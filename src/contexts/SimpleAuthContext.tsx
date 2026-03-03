@@ -71,11 +71,16 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     userRoleRef.current = userRole;
 
     const checkAuth = async () => {
+      const AUTH_TIMEOUT_MS = 12000;
       try {
         let data: { session: { user?: unknown; access_token?: string } | null };
         let error: { message?: string } | null;
         try {
-          const result = await supabase.auth.getSession();
+          const sessionPromise = supabase.auth.getSession();
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Auth timeout")), AUTH_TIMEOUT_MS)
+          );
+          const result = await Promise.race([sessionPromise, timeoutPromise]);
           data = result.data;
           error = result.error;
         } catch (supabaseErr) {
@@ -99,7 +104,15 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             const u = session.user as User;
             setUser(u);
             userRef.current = u;
-            await fetchUserRole(u.id, true);
+            try {
+              const rolePromise = fetchUserRole(u.id, true);
+              const roleTimeout = new Promise<null>((resolve) =>
+                setTimeout(() => resolve(null), 5000)
+              );
+              await Promise.race([rolePromise, roleTimeout]);
+            } catch {
+              /* role fetch failed, user still logged in */
+            }
           } else {
             setUser(null);
             setUserRole(null);

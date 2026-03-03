@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Image from "next/image";
 import { supabase } from "@/lib/supabase-client";
 
 interface HeroBackground {
@@ -78,14 +77,11 @@ export default function HeroBackgroundSlider() {
             index === currentIndex ? "opacity-100" : "opacity-0"
           }`}
         >
-          <Image
+          <img
             src={bg.image_url}
             alt={bg.title}
-            width={1920}
-            height={1080}
             className="w-full h-full object-cover"
-            priority={index === 0}
-            sizes="100vw"
+            loading={index === 0 ? "eager" : "lazy"}
           />
         </div>
       ))}

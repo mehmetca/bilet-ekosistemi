@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import Link from "next/link";
 import AdminGuard from "@/components/AdminGuard";
 
@@ -12,8 +11,7 @@ export default function YonetimPage() {
             <p className="mt-2 text-slate-600">Etkinlikleri yönetin, düzenleyin ve yeni etkinlikler ekleyin.</p>
           </div>
           
-          <Suspense fallback={<div>Yükleniyor...</div>}>
-            <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+          <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
               <h2 className="text-xl font-semibold text-slate-900 mb-4">
                 Yönetim Paneline Hoş Geldiniz
               </h2>
@@ -156,7 +154,6 @@ export default function YonetimPage() {
                 </div>
               </div>
             </div>
-          </Suspense>
         </div>
       </div>
     </AdminGuard>
