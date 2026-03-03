@@ -83,3 +83,19 @@ Sonra `.env.local` dosyasını o bilgisayarda elle oluşturup Supabase/Resend vb
 | Değişiklikleri gönderme | `git add .` → `git commit -m "..."` → `git push` |
 | Başkasının değişikliğini almak | `git pull`                            |
 | Yeni bilgisayarda açmak | `git clone ...` → `npm install` → `.env.local` |
+
+---
+
+## 5. Siteyi dışarıdaki biri nasıl görür? (bilgisayarına hiçbir şey kurmadan)
+
+**GitHub sadece kodu saklar** — site orada “çalışmaz”, sadece dosyalar durur. Birinin tarayıcıda siteyi görmesi için projeyi **canlı yayına (deploy)** almanız gerekir.
+
+**En kolay yol: Vercel (ücretsiz)**
+
+1. [vercel.com](https://vercel.com) → **Sign up** → **Continue with GitHub** ile GitHub hesabınızla giriş yapın.
+2. **Add New** → **Project** → `mehmetca/bilet-ekosistemi` reposunu seçin → **Import**.
+3. **Environment Variables** kısmında `.env.local` içindeki değişkenleri tek tek ekleyin (örn. `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `TICKET_EMAIL_FROM`, `RESEND_API_KEY` vb.).
+4. **Deploy** tıklayın. Birkaç dakika sonra size bir link verilir, örn: `https://bilet-ekosistemi-xxx.vercel.app`.
+5. Bu linki kime verirseniz, tarayıcıda açar; **hiçbir şey indirmesine veya kurmasına gerek yok**.
+
+Sonra kodda değişiklik yapıp `git push` yaptığınızda Vercel genelde otomatik yeni deploy alır; aynı link güncel siteyi gösterir.
