@@ -1,7 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Prevent dev/build artifact collisions: dev writes .next-dev, build/start use .next
-  distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   async redirects() {
     return [
       { source: "/turne", destination: "/", permanent: true },
