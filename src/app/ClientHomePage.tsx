@@ -103,18 +103,6 @@ export default function ClientHomePage() {
     event.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Turne etkinliğini tespit et (sanatçı adı - şehir formatı)
-  const isTourEvent = (event: Event) => {
-    return event.title.includes(' - ') && event.category === 'konser';
-  };
-
-  // Sanatçı adını ve şehri ayır
-  const parseTourEvent = (event: Event) => {
-    if (!isTourEvent(event)) return null;
-    const [artistName, city] = event.title.split(' - ');
-    return { artistName, city };
-  };
-
   // Etkinlik durumunu kontrol et
   const getEventStatus = (event: Event) => {
     const eventDateTime = new Date(event.date + ' ' + (event.time || '00:00'));
@@ -244,8 +232,6 @@ export default function ClientHomePage() {
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {filteredEvents.map((event) => {
-              const tourInfo = parseTourEvent(event);
-              const isTour = isTourEvent(event);
               const eventStatus = getEventStatus(event);
               const parsedMeta = parseEventDescription(event.description);
               
@@ -296,102 +282,46 @@ export default function ClientHomePage() {
                   </Link>
                   
                   <div className="p-5">
-                    {isTour && tourInfo ? (
-                      // Turne Etkinliği Tasarımı
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded">
-                            TURNÉ
-                          </span>
-                          {eventStatus.isPast && (
-                            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
-                              SONA ERDİ
-                            </span>
-                          )}
-                        </div>
-                        <h3 className={`font-bold text-lg mb-1 ${
-                          eventStatus.isPast ? 'text-slate-600' : 'text-slate-900'
-                        }`}>
-                          {tourInfo.artistName}
-                        </h3>
-                        <div className="space-y-1 text-sm mb-3">
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 flex-shrink-0" />
-                            <span className={`font-medium ${
-                              eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
-                            }`}>
-                              {tourInfo.city.toUpperCase()}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 flex-shrink-0" />
-                            <span className={
-                              eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
-                            }>
-                              {new Date(event.date).toLocaleDateString("tr-TR")} • {event.time}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className={
-                              eventStatus.isPast ? 'text-slate-400' : 'text-slate-500'
-                            }>
-                              {event.venue}
-                            </span>
-                          </div>
-                        </div>
-                        
-                        {/* Özgeçmiş (varsa) */}
-                        {event.description && (
-                          <p className={`text-sm line-clamp-2 mb-3 ${
-                            eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
-                          }`}>
-                            {parseEventDescription(event.description).content}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      // Normal Etkinlik Tasarımı
-                      <div>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span className="text-xs font-medium text-primary-600">
-                            {CATEGORY_LABELS[event.category]}
-                          </span>
-                          {eventStatus.isPast && (
-                            <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
-                              SONA ERDİ
-                            </span>
-                          )}
-                        </div>
-                        <h3 className={`font-semibold line-clamp-1 mb-2 ${
-                          eventStatus.isPast ? 'text-slate-600' : 'text-slate-900'
-                        }`}>
-                          {event.title}
-                        </h3>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 flex-shrink-0" />
-                            <span className={
-                              eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
-                            }>
-                              {new Date(event.date).toLocaleDateString("tr-TR")} • {event.time}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 flex-shrink-0" />
-                            <span className={
-                              eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
-                            }>
-                              {event.venue}, {event.location}
-                            </span>
-                          </div>
-                        </div>
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-xs font-medium text-primary-600">
+                          {CATEGORY_LABELS[event.category]}
+                        </span>
                         {eventStatus.isPast && (
-                          <p className="mt-3 text-xs font-medium text-red-600">
-                            Bu etkinlik tamamlanmıştır. Bilet satışı kapalıdır.
-                          </p>
+                          <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
+                            SONA ERDİ
+                          </span>
                         )}
                       </div>
-                    )}
+                      <h3 className={`font-semibold line-clamp-1 mb-2 ${
+                        eventStatus.isPast ? 'text-slate-600' : 'text-slate-900'
+                      }`}>
+                        {event.title}
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 flex-shrink-0" />
+                          <span className={
+                            eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
+                          }>
+                            {new Date(event.date).toLocaleDateString("tr-TR")} • {event.time}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 flex-shrink-0" />
+                          <span className={
+                            eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
+                          }>
+                            {event.venue}, {event.location}
+                          </span>
+                        </div>
+                      </div>
+                      {eventStatus.isPast && (
+                        <p className="mt-3 text-xs font-medium text-red-600">
+                          Bu etkinlik tamamlanmıştır. Bilet satışı kapalıdır.
+                        </p>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="px-5 pb-5 border-t border-slate-100">

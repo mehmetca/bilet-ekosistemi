@@ -11,7 +11,6 @@ const navLinks = [
   { href: "/", label: "Etkinlikler" },
   { href: "/takvim", label: "Takvim" },
   { href: "/sanatci", label: "Sanatçılar" },
-  { href: "/turne", label: "Turneler" },
 ];
 
 export default function Header() {

@@ -16,27 +16,6 @@ export interface Event {
   updated_at: string;
 }
 
-export interface TourEvent {
-  id: string;
-  artist_id?: string;
-  event_id?: string;
-  artist_name: string;
-  city: string;
-  venue: string;
-  date: string;
-  event_date?: string;
-  time: string;
-  price: number;
-  ticket_type?: TicketType;
-  ticket_url?: string | null;
-  available?: number;
-  description?: string | null;
-  image_url?: string;
-  artist_image_url?: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Artist {
   id: string;
   name: string;

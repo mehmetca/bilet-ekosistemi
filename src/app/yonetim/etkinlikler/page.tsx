@@ -116,14 +116,6 @@ function EtkinliklerContent() {
         throw new Error(`Bağlı biletler silinemedi: ${ticketsError.message}`);
       }
 
-      const { error: tourEventsError } = await supabase
-        .from("tour_events")
-        .delete()
-        .eq("event_id", id);
-      if (tourEventsError) {
-        console.warn("Bağlı turne etkinlikleri silinemedi:", tourEventsError);
-      }
-
       const { error: eventError } = await supabase
         .from("events")
         .delete()

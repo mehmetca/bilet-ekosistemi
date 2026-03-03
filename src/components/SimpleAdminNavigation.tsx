@@ -33,12 +33,6 @@ export default function SimpleAdminNavigation() {
       description: "Etkinlik yönetimi"
     },
     {
-      href: "/yonetim/turneler",
-      label: "Turneler",
-      icon: User,
-      description: "Sanatçı turneleri ve etkinlikleri"
-    },
-    {
       href: "/yonetim/bilet-turleri",
       label: "Bilet Türleri",
       icon: Ticket,

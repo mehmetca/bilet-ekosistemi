@@ -629,96 +629,10 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (ticketError || !ticket) {
-      // Try tour events if ticket not found
-      const { data: tourEvent, error: tourError } = await supabase
-        .from("tour_events")
-        .select("*")
-        .eq("id", ticketId)
-        .single();
-
-      if (tourError || !tourEvent) {
-        return NextResponse.json(
-          { success: false, message: "Bilet bulunamadı." },
-          { status: 404 }
-        );
-      }
-
-      const totalPrice = Number(tourEvent.price) * quantity;
-      const ticketCode = generateTicketCode();
-
-      // Direct insert
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .insert({
-          event_id: tourEvent.event_id,
-          ticket_id: ticketId,
-          quantity: quantity,
-          total_price: totalPrice,
-          ticket_code: ticketCode,
-          status: 'completed',
-          buyer_name: buyerName,
-          buyer_email: buyerEmail
-        })
-        .select()
-        .single();
-
-      if (orderError) {
-        console.error("API Order error:", orderError);
-        return NextResponse.json(
-          { success: false, message: `Sipariş oluşturulamadı: ${orderError.message}. Tekrar deneyin.` },
-          { status: 500 }
-        );
-      }
-
-      // Update tour event stock
-      const { error: updateError } = await supabase
-        .from("tour_events")
-        .update({ available: (tourEvent.available || 50) - quantity })
-        .eq("id", ticketId);
-
-      if (updateError) {
-        console.error("API Tour event stock update error:", updateError);
-      } else {
-        console.log("API Tour event stock updated successfully:", {
-          ticketId: ticketId,
-          oldStock: tourEvent.available || 50,
-          newStock: (tourEvent.available || 50) - quantity,
-          quantity: quantity
-        });
-      }
-
-      const eventSummary = await getEventSummary(supabase, tourEvent.event_id);
-      const emailResult = await sendTicketEmail({
-        buyerEmail,
-        buyerName,
-        ticketCode,
-        quantity,
-        ticketType: tourEvent.ticket_type || "Standart",
-        totalPrice,
-        eventTitle: eventSummary.title,
-        eventDate: eventSummary.date,
-        eventTime: eventSummary.time,
-        venue: eventSummary.venue,
-        location: eventSummary.location || tourEvent.city || tourEvent.location,
-      });
-
-      if (!emailResult.sent) {
-        console.error("Bilet e-postası gönderilemedi:", emailResult.reason);
-      }
-
-      return NextResponse.json({
-        success: true,
-        message: "Siparişiniz başarıyla oluşturuldu!",
-        ticketCode,
-        emailSent: emailResult.sent,
-        emailError: emailResult.sent ? undefined : emailResult.reason,
-        orderDetails: {
-          buyerName,
-          quantity,
-          ticketType: tourEvent.ticket_type,
-          price: totalPrice,
-        },
-      });
+      return NextResponse.json(
+        { success: false, message: "Bilet bulunamadı." },
+        { status: 404 }
+      );
     }
 
     const totalPrice = Number(ticket.price) * quantity;

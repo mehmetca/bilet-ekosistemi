@@ -13,7 +13,6 @@ import {
   BarChart3,
   LogOut,
   User,
-  Music2,
   Megaphone
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
@@ -38,12 +37,6 @@ export default function AdminNavigationFixed() {
       label: "Etkinlikler",
       icon: Calendar,
       description: "Etkinlik yönetimi"
-    },
-    {
-      href: "/yonetim/turneler",
-      label: "Turneler",
-      icon: Music2,
-      description: "Sanatçı turneleri ve etkinlikleri"
     },
     {
       href: "/yonetim/reklamlar",

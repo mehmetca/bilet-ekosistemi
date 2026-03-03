@@ -11,8 +11,7 @@ import {
   CreditCard,
   BarChart3,
   LogOut,
-  User,
-  Music2
+  User
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
@@ -34,12 +33,6 @@ export default function AdminNavigation() {
       label: "Etkinlikler",
       icon: Calendar,
       description: "Etkinlik yönetimi"
-    },
-    {
-      href: "/yonetim/turneler",
-      label: "Turneler",
-      icon: Music2,
-      description: "Sanatçı turneleri ve etkinlikleri"
     },
     {
       href: "/yonetim/bilet-turleri",
