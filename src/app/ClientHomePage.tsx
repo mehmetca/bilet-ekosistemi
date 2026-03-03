@@ -14,6 +14,12 @@ import { parseEventDescription } from "@/lib/eventMeta";
 
 export default function ClientHomePage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCity, setSelectedCity] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
   const [events, setEvents] = useState<Event[]>([]);
   const [news, setNews] = useState<News[]>([]);
   const isMountedRef = useRef(true);
@@ -98,10 +104,43 @@ export default function ClientHomePage() {
 
   const upcomingEvents = sortedEvents.filter((event) => !isEventPast(event));
   const pastEvents = sortedEvents.filter((event) => isEventPast(event));
+  const cityOptions = Array.from(
+    new Set(upcomingEvents.map((event) => (event.location || "").trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, "tr"));
 
-  const filteredEvents = upcomingEvents.filter(event =>
-    event.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredEvents = upcomingEvents.filter((event) => {
+    const term = searchTerm.trim().toLowerCase();
+    const matchesSearch =
+      !term ||
+      event.title.toLowerCase().includes(term) ||
+      (event.venue || "").toLowerCase().includes(term) ||
+      (event.location || "").toLowerCase().includes(term);
+
+    const matchesCity = selectedCity === "all" || event.location === selectedCity;
+    const matchesCategory = selectedCategory === "all" || event.category === selectedCategory;
+
+    const eventDate = new Date(event.date);
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    const matchesStart = !start || eventDate >= start;
+    const matchesEnd = !end || eventDate <= end;
+
+    const price = Number(event.price_from || 0);
+    const min = minPrice ? Number(minPrice) : null;
+    const max = maxPrice ? Number(maxPrice) : null;
+    const matchesMin = min === null || Number.isNaN(min) || price >= min;
+    const matchesMax = max === null || Number.isNaN(max) || price <= max;
+
+    return (
+      matchesSearch &&
+      matchesCity &&
+      matchesCategory &&
+      matchesStart &&
+      matchesEnd &&
+      matchesMin &&
+      matchesMax
+    );
+  });
 
   // Etkinlik durumunu kontrol et
   const getEventStatus = (event: Event) => {
@@ -176,8 +215,8 @@ export default function ClientHomePage() {
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
                 <Shield className="h-10 w-10 mx-auto mb-3 text-white" />
               </div>
-              <h3 className="font-semibold text-base mb-2 text-white">Güvenli Transferler</h3>
-              <p className="text-sm text-white/90">Hızlı ve güvenli</p>
+              <h3 className="font-semibold text-base mb-2 text-white">Güvenli Ödeme</h3>
+              <p className="text-sm text-white/90">3D Secure destekli güvenli ödeme altyapısı</p>
             </div>
             <div className="text-center">
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
@@ -186,6 +225,17 @@ export default function ClientHomePage() {
               <h3 className="font-semibold text-base mb-2 text-white">Canlı Envanter</h3>
               <p className="text-sm text-white/90">Gerçek zamanlı müsaitlik</p>
             </div>
+          </div>
+
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-2 text-xs">
+            {["VISA", "Mastercard", "AMEX", "Apple Pay", "Google Pay", "3D Secure"].map((badge) => (
+              <span
+                key={badge}
+                className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-white/95"
+              >
+                {badge}
+              </span>
+            ))}
           </div>
         </div>
       </section>
@@ -211,6 +261,76 @@ export default function ClientHomePage() {
       {/* Events */}
       <section id="events" className="container mx-auto px-4 py-16">
         <h2 className="text-2xl font-bold text-slate-900 mb-8">Yaklaşan Etkinlikler</h2>
+        <div className="mb-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-2 lg:grid-cols-4">
+          <select
+            value={selectedCity}
+            onChange={(e) => setSelectedCity(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="all">Tüm Şehirler</option>
+            {cityOptions.map((city) => (
+              <option key={city} value={city}>
+                {city}
+              </option>
+            ))}
+          </select>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="all">Tüm Kategoriler</option>
+            {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Başlangıç tarihi"
+          />
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Bitiş tarihi"
+          />
+          <input
+            type="number"
+            min="0"
+            value={minPrice}
+            onChange={(e) => setMinPrice(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Min €"
+          />
+          <input
+            type="number"
+            min="0"
+            value={maxPrice}
+            onChange={(e) => setMaxPrice(e.target.value)}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Max €"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedCity("all");
+              setSelectedCategory("all");
+              setStartDate("");
+              setEndDate("");
+              setMinPrice("");
+              setMaxPrice("");
+            }}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
+          >
+            Filtreleri Temizle
+          </button>
+        </div>
         
         {filteredEvents.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
@@ -420,12 +540,6 @@ export default function ClientHomePage() {
         </section>
       )}
 
-      {/* Footer */}
-      <footer className="border-t border-slate-200 bg-white py-8">
-        <div className="container mx-auto px-4 text-center text-sm text-slate-500">
-          © {new Date().getFullYear()} Bilet Ekosistemi
-        </div>
-      </footer>
     </div>
   );
 }

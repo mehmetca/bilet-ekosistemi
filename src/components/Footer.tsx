@@ -1,71 +1,45 @@
+"use client";
+
 import Link from "next/link";
-import { Ticket, Mail, Phone, MapPin } from "lucide-react";
+
+const policyLinks = [
+  { href: "/#guvenli-odeme", label: "Güvenli Ödeme" },
+  { href: "/#iade-politikasi", label: "İade Politikası" },
+  { href: "/#gonderim-politikasi", label: "Gönderim Politikası" },
+  { href: "/#canli-stok", label: "Canlı Stok" },
+];
 
 export default function Footer() {
   return (
-    <footer className="bg-slate-900 text-white">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Logo ve Açıklama */}
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white">
-                <Ticket className="h-4 w-4" />
-              </div>
-              <span className="font-bold text-xl">Bilet Ekosistemi</span>
-            </div>
-            <p className="text-slate-400 mb-4">
-              Etkinlik biletleri ve daha fazlası için en güvenilir platform.
-            </p>
-            <div className="flex gap-4">
-              <div className="flex items-center gap-2 text-slate-400">
-                <Mail className="h-4 w-4" />
-                <span>info@bilet-ekosistemi.com</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Hızlı Linkler */}
-          <div>
-            <h3 className="font-semibold mb-4">Hızlı Linkler</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/" className="text-slate-400 hover:text-white transition-colors">
-                  Etkinlikler
-                </Link>
-              </li>
-              <li>
-                <Link href="/takvim" className="text-slate-400 hover:text-white transition-colors">
-                  Takvim
-                </Link>
-              </li>
-              <li>
-                <Link href="/giris" className="text-slate-400 hover:text-white transition-colors">
-                  Giriş Yap
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* İletişim */}
-          <div>
-            <h3 className="font-semibold mb-4">İletişim</h3>
-            <ul className="space-y-2">
-              <li className="flex items-center gap-2 text-slate-400">
-                <Phone className="h-4 w-4" />
-                <span>+90 212 555 0123</span>
-              </li>
-              <li className="flex items-center gap-2 text-slate-400">
-                <MapPin className="h-4 w-4" />
-                <span>İstanbul, Türkiye</span>
-              </li>
-            </ul>
-          </div>
+    <footer className="border-t border-slate-200 bg-white py-8">
+      <div className="container mx-auto px-4">
+        <div className="flex flex-wrap items-center justify-center gap-4 text-sm mb-4">
+          {policyLinks.map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className="text-slate-600 hover:text-primary-600"
+            >
+              {label}
+            </Link>
+          ))}
         </div>
-
-        {/* Copyright */}
-        <div className="border-t border-slate-800 mt-8 pt-8 text-center text-slate-400">
-          <p>&copy; 2024 Bilet Ekosistemi. Tüm hakları saklıdır.</p>
+        <div className="space-y-4 text-center text-xs text-slate-500 max-w-2xl mx-auto">
+          <section id="guvenli-odeme">
+            <strong>Güvenli Ödeme:</strong> 3D Secure destekli ödeme altyapısı kullanılmaktadır.
+          </section>
+          <section id="iade-politikasi">
+            <strong>İade Politikası:</strong> İade koşulları etkinlik organizatörü tarafından belirlenir. Etkinlik ve kampanya koşullarına göre iade veya değişiklik uygulanabilir. Satın alma öncesi ilgili etkinlik koşullarını inceleyiniz.
+          </section>
+          <section id="gonderim-politikasi">
+            <strong>Gönderim Politikası:</strong> Standart kargo (DE): 2–4 iş günü. Ekspres kargo (DE): Öğleden önce (Pzt–Cuma) verilen siparişler ertesi iş günü teslim. Dijital bilet: Sözleşme sonrası anında yazdırılabilir. Basılı bilet ücretlidir; gönderim ücreti ödeyenlere teslim edilir. Gönderim seçenekleri alışveriş sepetinde sunulur.
+          </section>
+          <section id="canli-stok">
+            <strong>Canlı Stok:</strong> Stok bilgisi anlık güncellenir.
+          </section>
+        </div>
+        <div className="text-center text-sm text-slate-500 mt-6">
+          © {new Date().getFullYear()} Bilet Ekosistemi
         </div>
       </div>
     </footer>

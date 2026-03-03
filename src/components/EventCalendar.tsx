@@ -117,9 +117,11 @@ export default function EventCalendar({ events }: EventCalendarProps) {
           <div className="text-center py-12">
             <Calendar className="h-16 w-16 mx-auto text-slate-300 mb-4" />
             <p className="text-slate-500">
-              {selectedDate 
-                ? "Bu tarihte etkinlik bulunmamaktadır."
-                : "Seçilen kriterlere uygun etkinlik bulunmamaktadır."
+              {events.length === 0
+                ? "Henüz etkinlik eklenmemiş. Yakında yeni etkinlikler eklenecektir."
+                : selectedDate
+                  ? "Bu tarihte etkinlik bulunmamaktadır."
+                  : "Seçilen kriterlere uygun etkinlik bulunmamaktadır."
               }
             </p>
           </div>

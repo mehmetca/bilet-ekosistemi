@@ -52,6 +52,14 @@ export default function EventSlider({ events, title }: EventSliderProps) {
     return () => clearInterval(interval);
   }, [isAutoPlay, sliderEvents.length]);
 
+  // Liste daraldığında mevcut index taşarsa ilk elemana dön
+  useEffect(() => {
+    if (sliderEvents.length === 0) return;
+    if (currentIndex >= sliderEvents.length) {
+      setCurrentIndex(0);
+    }
+  }, [currentIndex, sliderEvents.length]);
+
   const goToPrevious = () => {
     setIsAutoPlay(false);
     setCurrentIndex((prev) => 
@@ -81,7 +89,8 @@ export default function EventSlider({ events, title }: EventSliderProps) {
     );
   }
 
-  const currentEvent = sliderEvents[currentIndex];
+  const currentEvent = sliderEvents[currentIndex] ?? sliderEvents[0];
+  if (!currentEvent) return null;
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

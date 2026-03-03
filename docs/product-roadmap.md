@@ -1,32 +1,32 @@
-# Product Roadmap
+# Urun Yol Haritasi
 
-## Phase 1 - Revenue Quick Wins
+## Faz 1 - Hizli Gelir Kazanclari
 
-- Simplify checkout into a shorter, single-flow experience.
-- Add trust signals (secure payment badges, refund policy, live stock text).
-- Improve event discovery with filters (city, date range, price, category).
-- Add sorting options (upcoming, cheapest, popular).
-- Add "duplicate event" in admin for faster content operations.
+- Odeme adimlarini kisaltip tek akisli hale getir.
+- Guven unsurlari ekle (guvenli odeme rozetleri, iade politikasi, canli stok yazisi).
+- Etkinlik kesfini filtrelerle guclendir (sehir, tarih araligi, fiyat, kategori).
+- Siralama secenekleri ekle (yaklasan, en ucuz, populer).
+- Admin paneline "etkinligi kopyala" ozelligi ekle.
 
-## Phase 2 - Operations and Conversion
+## Faz 2 - Operasyon ve Donusum
 
-- Add discount/promo code system with usage limits and date windows.
-- Add sales phases (early bird, general sale, gate sale).
-- Add waitlist for sold-out events with email notifications.
-- Add event FAQ and venue logistics blocks (transport, entry rules).
-- Add reminders before event time (email first, optional SMS later).
+- Indirim/promosyon kodu sistemi ekle (kullanim limiti, tarih araligi).
+- Satis fazlari ekle (erken donem, genel satis, kapida satis).
+- Tukenmis etkinlikler icin bekleme listesi ve e-posta bildirimi ekle.
+- Etkinlik SSS ve mekan bilgisi bloklari ekle (ulasim, giris kurallari).
+- Etkinlik oncesi hatirlatici ekle (once e-posta, sonra istege bagli SMS).
 
-## Phase 3 - Analytics and Scale
+## Faz 3 - Analitik ve Olcekleme
 
-- Build admin KPI dashboard (daily sales, conversion, refunds).
-- Add funnel analytics (view -> checkout -> purchase).
-- Add A/B testing for key CTA and hero assets.
-- Add audit logs for critical admin changes.
-- Add error monitoring and alerting (for example Sentry).
+- Admin KPI paneli olustur (gunluk satis, donusum, iade oranlari).
+- Huni analitigi ekle (goruntuleme -> odeme -> satin alma).
+- Ana CTA ve hero alanlari icin A/B test altyapisi kur.
+- Kritik admin islemleri icin denetim kaydi (audit log) tut.
+- Hata izleme ve alarmlama ekle (ornek: Sentry).
 
-## Technical Hygiene Backlog
+## Teknik Temizlik Backlog'u
 
-- Keep route and table ownership strict (events-only data model).
-- Add stronger API rate limiting and abuse protection.
-- Keep image optimization policy consistent (formats, size limits).
-- Improve SEO metadata and structured data for event pages.
+- Route ve tablo sorumluluklarini net tut (yalnizca etkinlik veri modeli).
+- API'lar icin daha guclu rate limiting ve suistimal korumasi ekle.
+- Gorsel optimizasyon politikasini standartlastir (format, boyut limitleri).
+- Etkinlik sayfalari icin SEO metadatasi ve yapisal veri (structured data) iyilestir.

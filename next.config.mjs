@@ -2,6 +2,12 @@
 const nextConfig = {
   // Prevent dev/build artifact collisions: dev writes .next-dev, build/start use .next
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
+  async redirects() {
+    return [
+      { source: "/turne", destination: "/", permanent: true },
+      { source: "/turne/:path*", destination: "/", permanent: true },
+    ];
+  },
   // Vercel build'in lint uyarılarından düşmemesi için (lint yerelde npm run lint ile çalıştırılabilir)
   eslint: { ignoreDuringBuilds: true },
   webpack: (config, { dev }) => {

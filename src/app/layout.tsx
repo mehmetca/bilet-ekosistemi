@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import Script from "next/script";
+import Footer from "@/components/Footer";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <SimpleAuthProvider>
           {children}
+          <Footer />
         </SimpleAuthProvider>
       </body>
     </html>
