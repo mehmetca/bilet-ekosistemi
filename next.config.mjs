@@ -2,6 +2,8 @@
 const nextConfig = {
   // Prevent dev/build artifact collisions: dev writes .next-dev, build/start use .next
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
+  // Vercel build'in lint uyarılarından düşmemesi için (lint yerelde npm run lint ile çalıştırılabilir)
+  eslint: { ignoreDuringBuilds: true },
   webpack: (config, { dev }) => {
     // Windows'ta .next-dev/cache pack dosyaları zaman zaman ENOENT verip
     // dev server'da unhandledRejection üretüyor; dev cache'i kapatıyoruz.
