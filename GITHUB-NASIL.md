@@ -98,4 +98,4 @@ Sonra `.env.local` dosyasını o bilgisayarda elle oluşturup Supabase/Resend vb
 4. **Deploy** tıklayın. Birkaç dakika sonra size bir link verilir, örn: `https://bilet-ekosistemi-xxx.vercel.app`.
 5. Bu linki kime verirseniz, tarayıcıda açar; **hiçbir şey indirmesine veya kurmasına gerek yok**.
 
-Sonra kodda değişiklik yapıp `git push` yaptığınızda Vercel genelde otomatik yeni deploy alır; aynı link güncel siteyi gösterir.
+**Çalışma şekli:** Değişiklikleri **local’de** yapıp test edin, onayladıktan sonra `git add` → `git commit` → `git push` yapın. Push ettiğiniz anda Vercel **otomatik** yeni deploy alır; birkaç dakika sonra canlı site güncellenir. Yani “onay verdiğiniz” an push ettiğiniz andır.

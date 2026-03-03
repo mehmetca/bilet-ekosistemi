@@ -1,8 +1,0 @@
-{
-  "/etkinlik/[id]/page": "app/etkinlik/[id]/page.js",
-  "/yonetim/sanatcilar/page": "app/yonetim/sanatcilar/page.js",
-  "/yonetim/page": "app/yonetim/page.js",
-  "/yonetim/hero-backgrounds/page": "app/yonetim/hero-backgrounds/page.js",
-  "/sanatci/page": "app/sanatci/page.js",
-  "/sanatci/[slug]/page": "app/sanatci/[slug]/page.js"
-}

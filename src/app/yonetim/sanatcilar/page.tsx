@@ -198,7 +198,7 @@ export default function SanatcilarPage() {
         (signal) =>
           supabase
             .from("artists")
-            .select("id,name,slug,bio,image_url")
+            .select("id,name,slug,bio,image_url,show_on_artist_page,show_on_tour_page")
             .eq("id", artistId)
             .abortSignal(signal)
             .single(),
@@ -480,7 +480,7 @@ export default function SanatcilarPage() {
               onClick={handleNew}
               className="rounded-lg bg-primary-600 text-white px-3 py-2 text-sm hover:bg-primary-700"
             >
-              Yeni
+              Yeni sanatçı ekle
             </button>
           </div>
 

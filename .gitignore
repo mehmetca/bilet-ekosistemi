@@ -12,6 +12,7 @@ node_modules
 
 # next
 .next
+.next-dev
 out
 
 # misc

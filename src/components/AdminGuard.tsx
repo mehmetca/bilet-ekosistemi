@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
@@ -13,14 +14,10 @@ export default function AdminGuard({ children }: AdminGuardProps) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading) {
-      if (!user) {
-        router.replace("/giris");
-      } else if (!isAdmin && !isController) {
-        router.replace("/");
-      }
+    if (!loading && !user) {
+      router.replace("/giris");
     }
-  }, [user, loading, isAdmin, isController, router]);
+  }, [user, loading, router]);
 
   if (loading) {
     return (
@@ -30,10 +27,29 @@ export default function AdminGuard({ children }: AdminGuardProps) {
     );
   }
 
-  if (!user || (!isAdmin && !isController)) {
+  if (!user) {
     return null;
   }
 
-  // Admin veya Controller ise children'ı göster
+  // Giriş yapılmış ama admin/controller değilse açıklayıcı sayfa göster (sessiz yönlendirme yok)
+  if (!isAdmin && !isController) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 max-w-md text-center">
+          <h1 className="text-xl font-semibold text-slate-900 mb-2">Yönetim paneline erişim yetkiniz yok</h1>
+          <p className="text-slate-600 mb-6">
+            Bu hesap yönetici veya bilet kontrol yetkisine sahip değil. Erişim için yönetici ile iletişime geçin.
+          </p>
+          <Link
+            href="/"
+            className="inline-block bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors"
+          >
+            Ana sayfaya dön
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return <>{children}</>;
 }
