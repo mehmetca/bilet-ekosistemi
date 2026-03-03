@@ -121,7 +121,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     let subscription: { unsubscribe?: () => void } | undefined;
     try {
       const { data: subData } = supabase.auth.onAuthStateChange(
-        async (event, session) => {
+        (event, session) => {
           if (!mounted) return;
 
           const dedupeKey = `${event}:${session?.user?.id || "none"}:${session?.access_token?.slice(-8) || "na"}`;
@@ -147,8 +147,17 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
               setUser(session.user);
               userRef.current = session.user;
 
-              if (event === "SIGNED_IN" || event === "USER_UPDATED" || userChanged || event === "INITIAL_SESSION") {
-                await fetchUserRole(session.user.id, userChanged || event !== "TOKEN_REFRESHED");
+              const needRole = event === "SIGNED_IN" || event === "USER_UPDATED" || userChanged || event === "INITIAL_SESSION";
+              if (needRole) {
+                const userId = session.user.id;
+                const force = userChanged || event !== "TOKEN_REFRESHED";
+                setTimeout(() => {
+                  if (!mounted) return;
+                  fetchUserRole(userId, force).finally(() => {
+                    if (mounted) setLoading(false);
+                  });
+                }, 0);
+                return;
               }
             } else {
               setUser(null);

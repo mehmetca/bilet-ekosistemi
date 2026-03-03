@@ -64,10 +64,14 @@ export default function LoginPage() {
         throw new Error("Giris yaniti gecersiz. access_token/refresh_token eksik.");
       }
 
-      const { data, error } = await supabase.auth.setSession({
+      const setSessionPromise = supabase.auth.setSession({
         access_token: payload.access_token,
         refresh_token: payload.refresh_token,
       });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Oturum kurulumu zaman aşımına uğradı.")), 12000)
+      );
+      const { data, error } = await Promise.race([setSessionPromise, timeoutPromise]);
       if (error) throw error;
 
       return data;
@@ -101,8 +105,9 @@ export default function LoginPage() {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       if (activeLoginAttemptRef.current !== attemptId) return;
-      router.replace("/yonetim");
-      router.refresh();
+      setLoading(false);
+      window.location.href = "/yonetim";
+      return;
     } catch (err: unknown) {
       if (activeLoginAttemptRef.current !== attemptId) return;
       const message = err && typeof err === 'object' && 'message' in err ? (err as { message?: string }).message : 'Giriş yapılamadı. Lütfen tekrar deneyin.';
