@@ -156,20 +156,20 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 </div>
                 <div className="p-5">
                   <span className="text-xs font-medium text-primary-600">
-                    {CATEGORY_LABELS[event.category]}
+                    {CATEGORY_LABELS[event.category as keyof typeof CATEGORY_LABELS] ?? event.category ?? "Etkinlik"}
                   </span>
-                  <h3 className="mt-2 font-semibold text-slate-900 line-clamp-2">{event.title}</h3>
+                  <h3 className="mt-2 font-semibold text-slate-900 line-clamp-2">{event.title ?? ""}</h3>
                   <p className="mt-2 text-sm text-slate-600 line-clamp-2">
                     {parseEventDescription(event.description).content}
                   </p>
                   <div className="mt-3 space-y-2 text-sm text-slate-500">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 flex-shrink-0" />
-                      {new Date(event.date).toLocaleDateString("tr-TR")} • {event.time}
+                      {event.date ? new Date(event.date).toLocaleDateString("tr-TR") : ""} • {event.time ?? ""}
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 flex-shrink-0" />
-                      {event.venue}, {event.location}
+                      {event.venue ?? ""}, {event.location ?? ""}
                     </div>
                   </div>
                   <div className="mt-4 flex justify-between items-center">
@@ -227,17 +227,17 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                   </div>
                   <div className="p-5">
                     <span className="text-xs font-medium text-slate-600">
-                      {CATEGORY_LABELS[event.category]}
+                      {CATEGORY_LABELS[event.category as keyof typeof CATEGORY_LABELS] ?? event.category ?? "Etkinlik"}
                     </span>
                     <h3 className="mt-2 font-semibold text-slate-700 line-clamp-2">{event.title}</h3>
                     <div className="mt-3 space-y-2 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 flex-shrink-0" />
-                        {new Date(event.date).toLocaleDateString("tr-TR")} • {event.time}
+                        {event.date ? new Date(event.date).toLocaleDateString("tr-TR") : ""} • {event.time ?? ""}
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 flex-shrink-0" />
-                        {event.venue}, {event.location}
+                        {event.venue ?? ""}, {event.location ?? ""}
                       </div>
                     </div>
                     <p className="mt-3 text-xs font-medium text-red-600">

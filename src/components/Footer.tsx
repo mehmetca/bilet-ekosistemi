@@ -38,7 +38,7 @@ export default function Footer() {
             <strong>Canlı Stok:</strong> Stok bilgisi anlık güncellenir.
           </section>
         </div>
-        <div className="text-center text-sm text-slate-500 mt-6">
+        <div className="text-center text-sm text-slate-500 mt-6" suppressHydrationWarning>
           © {new Date().getFullYear()} Bilet Ekosistemi
         </div>
       </div>

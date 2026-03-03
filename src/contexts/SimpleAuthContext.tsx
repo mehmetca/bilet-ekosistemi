@@ -72,7 +72,21 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
     const checkAuth = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession();
+        let data: { session: { user?: unknown; access_token?: string } | null };
+        let error: { message?: string } | null;
+        try {
+          const result = await supabase.auth.getSession();
+          data = result.data;
+          error = result.error;
+        } catch (supabaseErr) {
+          console.error("Supabase auth init error:", supabaseErr);
+          if (mounted) {
+            setUser(null);
+            setUserRole(null);
+            setLoading(false);
+          }
+          return;
+        }
         if (error) {
           console.error("Auth getSession error:", error);
           return;
@@ -82,9 +96,10 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
         
         if (mounted) {
           if (session?.user) {
-            setUser(session.user);
-            userRef.current = session.user;
-            await fetchUserRole(session.user.id, true);
+            const u = session.user as User;
+            setUser(u);
+            userRef.current = u;
+            await fetchUserRole(u.id, true);
           } else {
             setUser(null);
             setUserRole(null);
@@ -103,54 +118,58 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
     checkAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (!mounted) return;
+    let subscription: { unsubscribe?: () => void } | undefined;
+    try {
+      const { data: subData } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          if (!mounted) return;
 
-        // De-duplicate frequent repeated auth events for same session/user.
-        const dedupeKey = `${event}:${session?.user?.id || "none"}:${session?.access_token?.slice(-8) || "na"}`;
-        const now = Date.now();
-        if (
-          lastAuthEventRef.current &&
-          lastAuthEventRef.current.key === dedupeKey &&
-          now - lastAuthEventRef.current.at < 2000
-        ) {
-          return;
-        }
-        lastAuthEventRef.current = { key: dedupeKey, at: now };
+          const dedupeKey = `${event}:${session?.user?.id || "none"}:${session?.access_token?.slice(-8) || "na"}`;
+          const now = Date.now();
+          if (
+            lastAuthEventRef.current &&
+            lastAuthEventRef.current.key === dedupeKey &&
+            now - lastAuthEventRef.current.at < 2000
+          ) {
+            return;
+          }
+          lastAuthEventRef.current = { key: dedupeKey, at: now };
 
-        if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setUserRole(null);
-          userRef.current = null;
-          userRoleRef.current = null;
-          setLoading(false);
-        } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'INITIAL_SESSION') {
-          if (session?.user) {
-            const userChanged = userRef.current?.id !== session.user.id;
-            setUser(session.user);
-            userRef.current = session.user;
-
-            // Role is static in app flow; refresh only for sign-in, user updates, or user switch.
-            if (event === "SIGNED_IN" || event === "USER_UPDATED" || userChanged || event === "INITIAL_SESSION") {
-              await fetchUserRole(session.user.id, userChanged || event !== "TOKEN_REFRESHED");
-            }
-          } else {
+          if (event === "SIGNED_OUT") {
             setUser(null);
             setUserRole(null);
             userRef.current = null;
             userRoleRef.current = null;
+            setLoading(false);
+          } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
+            if (session?.user) {
+              const userChanged = userRef.current?.id !== session.user.id;
+              setUser(session.user);
+              userRef.current = session.user;
+
+              if (event === "SIGNED_IN" || event === "USER_UPDATED" || userChanged || event === "INITIAL_SESSION") {
+                await fetchUserRole(session.user.id, userChanged || event !== "TOKEN_REFRESHED");
+              }
+            } else {
+              setUser(null);
+              setUserRole(null);
+              userRef.current = null;
+              userRoleRef.current = null;
+            }
+            setLoading(false);
           }
-          setLoading(false);
         }
-      }
-    );
+      );
+      subscription = subData?.subscription;
+    } catch (subErr) {
+      console.error("Auth subscription error:", subErr);
+    }
 
     return () => {
       mounted = false;
-      subscription?.unsubscribe();
+      subscription?.unsubscribe?.();
     };
-  }, []); // Bağımlılık dizisi boşaltıldı, sadece mount olduğunda çalışacak
+  }, []);
 
   async function signOut() {
     await supabase.auth.signOut();

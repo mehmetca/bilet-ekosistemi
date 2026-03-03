@@ -405,7 +405,7 @@ export default function ClientHomePage() {
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-medium text-primary-600">
-                          {CATEGORY_LABELS[event.category]}
+                          {CATEGORY_LABELS[event.category as keyof typeof CATEGORY_LABELS] ?? event.category ?? "Etkinlik"}
                         </span>
                         {eventStatus.isPast && (
                           <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">

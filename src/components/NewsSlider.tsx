@@ -155,7 +155,7 @@ export default function NewsSlider({ news, title }: NewsSliderProps) {
             </h3>
             
             <p className="text-sm opacity-90 line-clamp-3 mb-4">
-              {currentNews.summary || currentNews.content.substring(0, 150) + "..."}
+              {currentNews.summary || (currentNews.content ? currentNews.content.substring(0, 150) + "..." : "")}
             </p>
 
             <div className="flex items-center justify-between">

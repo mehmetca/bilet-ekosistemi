@@ -22,14 +22,8 @@ export default function EventSlider({ events, title }: EventSliderProps) {
     const artistMap = new Map();
     
     events.forEach(event => {
-      // Turne etkinliğini sanatçı adını al
-      let artistName = '';
-      if (event.title.includes(' - ')) {
-        [artistName] = event.title.split(' - ');
-      } else {
-        // Regular event için title'ı kullan
-        artistName = event.title;
-      }
+      const title = event?.title ?? "";
+      let artistName = title.includes(" - ") ? title.split(" - ")[0] : title;
       
       // Bu sanatçıdan daha önce etkinlik eklenmediyse ekle
       if (!artistMap.has(artistName)) {
@@ -127,7 +121,7 @@ export default function EventSlider({ events, title }: EventSliderProps) {
           <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
             <div className="flex items-center gap-2 mb-3">
               <span className="text-xs font-medium bg-primary-600 px-2 py-1 rounded">
-                {CATEGORY_LABELS[currentEvent.category as keyof typeof CATEGORY_LABELS] || currentEvent.category}
+                {CATEGORY_LABELS[currentEvent.category as keyof typeof CATEGORY_LABELS] ?? currentEvent.category ?? "Etkinlik"}
               </span>
               <span className="text-xs opacity-90">
                 {new Date(currentEvent.date).toLocaleDateString("tr-TR")}
@@ -141,11 +135,11 @@ export default function EventSlider({ events, title }: EventSliderProps) {
             <div className="flex items-center gap-4 text-sm opacity-90 mb-4">
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                {new Date(currentEvent.date).toLocaleDateString("tr-TR")} • {currentEvent.time}
+                {currentEvent.date ? new Date(currentEvent.date).toLocaleDateString("tr-TR") : ""} • {currentEvent.time ?? ""}
               </div>
               <div className="flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
-                {currentEvent.venue}
+                {currentEvent.venue ?? ""}
               </div>
             </div>
 
