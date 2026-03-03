@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Ticket, User, LogIn, Menu, X } from "lucide-react";
 
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
@@ -16,6 +17,12 @@ const navLinks = [
 export default function Header() {
   const { user, isAdmin } = useSimpleAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Sayfa değiştiğinde mobil menüyü her zaman kapat (link tıklansa da tıklanmasa da)
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
