@@ -7,18 +7,6 @@ import { supabase } from "@/lib/supabase-client";
 import type { Artist, TourEvent } from "@/types/database";
 import { useRouter } from "next/navigation";
 
-const TURNER_ALLOWED_SLUGS = ["mem-ararat", "rojda"];
-
-function isTurneArtist(artist: Artist): boolean {
-  const slug = (artist.slug || "").toLowerCase();
-  const name = (artist.name || "").toLowerCase();
-  return (
-    TURNER_ALLOWED_SLUGS.includes(slug) ||
-    name.includes("mem ararat") ||
-    name.includes("rojda")
-  );
-}
-
 export default function TourManagementPage() {
   const { isAdmin, loading: authLoading } = useSimpleAuth();
   const router = useRouter();
@@ -31,11 +19,8 @@ export default function TourManagementPage() {
   const [editingArtist, setEditingArtist] = useState<Artist | null>(null);
   const [editingEvent, setEditingEvent] = useState<TourEvent | null>(null);
   const [loading, setLoading] = useState(true);
-  const visibleArtists = artists.filter(isTurneArtist);
-  const visibleArtistIdSet = new Set(visibleArtists.map((artist) => artist.id));
-  const visibleTourEvents = tourEvents.filter(
-    (event) => event.artist_id && visibleArtistIdSet.has(event.artist_id)
-  );
+  const visibleArtists = artists;
+  const visibleTourEvents = tourEvents;
 
   const [newArtist, setNewArtist] = useState({
     name: "",
@@ -152,8 +137,7 @@ export default function TourManagementPage() {
         console.error("Artist creation error:", error);
         alert("Sanatçı eklenemedi: " + error.message);
       } else {
-        
-        alert("Sanatçı başarıyla eklendi!");
+        alert("Sanatçı başarıyla eklendi! Şimdi turne etkinliği ekleyebilirsiniz.");
         setNewArtist({
           name: "",
           slug: "",
@@ -163,7 +147,11 @@ export default function TourManagementPage() {
           price_from: ""
         });
         setShowAddArtistForm(false);
-        fetchArtists();
+        await fetchArtists();
+        if (data) {
+          setSelectedArtist(data);
+          setShowAddEventForm(true);
+        }
       }
     } catch (error) {
       console.error("Add artist error:", error);
@@ -548,30 +536,54 @@ export default function TourManagementPage() {
         {showAddEventForm && (
           <>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <p className="text-blue-800 text-sm">Form açık! showAddEventForm: {showAddEventForm.toString()}</p>
+              <p className="text-blue-800 text-sm font-medium">Debug (Vercel)</p>
+              <p className="text-blue-800 text-sm">showAddEventForm: {String(showAddEventForm)}</p>
+              <p className="text-blue-800 text-sm">Seçili sanatçı: {selectedArtist ? selectedArtist.name : "—"}</p>
             </div>
             <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
             <h2 className="text-xl font-bold text-slate-900 mb-6">
               {editingEvent ? "Turne Etkinliği Düzenle" : "Turne Etkinliği Ekle"}
             </h2>
-          <div className="grid gap-4 md:grid-cols-2 mb-6">
-            <select
-              id="event_artist_id"
-              name="artist_id"
-              value={selectedArtist?.id || ""}
-              onChange={(e) => {
-                const artist = visibleArtists.find(a => a.id === e.target.value);
-                setSelectedArtist(artist || null);
-              }}
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            >
-              <option value="">Sanatçı Seçin</option>
-              {visibleArtists.map(artist => (
-                <option key={artist.id} value={artist.id}>
-                  {artist.name}
-                </option>
-              ))}
-            </select>
+            <div className="grid gap-4 md:grid-cols-2 mb-6">
+              <div className="flex gap-2 items-center flex-wrap">
+                <select
+                  id="event_artist_id"
+                  name="artist_id"
+                  value={selectedArtist?.id || ""}
+                  onChange={(e) => {
+                    const artist = visibleArtists.find(a => a.id === e.target.value);
+                    setSelectedArtist(artist || null);
+                  }}
+                  className="rounded-lg border border-slate-300 px-3 py-2 flex-1 min-w-0"
+                >
+                  <option value="">Sanatçı Seçin</option>
+                  {visibleArtists.map(artist => (
+                    <option key={artist.id} value={artist.id}>
+                      {artist.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddArtistForm(true);
+                    setEditingArtist(null);
+                    setNewArtist({
+                      name: "",
+                      slug: "",
+                      tour_name: "",
+                      tour_start_date: new Date().toISOString().slice(0, 16),
+                      tour_end_date: new Date().toISOString().slice(0, 16),
+                      price_from: ""
+                    });
+                  }}
+                  className="shrink-0 inline-flex items-center gap-1 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium"
+                  title="Listede yoksa yeni sanatçı ekleyin"
+                >
+                  <Plus className="h-4 w-4" />
+                  Yeni sanatçı ekle
+                </button>
+              </div>
             <input
               type="text"
               placeholder="Şehir"
@@ -646,15 +658,7 @@ export default function TourManagementPage() {
         {!showAddEventForm && (
           <div className="text-center mb-8">
             <button
-              onClick={() => {
-                console.log("Yeni Etkinlik Ekle clicked");
-                console.log("showAddEventForm before:", showAddEventForm);
-                setShowAddEventForm(true);
-                // Zorla render et
-                setTimeout(() => {
-                  console.log("showAddEventForm after timeout:", showAddEventForm);
-                }, 100);
-              }}
+              onClick={() => setShowAddEventForm(true)}
               className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium"
             >
               <Plus className="h-4 w-4" />
@@ -668,7 +672,7 @@ export default function TourManagementPage() {
           <h2 className="text-xl font-bold text-slate-900 mb-6">Sanatçılar</h2>
           {visibleArtists.length === 0 ? (
             <p className="text-slate-500 text-center py-8">
-              Turne yönetimi için sadece Rojda ve Mem Ararat gösteriliyor.
+              Henüz sanatçı yok. Üstte &quot;Sanatçı Ekle&quot; veya &quot;Turne Etkinliği Ekle&quot; formunda &quot;Yeni sanatçı ekle&quot; ile ekleyebilirsiniz.
             </p>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -678,8 +682,8 @@ export default function TourManagementPage() {
                     <div className="flex-1">
                       <h3 
                         className="font-semibold text-slate-900 text-lg hover:text-primary-600 cursor-pointer transition-colors"
-                        onClick={() => window.open(`/sanatci/${artist.slug}`, '_blank')}
-                        title="Sanatçı detay sayfasını aç"
+                        onClick={() => router.push(`/yonetim/turneler/${artist.slug}`)}
+                        title="Turne detay ve etkinlikleri düzenle"
                       >
                         {artist.name}
                       </h3>
