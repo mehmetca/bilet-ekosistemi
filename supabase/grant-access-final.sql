@@ -1,0 +1,3 @@
+GRANT ALL ON public.orders TO authenticated;
+GRANT ALL ON public.orders TO anon;
+GRANT SELECT ON public.orders TO public;

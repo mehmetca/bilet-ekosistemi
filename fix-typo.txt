@@ -1,0 +1,6 @@
+// Try to add buyer_email if column exists
+    try {
+      orderData.buyer_email = buyerEmail;
+    } catch (error) {
+      console.log("buyer_email column not available, proceeding without it");
+    }

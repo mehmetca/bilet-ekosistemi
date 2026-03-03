@@ -1,0 +1,22 @@
+{
+  "node": {
+    "6117fd0b5e398d7a231b88378ba7afb5ec2a9c73": {
+      "workers": {
+        "app/yonetim/bilet-kontrol/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5Cbilet-ekosistemi%5C%5Csrc%5C%5Capp%5C%5Ckontrol%5C%5Cactions.ts%22%2C%5B%22checkTicket%22%2C%22validateTicket%22%5D%5D%5D&__client_imported__=true!"
+      },
+      "layer": {
+        "app/yonetim/bilet-kontrol/page": "action-browser"
+      }
+    },
+    "ff4f4b8d4135e02e5a7180c1c12487babbe24320": {
+      "workers": {
+        "app/yonetim/bilet-kontrol/page": "(action-browser)/./node_modules/next/dist/build/webpack/loaders/next-flight-action-entry-loader.js?actions=%5B%5B%22C%3A%5C%5Cbilet-ekosistemi%5C%5Csrc%5C%5Capp%5C%5Ckontrol%5C%5Cactions.ts%22%2C%5B%22checkTicket%22%2C%22validateTicket%22%5D%5D%5D&__client_imported__=true!"
+      },
+      "layer": {
+        "app/yonetim/bilet-kontrol/page": "action-browser"
+      }
+    }
+  },
+  "edge": {},
+  "encryptionKey": "av0R/biERAtHQU4CRkillb4AIi72X0q4iadAC8sBcCY="
+}

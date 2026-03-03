@@ -1,0 +1,22 @@
+{
+  "extends": ["next/core-web-vitals", "next/typescript"],
+  "ignorePatterns": [
+    "**/*-fixed.ts",
+    "**/*-fixed.tsx",
+    "**/*-new.ts",
+    "**/*-new.tsx",
+    "**/*-minimal.ts",
+    "**/*-final.ts",
+    "**/*-old.ts",
+    "**/*-old.tsx",
+    "src/components/*Fixed.tsx",
+    "src/components/*New.tsx"
+  ],
+  "rules": {
+    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/ban-ts-comment": "warn",
+    "react/no-unescaped-entities": "warn",
+    "react-hooks/exhaustive-deps": "warn"
+  }
+}

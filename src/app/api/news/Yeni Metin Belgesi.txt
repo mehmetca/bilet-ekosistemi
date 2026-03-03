@@ -1,0 +1,3 @@
+[id] 
+
+[slug] olarak degistirildi

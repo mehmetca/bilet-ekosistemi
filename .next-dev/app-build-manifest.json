@@ -1,0 +1,133 @@
+{
+  "pages": {
+    "/turne/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/turne/page.js"
+    ],
+    "/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/layout.css",
+      "static/chunks/app/layout.js"
+    ],
+    "/error": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/error.js"
+    ],
+    "/not-found": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/not-found.js"
+    ],
+    "/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/page.js"
+    ],
+    "/sanatci/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/sanatci/page.js"
+    ],
+    "/sanatci/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/sanatci/layout.js"
+    ],
+    "/sanatci/[slug]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/sanatci/[slug]/page.css",
+      "static/chunks/app/sanatci/[slug]/page.js"
+    ],
+    "/takvim/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/takvim/page.js"
+    ],
+    "/yonetim/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/page.js"
+    ],
+    "/yonetim/layout": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/layout.js"
+    ],
+    "/etkinlik/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/etkinlik/[id]/page.js"
+    ],
+    "/yonetim/etkinlikler/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/etkinlikler/page.js"
+    ],
+    "/yonetim/turneler/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/turneler/page.js"
+    ],
+    "/yonetim/reklamlar/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/reklamlar/page.js"
+    ],
+    "/yonetim/sanatcilar/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/yonetim/sanatcilar/page.css",
+      "static/chunks/app/yonetim/sanatcilar/page.js"
+    ],
+    "/turne/[slug]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/turne/[slug]/page.js"
+    ],
+    "/yonetim/turneler/[slug]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/turneler/[slug]/page.js"
+    ],
+    "/yonetim/bilet-turleri/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/bilet-turleri/page.js"
+    ],
+    "/yonetim/bilet-listesi/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/bilet-listesi/page.js"
+    ],
+    "/yonetim/muhasebe/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/muhasebe/page.js"
+    ],
+    "/yonetim/bilet-kontrol/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/bilet-kontrol/page.js"
+    ],
+    "/yonetim/kullanicilar/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/kullanicilar/page.js"
+    ],
+    "/yonetim/haberler/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/css/app/yonetim/haberler/page.css",
+      "static/chunks/app/yonetim/haberler/page.js"
+    ],
+    "/yonetim/hero-backgrounds/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/yonetim/hero-backgrounds/page.js"
+    ]
+  }
+}
