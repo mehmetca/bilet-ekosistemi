@@ -2,18 +2,21 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users } from "lucide-react";
+import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
 import Header from "@/components/Header";
-import type { Event, Ticket as EventTicket } from "@/types/database";
+import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
 import TicketPrint from "@/components/TicketPrint";
 import { parseEventDescription } from "@/lib/eventMeta";
+import { extractMapEmbedUrl } from "@/lib/mapEmbed";
+import Link from "next/link";
 
 interface EventDetailClientProps {
   event: Event;
   tickets: EventTicket[];
+  venue?: Venue | null;
 }
 
-export default function EventDetailClient({ event, tickets }: EventDetailClientProps) {
+export default function EventDetailClient({ event, tickets, venue = null }: EventDetailClientProps) {
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
   const parsedDescription = useMemo(() => parseEventDescription(event.description), [event.description]);
@@ -41,6 +44,7 @@ export default function EventDetailClient({ event, tickets }: EventDetailClientP
   } | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [venueFaqOpen, setVenueFaqOpen] = useState(false);
   const selectedTicket = availableTickets.find((t) => t.id === selectedTicketType);
   const totalPrice = selectedTicket ? selectedTicket.price * ticketCount : 0;
   const eventDateTime = new Date(`${event.date} ${event.time || "23:59"}`);
@@ -438,6 +442,110 @@ export default function EventDetailClient({ event, tickets }: EventDetailClientP
                 </p>
               </div>
             </div>
+
+            {/* Mekan Bilgisi - SSS, Ulaşım, Giriş */}
+            {venue && (
+              <div className="bg-white rounded-xl border border-slate-200 p-8 mt-8">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-slate-900">Mekan Bilgisi</h2>
+                  <Link
+                    href="/mekanlar"
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                  >
+                    Tüm mekanlar →
+                  </Link>
+                </div>
+                <div className="space-y-6">
+                  {venue.seating_layout_description && (
+                    <div>
+                      <h3 className="font-semibold text-slate-800 mb-2">Oturma Düzeni</h3>
+                      <p className="text-slate-600">{venue.seating_layout_description}</p>
+                      {venue.seating_layout_image_url && (
+                        <img
+                          src={venue.seating_layout_image_url}
+                          alt={`${venue.name} oturma planı`}
+                          className="mt-3 rounded-lg border border-slate-200 max-w-md"
+                        />
+                      )}
+                    </div>
+                  )}
+                  {venue.transport_info && (
+                    <div className="flex items-start gap-3">
+                      <Car className="h-5 w-5 text-primary-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-slate-800 mb-1">Ulaşım</h3>
+                        <div
+                          className="text-slate-600 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-2"
+                          dangerouslySetInnerHTML={{ __html: venue.transport_info }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {(() => {
+                    const mapUrl = extractMapEmbedUrl(venue.map_embed_url);
+                    return mapUrl ? (
+                      <div>
+                        <h3 className="font-semibold text-slate-800 mb-2">Harita</h3>
+                        <div className="aspect-video w-full max-w-2xl overflow-hidden rounded-lg border border-slate-200">
+                          <iframe
+                            src={mapUrl}
+                            width="100%"
+                            height="100%"
+                            style={{ border: 0 }}
+                            allowFullScreen
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            title={`${venue.name} harita`}
+                            className="h-full w-full"
+                          />
+                        </div>
+                      </div>
+                    ) : null;
+                  })()}
+                  {venue.entrance_info && (
+                    <div className="flex items-start gap-3">
+                      <DoorOpen className="h-5 w-5 text-primary-600 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <h3 className="font-semibold text-slate-800 mb-1">Giriş Bilgileri</h3>
+                        <p className="text-slate-600">{venue.entrance_info}</p>
+                      </div>
+                    </div>
+                  )}
+                  {venue.rules && (
+                    <div>
+                      <h3 className="font-semibold text-slate-800 mb-1">Giriş Kuralları</h3>
+                      <p className="text-slate-600">{venue.rules}</p>
+                    </div>
+                  )}
+                  {venue.faq.length > 0 && (
+                    <div>
+                      <button
+                        onClick={() => setVenueFaqOpen((o) => !o)}
+                        className="flex items-center gap-2 text-slate-800 font-semibold hover:text-primary-600"
+                      >
+                        <HelpCircle className="h-5 w-5" />
+                        Sıkça Sorulan Sorular
+                        {venueFaqOpen ? (
+                          <ChevronUp className="h-4 w-4" />
+                        ) : (
+                          <ChevronDown className="h-4 w-4" />
+                        )}
+                      </button>
+                      {venueFaqOpen && (
+                        <div className="mt-4 space-y-4 border-l-2 border-primary-200 pl-4">
+                          {venue.faq.map((item, i) => (
+                            <div key={i}>
+                              <p className="font-medium text-slate-800">{item.soru}</p>
+                              <p className="mt-1 text-slate-600">{item.cevap}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sağ Taraf - Sidebar */}

@@ -10,6 +10,7 @@ import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 const navLinks = [
   { href: "/", label: "Etkinlikler" },
   { href: "/takvim", label: "Takvim" },
+  { href: "/mekanlar", label: "Mekanlar" },
   { href: "/sanatci", label: "Sanatçılar" },
 ];
 

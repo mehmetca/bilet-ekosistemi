@@ -13,7 +13,8 @@ import {
   BarChart3,
   LogOut,
   User,
-  Megaphone
+  Megaphone,
+  MapPin
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { useRouter } from "next/navigation";
@@ -37,6 +38,12 @@ export default function AdminNavigationFixed() {
       label: "Etkinlikler",
       icon: Calendar,
       description: "Etkinlik yönetimi"
+    },
+    {
+      href: "/yonetim/mekanlar",
+      label: "Mekanlar",
+      icon: MapPin,
+      description: "Salon ve mekan bilgileri"
     },
     {
       href: "/yonetim/reklamlar",

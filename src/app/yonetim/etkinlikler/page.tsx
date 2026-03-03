@@ -73,11 +73,21 @@ function EtkinliklerContent() {
   const [externalTicketUrl, setExternalTicketUrl] = useState("");
   const [ticketQuantities, setTicketQuantities] = useState<Record<string, number>>(EMPTY_TICKET_QUANTITIES);
   const [ticketPrices, setTicketPrices] = useState<Record<string, number>>(EMPTY_TICKET_PRICES);
+  const [venues, setVenues] = useState<Array<{ id: string; name: string; address: string | null; city: string | null }>>([]);
+  const [selectedVenueId, setSelectedVenueId] = useState<string>("");
 
   useEffect(() => {
     if (!isAdmin) return;
     fetchEvents();
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (showForm) {
+      supabase.from("venues").select("id,name,address,city").order("name").then(({ data }) => {
+        setVenues(data || []);
+      });
+    }
+  }, [showForm]);
 
   async function fetchEvents() {
     try {
@@ -163,6 +173,7 @@ function EtkinliklerContent() {
     setImageUrl(event.image_url || "");
     setDescriptionText(parsed.content || "");
     setExternalTicketUrl(parsed.externalTicketUrl || "");
+    setSelectedVenueId((event as Event & { venue_id?: string }).venue_id || "");
     setShowForm(true);
     await loadTicketQuantities(event.id);
   }
@@ -177,6 +188,7 @@ function EtkinliklerContent() {
     setExternalTicketUrl("");
     setTicketQuantities({ ...EMPTY_TICKET_QUANTITIES });
     setTicketPrices({ ...EMPTY_TICKET_PRICES });
+    setSelectedVenueId("");
   }
 
   async function syncPresetTickets(eventId: string, basePrice: number) {
@@ -285,6 +297,7 @@ function EtkinliklerContent() {
         category: formData.get("category") as EventCategory,
         price_from: derivedBasePrice,
         image_url: imageUrl || null,
+        venue_id: selectedVenueId || null,
       };
 
       
@@ -375,11 +388,13 @@ function EtkinliklerContent() {
           <button
             onClick={() => {
               setShowForm(true);
+              setEditingEvent(null);
               setImageUrl("");
               setDescriptionText("");
               setExternalTicketUrl("");
               setTicketQuantities({ ...EMPTY_TICKET_QUANTITIES });
               setTicketPrices({ ...EMPTY_TICKET_PRICES });
+              setSelectedVenueId("");
             }}
             className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
           >
@@ -455,6 +470,35 @@ function EtkinliklerContent() {
                   </div>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Mekan (Opsiyonel - SSS/ulaşım için)
+                  </label>
+                  <select
+                    value={selectedVenueId}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setSelectedVenueId(id);
+                      if (id) {
+                        const v = venues.find((x) => x.id === id);
+                        if (v) {
+                          const venueInput = document.querySelector<HTMLInputElement>('input[name="venue"]');
+                          const locationInput = document.querySelector<HTMLInputElement>('input[name="location"]');
+                          if (venueInput) venueInput.value = v.name;
+                          if (locationInput) locationInput.value = [v.address, v.city].filter(Boolean).join(", ") || v.name;
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                  >
+                    <option value="">— Mekan seçin veya manuel girin —</option>
+                    {venues.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.name} {v.city ? `(${v.city})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -465,6 +509,7 @@ function EtkinliklerContent() {
                       name="venue"
                       required
                       defaultValue={editingEvent?.venue || ""}
+                      key={editingEvent?.id || "new"}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
                     />
                   </div>
@@ -477,6 +522,7 @@ function EtkinliklerContent() {
                       name="location"
                       required
                       defaultValue={editingEvent?.location || ""}
+                      key={editingEvent?.id || "new"}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
                     />
                   </div>

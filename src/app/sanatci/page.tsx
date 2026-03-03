@@ -59,6 +59,7 @@ function SanatciIndexContent() {
         const { data, error } = await supabase
           .from("artists")
           .select("*")
+          .or("show_on_artist_page.is.null,show_on_artist_page.eq.true")
           .order("name", { ascending: true });
 
         if (error) {

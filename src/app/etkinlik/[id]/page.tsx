@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase-server";
-import type { Event, Ticket } from "@/types/database";
+import type { Event, Ticket, Venue } from "@/types/database";
 import EventDetailClient from "@/app/etkinlik/[id]/client";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +10,33 @@ interface PageProps {
   params: {
     id: string;
   };
+}
+
+async function getVenue(venueId: string | null | undefined): Promise<Venue | null> {
+  if (!venueId) return null;
+  try {
+    const supabase = await createServerSupabase();
+    const { data, error } = await supabase.from("venues").select("*").eq("id", venueId).single();
+    if (error || !data) return null;
+    return {
+      id: data.id,
+      name: data.name,
+      address: data.address || null,
+      city: data.city || null,
+      capacity: data.capacity != null ? Number(data.capacity) : null,
+      seating_layout_description: data.seating_layout_description || null,
+      seating_layout_image_url: data.seating_layout_image_url || null,
+      entrance_info: data.entrance_info || null,
+      transport_info: data.transport_info || null,
+      map_embed_url: data.map_embed_url || null,
+      rules: data.rules || null,
+      faq: Array.isArray(data.faq)
+        ? (data.faq as Array<{ soru: string; cevap: string }>).filter((x) => x?.soru && x?.cevap)
+        : [],
+    };
+  } catch {
+    return null;
+  }
 }
 
 const TICKET_DISPLAY_ORDER = [
@@ -94,10 +121,11 @@ async function getEventTickets(eventId: string): Promise<Ticket[]> {
 export default async function EventDetailPage({ params }: PageProps) {
   const event = await getEventBySlug(params.id);
   const tickets = event ? await getEventTickets(event.id) : [];
+  const venue = event?.venue_id ? await getVenue(event.venue_id) : null;
 
   if (!event) {
     notFound();
   }
 
-  return <EventDetailClient event={event} tickets={tickets} />;
+  return <EventDetailClient event={event} tickets={tickets} venue={venue} />;
 }

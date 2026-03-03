@@ -6,6 +6,7 @@ export interface Event {
   time: string;
   location: string;
   venue: string;
+  venue_id?: string | null;
   price_from: number;
   image_url?: string;
   category: EventCategory;
@@ -14,6 +15,21 @@ export interface Event {
   ticket_url?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface Venue {
+  id: string;
+  name: string;
+  address: string | null;
+  city: string | null;
+  capacity: number | null;
+  seating_layout_description: string | null;
+  seating_layout_image_url: string | null;
+  entrance_info: string | null;
+  transport_info: string | null;
+  map_embed_url: string | null;
+  rules: string | null;
+  faq: Array<{ soru: string; cevap: string }>;
 }
 
 export interface Artist {
