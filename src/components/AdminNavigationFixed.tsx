@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { X } from "lucide-react";
 import { 
   Calendar, 
   Ticket, 
@@ -21,8 +22,17 @@ import {
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { useRouter } from "next/navigation";
 
-export default function AdminNavigationFixed() {
+interface AdminNavigationFixedProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminNavigationFixedProps) {
   const pathname = usePathname();
+
+  useEffect(() => {
+    if (onClose) onClose();
+  }, [pathname]);
   const { user, isAdmin, isController, userRole, signOut } = useSimpleAuth();
   const router = useRouter();
 
@@ -132,21 +142,35 @@ export default function AdminNavigationFixed() {
 
   const menuItems = isAdmin ? adminMenuItems : controllerMenuItems;
 
-  return (
-    <div className="w-56 h-screen bg-white border-r border-slate-200 flex flex-col overflow-hidden">
+  const sidebarContent = (
+    <div className="w-56 h-full bg-white flex flex-col overflow-hidden">
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-slate-200">
-        <h1 className="text-base font-bold text-slate-900 truncate max-w-[120px]">Yönetim</h1>
-        <div className="mt-2 flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-green-500"></div>
-          <span className="text-xs text-slate-600 truncate max-w-[100px]">
-            {user?.email}
-          </span>
-        </div>
-        <div className="mt-1">
-          <span className="inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-            {userRole === "admin" ? "Yön" : "K"}
-          </span>
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-base font-bold text-slate-900 truncate">Yönetim</h1>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
+              <span className="text-xs text-slate-600 truncate">
+                {user?.email}
+              </span>
+            </div>
+            <div className="mt-1">
+              <span className="inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                {userRole === "admin" ? "Yön" : "K"}
+              </span>
+            </div>
+          </div>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="md:hidden p-1.5 -mr-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded flex-shrink-0"
+              aria-label="Menüyü kapat"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -196,5 +220,33 @@ export default function AdminNavigationFixed() {
         </p>
       </div>
     </div>
+  );
+
+  return (
+    <>
+      {/* Mobil: overlay backdrop */}
+      {onClose && (
+        <div
+          className={`fixed inset-0 bg-black/50 z-40 md:hidden transition-opacity ${
+            isOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      {/* Sidebar: mobilde overlay, masaüstünde sabit */}
+      <aside
+        className={`
+          fixed md:static inset-y-0 left-0 z-50 md:z-auto
+          w-56 h-screen bg-white border-r border-slate-200
+          flex flex-col overflow-hidden
+          transform transition-transform duration-200 ease-out
+          md:transform-none
+          ${onClose ? (isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0") : "translate-x-0"}
+        `}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }

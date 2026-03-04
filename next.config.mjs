@@ -1,4 +1,3 @@
-import { withSentryConfig } from "@sentry/nextjs";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
@@ -45,8 +44,15 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(withNextIntl(nextConfig), {
-  org: process.env.SENTRY_ORG || "bilet-ekosistemi",
-  project: process.env.SENTRY_PROJECT || "bilet-ekosistemi",
-  silent: !process.env.CI,
-});
+export default async function config() {
+  const configWithIntl = withNextIntl(nextConfig);
+  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+    const { withSentryConfig } = await import("@sentry/nextjs");
+    return withSentryConfig(configWithIntl, {
+      org: process.env.SENTRY_ORG || "bilet-ekosistemi",
+      project: process.env.SENTRY_PROJECT || "bilet-ekosistemi",
+      silent: !process.env.CI,
+    });
+  }
+  return configWithIntl;
+}
