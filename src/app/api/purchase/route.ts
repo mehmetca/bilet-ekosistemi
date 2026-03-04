@@ -562,27 +562,12 @@ async function sendTicketEmail(payload: TicketMailPayload) {
 
 export async function POST(request: NextRequest) {
   try {
-    console.log("=== API PURCHASE START ===");
     
     const formData = await request.formData();
-    
-    // Debug: FormData'ı kontrol et
-    console.log("API FormData entries:");
-    formData.forEach((value, key) => {
-      console.log(`${key}: ${value}`);
-    });
-    
     const ticketId = formData.get("ticket_id") as string;
     const quantity = parseInt(formData.get("quantity") as string, 10);
     const buyerName = (formData.get("buyer_name") as string)?.trim();
     const buyerEmail = (formData.get("buyer_email") as string)?.trim();
-
-    console.log("API Parsed values:", {
-      ticketId,
-      quantity,
-      buyerName,
-      buyerEmail
-    });
 
     if (!ticketId || !quantity || !buyerName || !buyerEmail) {
       return NextResponse.json(
@@ -685,13 +670,6 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       console.error("API Stock update error:", updateError);
-    } else {
-      console.log("API Stock updated successfully:", {
-        ticketId: ticketId,
-        oldStock: ticket.available,
-        newStock: nextAvailable,
-        quantity: quantity
-      });
     }
 
     const eventSummary = await getEventSummary(supabase, ticket.event_id);

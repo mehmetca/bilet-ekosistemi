@@ -21,20 +21,13 @@ export default function HeroBackgroundSlider() {
   useEffect(() => {
     async function fetchBackgrounds() {
       try {
-        console.log("Fetching hero backgrounds...");
-        
         const { data, error } = await supabase
           .from("hero_backgrounds")
           .select("*")
           .eq("is_active", true)
           .order("sort_order", { ascending: true });
 
-        console.log("Hero backgrounds response:", { data, error });
-
-        if (error) {
-          console.error("Background fetch error details:", error);
-          throw error;
-        }
+        if (error) throw error;
         
         setBackgrounds(data || []);
       } catch (error) {

@@ -25,6 +25,8 @@ export interface Venue {
   capacity: number | null;
   seating_layout_description: string | null;
   seating_layout_image_url: string | null;
+  image_url_1?: string | null;
+  image_url_2?: string | null;
   entrance_info: string | null;
   transport_info: string | null;
   map_embed_url: string | null;
@@ -140,6 +142,9 @@ export const CATEGORY_LABELS: Record<EventCategory, string> = {
   'stand-up': 'Stand-Up',
   diger: 'Diğer',
 };
+
+/** Ana sayfa filtre ve etkinlik formunda gösterilecek kategoriler (spor çıkarıldı) */
+export const DISPLAY_CATEGORIES: EventCategory[] = ['konser', 'tiyatro', 'stand-up', 'festival', 'diger'];
 
 export const TICKET_TYPE_LABELS: Record<TicketType, string> = {
   normal: "Normal",

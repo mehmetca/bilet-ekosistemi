@@ -375,5 +375,4 @@ async function addToSyncQueue(data: any) {
 
 async function syncOfflineTickets() {
   // Implementation for syncing offline tickets when online
-  console.log('Syncing offline tickets...');
 }

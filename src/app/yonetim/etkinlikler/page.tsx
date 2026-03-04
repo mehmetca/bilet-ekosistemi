@@ -5,10 +5,11 @@ import { Plus, Edit2, Trash2, Calendar, MapPin, Music2 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import type { Event, EventCategory } from "@/types/database";
-import { CATEGORY_LABELS } from "@/types/database";
+import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
 import AdminImageUpload from "@/components/AdminImageUpload";
 import AdminGuard from "@/components/AdminGuard";
 import { buildEventDescription, parseEventDescription } from "@/lib/eventMeta";
+import { logAudit } from "@/lib/audit";
 
 const PRESET_TICKET_TYPES = [
   { key: "standart", name: "Standart Bilet", type: "normal", multiplier: 1 },
@@ -108,6 +109,9 @@ function EtkinliklerContent() {
   async function handleDelete(id: string) {
     if (!confirm("Bu etkinliği silmek istediğinizden emin misiniz?")) return;
 
+    const eventToDelete = events.find((e) => e.id === id);
+    const title = eventToDelete?.title || id;
+
     try {
       // FK ilişkileri nedeniyle önce bağlı kayıtları temizle.
       const { error: ordersError } = await supabase
@@ -131,6 +135,13 @@ function EtkinliklerContent() {
         .delete()
         .eq("id", id);
       if (eventError) throw eventError;
+
+      await logAudit({
+        action: "delete",
+        entity_type: "event",
+        entity_id: id,
+        details: { title },
+      });
       
       setEvents(events.filter(event => event.id !== id));
     } catch (error) {
@@ -539,11 +550,11 @@ function EtkinliklerContent() {
                       defaultValue={editingEvent?.category || "konser"}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
                     >
-                      <option value="konser">Konser</option>
-                      <option value="tiyatro">Tiyatro</option>
-                      <option value="spor">Spor</option>
-                      <option value="workshop">Workshop</option>
-                      <option value="diger">Diğer</option>
+                      {DISPLAY_CATEGORIES.map((key) => (
+                        <option key={key} value={key}>
+                          {CATEGORY_LABELS[key]}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div>

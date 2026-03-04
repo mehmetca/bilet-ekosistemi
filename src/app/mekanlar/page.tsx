@@ -21,6 +21,8 @@ interface Venue {
   capacity: number | null;
   seating_layout_description: string | null;
   seating_layout_image_url: string | null;
+  image_url_1: string | null;
+  image_url_2: string | null;
   entrance_info: string | null;
   transport_info: string | null;
   map_embed_url: string | null;
@@ -57,6 +59,8 @@ export default function MekanlarPage() {
           capacity: row.capacity != null ? Number(row.capacity) : null,
           seating_layout_description: row.seating_layout_description || null,
           seating_layout_image_url: row.seating_layout_image_url || null,
+          image_url_1: row.image_url_1 || null,
+          image_url_2: row.image_url_2 || null,
           entrance_info: row.entrance_info || null,
           transport_info: row.transport_info || null,
           rules: row.rules || null,
@@ -132,15 +136,36 @@ export default function MekanlarPage() {
                         {isOpen && (
                           <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-6">
                             <div className="flex flex-col md:flex-row gap-6">
-                              <div className="relative h-40 w-full flex-shrink-0 md:h-48 md:w-64 rounded-lg overflow-hidden bg-slate-100">
-                                {venue.seating_layout_image_url ? (
-                                  <img
-                                    src={venue.seating_layout_image_url}
-                                    alt={venue.name}
-                                    className="h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center">
+                              <div className="flex flex-col gap-3 flex-shrink-0">
+                                {(venue.image_url_1 || venue.image_url_2) ? (
+                                  <div className={`grid gap-2 ${venue.image_url_1 && venue.image_url_2 ? "grid-cols-2" : "grid-cols-1"} h-40 md:h-48 w-full md:w-64`}>
+                                    {venue.image_url_1 && (
+                                      <img
+                                        src={venue.image_url_1}
+                                        alt={`${venue.name} - Fotoğraf 1`}
+                                        className="h-full w-full object-cover rounded-lg"
+                                      />
+                                    )}
+                                    {venue.image_url_2 && (
+                                      <img
+                                        src={venue.image_url_2}
+                                        alt={`${venue.name} - Fotoğraf 2`}
+                                        className="h-full w-full object-cover rounded-lg"
+                                      />
+                                    )}
+                                  </div>
+                                ) : null}
+                                {venue.seating_layout_image_url && (
+                                  <div className="h-32 w-full md:w-64 rounded-lg overflow-hidden bg-slate-100">
+                                    <img
+                                      src={venue.seating_layout_image_url}
+                                      alt={`${venue.name} - Oturma planı`}
+                                      className="h-full w-full object-cover"
+                                    />
+                                  </div>
+                                )}
+                                {!venue.image_url_1 && !venue.image_url_2 && !venue.seating_layout_image_url && (
+                                  <div className="h-40 w-full md:w-64 rounded-lg bg-slate-100 flex items-center justify-center">
                                     <MapPin className="h-12 w-12 text-slate-400" />
                                   </div>
                                 )}

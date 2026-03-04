@@ -34,7 +34,6 @@ export default function BiletKontrolPage() {
     setLoading(true);
     setResult(null);
     const res = await checkTicket(formData);
-    console.log("Bilet kontrol sonucu:", res);
     setResult(res);
     setLoading(false);
   }
@@ -217,8 +216,7 @@ export default function BiletKontrolPage() {
 
         {showMultiScanner && (
           <MultiTicketScanner
-            onBatchComplete={(tickets) => {
-              console.log("Grup tarama tamamlandı:", tickets);
+            onBatchComplete={() => {
               setShowMultiScanner(false);
             }}
             onClose={() => setShowMultiScanner(false)}

@@ -11,10 +11,12 @@ import {
   Shield, 
   CreditCard,
   BarChart3,
+  FlaskConical,
   LogOut,
   User,
   Megaphone,
-  MapPin
+  MapPin,
+  Bell
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { useRouter } from "next/navigation";
@@ -88,6 +90,30 @@ export default function AdminNavigationFixed() {
       description: "Bilet doğrulama"
     },
     {
+      href: "/yonetim/etkinlik-uyarilari",
+      label: "Etkinlik Uyarıları",
+      icon: Bell,
+      description: "Bilet hatırlatması kayıtları"
+    },
+    {
+      href: "/yonetim/huni-analitigi",
+      label: "Huni Analitiği",
+      icon: BarChart3,
+      description: "Görüntüleme → Satın alma"
+    },
+    {
+      href: "/yonetim/ab-test",
+      label: "A/B Test",
+      icon: FlaskConical,
+      description: "Hero ve CTA varyantları"
+    },
+    {
+      href: "/yonetim/audit-log",
+      label: "Denetim Kaydı",
+      icon: Shield,
+      description: "Audit log"
+    },
+    {
       href: "/yonetim/ayarlar",
       label: "Ayarlar",
       icon: Settings,
@@ -107,9 +133,9 @@ export default function AdminNavigationFixed() {
   const menuItems = isAdmin ? adminMenuItems : controllerMenuItems;
 
   return (
-    <div className="w-56 bg-white border-r border-slate-200 min-h-screen relative">
+    <div className="w-56 h-screen bg-white border-r border-slate-200 flex flex-col overflow-hidden">
       {/* Header */}
-      <div className="p-4 border-b border-slate-200">
+      <div className="flex-shrink-0 p-4 border-b border-slate-200">
         <h1 className="text-base font-bold text-slate-900 truncate max-w-[120px]">Yönetim</h1>
         <div className="mt-2 flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-green-500"></div>
@@ -124,8 +150,8 @@ export default function AdminNavigationFixed() {
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="p-3 space-y-1 relative z-10">
+      {/* Navigation - scrollable */}
+      <nav className="flex-1 overflow-y-auto min-h-0 p-3 space-y-1">
         {menuItems.map((item) => {
           const Icon = item.icon;
           return (
@@ -148,30 +174,26 @@ export default function AdminNavigationFixed() {
         })}
       </nav>
 
-      {/* User Menu */}
-      <div className="absolute bottom-0 left-0 right-0 p-3 border-t border-slate-200 bg-white z-20">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-                if (typeof signOut === 'function') {
-                  signOut();
-                }
-                router.push('/giris');
-              }}
-            className="flex items-center gap-2 px-3 py-2 text-slate-600 hover:text-slate-900 transition-colors"
-          >
-            <LogOut className="h-4 w-4" />
-            <span className="text-sm font-medium">Çıkış Yap</span>
-          </button>
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-slate-900 truncate max-w-[140px]">
-            {user?.email}
-          </p>
-          <p className="text-xs text-slate-500 truncate max-w-[140px]">
-            {userRole === "admin" ? "Yönetici" : "Kontrolör"}
-          </p>
-        </div>
+      {/* User Menu - sabit altta */}
+      <div className="flex-shrink-0 p-3 border-t border-slate-200 bg-white">
+        <button
+          onClick={() => {
+            if (typeof signOut === "function") {
+              signOut();
+            }
+            router.push("/giris");
+          }}
+          className="flex items-center gap-2 px-3 py-2 w-full text-left text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          <span className="text-sm font-medium">Çıkış Yap</span>
+        </button>
+        <p className="text-xs font-medium text-slate-900 truncate px-3">
+          {user?.email}
+        </p>
+        <p className="text-xs text-slate-500 truncate px-3 mt-0.5">
+          {userRole === "admin" ? "Yönetici" : "Kontrolör"}
+        </p>
       </div>
     </div>
   );

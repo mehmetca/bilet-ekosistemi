@@ -99,7 +99,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         alert(errorData.error || 'Haber kaydedilemedi!');
       }
     } catch (error) {
-      console.error("Haber kaydedilemdi:", error);
+      console.error("Haber kaydedilemedi:", error);
       alert('Haber kaydedilemdi!');
     }
   };

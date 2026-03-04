@@ -1,3 +1,5 @@
+import { withSentryConfig } from "@sentry/nextjs";
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async redirects() {
@@ -40,4 +42,8 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG || "bilet-ekosistemi",
+  project: process.env.SENTRY_PROJECT || "bilet-ekosistemi",
+  silent: !process.env.CI,
+});

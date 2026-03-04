@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { validateImageFile, getImageHint } from "@/lib/image-standards";
 
 interface AdminImageUploadProps {
   value: string;
@@ -48,20 +49,12 @@ export default function AdminImageUpload({ value, onChange, onUploadingChange }:
 
   function handleFileSelect(files: FileList | null) {
     if (!files || files.length === 0) return;
-    
     const file = files[0];
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    
-    if (!validTypes.includes(file.type)) {
-      alert('Sadece JPEG, PNG, GIF ve WebP formatları kabul edilir.');
+    const err = validateImageFile(file, false);
+    if (err) {
+      alert(err);
       return;
     }
-    
-    if (file.size > 5 * 1024 * 1024) { // 5MB
-      alert('Dosya boyutu 5MB\'dan küçük olmalıdır.');
-      return;
-    }
-    
     uploadImage(file);
   }
 
@@ -121,7 +114,7 @@ export default function AdminImageUpload({ value, onChange, onUploadingChange }:
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             onChange={(e) => handleFileSelect(e.target.files)}
             className="hidden"
           />
@@ -131,7 +124,7 @@ export default function AdminImageUpload({ value, onChange, onUploadingChange }:
             <div className="text-sm text-slate-600">
               <p className="font-medium">Görsel yüklemek için tıklayın veya sürükleyin</p>
               <p className="text-xs text-slate-500 mt-1">
-                PNG, JPG, GIF, WebP (Max 5MB)
+                {getImageHint("EVENT_DETAIL")}
               </p>
             </div>
             <button

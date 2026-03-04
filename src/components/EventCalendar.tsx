@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Calendar, Filter, MapPin, Music2 } from "lucide-react";
 import type { Event } from "@/types/database";
-import { CATEGORY_LABELS } from "@/types/database";
+import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
 import Link from "next/link";
 import { parseEventDescription } from "@/lib/eventMeta";
 
@@ -65,16 +65,11 @@ export default function EventCalendar({ events }: EventCalendarProps) {
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
             >
               <option value="all">Tüm Türler</option>
-              <option value="konser">Konser</option>
-              <option value="tiyatro">Tiyatro</option>
-              <option value="sinema">Sinema</option>
-              <option value="panel_soylesi">Panel-Söyleşi</option>
-              <option value="sergi">Sergi</option>
-              <option value="festival">Festival</option>
-              <option value="yarisma">Yarışma</option>
-              <option value="atolye">Atölye</option>
-              <option value="diger">Diğer</option>
-              <option value="senlik">Şenlik</option>
+              {DISPLAY_CATEGORIES.map((key) => (
+                <option key={key} value={key}>
+                  {CATEGORY_LABELS[key]}
+                </option>
+              ))}
             </select>
           </div>
 

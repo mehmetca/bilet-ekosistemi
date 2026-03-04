@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { X, Save } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import type { Event, EventCategory } from "@/types/database";
-import { CATEGORY_LABELS } from "@/types/database";
+import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
 import ImageUpload from "./ImageUpload";
 
 interface EventFormProps {
@@ -187,9 +187,9 @@ export default function EventForm({ event, onClose, onSubmit }: EventFormProps) 
                 required
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
-                {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
+                {DISPLAY_CATEGORIES.map((key) => (
+                  <option key={key} value={key}>
+                    {CATEGORY_LABELS[key]}
                   </option>
                 ))}
               </select>

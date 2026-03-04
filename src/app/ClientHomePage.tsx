@@ -6,7 +6,7 @@ import { Calendar, MapPin, Music2, Search, ExternalLink, CheckCircle, Shield, Cl
 import Header from "@/components/Header";
 import HeroBackgroundSlider from "@/components/HeroBackgroundSlider";
 import type { Event, News } from "@/types/database";
-import { CATEGORY_LABELS } from "@/types/database";
+import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
 import EventSlider from "@/components/EventSlider";
 import NewsSlider from "@/components/NewsSlider";
 import { supabase } from "@/lib/supabase-client";
@@ -20,8 +20,15 @@ export default function ClientHomePage() {
   const [endDate, setEndDate] = useState("");
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
+  const [sortBy, setSortBy] = useState<"yaklasan" | "en-ucuz" | "populer">("yaklasan");
   const [events, setEvents] = useState<Event[]>([]);
   const [news, setNews] = useState<News[]>([]);
+  const [heroVariant, setHeroVariant] = useState<{
+    variant: string;
+    hero_title: string;
+    hero_subtitle: string;
+    cta_text: string;
+  } | null>(null);
   const isMountedRef = useRef(true);
   const fallbackImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
@@ -55,6 +62,49 @@ export default function ClientHomePage() {
     } catch (error) {
       console.error("Data fetch error:", error);
     }
+  }, []);
+
+  // A/B test: Hero varyantı (session bazlı cache)
+  useEffect(() => {
+    const key = "hero_ab_variant";
+    try {
+      const cached = sessionStorage.getItem(key);
+      if (cached) {
+        const parsed = JSON.parse(cached) as { variant: string; hero_title: string; hero_subtitle: string; cta_text: string };
+        setHeroVariant(parsed);
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+    fetch("/api/ab/variant")
+      .then(async (r) => {
+        if (!r.ok) throw new Error("Variant fetch failed");
+        return r.json();
+      })
+      .then((data) => {
+        if (!data || typeof data !== "object") return;
+        const v = {
+          variant: data.variant || "A",
+          hero_title: data.hero_title || "Hayalinizdaki Etkinliğe Bilet Bulun",
+          hero_subtitle: data.hero_subtitle || "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.",
+          cta_text: data.cta_text || "Ara",
+        };
+        setHeroVariant(v);
+        try {
+          sessionStorage.setItem(key, JSON.stringify(v));
+        } catch {
+          /* ignore */
+        }
+      })
+      .catch(() => {
+        setHeroVariant({
+          variant: "A",
+          hero_title: "Hayalinizdaki Etkinliğe Bilet Bulun",
+          hero_subtitle: "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.",
+          cta_text: "Ara",
+        });
+      });
   }, []);
 
   // İlk yükleme + browser ileri/geri dönüşlerinde yeniden veri çek
@@ -108,7 +158,7 @@ export default function ClientHomePage() {
     new Set(upcomingEvents.map((event) => (event.location || "").trim()).filter(Boolean))
   ).sort((a, b) => a.localeCompare(b, "tr"));
 
-  const filteredEvents = upcomingEvents.filter((event) => {
+  const filteredEventsRaw = upcomingEvents.filter((event) => {
     const term = searchTerm.trim().toLowerCase();
     const matchesSearch =
       !term ||
@@ -142,6 +192,25 @@ export default function ClientHomePage() {
     );
   });
 
+  const filteredEvents = [...filteredEventsRaw].sort((a, b) => {
+    if (sortBy === "yaklasan") {
+      const aDate = new Date(`${a.date} ${a.time || "00:00"}`).getTime();
+      const bDate = new Date(`${b.date} ${b.time || "00:00"}`).getTime();
+      return aDate - bDate;
+    }
+    if (sortBy === "en-ucuz") {
+      const aPrice = Number(a.price_from || 0);
+      const bPrice = Number(b.price_from || 0);
+      return aPrice - bPrice;
+    }
+    if (sortBy === "populer") {
+      const aCreated = new Date(a.created_at).getTime();
+      const bCreated = new Date(b.created_at).getTime();
+      return bCreated - aCreated;
+    }
+    return 0;
+  });
+
   // Etkinlik durumunu kontrol et
   const getEventStatus = (event: Event) => {
     const eventDateTime = new Date(event.date + ' ' + (event.time || '00:00'));
@@ -167,10 +236,10 @@ export default function ClientHomePage() {
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4 text-center">
           <h1 className="text-4xl font-bold md:text-6xl mb-6 text-white">
-            Hayalinizdaki Etkinliğe Bilet Bulun
+            {heroVariant?.hero_title ?? "Hayalinizdaki Etkinliğe Bilet Bulun"}
           </h1>
           <p className="text-lg md:text-xl text-white mb-12 max-w-3xl mx-auto">
-            Konser, tiyatro, spor ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.
+            {heroVariant?.hero_subtitle ?? "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın."}
           </p>
           
           {/* Orijinal Büyüklükte Arama Kutusu */}
@@ -190,7 +259,7 @@ export default function ClientHomePage() {
                 href="#events"
                 className="rounded-xl bg-primary-600 px-8 py-4 font-semibold text-white hover:bg-primary-700 transition-colors"
               >
-                Ara
+                {heroVariant?.cta_text ?? "Ara"}
               </Link>
             </div>
           </div>
@@ -263,6 +332,15 @@ export default function ClientHomePage() {
         <h2 className="text-2xl font-bold text-slate-900 mb-8">Yaklaşan Etkinlikler</h2>
         <div className="mb-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-2 lg:grid-cols-4">
           <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as "yaklasan" | "en-ucuz" | "populer")}
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="yaklasan">Yaklaşan</option>
+            <option value="en-ucuz">En Ucuz</option>
+            <option value="populer">Popüler</option>
+          </select>
+          <select
             value={selectedCity}
             onChange={(e) => setSelectedCity(e.target.value)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
@@ -280,9 +358,9 @@ export default function ClientHomePage() {
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
             <option value="all">Tüm Kategoriler</option>
-            {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+            {DISPLAY_CATEGORIES.map((key) => (
               <option key={key} value={key}>
-                {label}
+                {CATEGORY_LABELS[key]}
               </option>
             ))}
           </select>
@@ -319,6 +397,7 @@ export default function ClientHomePage() {
           <button
             type="button"
             onClick={() => {
+              setSortBy("yaklasan");
               setSelectedCity("all");
               setSelectedCategory("all");
               setStartDate("");

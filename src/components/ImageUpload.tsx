@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
+import { validateImageFile, getImageHint } from "@/lib/image-standards";
 
 interface ImageUploadProps {
   value?: string;
@@ -103,12 +104,12 @@ export default function ImageUpload({ value, onChange, onRemove }: ImageUploadPr
               Etkinlik görseli yüklemek için tıklayın
             </div>
             <div className="text-xs text-slate-500 mb-4">
-              PNG, JPG, GIF (Max. 5MB)
+              {getImageHint("EVENT_DETAIL")}
             </div>
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png,image/webp"
               onChange={handleFileSelect}
               disabled={uploading}
               className="hidden"

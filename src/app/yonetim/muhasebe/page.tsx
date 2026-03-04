@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Order } from "@/types/database";
 import { BarChart3, TrendingUp, Calendar, CreditCard } from "lucide-react";
+import AdminKPIDashboard from "@/components/AdminKPIDashboard";
 
 export default function MuhasebePage() {
   const [loading, setLoading] = useState(true);
@@ -75,6 +76,11 @@ export default function MuhasebePage() {
         <h1 className="text-2xl font-bold text-slate-900 mb-6">
           Muhasebe ve Finansal Raporlar
         </h1>
+
+        {/* KPI Özeti */}
+        <div className="mb-8">
+          <AdminKPIDashboard />
+        </div>
 
         {/* İstatistik Kartları */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

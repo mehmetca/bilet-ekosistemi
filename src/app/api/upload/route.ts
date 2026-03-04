@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { IMAGE_STANDARDS, validateImageFile } from "@/lib/image-standards";
 
 const BUCKET = "uploads";
 
@@ -20,14 +21,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Dosya bulunamadı" }, { status: 400 });
     }
 
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      return NextResponse.json({ error: "Sadece resim dosyaları yüklenebilir" }, { status: 400 });
-    }
-
-    const maxSize = 5 * 1024 * 1024; // 5MB
-    if (file.size > maxSize) {
-      return NextResponse.json({ error: "Dosya boyutu 5MB'dan küçük olmalı" }, { status: 400 });
+    const err = validateImageFile(file, false);
+    if (err) {
+      return NextResponse.json({ error: err }, { status: 400 });
     }
 
     const ext = file.name.split(".").pop() || "jpg";

@@ -4,11 +4,14 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:turbo": "next dev --turbo",
+    "dev:clean": "node scripts/clean-dev.js",
     "build": "next build",
     "start": "node scripts/chunk-compat.js && next start",
     "lint": "next lint"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.42.0",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.45.4",
     "@types/qrcode": "^1.5.6",

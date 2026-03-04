@@ -94,13 +94,11 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
         }
 
         if (!artistData) {
-          console.log("No artist found for slug:", resolvedParams.slug);
           setArtist(null);
           setLoading(false);
           return;
         }
 
-        console.log("Artist found:", artistData);
         setArtist(artistData as Artist);
       } catch (error) {
         console.error("Fetch error:", error);

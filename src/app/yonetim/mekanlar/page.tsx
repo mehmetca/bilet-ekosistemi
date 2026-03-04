@@ -21,6 +21,8 @@ interface Venue {
   capacity: number | null;
   seating_layout_description: string | null;
   seating_layout_image_url: string | null;
+  image_url_1: string | null;
+  image_url_2: string | null;
   entrance_info: string | null;
   transport_info: string | null;
   map_embed_url: string | null;
@@ -36,6 +38,8 @@ const EMPTY_VENUE = {
   capacity: null as number | null,
   seating_layout_description: "",
   seating_layout_image_url: "",
+  image_url_1: "",
+  image_url_2: "",
   entrance_info: "",
   transport_info: "",
   map_embed_url: "",
@@ -58,9 +62,13 @@ function MekanlarContent() {
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
-  const [form, setForm] = useState<typeof EMPTY_VENUE & { seating_layout_image_url?: string }>({
+  const [form, setForm] = useState<
+    typeof EMPTY_VENUE & { seating_layout_image_url?: string; image_url_1?: string; image_url_2?: string }
+  >({
     ...EMPTY_VENUE,
     seating_layout_image_url: "",
+    image_url_1: "",
+    image_url_2: "",
   });
   const [imageUploading, setImageUploading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -99,6 +107,8 @@ function MekanlarContent() {
       capacity: row.capacity != null ? Number(row.capacity) : null,
       seating_layout_description: (row.seating_layout_description as string) || null,
       seating_layout_image_url: (row.seating_layout_image_url as string) || null,
+      image_url_1: (row.image_url_1 as string) || null,
+      image_url_2: (row.image_url_2 as string) || null,
       entrance_info: (row.entrance_info as string) || null,
       transport_info: (row.transport_info as string) || null,
       map_embed_url: (row.map_embed_url as string) || null,
@@ -109,7 +119,7 @@ function MekanlarContent() {
   }
 
   function resetForm() {
-    setForm({ ...EMPTY_VENUE, seating_layout_image_url: "" });
+    setForm({ ...EMPTY_VENUE, seating_layout_image_url: "", image_url_1: "", image_url_2: "" });
     setEditingVenue(null);
     setShowForm(false);
   }
@@ -123,6 +133,8 @@ function MekanlarContent() {
       capacity: venue.capacity,
       seating_layout_description: venue.seating_layout_description || "",
       seating_layout_image_url: venue.seating_layout_image_url || "",
+      image_url_1: venue.image_url_1 || "",
+      image_url_2: venue.image_url_2 || "",
       entrance_info: venue.entrance_info || "",
       transport_info: venue.transport_info || "",
       map_embed_url: venue.map_embed_url || "",
@@ -137,6 +149,8 @@ function MekanlarContent() {
     setForm({
       ...EMPTY_VENUE,
       seating_layout_image_url: "",
+      image_url_1: "",
+      image_url_2: "",
       faq: [{ soru: "", cevap: "" }],
     });
     setShowForm(true);
@@ -182,6 +196,8 @@ function MekanlarContent() {
         capacity: form.capacity != null && form.capacity > 0 ? form.capacity : null,
         seating_layout_description: form.seating_layout_description.trim() || null,
         seating_layout_image_url: form.seating_layout_image_url?.trim() || null,
+        image_url_1: form.image_url_1?.trim() || null,
+        image_url_2: form.image_url_2?.trim() || null,
         entrance_info: form.entrance_info.trim() || null,
         transport_info: form.transport_info.trim() || null,
         map_embed_url: form.map_embed_url?.trim() || null,
@@ -350,6 +366,29 @@ function MekanlarContent() {
                   />
                 </div>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Mekan Fotoğrafı 1
+                    </label>
+                    <AdminImageUpload
+                      value={form.image_url_1 || ""}
+                      onChange={(url) => setForm((p) => ({ ...p, image_url_1: url }))}
+                      onUploadingChange={setImageUploading}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Mekan Fotoğrafı 2 (opsiyonel)
+                    </label>
+                    <AdminImageUpload
+                      value={form.image_url_2 || ""}
+                      onChange={(url) => setForm((p) => ({ ...p, image_url_2: url }))}
+                      onUploadingChange={setImageUploading}
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
                     Giriş Bilgileri
@@ -485,12 +524,12 @@ function MekanlarContent() {
                 className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
               >
                 <div className="flex gap-6">
-                  <div className="w-24 h-24 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0">
-                    {venue.seating_layout_image_url ? (
+                  <div className="w-24 h-24 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    {(venue.image_url_1 || venue.seating_layout_image_url) ? (
                       <img
-                        src={venue.seating_layout_image_url}
+                        src={venue.image_url_1 || venue.seating_layout_image_url || ""}
                         alt={venue.name}
-                        className="w-full h-full object-cover rounded-lg"
+                        className="w-full h-full object-cover"
                       />
                     ) : (
                       <MapPin className="h-8 w-8 text-slate-400" />

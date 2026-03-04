@@ -51,9 +51,6 @@ export default function HeroBackgroundManagement() {
 
     // Debug: Check authentication
     const { data: { user } } = await supabase.auth.getUser();
-    console.log("Current user:", user);
-    console.log("User metadata:", user?.user_metadata);
-    console.log("App metadata:", user?.app_metadata);
 
     setUploading(true);
     try {

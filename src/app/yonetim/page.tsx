@@ -54,6 +54,22 @@ export default function YonetimPage() {
                 </Link>
                 
                 <Link 
+                  href="/yonetim/etkinlik-uyarilari"
+                  className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group"
+                >
+                  <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Etkinlik Uyarıları</h3>
+                  <p className="text-sm text-slate-500">Bilet hatırlatması kayıtları</p>
+                </Link>
+                
+                <Link 
+                  href="/yonetim/huni-analitigi"
+                  className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group"
+                >
+                  <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Huni Analitiği</h3>
+                  <p className="text-sm text-slate-500">Görüntüleme → Satın alma</p>
+                </Link>
+                
+                <Link 
                   href="/yonetim/kullanicilar"
                   className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group"
                 >

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Search, Filter } from "lucide-react";
 import type { Event, EventCategory } from "@/types/database";
-import { CATEGORY_LABELS } from "@/types/database";
+import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
 
 interface SearchSectionProps {
   events: Event[];
@@ -56,7 +56,7 @@ export default function SearchSection({ events, onFilteredEventsChange }: Search
           Hayalinizdeki Etkinliğe Bilet Bulun
         </h1>
         <p className="mt-4 text-lg text-primary-100">
-          Konser, tiyatro, spor ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.
+          Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.
         </p>
         
         <div className="mx-auto mt-8 max-w-4xl space-y-4">
@@ -87,9 +87,9 @@ export default function SearchSection({ events, onFilteredEventsChange }: Search
               className="rounded-lg border-0 bg-white/10 text-white px-4 py-2 backdrop-blur-sm hover:bg-white/20 transition-colors"
             >
               <option value="all" className="text-slate-900">Tüm Kategoriler</option>
-              {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                <option key={value} value={value} className="text-slate-900">
-                  {label}
+              {DISPLAY_CATEGORIES.map((key) => (
+                <option key={key} value={key} className="text-slate-900">
+                  {CATEGORY_LABELS[key]}
                 </option>
               ))}
             </select>

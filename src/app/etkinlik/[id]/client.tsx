@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell } from "lucide-react";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
 import TicketPrint from "@/components/TicketPrint";
@@ -45,10 +45,34 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
   const [isFavorite, setIsFavorite] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [venueFaqOpen, setVenueFaqOpen] = useState(false);
+  const [reminderEmail, setReminderEmail] = useState("");
+  const [reminderPending, setReminderPending] = useState(false);
+  const [reminderResult, setReminderResult] = useState<{ success: boolean; message: string } | null>(null);
   const selectedTicket = availableTickets.find((t) => t.id === selectedTicketType);
   const totalPrice = selectedTicket ? selectedTicket.price * ticketCount : 0;
   const eventDateTime = new Date(`${event.date} ${event.time || "23:59"}`);
   const isPastEvent = eventDateTime < new Date();
+
+  async function handleReminderSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reminderEmail.trim()) return;
+    setReminderPending(true);
+    setReminderResult(null);
+    try {
+      const res = await fetch("/api/reminders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: reminderEmail.trim(), event_id: event.id }),
+      });
+      const data = await res.json();
+      setReminderResult({ success: data.success, message: data.message || "Bir hata oluştu." });
+      if (data.success) setReminderEmail("");
+    } catch {
+      setReminderResult({ success: false, message: "Bağlantı hatası." });
+    } finally {
+      setReminderPending(false);
+    }
+  }
 
   useEffect(() => {
     try {
@@ -58,6 +82,36 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
     } catch {
       setIsFavorite(false);
     }
+  }, [event.id]);
+
+  // Huni analitiği: etkinlik görüntüleme
+  useEffect(() => {
+    let sid = "";
+    let heroVariant: string | undefined;
+    try {
+      sid = sessionStorage.getItem("analytics_session") || "";
+      if (!sid) {
+        sid = `s_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+        sessionStorage.setItem("analytics_session", sid);
+      }
+      const hv = sessionStorage.getItem("hero_ab_variant");
+      if (hv) {
+        const parsed = JSON.parse(hv) as { variant?: string };
+        heroVariant = parsed?.variant;
+      }
+    } catch {
+      /* ignore */
+    }
+    fetch("/api/analytics/funnel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        type: "view",
+        event_id: event.id,
+        session_id: sid || undefined,
+        hero_variant: heroVariant,
+      }),
+    }).catch(() => {});
   }, [event.id]);
 
   function toggleFavorite() {
@@ -114,6 +168,31 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
 
     setIsPending(true);
     try {
+      // Huni analitiği: ödeme başlatma
+      let sid = "";
+      let heroVariant: string | undefined;
+      try {
+        sid = sessionStorage.getItem("analytics_session") || "";
+        const hv = sessionStorage.getItem("hero_ab_variant");
+        if (hv) {
+          const parsed = JSON.parse(hv) as { variant?: string };
+          heroVariant = parsed?.variant;
+        }
+      } catch {
+        /* ignore */
+      }
+      fetch("/api/analytics/funnel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "purchase_intent",
+          event_id: event.id,
+          ticket_id: selectedTicket.id,
+          session_id: sid || undefined,
+          hero_variant: heroVariant,
+        }),
+      }).catch(() => {});
+
       const formData = new FormData();
       formData.append("ticket_id", selectedTicket.id);
       formData.append("quantity", String(ticketCount));
@@ -456,6 +535,24 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
                   </Link>
                 </div>
                 <div className="space-y-6">
+                  {(venue.image_url_1 || venue.image_url_2) && (
+                    <div className="flex gap-2">
+                      {venue.image_url_1 && (
+                        <img
+                          src={venue.image_url_1}
+                          alt={`${venue.name} - Fotoğraf 1`}
+                          className="rounded-lg border border-slate-200 object-cover h-32 w-full max-w-[200px]"
+                        />
+                      )}
+                      {venue.image_url_2 && (
+                        <img
+                          src={venue.image_url_2}
+                          alt={`${venue.name} - Fotoğraf 2`}
+                          className="rounded-lg border border-slate-200 object-cover h-32 w-full max-w-[200px]"
+                        />
+                      )}
+                    </div>
+                  )}
                   {venue.seating_layout_description && (
                     <div>
                       <h3 className="font-semibold text-slate-800 mb-2">Oturma Düzeni</h3>
@@ -603,6 +700,41 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
                   </div>
                 </div>
               </div>
+
+              {/* Bilet Uyarısı */}
+              {!isPastEvent && (
+                <div className="bg-amber-50 rounded-xl border border-amber-200 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-amber-600" />
+                    Bilet Uyarısı
+                  </h3>
+                  <p className="text-sm text-slate-600 mb-4">
+                    E-posta adresinizi girin, etkinlikten önce size hatırlatma gönderelim.
+                  </p>
+                  <form onSubmit={handleReminderSubmit} className="space-y-3">
+                    <input
+                      type="email"
+                      value={reminderEmail}
+                      onChange={(e) => setReminderEmail(e.target.value)}
+                      placeholder="ornek@mail.com"
+                      required
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={reminderPending}
+                      className="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {reminderPending ? "Kaydediliyor..." : "Hatırlatma Al"}
+                    </button>
+                  </form>
+                  {reminderResult && (
+                    <p className={`mt-3 text-sm ${reminderResult.success ? "text-green-700" : "text-red-700"}`}>
+                      {reminderResult.message}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Güvenli Alışveriş */}
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">

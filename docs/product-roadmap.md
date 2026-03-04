@@ -26,7 +26,8 @@
 
 ## Teknik Temizlik Backlog'u
 
-- Route ve tablo sorumluluklarini net tut (yalnizca etkinlik veri modeli).
-- API'lar icin daha guclu rate limiting ve suistimal korumasi ekle.
-- Gorsel optimizasyon politikasini standartlastir (format, boyut limitleri).
-- Etkinlik sayfalari icin SEO metadatasi ve yapisal veri (structured data) iyilestir.
+- [x] Gorsel optimizasyon politikasini standartlastir (format, boyut limitleri).
+- [x] Etkinlik sayfalari icin SEO metadatasi ve yapisal veri (structured data) iyilestir.
+- [x] Debug console.log temizligi (production).
+- [ ] Route ve tablo sorumluluklarini net tut (yalnizca etkinlik veri modeli).
+- [ ] API'lar icin rate limiting (trafik artinca).
