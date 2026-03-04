@@ -1,16 +1,14 @@
 import { notFound } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { Event, Ticket, Venue } from "@/types/database";
-import EventDetailClient from "@/app/etkinlik/[id]/client";
+import EventDetailClient from "./client";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 interface PageProps {
-  params: {
-    id: string;
-  };
+  params: Promise<{ locale?: string; id: string }>;
 }
 
 // Domain yoksa: Vercel'de VERCEL_URL, localde localhost kullanılır
@@ -129,7 +127,8 @@ async function getEventTickets(eventId: string): Promise<Ticket[]> {
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const event = await getEventBySlug(params.id);
+  const { id } = await params;
+  const event = await getEventBySlug(id);
   if (!event) return { title: "Etkinlik Bulunamadı" };
 
   const title = `${event.title} | Bilet Ekosistemi`;
@@ -194,7 +193,8 @@ function buildEventStructuredData(event: Event, venue: Venue | null) {
 }
 
 export default async function EventDetailPage({ params }: PageProps) {
-  const event = await getEventBySlug(params.id);
+  const { locale = "tr", id } = await params;
+  const event = await getEventBySlug(id);
   const tickets = event ? await getEventTickets(event.id) : [];
   const venue = event?.venue_id ? await getVenue(event.venue_id) : null;
 
@@ -210,7 +210,7 @@ export default async function EventDetailPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <EventDetailClient event={event} tickets={tickets} venue={venue} />
+      <EventDetailClient event={event} tickets={tickets} venue={venue} locale={locale as "tr" | "de" | "en"} />
     </>
   );
 }

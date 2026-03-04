@@ -16,6 +16,8 @@ export default function GlobalError({
     }
   }, [error]);
 
+  const isDev = process.env.NODE_ENV === "development";
+
   return (
     <html lang="tr">
       <body>
@@ -24,20 +26,61 @@ export default function GlobalError({
             padding: "2rem",
             fontFamily: "system-ui, sans-serif",
             textAlign: "center",
+            maxWidth: "480px",
+            margin: "0 auto",
           }}
         >
-          <h1>Bir hata oluştu</h1>
-          <p>Üzgünüz, beklenmeyen bir hata meydana geldi.</p>
-          <button
-            onClick={() => reset()}
-            style={{
-              marginTop: "1rem",
-              padding: "0.5rem 1rem",
-              cursor: "pointer",
-            }}
-          >
-            Tekrar dene
-          </button>
+          <h1 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Bir hata oluştu</h1>
+          <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>
+            Üzgünüz, beklenmeyen bir hata meydana geldi.
+          </p>
+          {isDev && error?.message && (
+            <details
+              style={{
+                marginBottom: "1.5rem",
+                textAlign: "left",
+                background: "#f8fafc",
+                padding: "0.75rem",
+                borderRadius: "0.5rem",
+                fontSize: "0.875rem",
+              }}
+            >
+              <summary style={{ cursor: "pointer", color: "#64748b" }}>Hata detayı</summary>
+              <pre style={{ marginTop: "0.5rem", overflow: "auto", whiteSpace: "pre-wrap" }}>
+                {error.message}
+                {error.digest && `\nDigest: ${error.digest}`}
+              </pre>
+            </details>
+          )}
+          <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
+            <button
+              onClick={() => reset()}
+              style={{
+                padding: "0.5rem 1rem",
+                cursor: "pointer",
+                background: "#0f172a",
+                color: "white",
+                border: "none",
+                borderRadius: "0.5rem",
+                fontWeight: 600,
+              }}
+            >
+              Tekrar dene
+            </button>
+            <a
+              href="/"
+              style={{
+                padding: "0.5rem 1rem",
+                background: "#e2e8f0",
+                color: "#334155",
+                textDecoration: "none",
+                borderRadius: "0.5rem",
+                fontWeight: 600,
+              }}
+            >
+              Ana Sayfaya Dön
+            </a>
+          </div>
         </div>
       </body>
     </html>

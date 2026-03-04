@@ -14,6 +14,10 @@ CREATE TABLE IF NOT EXISTS public.audit_logs (
 -- RLS
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
 
+-- Mevcut policy'leri kaldır (yeniden çalıştırma için)
+DROP POLICY IF EXISTS "Admins can read audit_logs" ON public.audit_logs;
+DROP POLICY IF EXISTS "Admins can insert audit_logs" ON public.audit_logs;
+
 -- Sadece admin okuyabilir
 CREATE POLICY "Admins can read audit_logs" ON public.audit_logs
   FOR SELECT USING (
@@ -27,6 +31,6 @@ CREATE POLICY "Admins can insert audit_logs" ON public.audit_logs
   );
 
 -- Index
-CREATE INDEX idx_audit_logs_created_at ON public.audit_logs(created_at DESC);
-CREATE INDEX idx_audit_logs_entity ON public.audit_logs(entity_type, entity_id);
-CREATE INDEX idx_audit_logs_user_id ON public.audit_logs(user_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_entity ON public.audit_logs(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON public.audit_logs(user_id);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Calendar, MapPin, Music2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Calendar, MapPin, Music2, X } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import type { Event, EventCategory } from "@/types/database";
@@ -71,7 +71,15 @@ function EtkinliklerContent() {
   const [imageUrl, setImageUrl] = useState<string>("");
   const [imageUploading, setImageUploading] = useState(false);
   const [descriptionText, setDescriptionText] = useState("");
+  const [descriptionTextDe, setDescriptionTextDe] = useState("");
+  const [descriptionTextEn, setDescriptionTextEn] = useState("");
   const [externalTicketUrl, setExternalTicketUrl] = useState("");
+  const [titleTr, setTitleTr] = useState("");
+  const [titleDe, setTitleDe] = useState("");
+  const [titleEn, setTitleEn] = useState("");
+  const [venueTr, setVenueTr] = useState("");
+  const [venueDe, setVenueDe] = useState("");
+  const [venueEn, setVenueEn] = useState("");
   const [ticketQuantities, setTicketQuantities] = useState<Record<string, number>>(EMPTY_TICKET_QUANTITIES);
   const [ticketPrices, setTicketPrices] = useState<Record<string, number>>(EMPTY_TICKET_PRICES);
   const [venues, setVenues] = useState<Array<{ id: string; name: string; address: string | null; city: string | null }>>([]);
@@ -180,10 +188,20 @@ function EtkinliklerContent() {
 
   async function handleEdit(event: Event) {
     const parsed = parseEventDescription(event.description);
+    const parsedDe = parseEventDescription((event as Event & { description_de?: string }).description_de);
+    const parsedEn = parseEventDescription((event as Event & { description_en?: string }).description_en);
     setEditingEvent(event);
     setImageUrl(event.image_url || "");
     setDescriptionText(parsed.content || "");
+    setDescriptionTextDe(parsedDe.content || "");
+    setDescriptionTextEn(parsedEn.content || "");
     setExternalTicketUrl(parsed.externalTicketUrl || "");
+    setTitleTr((event as Event & { title_tr?: string }).title_tr || event.title);
+    setTitleDe((event as Event & { title_de?: string }).title_de || "");
+    setTitleEn((event as Event & { title_en?: string }).title_en || "");
+    setVenueTr((event as Event & { venue_tr?: string }).venue_tr || event.venue);
+    setVenueDe((event as Event & { venue_de?: string }).venue_de || "");
+    setVenueEn((event as Event & { venue_en?: string }).venue_en || "");
     setSelectedVenueId((event as Event & { venue_id?: string }).venue_id || "");
     setShowForm(true);
     await loadTicketQuantities(event.id);
@@ -196,7 +214,15 @@ function EtkinliklerContent() {
     setImageUrl("");
     setImageUploading(false);
     setDescriptionText("");
+    setDescriptionTextDe("");
+    setDescriptionTextEn("");
     setExternalTicketUrl("");
+    setTitleTr("");
+    setTitleDe("");
+    setTitleEn("");
+    setVenueTr("");
+    setVenueDe("");
+    setVenueEn("");
     setTicketQuantities({ ...EMPTY_TICKET_QUANTITIES });
     setTicketPrices({ ...EMPTY_TICKET_PRICES });
     setSelectedVenueId("");
@@ -298,17 +324,28 @@ function EtkinliklerContent() {
       const derivedBasePrice =
         activePrices.length > 0 ? Math.min(...activePrices) : fallbackBasePrice;
 
+      const titleTrVal = titleTr || (formData.get("title") as string) || "";
+      const venueTrVal = venueTr || (formData.get("venue") as string) || "";
       const eventData = {
-        title: formData.get("title") as string,
+        title: titleTrVal,
         description: buildEventDescription(descriptionText, externalTicketUrl),
         date: formData.get("date") as string,
         time: formData.get("time") as string,
-        venue: formData.get("venue") as string,
+        venue: venueTrVal,
         location: formData.get("location") as string,
         category: formData.get("category") as EventCategory,
         price_from: derivedBasePrice,
         image_url: imageUrl || null,
         venue_id: selectedVenueId || null,
+        title_tr: titleTrVal || null,
+        title_de: titleDe || null,
+        title_en: titleEn || null,
+        description_tr: buildEventDescription(descriptionText, externalTicketUrl) || null,
+        description_de: descriptionTextDe ? buildEventDescription(descriptionTextDe, externalTicketUrl) : null,
+        description_en: descriptionTextEn ? buildEventDescription(descriptionTextEn, externalTicketUrl) : null,
+        venue_tr: venueTrVal || null,
+        venue_de: venueDe || null,
+        venue_en: venueEn || null,
       };
 
       
@@ -402,7 +439,15 @@ function EtkinliklerContent() {
               setEditingEvent(null);
               setImageUrl("");
               setDescriptionText("");
+              setDescriptionTextDe("");
+              setDescriptionTextEn("");
               setExternalTicketUrl("");
+              setTitleTr("");
+              setTitleDe("");
+              setTitleEn("");
+              setVenueTr("");
+              setVenueDe("");
+              setVenueEn("");
               setTicketQuantities({ ...EMPTY_TICKET_QUANTITIES });
               setTicketPrices({ ...EMPTY_TICKET_PRICES });
               setSelectedVenueId("");
@@ -416,8 +461,16 @@ function EtkinliklerContent() {
 
         {showForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-              <h2 className="text-xl font-bold text-slate-900 mb-6">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 relative">
+              <button
+                type="button"
+                onClick={handleFormClose}
+                className="absolute top-4 right-4 p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                aria-label="Kapat"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <h2 className="text-xl font-bold text-slate-900 mb-6 pr-10">
                 {editingEvent ? "Etkinlik Düzenle" : "Yeni Etkinlik"}
               </h2>
               
@@ -428,30 +481,82 @@ function EtkinliklerContent() {
                 }}
                 className="space-y-4"
               >
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Etkinlik Adı
-                  </label>
-                  <input
-                    type="text"
-                    name="title"
-                    required
-                    defaultValue={editingEvent?.title || ""}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Açıklama
-                  </label>
-                  <textarea
-                    name="description"
-                    rows={3}
-                    value={descriptionText}
-                    onChange={(e) => setDescriptionText(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  />
+                <div className="space-y-4">
+                  <h3 className="font-semibold text-slate-800">Çok Dilli İçerik (TR, DE, EN)</h3>
+                  <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50 space-y-3">
+                    <h4 className="text-sm font-medium text-slate-700">Türkçe (zorunlu)</h4>
+                    <input type="hidden" name="title" value={titleTr} />
+                    <input
+                      type="text"
+                      placeholder="Etkinlik Adı (TR)"
+                      required
+                      value={titleTr}
+                      onChange={(e) => setTitleTr(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    />
+                    <textarea
+                      placeholder="Açıklama (TR)"
+                      rows={2}
+                      value={descriptionText}
+                      onChange={(e) => setDescriptionText(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Mekan Adı (TR)"
+                      value={venueTr}
+                      onChange={(e) => setVenueTr(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50 space-y-3">
+                    <h4 className="text-sm font-medium text-slate-700">Deutsch (opsiyonel)</h4>
+                    <input
+                      type="text"
+                      placeholder="Etkinlik Adı (DE)"
+                      value={titleDe}
+                      onChange={(e) => setTitleDe(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    />
+                    <textarea
+                      placeholder="Açıklama (DE)"
+                      rows={2}
+                      value={descriptionTextDe}
+                      onChange={(e) => setDescriptionTextDe(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Mekan Adı (DE)"
+                      value={venueDe}
+                      onChange={(e) => setVenueDe(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    />
+                  </div>
+                  <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50 space-y-3">
+                    <h4 className="text-sm font-medium text-slate-700">English (opsiyonel)</h4>
+                    <input
+                      type="text"
+                      placeholder="Etkinlik Adı (EN)"
+                      value={titleEn}
+                      onChange={(e) => setTitleEn(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    />
+                    <textarea
+                      placeholder="Açıklama (EN)"
+                      rows={2}
+                      value={descriptionTextEn}
+                      onChange={(e) => setDescriptionTextEn(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Mekan Adı (EN)"
+                      value={venueEn}
+                      onChange={(e) => setVenueEn(e.target.value)}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -493,9 +598,8 @@ function EtkinliklerContent() {
                       if (id) {
                         const v = venues.find((x) => x.id === id);
                         if (v) {
-                          const venueInput = document.querySelector<HTMLInputElement>('input[name="venue"]');
+                          setVenueTr(v.name);
                           const locationInput = document.querySelector<HTMLInputElement>('input[name="location"]');
-                          if (venueInput) venueInput.value = v.name;
                           if (locationInput) locationInput.value = [v.address, v.city].filter(Boolean).join(", ") || v.name;
                         }
                       }
@@ -510,33 +614,18 @@ function EtkinliklerContent() {
                     ))}
                   </select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Mekan Adı
-                    </label>
-                    <input
-                      type="text"
-                      name="venue"
-                      required
-                      defaultValue={editingEvent?.venue || ""}
-                      key={editingEvent?.id || "new"}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Konum
-                    </label>
-                    <input
-                      type="text"
-                      name="location"
-                      required
-                      defaultValue={editingEvent?.location || ""}
-                      key={editingEvent?.id || "new"}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Konum (şehir/adres - tüm dillerde ortak)
+                  </label>
+                  <input
+                    type="text"
+                    name="location"
+                    required
+                    defaultValue={editingEvent?.location || ""}
+                    key={editingEvent?.id || "new"}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

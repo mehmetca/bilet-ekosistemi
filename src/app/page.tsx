@@ -1,5 +1,6 @@
-import ClientHomePage from "@/app/ClientHomePage";
+import { redirect } from "next/navigation";
+import { routing } from "@/i18n/routing";
 
-export default function HomePage() {
-  return <ClientHomePage />;
+export default function RootPage() {
+  redirect(`/${routing.defaultLocale}`);
 }

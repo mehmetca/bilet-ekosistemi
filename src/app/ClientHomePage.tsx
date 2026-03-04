@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { Calendar, MapPin, Music2, Search, ExternalLink, CheckCircle, Shield, Clock, Database } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import HeroBackgroundSlider from "@/components/HeroBackgroundSlider";
 import type { Event, News } from "@/types/database";
@@ -11,8 +12,11 @@ import EventSlider from "@/components/EventSlider";
 import NewsSlider from "@/components/NewsSlider";
 import { supabase } from "@/lib/supabase-client";
 import { parseEventDescription } from "@/lib/eventMeta";
+import { getLocalizedEvent } from "@/lib/i18n-content";
 
 export default function ClientHomePage() {
+  const t = useTranslations("home");
+  const locale = useLocale();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCity, setSelectedCity] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
@@ -236,10 +240,10 @@ export default function ClientHomePage() {
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4 text-center">
           <h1 className="text-4xl font-bold md:text-6xl mb-6 text-white">
-            {heroVariant?.hero_title ?? "Hayalinizdaki Etkinliğe Bilet Bulun"}
+            {locale === "tr" && heroVariant?.hero_title ? heroVariant.hero_title : t("heroTitle")}
           </h1>
           <p className="text-lg md:text-xl text-white mb-12 max-w-3xl mx-auto">
-            {heroVariant?.hero_subtitle ?? "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın."}
+            {locale === "tr" && heroVariant?.hero_subtitle ? heroVariant.hero_subtitle : t("heroSubtitle")}
           </p>
           
           {/* Orijinal Büyüklükte Arama Kutusu */}
@@ -249,7 +253,7 @@ export default function ClientHomePage() {
                 <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <input
                   type="search"
-                  placeholder="Etkinlik, sanatçı veya venue ara..."
+                  placeholder={t("searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full rounded-xl border-0 py-4 pl-12 pr-4 text-slate-900 text-lg focus:outline-none"
@@ -259,7 +263,7 @@ export default function ClientHomePage() {
                 href="#events"
                 className="rounded-xl bg-primary-600 px-8 py-4 font-semibold text-white hover:bg-primary-700 transition-colors"
               >
-                {heroVariant?.cta_text ?? "Ara"}
+                {locale === "tr" && heroVariant?.cta_text ? heroVariant.cta_text : t("search")}
               </Link>
             </div>
           </div>
@@ -270,29 +274,29 @@ export default function ClientHomePage() {
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
                 <CheckCircle className="h-10 w-10 mx-auto mb-3 text-white" />
               </div>
-              <h3 className="font-semibold text-base mb-2 text-white">Doğrulanmış Biletler</h3>
-              <p className="text-sm text-white/90">100% orijinal garanti</p>
+              <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.verified")}</h3>
+              <p className="text-sm text-white/90">{t("trustBadges.verifiedDesc")}</p>
             </div>
             <div className="text-center">
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
                 <Clock className="h-10 w-10 mx-auto mb-3 text-white" />
               </div>
-              <h3 className="font-semibold text-base mb-2 text-white">Anında Teslimat</h3>
-              <p className="text-sm text-white/90">Hızlı ve güvenli</p>
+              <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.delivery")}</h3>
+              <p className="text-sm text-white/90">{t("trustBadges.deliveryDesc")}</p>
             </div>
             <div className="text-center">
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
                 <Shield className="h-10 w-10 mx-auto mb-3 text-white" />
               </div>
-              <h3 className="font-semibold text-base mb-2 text-white">Güvenli Ödeme</h3>
-              <p className="text-sm text-white/90">3D Secure destekli güvenli ödeme altyapısı</p>
+              <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.payment")}</h3>
+              <p className="text-sm text-white/90">{t("trustBadges.paymentDesc")}</p>
             </div>
             <div className="text-center">
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
                 <Database className="h-10 w-10 mx-auto mb-3 text-white" />
               </div>
-              <h3 className="font-semibold text-base mb-2 text-white">Canlı Envanter</h3>
-              <p className="text-sm text-white/90">Gerçek zamanlı müsaitlik</p>
+              <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.inventory")}</h3>
+              <p className="text-sm text-white/90">{t("trustBadges.inventoryDesc")}</p>
             </div>
           </div>
 
@@ -315,13 +319,17 @@ export default function ClientHomePage() {
           {/* Yaklaşan Etkinlikler Slider */}
           <EventSlider 
             events={filteredEvents} 
-            title="Yaklaşan Etkinlikler" 
+            title={t("upcomingEvents")} 
+            locale={locale as "tr" | "de" | "en"}
+            noEventsText={t("noEventsSlider")}
+            buyTicketText={t("buyTicket")}
           />
           
           {/* Haberler Slider */}
           <NewsSlider 
             news={news} 
-            title="Haberler" 
+            title={t("news")} 
+            locale={locale as "tr" | "de" | "en"}
           />
         </div>
         
@@ -329,23 +337,23 @@ export default function ClientHomePage() {
 
       {/* Events */}
       <section id="events" className="container mx-auto px-4 py-16">
-        <h2 className="text-2xl font-bold text-slate-900 mb-8">Yaklaşan Etkinlikler</h2>
+        <h2 className="text-2xl font-bold text-slate-900 mb-8">{t("upcomingEvents")}</h2>
         <div className="mb-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-2 lg:grid-cols-4">
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as "yaklasan" | "en-ucuz" | "populer")}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
-            <option value="yaklasan">Yaklaşan</option>
-            <option value="en-ucuz">En Ucuz</option>
-            <option value="populer">Popüler</option>
+            <option value="yaklasan">{t("sortBy.upcoming")}</option>
+            <option value="en-ucuz">{t("sortBy.cheapest")}</option>
+            <option value="populer">{t("sortBy.popular")}</option>
           </select>
           <select
             value={selectedCity}
             onChange={(e) => setSelectedCity(e.target.value)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
-            <option value="all">Tüm Şehirler</option>
+            <option value="all">{t("filters.allCities")}</option>
             {cityOptions.map((city) => (
               <option key={city} value={city}>
                 {city}
@@ -357,7 +365,7 @@ export default function ClientHomePage() {
             onChange={(e) => setSelectedCategory(e.target.value)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
           >
-            <option value="all">Tüm Kategoriler</option>
+            <option value="all">{t("filters.allCategories")}</option>
             {DISPLAY_CATEGORIES.map((key) => (
               <option key={key} value={key}>
                 {CATEGORY_LABELS[key]}
@@ -369,14 +377,14 @@ export default function ClientHomePage() {
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Başlangıç tarihi"
+            placeholder={t("filters.startDate")}
           />
           <input
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Bitiş tarihi"
+            placeholder={t("filters.endDate")}
           />
           <input
             type="number"
@@ -384,7 +392,7 @@ export default function ClientHomePage() {
             value={minPrice}
             onChange={(e) => setMinPrice(e.target.value)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Min €"
+            placeholder={t("filters.minPrice")}
           />
           <input
             type="number"
@@ -392,7 +400,7 @@ export default function ClientHomePage() {
             value={maxPrice}
             onChange={(e) => setMaxPrice(e.target.value)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder="Max €"
+            placeholder={t("filters.maxPrice")}
           />
           <button
             type="button"
@@ -407,24 +415,22 @@ export default function ClientHomePage() {
             }}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
           >
-            Filtreleri Temizle
+            {t("filters.clear")}
           </button>
         </div>
         
         {filteredEvents.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
             <Music2 className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-            <p className="text-lg font-medium">Henüz etkinlik yok</p>
-            <p className="mt-2 text-sm">
-              Supabase&apos;de tablolar oluşturuluyor veya veri yok.
-            </p>
+            <p className="text-lg font-medium">{t("noEvents")}</p>
+            <p className="mt-2 text-sm">{t("supabaseHint")}</p>
             <div className="mt-4 p-4 bg-slate-100 rounded-lg text-left">
-              <p className="font-medium mb-2">Çözüm adımları:</p>
+              <p className="font-medium mb-2">{t("solutionSteps")}</p>
               <ol className="text-sm space-y-1">
-                <li>1. Supabase Dashboard aç</li>
-                <li>2. SQL Editor gir</li>
-                <li>3. <code className="bg-slate-200 px-1 rounded">quick-fix.sql</code> çalıştır</li>
-                <li>4. Sayfayı yenile</li>
+                <li>1. {t("solution1")}</li>
+                <li>2. {t("solution2")}</li>
+                <li>3. <code className="bg-slate-200 px-1 rounded">quick-fix.sql</code> {t("solution3")}</li>
+                <li>4. {t("solution4")}</li>
               </ol>
             </div>
           </div>
@@ -432,7 +438,8 @@ export default function ClientHomePage() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {filteredEvents.map((event) => {
               const eventStatus = getEventStatus(event);
-              const parsedMeta = parseEventDescription(event.description);
+              const localized = getLocalizedEvent(event as Record<string, unknown>, locale as "tr" | "de" | "en");
+              const parsedMeta = parseEventDescription(localized.description || event.description);
               
               return (
                 <div
@@ -448,7 +455,7 @@ export default function ClientHomePage() {
                       {event.image_url ? (
                         <img
                           src={event.image_url}
-                          alt={event.title}
+                          alt={localized.title}
                           className="h-full w-full object-cover object-top"
                           onError={(e) => {
                             if (e.currentTarget.dataset.fallbackApplied === "1") return;
@@ -473,7 +480,7 @@ export default function ClientHomePage() {
                       {eventStatus.isPast && (
                         <div className="absolute left-2 top-2">
                           <span className="px-2 py-1 text-xs font-bold text-white bg-red-600 rounded">
-                            BİTTİ
+                            {t("eventEnded")}
                           </span>
                         </div>
                       )}
@@ -495,7 +502,7 @@ export default function ClientHomePage() {
                       <h3 className={`font-semibold line-clamp-1 mb-2 ${
                         eventStatus.isPast ? 'text-slate-600' : 'text-slate-900'
                       }`}>
-                        {event.title}
+                        {localized.title}
                       </h3>
                       <div className="space-y-2 text-sm">
                         <div className="flex items-center gap-2">
@@ -511,13 +518,13 @@ export default function ClientHomePage() {
                           <span className={
                             eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
                           }>
-                            {event.venue}, {event.location}
+                            {localized.venue || event.venue}, {event.location}
                           </span>
                         </div>
                       </div>
                       {eventStatus.isPast && (
                         <p className="mt-3 text-xs font-medium text-red-600">
-                          Bu etkinlik tamamlanmıştır. Bilet satışı kapalıdır.
+                          {t("eventEndedBanner")}
                         </p>
                       )}
                     </div>
@@ -529,20 +536,20 @@ export default function ClientHomePage() {
                         eventStatus.isPast ? 'text-slate-500' : 'text-primary-600'
                       }`}>
                         {Number(event.price_from) > 0
-                          ? `ab €${Number(event.price_from).toLocaleString("de-DE")}`
-                          : "Ücretsiz"}
+                          ? `${t("from")} €${Number(event.price_from).toLocaleString("de-DE")}`
+                          : t("free")}
                       </span>
                       <button
                         onClick={() => {
                           const externalTicketUrl = parsedMeta.externalTicketUrl;
                           if (eventStatus.isPast) {
-                            alert("Bu etkinlik tamamlanmıştır. Bilet satılamaz.");
+                            alert(t("eventEndedAlert"));
                             return;
                           }
                           if (externalTicketUrl || event.ticket_url) {
                             window.open(externalTicketUrl || event.ticket_url, "_blank");
                           } else {
-                            window.location.href = `/etkinlik/${event.id}`;
+                            window.location.href = `/${locale}/etkinlik/${event.id}`;
                           }
                         }}
                         className={`text-sm font-medium flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
@@ -551,7 +558,7 @@ export default function ClientHomePage() {
                             : 'text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100'
                         }`}
                       >
-                        {eventStatus.isPast ? 'Bilet Alınamaz' : 'Bilet Al'}
+                        {eventStatus.isPast ? t("buyTicketDisabled") : t("buyTicket")}
                         {(parsedMeta.externalTicketUrl || event.ticket_url) && !eventStatus.isPast && (
                           <ExternalLink className="h-3 w-3" />
                         )}
@@ -567,9 +574,11 @@ export default function ClientHomePage() {
 
       {pastEvents.length > 0 && (
         <section className="container mx-auto px-4 pb-16">
-          <h2 className="text-2xl font-bold text-slate-900 mb-8">Biten Etkinlikler</h2>
+          <h2 className="text-2xl font-bold text-slate-900 mb-8">{t("pastEvents")}</h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {pastEvents.map((event) => (
+            {pastEvents.map((event) => {
+              const pastLocalized = getLocalizedEvent(event as Record<string, unknown>, locale as "tr" | "de" | "en");
+              return (
               <div
                 key={`past-${event.id}`}
                 className="overflow-hidden rounded-2xl border bg-slate-50 border-slate-300 opacity-80"
@@ -578,7 +587,7 @@ export default function ClientHomePage() {
                   {event.image_url ? (
                     <img
                       src={event.image_url}
-                      alt={event.title}
+                      alt={pastLocalized.title}
                       className="h-full w-full object-cover object-top"
                       onError={(e) => {
                         if (e.currentTarget.dataset.fallbackApplied === "1") return;
@@ -591,12 +600,12 @@ export default function ClientHomePage() {
                   )}
                   <div className="absolute left-2 top-2">
                     <span className="px-2 py-1 text-xs font-bold text-white bg-red-600 rounded">
-                      BİTTİ
+                      {t("eventEnded")}
                     </span>
                   </div>
                 </div>
                 <div className="p-5">
-                  <h3 className="font-semibold line-clamp-1 mb-2 text-slate-700">{event.title}</h3>
+                  <h3 className="font-semibold line-clamp-1 mb-2 text-slate-700">{pastLocalized.title}</h3>
                   <div className="space-y-2 text-sm text-slate-500">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 flex-shrink-0" />
@@ -606,15 +615,15 @@ export default function ClientHomePage() {
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 flex-shrink-0" />
-                      <span>{event.venue}, {event.location}</span>
+                      <span>{pastLocalized.venue || event.venue}, {event.location}</span>
                     </div>
                   </div>
                   <p className="mt-3 text-xs font-medium text-red-600">
-                    Bu etkinlik tamamlanmıştır. Bilet satışı kapalıdır.
+                    {t("eventEndedBanner")}
                   </p>
                 </div>
               </div>
-            ))}
+            );})}
           </div>
         </section>
       )}

@@ -1,20 +1,25 @@
 "use client";
 
 import { Calendar, ArrowLeft, Share2 } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import Image from "next/image";
 import type { News } from "@/types/database";
+import { getLocalizedNews, type Locale } from "@/lib/i18n-content";
 
 interface HaberDetayClientProps {
   haber: News;
+  locale?: Locale;
 }
 
-export default function HaberDetayClient({ haber }: HaberDetayClientProps) {
+export default function HaberDetayClient({ haber, locale = "tr" }: HaberDetayClientProps) {
+  const localized = getLocalizedNews(haber as Record<string, unknown>, locale);
+  const excerpt = localized.excerpt || (haber as Record<string, unknown>).summary || (localized.content ? localized.content.substring(0, 150) + "..." : "");
+
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
-        title: haber.title,
-        text: haber.summary || haber.content.substring(0, 150) + "...",
+        title: localized.title || haber.title,
+        text: excerpt,
         url: window.location.href,
       });
     } else {
@@ -44,7 +49,7 @@ export default function HaberDetayClient({ haber }: HaberDetayClientProps) {
           {/* Başlık */}
           <div className="text-center mb-8">
             <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-              {haber.title}
+              {localized.title || haber.title}
             </h1>
             
             <div className="flex items-center justify-center gap-4 text-sm text-slate-600">
@@ -73,7 +78,7 @@ export default function HaberDetayClient({ haber }: HaberDetayClientProps) {
               <div className="relative aspect-video rounded-xl overflow-hidden">
                 <Image
                   src={haber.image_url}
-                  alt={haber.title}
+                  alt={localized.title || haber.title}
                   fill
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 896px"
@@ -83,10 +88,10 @@ export default function HaberDetayClient({ haber }: HaberDetayClientProps) {
           )}
 
           {/* Özet */}
-          {haber.summary && (
+          {excerpt && (
             <div className="bg-primary-50 border-l-4 border-primary-600 p-4 mb-8 rounded-r-lg">
               <p className="text-lg text-primary-900 font-medium">
-                {haber.summary}
+                {excerpt}
               </p>
             </div>
           )}
@@ -94,7 +99,7 @@ export default function HaberDetayClient({ haber }: HaberDetayClientProps) {
           {/* İçerik */}
           <div className="prose prose-lg max-w-none">
             <div 
-              dangerouslySetInnerHTML={{ __html: haber.content }}
+              dangerouslySetInnerHTML={{ __html: localized.content || haber.content }}
               className="text-slate-700 leading-relaxed"
             />
           </div>

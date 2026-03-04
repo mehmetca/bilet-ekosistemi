@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, MapPin, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Edit2, Trash2, MapPin, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import AdminGuard from "@/components/AdminGuard";
@@ -29,6 +29,27 @@ interface Venue {
   rules: string | null;
   faq: VenueFaqItem[];
   created_at: string;
+  name_tr?: string | null;
+  name_de?: string | null;
+  name_en?: string | null;
+  address_tr?: string | null;
+  address_de?: string | null;
+  address_en?: string | null;
+  city_tr?: string | null;
+  city_de?: string | null;
+  city_en?: string | null;
+  seating_layout_description_tr?: string | null;
+  seating_layout_description_de?: string | null;
+  seating_layout_description_en?: string | null;
+  entrance_info_tr?: string | null;
+  entrance_info_de?: string | null;
+  entrance_info_en?: string | null;
+  transport_info_tr?: string | null;
+  transport_info_de?: string | null;
+  transport_info_en?: string | null;
+  rules_tr?: string | null;
+  rules_de?: string | null;
+  rules_en?: string | null;
 }
 
 const EMPTY_VENUE = {
@@ -45,6 +66,27 @@ const EMPTY_VENUE = {
   map_embed_url: "",
   rules: "",
   faq: [] as VenueFaqItem[],
+  name_tr: "",
+  name_de: "",
+  name_en: "",
+  address_tr: "",
+  address_de: "",
+  address_en: "",
+  city_tr: "",
+  city_de: "",
+  city_en: "",
+  seating_layout_description_tr: "",
+  seating_layout_description_de: "",
+  seating_layout_description_en: "",
+  entrance_info_tr: "",
+  entrance_info_de: "",
+  entrance_info_en: "",
+  transport_info_tr: "",
+  transport_info_de: "",
+  transport_info_en: "",
+  rules_tr: "",
+  rules_de: "",
+  rules_en: "",
 };
 
 export default function MekanlarPage() {
@@ -115,6 +157,27 @@ function MekanlarContent() {
       rules: (row.rules as string) || null,
       faq: faqArr,
       created_at: (row.created_at as string) || "",
+      name_tr: (row.name_tr as string) || null,
+      name_de: (row.name_de as string) || null,
+      name_en: (row.name_en as string) || null,
+      address_tr: (row.address_tr as string) || null,
+      address_de: (row.address_de as string) || null,
+      address_en: (row.address_en as string) || null,
+      city_tr: (row.city_tr as string) || null,
+      city_de: (row.city_de as string) || null,
+      city_en: (row.city_en as string) || null,
+      seating_layout_description_tr: (row.seating_layout_description_tr as string) || null,
+      seating_layout_description_de: (row.seating_layout_description_de as string) || null,
+      seating_layout_description_en: (row.seating_layout_description_en as string) || null,
+      entrance_info_tr: (row.entrance_info_tr as string) || null,
+      entrance_info_de: (row.entrance_info_de as string) || null,
+      entrance_info_en: (row.entrance_info_en as string) || null,
+      transport_info_tr: (row.transport_info_tr as string) || null,
+      transport_info_de: (row.transport_info_de as string) || null,
+      transport_info_en: (row.transport_info_en as string) || null,
+      rules_tr: (row.rules_tr as string) || null,
+      rules_de: (row.rules_de as string) || null,
+      rules_en: (row.rules_en as string) || null,
     };
   }
 
@@ -140,6 +203,27 @@ function MekanlarContent() {
       map_embed_url: venue.map_embed_url || "",
       rules: venue.rules || "",
       faq: venue.faq.length > 0 ? [...venue.faq] : [{ soru: "", cevap: "" }],
+      name_tr: venue.name_tr || venue.name || "",
+      name_de: venue.name_de || "",
+      name_en: venue.name_en || "",
+      address_tr: venue.address_tr || venue.address || "",
+      address_de: venue.address_de || "",
+      address_en: venue.address_en || "",
+      city_tr: venue.city_tr || venue.city || "",
+      city_de: venue.city_de || "",
+      city_en: venue.city_en || "",
+      seating_layout_description_tr: venue.seating_layout_description_tr || venue.seating_layout_description || "",
+      seating_layout_description_de: venue.seating_layout_description_de || "",
+      seating_layout_description_en: venue.seating_layout_description_en || "",
+      entrance_info_tr: venue.entrance_info_tr || venue.entrance_info || "",
+      entrance_info_de: venue.entrance_info_de || "",
+      entrance_info_en: venue.entrance_info_en || "",
+      transport_info_tr: venue.transport_info_tr || venue.transport_info || "",
+      transport_info_de: venue.transport_info_de || "",
+      transport_info_en: venue.transport_info_en || "",
+      rules_tr: venue.rules_tr || venue.rules || "",
+      rules_de: venue.rules_de || "",
+      rules_en: venue.rules_en || "",
     });
     setShowForm(true);
   }
@@ -189,20 +273,42 @@ function MekanlarContent() {
     try {
       const faqFiltered = form.faq.filter((x) => x.soru.trim() && x.cevap.trim());
 
+      const nameVal = form.name_tr?.trim() || form.name.trim();
       const payload = {
-        name: form.name.trim(),
-        address: form.address.trim() || null,
-        city: form.city.trim() || null,
+        name: nameVal || form.name.trim(),
+        address: form.address_tr?.trim() || form.address.trim() || null,
+        city: form.city_tr?.trim() || form.city.trim() || null,
         capacity: form.capacity != null && form.capacity > 0 ? form.capacity : null,
-        seating_layout_description: form.seating_layout_description.trim() || null,
+        seating_layout_description: form.seating_layout_description_tr?.trim() || form.seating_layout_description.trim() || null,
         seating_layout_image_url: form.seating_layout_image_url?.trim() || null,
         image_url_1: form.image_url_1?.trim() || null,
         image_url_2: form.image_url_2?.trim() || null,
-        entrance_info: form.entrance_info.trim() || null,
-        transport_info: form.transport_info.trim() || null,
+        entrance_info: form.entrance_info_tr?.trim() || form.entrance_info.trim() || null,
+        transport_info: form.transport_info_tr?.trim() || form.transport_info.trim() || null,
         map_embed_url: form.map_embed_url?.trim() || null,
-        rules: form.rules.trim() || null,
+        rules: form.rules_tr?.trim() || form.rules.trim() || null,
         faq: faqFiltered,
+        name_tr: form.name_tr?.trim() || null,
+        name_de: form.name_de?.trim() || null,
+        name_en: form.name_en?.trim() || null,
+        address_tr: form.address_tr?.trim() || null,
+        address_de: form.address_de?.trim() || null,
+        address_en: form.address_en?.trim() || null,
+        city_tr: form.city_tr?.trim() || null,
+        city_de: form.city_de?.trim() || null,
+        city_en: form.city_en?.trim() || null,
+        seating_layout_description_tr: form.seating_layout_description_tr?.trim() || null,
+        seating_layout_description_de: form.seating_layout_description_de?.trim() || null,
+        seating_layout_description_en: form.seating_layout_description_en?.trim() || null,
+        entrance_info_tr: form.entrance_info_tr?.trim() || null,
+        entrance_info_de: form.entrance_info_de?.trim() || null,
+        entrance_info_en: form.entrance_info_en?.trim() || null,
+        transport_info_tr: form.transport_info_tr?.trim() || null,
+        transport_info_de: form.transport_info_de?.trim() || null,
+        transport_info_en: form.transport_info_en?.trim() || null,
+        rules_tr: form.rules_tr?.trim() || null,
+        rules_de: form.rules_de?.trim() || null,
+        rules_en: form.rules_en?.trim() || null,
       };
 
       if (editingVenue) {
@@ -284,42 +390,113 @@ function MekanlarContent() {
 
         {showForm && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
-              <h2 className="text-xl font-bold text-slate-900 mb-6">
+            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 relative">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="absolute top-4 right-4 p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                aria-label="Kapat"
+              >
+                <X className="h-5 w-5" />
+              </button>
+              <h2 className="text-xl font-bold text-slate-900 mb-6 pr-10">
                 {editingVenue ? "Mekan Düzenle" : "Yeni Mekan"}
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Mekan Adı *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    value={form.name}
-                    onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  />
+                <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">Mekan Adı (TR zorunlu, DE/EN opsiyonel)</h3>
+                  <div className="space-y-2">
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Türkçe *</label>
+                      <input
+                        type="text"
+                        required
+                        value={form.name_tr || form.name}
+                        onChange={(e) => setForm((p) => ({ ...p, name_tr: e.target.value, name: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Almanca</label>
+                      <input
+                        type="text"
+                        value={form.name_de}
+                        onChange={(e) => setForm((p) => ({ ...p, name_de: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">İngilizce</label>
+                      <input
+                        type="text"
+                        value={form.name_en}
+                        onChange={(e) => setForm((p) => ({ ...p, name_en: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
-                    <input
-                      type="text"
-                      value={form.address}
-                      onChange={(e) => setForm((p) => ({ ...p, address: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
+                <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-3">Adres & Şehir</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Adres (TR)</label>
+                      <input
+                        type="text"
+                        value={form.address_tr || form.address}
+                        onChange={(e) => setForm((p) => ({ ...p, address_tr: e.target.value, address: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Adres (DE)</label>
+                      <input
+                        type="text"
+                        value={form.address_de}
+                        onChange={(e) => setForm((p) => ({ ...p, address_de: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Adres (EN)</label>
+                      <input
+                        type="text"
+                        value={form.address_en}
+                        onChange={(e) => setForm((p) => ({ ...p, address_en: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Şehir</label>
-                    <input
-                      type="text"
-                      value={form.city}
-                      onChange={(e) => setForm((p) => ({ ...p, city: e.target.value }))}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Şehir (TR)</label>
+                      <input
+                        type="text"
+                        value={form.city_tr || form.city}
+                        onChange={(e) => setForm((p) => ({ ...p, city_tr: e.target.value, city: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Şehir (DE)</label>
+                      <input
+                        type="text"
+                        value={form.city_de}
+                        onChange={(e) => setForm((p) => ({ ...p, city_de: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-slate-500 mb-0.5">Şehir (EN)</label>
+                      <input
+                        type="text"
+                        value={form.city_en}
+                        onChange={(e) => setForm((p) => ({ ...p, city_en: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -341,18 +518,40 @@ function MekanlarContent() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Oturma Düzeni Açıklaması
+                    Oturma Düzeni Açıklaması (TR / DE / EN)
                   </label>
-                  <textarea
-                    name="seating_layout_description"
-                    rows={3}
-                    placeholder="Örn: 3 kademe, orkestra + balkon, toplam 12 blok"
-                    value={form.seating_layout_description}
-                    onChange={(e) =>
-                      setForm((p) => ({ ...p, seating_layout_description: e.target.value }))
-                    }
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  />
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-xs text-slate-500">TR</span>
+                      <textarea
+                        rows={2}
+                        placeholder="Örn: 3 kademe, orkestra + balkon"
+                        value={form.seating_layout_description_tr || form.seating_layout_description}
+                        onChange={(e) =>
+                          setForm((p) => ({ ...p, seating_layout_description_tr: e.target.value, seating_layout_description: e.target.value }))
+                        }
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">DE</span>
+                      <textarea
+                        rows={2}
+                        value={form.seating_layout_description_de}
+                        onChange={(e) => setForm((p) => ({ ...p, seating_layout_description_de: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">EN</span>
+                      <textarea
+                        rows={2}
+                        value={form.seating_layout_description_en}
+                        onChange={(e) => setForm((p) => ({ ...p, seating_layout_description_en: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -391,28 +590,73 @@ function MekanlarContent() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Giriş Bilgileri
+                    Giriş Bilgileri (TR / DE / EN)
                   </label>
-                  <textarea
-                    name="entrance_info"
-                    rows={2}
-                    placeholder="Giriş kapıları, nereden girilir"
-                    value={form.entrance_info}
-                    onChange={(e) => setForm((p) => ({ ...p, entrance_info: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  />
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-xs text-slate-500">TR</span>
+                      <textarea
+                        rows={2}
+                        placeholder="Giriş kapıları, nereden girilir"
+                        value={form.entrance_info_tr || form.entrance_info}
+                        onChange={(e) => setForm((p) => ({ ...p, entrance_info_tr: e.target.value, entrance_info: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">DE</span>
+                      <textarea
+                        rows={2}
+                        value={form.entrance_info_de}
+                        onChange={(e) => setForm((p) => ({ ...p, entrance_info_de: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">EN</span>
+                      <textarea
+                        rows={2}
+                        value={form.entrance_info_en}
+                        onChange={(e) => setForm((p) => ({ ...p, entrance_info_en: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Ulaşım Bilgisi
+                    Ulaşım Bilgisi (TR / DE / EN)
                   </label>
-                  <RichTextEditor
-                    value={form.transport_info || ""}
-                    onChange={(v) => setForm((p) => ({ ...p, transport_info: v }))}
-                    placeholder="Metro, otobüs, otopark bilgileri..."
-                    minHeight="120px"
-                  />
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-xs text-slate-500">TR</span>
+                      <RichTextEditor
+                        value={form.transport_info_tr || form.transport_info || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, transport_info_tr: v, transport_info: v }))}
+                        placeholder="Metro, otobüs, otopark bilgileri..."
+                        minHeight="100px"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">DE</span>
+                      <RichTextEditor
+                        value={form.transport_info_de || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, transport_info_de: v }))}
+                        placeholder="Metro, Bus, Parkplatz..."
+                        minHeight="100px"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">EN</span>
+                      <RichTextEditor
+                        value={form.transport_info_en || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, transport_info_en: v }))}
+                        placeholder="Metro, bus, parking..."
+                        minHeight="100px"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div>
@@ -434,16 +678,38 @@ function MekanlarContent() {
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Giriş Kuralları
+                    Giriş Kuralları (TR / DE / EN)
                   </label>
-                  <textarea
-                    name="rules"
-                    rows={2}
-                    placeholder="Yaş sınırı, yasaklar vb."
-                    value={form.rules}
-                    onChange={(e) => setForm((p) => ({ ...p, rules: e.target.value }))}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  />
+                  <div className="space-y-2">
+                    <div>
+                      <span className="text-xs text-slate-500">TR</span>
+                      <textarea
+                        rows={2}
+                        placeholder="Yaş sınırı, yasaklar vb."
+                        value={form.rules_tr || form.rules}
+                        onChange={(e) => setForm((p) => ({ ...p, rules_tr: e.target.value, rules: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">DE</span>
+                      <textarea
+                        rows={2}
+                        value={form.rules_de}
+                        onChange={(e) => setForm((p) => ({ ...p, rules_de: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-slate-500">EN</span>
+                      <textarea
+                        rows={2}
+                        value={form.rules_en}
+                        onChange={(e) => setForm((p) => ({ ...p, rules_en: e.target.value }))}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="rounded-lg border border-slate-200 p-4">

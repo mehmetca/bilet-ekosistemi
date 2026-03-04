@@ -1,0 +1,123 @@
+{
+  "nav": {
+    "events": "Etkinlikler",
+    "calendar": "Takvim",
+    "venues": "Mekanlar",
+    "artists": "Sanatçılar",
+    "management": "Yönetim Paneli",
+    "profile": "Profilim",
+    "login": "Giriş Yap",
+    "admin": "Yönetim"
+  },
+  "home": {
+    "heroTitle": "Hayalinizdeki Etkinliğe Bilet Bulun",
+    "heroSubtitle": "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.",
+    "search": "Ara",
+    "searchPlaceholder": "Etkinlik, sanatçı veya venue ara...",
+    "upcomingEvents": "Yaklaşan Etkinlikler",
+    "news": "Haberler",
+    "sortBy": {
+      "upcoming": "Yaklaşan",
+      "cheapest": "En Ucuz",
+      "popular": "Popüler"
+    },
+    "filters": {
+      "allCities": "Tüm Şehirler",
+      "allCategories": "Tüm Kategoriler",
+      "clear": "Filtreleri Temizle",
+      "startDate": "Başlangıç tarihi",
+      "endDate": "Bitiş tarihi",
+      "minPrice": "Min €",
+      "maxPrice": "Max €"
+    },
+    "noEvents": "Henüz etkinlik yok",
+    "noEventsSlider": "Yaklaşan etkinlik bulunmamaktadır.",
+    "trustBadges": {
+      "verified": "Doğrulanmış Biletler",
+      "verifiedDesc": "100% orijinal garanti",
+      "delivery": "Anında Teslimat",
+      "deliveryDesc": "Hızlı ve güvenli",
+      "payment": "Güvenli Ödeme",
+      "paymentDesc": "3D Secure destekli güvenli ödeme altyapısı",
+      "inventory": "Canlı Envanter",
+      "inventoryDesc": "Gerçek zamanlı müsaitlik"
+    },
+    "solutionSteps": "Çözüm adımları:",
+    "solution1": "Supabase Dashboard aç",
+    "solution2": "SQL Editor gir",
+    "solution3": "quick-fix.sql çalıştır",
+    "solution4": "Sayfayı yenile",
+    "supabaseHint": "Supabase'de tablolar oluşturuluyor veya veri yok.",
+    "buyTicket": "Bilet Al",
+    "buyTicketDisabled": "Bilet Alınamaz",
+    "details": "Detaylar",
+    "from": "ab",
+    "free": "Ücretsiz",
+    "pastEvents": "Biten Etkinlikler",
+    "eventEnded": "BİTTİ",
+    "eventEndedAlert": "Bu etkinlik tamamlanmıştır. Bilet satılamaz.",
+    "eventEndedBanner": "Bu etkinlik tamamlanmıştır. Bilet satışı kapalıdır."
+  },
+  "categories": {
+    "konser": "Konser",
+    "tiyatro": "Tiyatro",
+    "sinema": "Sinema",
+    "festival": "Festival",
+    "spor": "Spor",
+    "stand-up": "Stand-Up",
+    "diger": "Diğer",
+    "event": "Etkinlik"
+  },
+  "calendar": {
+    "title": "Etkinlik Takvimi",
+    "allCategories": "Tüm Türler",
+    "clear": "Temizle",
+    "eventsCount": "etkinlik",
+    "noImage": "Görsel Yok",
+    "noEventsYet": "Henüz etkinlik eklenmemiş. Yakında yeni etkinlikler eklenecektir.",
+    "noEventsForDate": "Bu tarihte etkinlik bulunmamaktadır.",
+    "noEventsForFilter": "Seçilen kriterlere uygun etkinlik bulunmamaktadır.",
+    "eventsOnDate": "Tarihli Etkinlikler",
+    "eventsOfCategory": "Etkinlikleri",
+    "buyTicket": "Bilet Al"
+  },
+  "venues": {
+    "title": "Mekanlar ve Salonlar",
+    "subtitle": "Etkinlik mekanlarımız, oturma düzenleri, ulaşım ve giriş bilgileri.",
+    "noVenues": "Henüz mekan eklenmemiş",
+    "other": "Diğer",
+    "capacity": "Kapasite",
+    "persons": "kişi",
+    "transport": "Ulaşım",
+    "entrance": "Giriş",
+    "rules": "Kurallar",
+    "map": "Harita",
+    "faqShow": "SSS Gizle",
+    "faqCount": "SSS",
+    "photo": "Fotoğraf",
+    "seatingPlan": "Oturma planı"
+  },
+  "artists": {
+    "title": "Sanatçılar",
+    "subtitle": "Tüm sanatçı biyografileri ve görselleri",
+    "loading": "Yükleniyor...",
+    "noArtists": "Henüz sanatçı kaydı yok.",
+    "noPhoto": "Fotoğraf yok",
+    "bioPlaceholder": "Biyografi bilgisi yakında eklenecek."
+  },
+  "footer": {
+    "about": "Hakkımızda",
+    "contact": "İletişim",
+    "privacy": "Gizlilik",
+    "terms": "Kullanım Koşulları",
+    "securePayment": "Güvenli Ödeme",
+    "refundPolicy": "İade Politikası",
+    "shippingPolicy": "Gönderim Politikası",
+    "liveStock": "Canlı Stok",
+    "securePaymentDesc": "3D Secure destekli ödeme altyapısı kullanılmaktadır.",
+    "refundPolicyDesc": "İade koşulları etkinlik organizatörü tarafından belirlenir. Etkinlik ve kampanya koşullarına göre iade veya değişiklik uygulanabilir. Satın alma öncesi ilgili etkinlik koşullarını inceleyiniz.",
+    "shippingPolicyDesc": "Standart kargo (DE): 2–4 iş günü. Ekspres kargo (DE): Öğleden önce (Pzt–Cuma) verilen siparişler ertesi iş günü teslim. Dijital bilet: Sözleşme sonrası anında yazdırılabilir. Basılı bilet ücretlidir; gönderim ücreti ödeyenlere teslim edilir. Gönderim seçenekleri alışveriş sepetinde sunulur.",
+    "liveStockDesc": "Stok bilgisi anlık güncellenir.",
+    "copyright": "© {year} Bilet Ekosistemi"
+  }
+}

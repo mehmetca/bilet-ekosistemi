@@ -1,0 +1,123 @@
+{
+  "nav": {
+    "events": "Events",
+    "calendar": "Calendar",
+    "venues": "Venues",
+    "artists": "Artists",
+    "management": "Admin Panel",
+    "profile": "My Profile",
+    "login": "Log In",
+    "admin": "Admin"
+  },
+  "home": {
+    "heroTitle": "Find Tickets for Your Dream Event",
+    "heroSubtitle": "Concerts, theatre, stand-up and more. Secure payment, easy ticket purchase.",
+    "search": "Search",
+    "searchPlaceholder": "Search event, artist or venue...",
+    "upcomingEvents": "Upcoming Events",
+    "news": "News",
+    "sortBy": {
+      "upcoming": "Upcoming",
+      "cheapest": "Cheapest",
+      "popular": "Popular"
+    },
+    "filters": {
+      "allCities": "All Cities",
+      "allCategories": "All Categories",
+      "clear": "Clear Filters",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "minPrice": "Min €",
+      "maxPrice": "Max €"
+    },
+    "noEvents": "No events yet",
+    "noEventsSlider": "No upcoming events.",
+    "trustBadges": {
+      "verified": "Verified Tickets",
+      "verifiedDesc": "100% original guarantee",
+      "delivery": "Instant Delivery",
+      "deliveryDesc": "Fast and secure",
+      "payment": "Secure Payment",
+      "paymentDesc": "3D Secure payment processing",
+      "inventory": "Live Inventory",
+      "inventoryDesc": "Real-time availability"
+    },
+    "solutionSteps": "Solution steps:",
+    "solution1": "Open Supabase Dashboard",
+    "solution2": "Open SQL Editor",
+    "solution3": "Run quick-fix.sql",
+    "solution4": "Refresh the page",
+    "supabaseHint": "Supabase tables are being created or no data available.",
+    "buyTicket": "Buy Ticket",
+    "buyTicketDisabled": "Unavailable",
+    "details": "Details",
+    "from": "from",
+    "free": "Free",
+    "pastEvents": "Past Events",
+    "eventEnded": "ENDED",
+    "eventEndedAlert": "This event has ended. Tickets can no longer be purchased.",
+    "eventEndedBanner": "This event has ended. Ticket sales are closed."
+  },
+  "categories": {
+    "konser": "Concert",
+    "tiyatro": "Theatre",
+    "sinema": "Cinema",
+    "festival": "Festival",
+    "spor": "Sports",
+    "stand-up": "Stand-Up",
+    "diger": "Other",
+    "event": "Event"
+  },
+  "calendar": {
+    "title": "Event Calendar",
+    "allCategories": "All Categories",
+    "clear": "Clear",
+    "eventsCount": "events",
+    "noImage": "No Image",
+    "noEventsYet": "No events added yet. New events will be added soon.",
+    "noEventsForDate": "No events on this date.",
+    "noEventsForFilter": "No events match the selected criteria.",
+    "eventsOnDate": "Events on",
+    "eventsOfCategory": "Events",
+    "buyTicket": "Buy Ticket"
+  },
+  "venues": {
+    "title": "Venues and Halls",
+    "subtitle": "Our event venues, seating layouts, transport and entrance information.",
+    "noVenues": "No venues added yet",
+    "other": "Other",
+    "capacity": "Capacity",
+    "persons": "persons",
+    "transport": "Transport",
+    "entrance": "Entrance",
+    "rules": "Rules",
+    "map": "Map",
+    "faqShow": "Hide FAQ",
+    "faqCount": "FAQ",
+    "photo": "Photo",
+    "seatingPlan": "Seating plan"
+  },
+  "artists": {
+    "title": "Artists",
+    "subtitle": "All artist biographies and images",
+    "loading": "Loading...",
+    "noArtists": "No artists registered yet.",
+    "noPhoto": "No photo",
+    "bioPlaceholder": "Biography information will be added soon."
+  },
+  "footer": {
+    "about": "About",
+    "contact": "Contact",
+    "privacy": "Privacy",
+    "terms": "Terms of Use",
+    "securePayment": "Secure Payment",
+    "refundPolicy": "Refund Policy",
+    "shippingPolicy": "Shipping Policy",
+    "liveStock": "Live Stock",
+    "securePaymentDesc": "3D Secure payment infrastructure is used.",
+    "refundPolicyDesc": "Refund conditions are determined by the event organiser. Refund or change may apply according to event and campaign conditions. Please review the relevant event conditions before purchase.",
+    "shippingPolicyDesc": "Standard shipping (DE): 2–4 business days. Express shipping (DE): Orders placed before noon (Mon–Fri) delivered next business day. Digital ticket: Printable immediately after contract. Printed ticket is chargeable; delivered to those paying shipping. Shipping options are shown in the cart.",
+    "liveStockDesc": "Stock information is updated in real time.",
+    "copyright": "© {year} Bilet Ekosistemi"
+  }
+}

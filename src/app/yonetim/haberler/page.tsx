@@ -22,6 +22,16 @@ export default function HaberlerPage() {
     title: "",
     content: "",
     summary: "",
+    excerpt: "",
+    title_tr: "",
+    title_de: "",
+    title_en: "",
+    content_tr: "",
+    content_de: "",
+    content_en: "",
+    excerpt_tr: "",
+    excerpt_de: "",
+    excerpt_en: "",
     image_url: "",
     is_published: false,
   });
@@ -75,9 +85,26 @@ export default function HaberlerPage() {
 
 const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    
-    
+    const titleVal = formData.title_tr?.trim() || formData.title.trim();
+    const contentVal = formData.content_tr?.trim() || formData.content.trim();
+    const excerptVal = formData.excerpt_tr?.trim() || formData.summary?.trim() || formData.excerpt?.trim() || "";
+    const payload = {
+      title: titleVal,
+      content: contentVal,
+      excerpt: excerptVal,
+      summary: excerptVal,
+      image_url: formData.image_url || null,
+      is_published: formData.is_published,
+      title_tr: formData.title_tr?.trim() || null,
+      title_de: formData.title_de?.trim() || null,
+      title_en: formData.title_en?.trim() || null,
+      content_tr: formData.content_tr?.trim() || null,
+      content_de: formData.content_de?.trim() || null,
+      content_en: formData.content_en?.trim() || null,
+      excerpt_tr: formData.excerpt_tr?.trim() || formData.summary?.trim() || null,
+      excerpt_de: formData.excerpt_de?.trim() || null,
+      excerpt_en: formData.excerpt_en?.trim() || null,
+    };
     try {
       const url = editingNews ? `/api/news/${editingNews.id}` : "/api/news";
       const method = editingNews ? "PUT" : "POST";
@@ -87,7 +114,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
@@ -106,12 +133,23 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   const handleEdit = (newsItem: News) => {
     setEditingNews(newsItem);
+    const item = newsItem as Record<string, unknown>;
     setFormData({
       title: newsItem.title,
       content: newsItem.content,
-      summary: newsItem.summary || "",
+      summary: (item.summary as string) || (item.excerpt as string) || "",
+      excerpt: (item.excerpt as string) || (item.summary as string) || "",
+      title_tr: (item.title_tr as string) || newsItem.title,
+      title_de: (item.title_de as string) || "",
+      title_en: (item.title_en as string) || "",
+      content_tr: (item.content_tr as string) || newsItem.content,
+      content_de: (item.content_de as string) || "",
+      content_en: (item.content_en as string) || "",
+      excerpt_tr: (item.excerpt_tr as string) || (item.excerpt as string) || (item.summary as string) || "",
+      excerpt_de: (item.excerpt_de as string) || "",
+      excerpt_en: (item.excerpt_en as string) || "",
       image_url: newsItem.image_url || "",
-      is_published: newsItem.is_published,
+      is_published: newsItem.is_published ?? false,
     });
     setShowForm(true);
   };
@@ -155,6 +193,16 @@ const handleSubmit = async (e: React.FormEvent) => {
       title: "",
       content: "",
       summary: "",
+      excerpt: "",
+      title_tr: "",
+      title_de: "",
+      title_en: "",
+      content_tr: "",
+      content_de: "",
+      content_en: "",
+      excerpt_tr: "",
+      excerpt_de: "",
+      excerpt_en: "",
       image_url: "",
       is_published: false,
     });
@@ -203,30 +251,72 @@ const handleSubmit = async (e: React.FormEvent) => {
           </h2>
           
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Başlık
-              </label>
-              <input
-                type="text"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:ring-primary-500"
-                required
-              />
+            <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Başlık (TR zorunlu, DE/EN opsiyonel)</h3>
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-0.5">Türkçe *</label>
+                  <input
+                    type="text"
+                    value={formData.title_tr || formData.title}
+                    onChange={(e) => setFormData({ ...formData, title_tr: e.target.value, title: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:ring-primary-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-0.5">Almanca</label>
+                  <input
+                    type="text"
+                    value={formData.title_de}
+                    onChange={(e) => setFormData({ ...formData, title_de: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-0.5">İngilizce</label>
+                  <input
+                    type="text"
+                    value={formData.title_en}
+                    onChange={(e) => setFormData({ ...formData, title_en: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Özet
-              </label>
-              <input
-                type="text"
-                value={formData.summary}
-                onChange={(e) => setFormData({ ...formData, summary: e.target.value })}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:ring-primary-500"
-                placeholder="Kısa açıklama (isteğe bağlı)"
-              />
+            <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50">
+              <h3 className="text-sm font-semibold text-slate-700 mb-3">Özet (TR / DE / EN)</h3>
+              <div className="space-y-2">
+                <div>
+                  <label className="block text-xs text-slate-500 mb-0.5">Türkçe</label>
+                  <input
+                    type="text"
+                    value={formData.excerpt_tr || formData.summary}
+                    onChange={(e) => setFormData({ ...formData, excerpt_tr: e.target.value, summary: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                    placeholder="Kısa açıklama"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-0.5">Almanca</label>
+                  <input
+                    type="text"
+                    value={formData.excerpt_de}
+                    onChange={(e) => setFormData({ ...formData, excerpt_de: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-slate-500 mb-0.5">İngilizce</label>
+                  <input
+                    type="text"
+                    value={formData.excerpt_en}
+                    onChange={(e) => setFormData({ ...formData, excerpt_en: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+              </div>
             </div>
 
             <div>
@@ -284,18 +374,49 @@ const handleSubmit = async (e: React.FormEvent) => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                İçerik
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                İçerik (TR zorunlu, DE/EN opsiyonel)
               </label>
-              <div className="border border-slate-300 rounded-lg overflow-hidden">
-                <MDEditor
-                  value={formData.content}
-                  onChange={(value: string | undefined) => setFormData(prev => ({ ...prev, content: value || "" }))}
-                  height={300}
-                  preview="edit"
-                  hideToolbar={false}
-                  visibleDragbar={false}
-                />
+              <div className="space-y-4">
+                <div>
+                  <span className="text-xs text-slate-500 font-medium">Türkçe *</span>
+                  <div className="border border-slate-300 rounded-lg overflow-hidden mt-1">
+                    <MDEditor
+                      value={formData.content_tr || formData.content}
+                      onChange={(value: string | undefined) => setFormData(prev => ({ ...prev, content_tr: value || "", content: value || "" }))}
+                      height={260}
+                      preview="edit"
+                      hideToolbar={false}
+                      visibleDragbar={false}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-500 font-medium">Almanca</span>
+                  <div className="border border-slate-300 rounded-lg overflow-hidden mt-1">
+                    <MDEditor
+                      value={formData.content_de}
+                      onChange={(value: string | undefined) => setFormData(prev => ({ ...prev, content_de: value || "" }))}
+                      height={200}
+                      preview="edit"
+                      hideToolbar={false}
+                      visibleDragbar={false}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs text-slate-500 font-medium">İngilizce</span>
+                  <div className="border border-slate-300 rounded-lg overflow-hidden mt-1">
+                    <MDEditor
+                      value={formData.content_en}
+                      onChange={(value: string | undefined) => setFormData(prev => ({ ...prev, content_en: value || "" }))}
+                      height={200}
+                      preview="edit"
+                      hideToolbar={false}
+                      visibleDragbar={false}
+                    />
+                  </div>
+                </div>
               </div>
               <p className="text-xs text-slate-500 mt-1">
                 Markdown formatında yazabilirsiniz. **kalın**, *italik*, [link](url), #başlık vb.

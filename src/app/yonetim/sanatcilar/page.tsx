@@ -17,6 +17,12 @@ type ArtistFormState = {
   slug: string;
   image_url: string;
   bio: string;
+  name_tr: string;
+  name_de: string;
+  name_en: string;
+  bio_tr: string;
+  bio_de: string;
+  bio_en: string;
   gallery_1: string;
   gallery_1_position: ArtistGalleryPosition;
   gallery_2: string;
@@ -40,6 +46,12 @@ const EMPTY_FORM: ArtistFormState = {
   slug: "",
   image_url: "",
   bio: "",
+  name_tr: "",
+  name_de: "",
+  name_en: "",
+  bio_tr: "",
+  bio_de: "",
+  bio_en: "",
   gallery_1: "",
   gallery_1_position: "top",
   gallery_2: "",
@@ -192,13 +204,13 @@ export default function SanatcilarPage() {
     setLoadingArtist(true);
     try {
       const { data, error } = await withTimeout<{
-        data: { id: string; name: string; slug: string; bio: string | null; image_url: string | null } | null;
+        data: Record<string, unknown> | null;
         error: { message: string } | null;
       }>(
         (signal) =>
           supabase
             .from("artists")
-            .select("id,name,slug,bio,image_url,show_on_artist_page,show_on_tour_page")
+            .select("id,name,slug,bio,image_url,show_on_artist_page,show_on_tour_page,name_tr,name_de,name_en,bio_tr,bio_de,bio_en")
             .eq("id", artistId)
             .abortSignal(signal)
             .single(),
@@ -210,13 +222,23 @@ export default function SanatcilarPage() {
         return;
       }
 
-      const parsed = parseArtistBio(data.bio);
+      const bioRaw = (data.bio_tr as string) || (data.bio as string);
+      const parsed = parseArtistBio(bioRaw);
+      const parsedDe = parseArtistBio((data.bio_de as string) || "");
+      const parsedEn = parseArtistBio((data.bio_en as string) || "");
+      const nameVal = (data.name_tr as string) || (data.name as string) || "";
       setForm({
-        id: data.id,
-        name: data.name || "",
-        slug: data.slug || "",
-        image_url: data.image_url || "",
+        id: data.id as string,
+        name: nameVal,
+        slug: (data.slug as string) || "",
+        image_url: (data.image_url as string) || "",
         bio: parsed.content || "",
+        name_tr: (data.name_tr as string) || (data.name as string) || "",
+        name_de: (data.name_de as string) || "",
+        name_en: (data.name_en as string) || "",
+        bio_tr: parsed.content || "",
+        bio_de: parsedDe.content || "",
+        bio_en: parsedEn.content || "",
         gallery_1: parsed.gallery[0]?.url || "",
         gallery_1_position: parsed.gallery[0]?.position || "top",
         gallery_2: parsed.gallery[1]?.url || "",
@@ -303,44 +325,51 @@ export default function SanatcilarPage() {
     if (isSaving) {
       activeMutationAbortRef.current?.abort();
     }
-    if (!form.name.trim()) {
-      setToast({ type: "warning", message: "Sanatçı adı zorunlu." });
+    const nameVal = (form.name_tr || form.name).trim();
+    if (!nameVal) {
+      setToast({ type: "warning", message: "Sanatçı adı (TR) zorunlu." });
       return;
     }
 
-    const slug = (form.slug || slugify(form.name)).trim();
+    const slug = (form.slug || slugify(nameVal)).trim();
     if (!slug) {
       setToast({ type: "warning", message: "Slug oluşturulamadı." });
       return;
     }
 
-    const bio = buildArtistBio(
-      form.bio,
-      [
-        { url: form.gallery_1, position: form.gallery_1_position },
-        { url: form.gallery_2, position: form.gallery_2_position },
-        { url: form.gallery_3, position: form.gallery_3_position },
-      ],
-      {
-        youtube: form.youtube_url,
-        spotify: form.spotify_url,
-        instagram: form.instagram_url,
-        website: form.website_url,
-      },
-      {
-        text: form.card_text,
-        lines: form.card_lines,
-      },
-      {
-        urls: [form.video_1_url, form.video_2_url, form.video_3_url],
-      }
-    );
+    const gallery = [
+      { url: form.gallery_1, position: form.gallery_1_position },
+      { url: form.gallery_2, position: form.gallery_2_position },
+      { url: form.gallery_3, position: form.gallery_3_position },
+    ];
+    const socials = {
+      youtube: form.youtube_url,
+      spotify: form.spotify_url,
+      instagram: form.instagram_url,
+      website: form.website_url,
+    };
+    const card = { text: form.card_text, lines: form.card_lines };
+    const videos = { urls: [form.video_1_url, form.video_2_url, form.video_3_url] };
+
+    const bioTr = buildArtistBio(form.bio_tr || form.bio, gallery, socials, card, videos);
+    const bioDe = form.bio_de.trim()
+      ? buildArtistBio(form.bio_de, gallery, socials, card, videos)
+      : null;
+    const bioEn = form.bio_en.trim()
+      ? buildArtistBio(form.bio_en, gallery, socials, card, videos)
+      : null;
 
     const payload = {
-      name: form.name.trim(),
+      name: nameVal,
       slug,
       image_url: form.image_url.trim() || null,
-      bio: bio || null,
+      bio: bioTr || null,
+      name_tr: nameVal || null,
+      name_de: form.name_de.trim() || null,
+      name_en: form.name_en.trim() || null,
+      bio_tr: bioTr || null,
+      bio_de: bioDe,
+      bio_en: bioEn,
     };
 
     const mutationAbortController = new AbortController();
@@ -507,17 +536,44 @@ export default function SanatcilarPage() {
         </section>
 
         <section className="xl:col-span-2 bg-white border border-slate-200 rounded-xl p-5 space-y-5">
+          <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50">
+            <h3 className="text-sm font-semibold text-slate-700 mb-3">Sanatçı Adı (TR zorunlu, DE/EN opsiyonel)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-slate-500 mb-0.5">Türkçe *</label>
+                <input
+                  value={form.name_tr || form.name}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setFormField("name_tr", v);
+                    setFormField("name", v);
+                    if (!form.id) setFormField("slug", slugify(v));
+                  }}
+                  placeholder="Sanatçı adı (TR)"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-0.5">Almanca</label>
+                <input
+                  value={form.name_de}
+                  onChange={(e) => setFormField("name_de", e.target.value)}
+                  placeholder="Sanatçı adı (DE)"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-0.5">İngilizce</label>
+                <input
+                  value={form.name_en}
+                  onChange={(e) => setFormField("name_en", e.target.value)}
+                  placeholder="Sanatçı adı (EN)"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              value={form.name}
-              onChange={(e) => {
-                const name = e.target.value;
-                setFormField("name", name);
-                if (!form.id) setFormField("slug", slugify(name));
-              }}
-              placeholder="Sanatçı adı"
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
             <input
               value={form.slug}
               onChange={(e) => setFormField("slug", slugify(e.target.value))}
@@ -675,14 +731,44 @@ export default function SanatcilarPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Biyografi / Özgeçmiş</label>
-            <div className="border border-slate-200 rounded-lg overflow-hidden">
-              <MDEditor
-                value={form.bio}
-                onChange={(val) => setFormField("bio", val || "")}
-                preview="edit"
-                height={260}
-              />
+            <label className="block text-sm font-medium text-slate-700 mb-2">Biyografi / Özgeçmiş (TR zorunlu, DE/EN opsiyonel)</label>
+            <div className="space-y-4">
+              <div>
+                <span className="text-xs text-slate-500 font-medium">Türkçe *</span>
+                <div className="border border-slate-200 rounded-lg overflow-hidden mt-1">
+                  <MDEditor
+                    value={form.bio_tr || form.bio}
+                    onChange={(val) => {
+                      setFormField("bio_tr", val || "");
+                      setFormField("bio", val || "");
+                    }}
+                    preview="edit"
+                    height={220}
+                  />
+                </div>
+              </div>
+              <div>
+                <span className="text-xs text-slate-500 font-medium">Almanca</span>
+                <div className="border border-slate-200 rounded-lg overflow-hidden mt-1">
+                  <MDEditor
+                    value={form.bio_de}
+                    onChange={(val) => setFormField("bio_de", val || "")}
+                    preview="edit"
+                    height={180}
+                  />
+                </div>
+              </div>
+              <div>
+                <span className="text-xs text-slate-500 font-medium">İngilizce</span>
+                <div className="border border-slate-200 rounded-lg overflow-hidden mt-1">
+                  <MDEditor
+                    value={form.bio_en}
+                    onChange={(val) => setFormField("bio_en", val || "")}
+                    preview="edit"
+                    height={180}
+                  />
+                </div>
+              </div>
             </div>
           </div>
 

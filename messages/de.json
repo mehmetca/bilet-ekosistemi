@@ -1,0 +1,123 @@
+{
+  "nav": {
+    "events": "Veranstaltungen",
+    "calendar": "Kalender",
+    "venues": "Spielstätten",
+    "artists": "Künstler",
+    "management": "Verwaltung",
+    "profile": "Mein Profil",
+    "login": "Anmelden",
+    "admin": "Verwaltung"
+  },
+  "home": {
+    "heroTitle": "Finden Sie Tickets für Ihre Traumveranstaltung",
+    "heroSubtitle": "Konzerte, Theater, Stand-up und mehr. Sichere Zahlung, einfacher Ticketkauf.",
+    "search": "Suchen",
+    "searchPlaceholder": "Veranstaltung, Künstler oder Spielstätte suchen...",
+    "upcomingEvents": "Kommende Veranstaltungen",
+    "news": "Nachrichten",
+    "sortBy": {
+      "upcoming": "Demnächst",
+      "cheapest": "Günstigste",
+      "popular": "Beliebt"
+    },
+    "filters": {
+      "allCities": "Alle Städte",
+      "allCategories": "Alle Kategorien",
+      "clear": "Filter zurücksetzen",
+      "startDate": "Startdatum",
+      "endDate": "Enddatum",
+      "minPrice": "Min €",
+      "maxPrice": "Max €"
+    },
+    "noEvents": "Noch keine Veranstaltungen",
+    "noEventsSlider": "Keine kommenden Veranstaltungen.",
+    "trustBadges": {
+      "verified": "Verifizierte Tickets",
+      "verifiedDesc": "100% Original-Garantie",
+      "delivery": "Sofortige Lieferung",
+      "deliveryDesc": "Schnell und sicher",
+      "payment": "Sichere Zahlung",
+      "paymentDesc": "3D Secure Zahlungsabwicklung",
+      "inventory": "Live-Bestand",
+      "inventoryDesc": "Echtzeit-Verfügbarkeit"
+    },
+    "solutionSteps": "Lösungsschritte:",
+    "solution1": "Supabase Dashboard öffnen",
+    "solution2": "SQL Editor öffnen",
+    "solution3": "quick-fix.sql ausführen",
+    "solution4": "Seite neu laden",
+    "supabaseHint": "Supabase-Tabellen werden erstellt oder es gibt keine Daten.",
+    "buyTicket": "Ticket kaufen",
+    "buyTicketDisabled": "Nicht verfügbar",
+    "details": "Details",
+    "from": "ab",
+    "free": "Kostenlos",
+    "pastEvents": "Vergangene Veranstaltungen",
+    "eventEnded": "BEENDET",
+    "eventEndedAlert": "Diese Veranstaltung ist beendet. Tickets können nicht mehr gekauft werden.",
+    "eventEndedBanner": "Diese Veranstaltung ist beendet. Der Ticketverkauf ist geschlossen."
+  },
+  "categories": {
+    "konser": "Konzert",
+    "tiyatro": "Theater",
+    "sinema": "Kino",
+    "festival": "Festival",
+    "spor": "Sport",
+    "stand-up": "Stand-Up",
+    "diger": "Sonstige",
+    "event": "Veranstaltung"
+  },
+  "calendar": {
+    "title": "Veranstaltungskalender",
+    "allCategories": "Alle Kategorien",
+    "clear": "Löschen",
+    "eventsCount": "Veranstaltungen",
+    "noImage": "Kein Bild",
+    "noEventsYet": "Noch keine Veranstaltungen. Bald werden neue Veranstaltungen hinzugefügt.",
+    "noEventsForDate": "An diesem Datum sind keine Veranstaltungen.",
+    "noEventsForFilter": "Keine Veranstaltungen entsprechen den ausgewählten Kriterien.",
+    "eventsOnDate": "Veranstaltungen am",
+    "eventsOfCategory": "Veranstaltungen",
+    "buyTicket": "Ticket kaufen"
+  },
+  "venues": {
+    "title": "Spielstätten und Säle",
+    "subtitle": "Unsere Veranstaltungsorte, Sitzpläne, Anreise und Einlassinformationen.",
+    "noVenues": "Noch keine Spielstätten hinzugefügt",
+    "other": "Sonstige",
+    "capacity": "Kapazität",
+    "persons": "Personen",
+    "transport": "Anreise",
+    "entrance": "Einlass",
+    "rules": "Regeln",
+    "map": "Karte",
+    "faqShow": "FAQ ausblenden",
+    "faqCount": "FAQ",
+    "photo": "Foto",
+    "seatingPlan": "Sitzplan"
+  },
+  "artists": {
+    "title": "Künstler",
+    "subtitle": "Alle Künstlerbiografien und Bilder",
+    "loading": "Wird geladen...",
+    "noArtists": "Noch keine Künstler eingetragen.",
+    "noPhoto": "Kein Foto",
+    "bioPlaceholder": "Biografie-Informationen werden bald hinzugefügt."
+  },
+  "footer": {
+    "about": "Über uns",
+    "contact": "Kontakt",
+    "privacy": "Datenschutz",
+    "terms": "Nutzungsbedingungen",
+    "securePayment": "Sichere Zahlung",
+    "refundPolicy": "Rückgaberichtlinie",
+    "shippingPolicy": "Versandrichtlinie",
+    "liveStock": "Live-Bestand",
+    "securePaymentDesc": "Es wird eine 3D Secure-Zahlungsinfrastruktur verwendet.",
+    "refundPolicyDesc": "Die Rückgabebedingungen werden vom Veranstalter festgelegt. Rückgabe oder Änderung gemäß Veranstaltungs- und Kampagnenbedingungen möglich. Bitte prüfen Sie vor dem Kauf die jeweiligen Veranstaltungsbedingungen.",
+    "shippingPolicyDesc": "Standardversand (DE): 2–4 Werktage. Expressversand (DE): Bestellungen vor Mittag (Mo–Fr) werden am nächsten Werktag geliefert. Digitales Ticket: Sofort nach Vertragsabschluss druckbar. Gedrucktes Ticket ist kostenpflichtig; wird an Versandkosten-Zahler geliefert. Versandoptionen werden im Warenkorb angezeigt.",
+    "liveStockDesc": "Bestandsinformationen werden in Echtzeit aktualisiert.",
+    "copyright": "© {year} Bilet Ekosistemi"
+  }
+}

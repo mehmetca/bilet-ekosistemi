@@ -1,9 +1,10 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Link, useRouter } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
+import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabase-client";
 import { parseArtistBio } from "@/lib/artistProfile";
 import type { Artist } from "@/types/database";
@@ -38,6 +39,7 @@ function getLineClampClass(lines: number): string {
 }
 
 function SanatciIndexContent() {
+  const t = useTranslations("artists");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -90,17 +92,17 @@ function SanatciIndexContent() {
       <Header />
       <main className="container mx-auto px-4 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Sanatçılar</h1>
-          <p className="text-slate-600 mt-2">Tüm sanatçı biyografileri ve görselleri</p>
+          <h1 className="text-3xl font-bold text-slate-900">{t("title")}</h1>
+          <p className="text-slate-600 mt-2">{t("subtitle")}</p>
         </div>
 
         {loading ? (
           <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500">
-            Yükleniyor...
+            {t("loading")}
           </div>
         ) : pagedArtists.length === 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500">
-            Henüz sanatçı kaydı yok.
+            {t("noArtists")}
           </div>
         ) : (
           <>
@@ -125,14 +127,14 @@ function SanatciIndexContent() {
                         />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-slate-400 text-sm">
-                          Fotoğraf yok
+                          {t("noPhoto")}
                         </div>
                       )}
                     </div>
                     <div className="p-4">
                       <h2 className="font-semibold text-slate-900 line-clamp-1">{artist.name}</h2>
                       <p className={`text-sm text-slate-600 mt-2 ${lineClampClass}`}>
-                        {excerpt || "Biyografi bilgisi yakında eklenecek."}
+                        {excerpt || t("bioPlaceholder")}
                       </p>
                     </div>
                   </Link>
@@ -164,20 +166,23 @@ function SanatciIndexContent() {
   );
 }
 
+function ArtistsLoadingFallback() {
+  const t = useTranslations("artists");
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <Header />
+      <main className="container mx-auto px-4 py-10">
+        <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500">
+          {t("loading")}
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export default function SanatciIndexPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-slate-50">
-          <Header />
-          <main className="container mx-auto px-4 py-10">
-            <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500">
-              Yükleniyor...
-            </div>
-          </main>
-        </div>
-      }
-    >
+    <Suspense fallback={<ArtistsLoadingFallback />}>
       <SanatciIndexContent />
     </Suspense>
   );

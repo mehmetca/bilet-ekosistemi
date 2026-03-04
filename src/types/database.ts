@@ -15,6 +15,16 @@ export interface Event {
   ticket_url?: string | null;
   created_at: string;
   updated_at: string;
+  /** Çok dilli alanlar */
+  title_tr?: string | null;
+  title_de?: string | null;
+  title_en?: string | null;
+  description_tr?: string | null;
+  description_de?: string | null;
+  description_en?: string | null;
+  venue_tr?: string | null;
+  venue_de?: string | null;
+  venue_en?: string | null;
 }
 
 export interface Venue {
@@ -32,6 +42,28 @@ export interface Venue {
   map_embed_url: string | null;
   rules: string | null;
   faq: Array<{ soru: string; cevap: string }>;
+  /** Çok dilli alanlar */
+  name_tr?: string | null;
+  name_de?: string | null;
+  name_en?: string | null;
+  address_tr?: string | null;
+  address_de?: string | null;
+  address_en?: string | null;
+  city_tr?: string | null;
+  city_de?: string | null;
+  city_en?: string | null;
+  seating_layout_description_tr?: string | null;
+  seating_layout_description_de?: string | null;
+  seating_layout_description_en?: string | null;
+  transport_info_tr?: string | null;
+  transport_info_de?: string | null;
+  transport_info_en?: string | null;
+  entrance_info_tr?: string | null;
+  entrance_info_de?: string | null;
+  entrance_info_en?: string | null;
+  rules_tr?: string | null;
+  rules_de?: string | null;
+  rules_en?: string | null;
 }
 
 export interface Artist {
@@ -46,6 +78,13 @@ export interface Artist {
   tour_end_date?: string | null;
   created_at?: string;
   updated_at?: string;
+  /** Çok dilli alanlar */
+  name_tr?: string | null;
+  name_de?: string | null;
+  name_en?: string | null;
+  bio_tr?: string | null;
+  bio_de?: string | null;
+  bio_en?: string | null;
 }
 
 export interface News {
@@ -59,6 +98,16 @@ export interface News {
   published_at: string;
   created_at: string;
   updated_at: string;
+  /** Çok dilli alanlar */
+  title_tr?: string | null;
+  title_de?: string | null;
+  title_en?: string | null;
+  content_tr?: string | null;
+  content_de?: string | null;
+  content_en?: string | null;
+  excerpt_tr?: string | null;
+  excerpt_de?: string | null;
+  excerpt_en?: string | null;
 }
 
 export interface Advertisement {

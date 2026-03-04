@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
-import { supabase } from "@/lib/supabase-client";
 import AdminGuard from "@/components/AdminGuard";
-import { FileText, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 
 interface AuditLog {
   id: string;
@@ -26,32 +25,33 @@ export default function AuditLogPage() {
 }
 
 function AuditLogContent() {
-  const { isAdmin } = useSimpleAuth();
+  const { isAdmin, isController } = useSimpleAuth();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    fetchLogs();
-  }, [isAdmin]);
-
-  async function fetchLogs() {
+  const fetchLogs = useCallback(async () => {
+    if (!isAdmin && !isController) return;
+    setLoading(true);
+    setError(null);
     try {
-      const { data, error } = await supabase
-        .from("audit_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(200);
-
-      if (error) throw error;
-      setLogs((data || []) as AuditLog[]);
+      const res = await fetch("/api/audit-logs");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || "Veriler yüklenemedi");
+      setLogs(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Audit log fetch error:", err);
+      setError(err instanceof Error ? err.message : "Bir hata oluştu");
+      setLogs([]);
     } finally {
       setLoading(false);
     }
-  }
+  }, [isAdmin, isController]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const actionLabels: Record<string, string> = {
     create: "Oluşturma",
@@ -68,7 +68,7 @@ function AuditLogContent() {
     news: "Haber",
   };
 
-  if (!isAdmin) {
+  if (!isAdmin && !isController) {
     return (
       <div className="p-8">
         <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
@@ -78,7 +78,7 @@ function AuditLogContent() {
     );
   }
 
-  if (loading) {
+  if (loading && logs.length === 0) {
     return (
       <div className="p-8">
         <div className="text-center text-slate-500">Yükleniyor...</div>
@@ -89,15 +89,41 @@ function AuditLogContent() {
   return (
     <div className="p-8">
       <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold text-slate-900 mb-6">Denetim Kaydı</h1>
-        <p className="text-slate-600 mb-6">
-          Kritik admin işlemlerinin kaydı. Son 200 kayıt gösteriliyor.
-        </p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Denetim Kaydı</h1>
+            <p className="text-slate-600 mt-1">
+              Kritik admin işlemlerinin kaydı. Son 200 kayıt gösteriliyor.
+            </p>
+          </div>
+          <button
+            onClick={() => fetchLogs()}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Yenile
+          </button>
+        </div>
 
-        {logs.length === 0 ? (
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 p-4 mb-6 text-red-800">
+            <p className="font-medium">Hata: {error}</p>
+            <p className="text-sm mt-1">audit_logs tablosu mevcut mu? Migration 027 çalıştırıldı mı?</p>
+            <button
+              onClick={() => fetchLogs()}
+              className="mt-2 text-sm underline hover:no-underline"
+            >
+              Tekrar dene
+            </button>
+          </div>
+        )}
+
+        {logs.length === 0 && !loading ? (
           <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500">
             <FileText className="h-16 w-16 mx-auto text-slate-300 mb-4" />
             <p>Henüz kayıt yok.</p>
+            <p className="text-sm mt-2">Etkinlik silme, güncelleme gibi işlemler burada görünecektir.</p>
           </div>
         ) : (
           <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
@@ -115,9 +141,8 @@ function AuditLogContent() {
                 </thead>
                 <tbody>
                   {logs.map((log) => (
-                    <>
+                    <React.Fragment key={log.id}>
                       <tr
-                        key={log.id}
                         className="border-b border-slate-100 hover:bg-slate-50/50 cursor-pointer"
                         onClick={() => setExpandedId((id) => (id === log.id ? null : log.id))}
                       >
@@ -147,7 +172,7 @@ function AuditLogContent() {
                         </td>
                       </tr>
                       {expandedId === log.id && Object.keys(log.details || {}).length > 0 && (
-                        <tr key={`${log.id}-detail`} className="bg-slate-50/50">
+                        <tr className="bg-slate-50/50">
                           <td colSpan={6} className="p-4">
                             <pre className="text-xs text-slate-600 overflow-x-auto">
                               {JSON.stringify(log.details, null, 2)}
@@ -155,7 +180,7 @@ function AuditLogContent() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>

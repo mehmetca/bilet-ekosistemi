@@ -12,8 +12,11 @@ interface Advertisement {
   link_url: string;
   placement: string;
   is_active: boolean;
+  locale?: string | null;
   created_at: string;
 }
+
+const LOCALE_LABELS: Record<string, string> = { tr: "Türkçe", de: "Deutsch", en: "English" };
 
 export default function ReklamlarPage() {
   const { isAdmin, loading: authLoading } = useSimpleAuth();
@@ -27,7 +30,8 @@ export default function ReklamlarPage() {
     image_url: "",
     link_url: "",
     placement: "news_slider",
-    is_active: true
+    is_active: true,
+    locale: "tr" as "tr" | "de" | "en"
   });
 
   useEffect(() => {
@@ -66,7 +70,8 @@ export default function ReklamlarPage() {
         image_url: "",
         link_url: "",
         placement: "news_slider",
-        is_active: true
+        is_active: true,
+        locale: "tr"
       });
       setShowAddForm(false);
       fetchAdvertisements();
@@ -98,7 +103,8 @@ export default function ReklamlarPage() {
         image_url: "",
         link_url: "",
         placement: "news_slider",
-        is_active: true
+        is_active: true,
+        locale: "tr"
       });
       setShowAddForm(false);
       fetchAdvertisements();
@@ -138,7 +144,8 @@ export default function ReklamlarPage() {
       image_url: ad.image_url,
       link_url: ad.link_url,
       placement: ad.placement,
-      is_active: ad.is_active
+      is_active: ad.is_active,
+      locale: (ad.locale || "tr") as "tr" | "de" | "en"
     });
     setShowAddForm(true);
   }
@@ -151,7 +158,8 @@ export default function ReklamlarPage() {
       image_url: "",
       link_url: "",
       placement: "news_slider",
-      is_active: true
+      is_active: true,
+      locale: "tr"
     });
   }
 
@@ -211,27 +219,48 @@ export default function ReklamlarPage() {
               {editingAd ? "Reklam Düzenle" : "Yeni Reklam Ekle"}
             </h2>
             <div className="grid gap-4 md:grid-cols-2">
-              <input
-                type="text"
-                placeholder="Reklam Başlığı"
-                value={newAd.title}
-                onChange={(e) => setNewAd({ ...newAd, title: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2"
-              />
-              <input
-                type="url"
-                placeholder="Reklam Linki"
-                value={newAd.link_url}
-                onChange={(e) => setNewAd({ ...newAd, link_url: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2"
-              />
-              <select
-                value={newAd.placement}
-                onChange={(e) => setNewAd({ ...newAd, placement: e.target.value })}
-                className="rounded-lg border border-slate-300 px-3 py-2"
-              >
-                <option value="news_slider">Haberler Slider</option>
-              </select>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Reklam Başlığı</label>
+                <input
+                  type="text"
+                  placeholder="Reklam Başlığı"
+                  value={newAd.title}
+                  onChange={(e) => setNewAd({ ...newAd, title: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Reklam Linki</label>
+                <input
+                  type="url"
+                  placeholder="https://..."
+                  value={newAd.link_url}
+                  onChange={(e) => setNewAd({ ...newAd, link_url: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Dil (Hedef Kitle)</label>
+                <select
+                  value={newAd.locale}
+                  onChange={(e) => setNewAd({ ...newAd, locale: e.target.value as "tr" | "de" | "en" })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                >
+                  <option value="tr">Türkçe</option>
+                  <option value="de">Deutsch (Almanca)</option>
+                  <option value="en">English (İngilizce)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Yerleşim</label>
+                <select
+                  value={newAd.placement}
+                  onChange={(e) => setNewAd({ ...newAd, placement: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                >
+                  <option value="news_slider">Haberler Slider</option>
+                </select>
+              </div>
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
@@ -287,7 +316,7 @@ export default function ReklamlarPage() {
                 <div key={ad.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
                         <h3 className="font-semibold text-slate-900">{ad.title}</h3>
                         <span className={`text-xs px-2 py-1 rounded ${
                           ad.is_active 
@@ -296,6 +325,11 @@ export default function ReklamlarPage() {
                         }`}>
                           {ad.is_active ? 'Aktif' : 'Pasif'}
                         </span>
+                        {ad.locale && (
+                          <span className="text-xs px-2 py-1 rounded bg-slate-100 text-slate-700">
+                            {LOCALE_LABELS[ad.locale] || ad.locale.toUpperCase()}
+                          </span>
+                        )}
                       </div>
                       
                       {ad.image_url && (

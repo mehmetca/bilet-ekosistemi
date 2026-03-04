@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import type { News } from "@/types/database";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { isImageReachable } from "@/lib/image-utils";
+import { getLocalizedNews, type Locale } from "@/lib/i18n-content";
 
 interface NewsSliderProps {
   news?: News[];
   title: string;
+  locale?: Locale;
 }
 
 interface Advertisement {
@@ -20,7 +22,7 @@ interface Advertisement {
   is_active: boolean;
 }
 
-export default function NewsSlider({ news, title }: NewsSliderProps) {
+export default function NewsSlider({ news, title, locale = "tr" }: NewsSliderProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const [safeNews, setSafeNews] = useState<News[]>(news || []);
@@ -45,7 +47,8 @@ export default function NewsSlider({ news, title }: NewsSliderProps) {
   useEffect(() => {
     async function fetchNewsSliderAd() {
       try {
-        const response = await fetch("/api/advertisements");
+        const url = locale ? `/api/advertisements?locale=${locale}` : "/api/advertisements";
+        const response = await fetch(url);
         if (!response.ok) return;
         const ads = (await response.json()) as Advertisement[];
         const targetAd = ads.find(
@@ -61,7 +64,7 @@ export default function NewsSlider({ news, title }: NewsSliderProps) {
     }
 
     fetchNewsSliderAd();
-  }, []);
+  }, [locale]);
 
   // Otomatik oynatma
   useEffect(() => {
@@ -106,6 +109,9 @@ export default function NewsSlider({ news, title }: NewsSliderProps) {
   }
 
   const currentNews = safeNews[currentIndex];
+  const localized = currentNews
+    ? getLocalizedNews(currentNews as Record<string, unknown>, locale)
+    : { title: "", content: "", excerpt: "" };
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -121,7 +127,7 @@ export default function NewsSlider({ news, title }: NewsSliderProps) {
           {currentNews.image_url ? (
             <img
               src={currentNews.image_url}
-              alt={currentNews.title}
+              alt={localized.title || currentNews.title}
               className="w-full h-full object-cover"
             />
           ) : (
@@ -151,11 +157,11 @@ export default function NewsSlider({ news, title }: NewsSliderProps) {
             </div>
             
             <h3 className="text-2xl font-bold mb-3 line-clamp-2">
-              {currentNews.title}
+              {localized.title || currentNews.title}
             </h3>
             
             <p className="text-sm opacity-90 line-clamp-3 mb-4">
-              {currentNews.summary || (currentNews.content ? currentNews.content.substring(0, 150) + "..." : "")}
+              {localized.excerpt || (currentNews as Record<string, unknown>).summary || (localized.content ? localized.content.substring(0, 150) + "..." : "")}
             </p>
 
             <div className="flex items-center justify-between">

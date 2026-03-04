@@ -25,8 +25,9 @@ async function getNews(id: string): Promise<News | null> {
   }
 }
 
-export default async function HaberDetayPage({ params }: { params: { id: string } }) {
-  const haber = await getNews(params.id);
+export default async function HaberDetayPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
+  const { locale, id } = await params;
+  const haber = await getNews(id);
 
   if (!haber) {
     // Geçici olarak ana sayfaya yönlendir
@@ -46,5 +47,5 @@ export default async function HaberDetayPage({ params }: { params: { id: string 
     );
   }
 
-  return <HaberDetayClient haber={haber} />;
+  return <HaberDetayClient haber={haber} locale={locale as "tr" | "de" | "en"} />;
 }

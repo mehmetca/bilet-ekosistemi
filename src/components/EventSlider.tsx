@@ -4,14 +4,19 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Calendar, MapPin, Music2 } from "lucide-react";
 import type { Event } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { getLocalizedEvent } from "@/lib/i18n-content";
+import type { Locale } from "@/lib/i18n-content";
 
 interface EventSliderProps {
   events: Event[];
   title: string;
+  locale?: Locale;
+  noEventsText?: string;
+  buyTicketText?: string;
 }
 
-export default function EventSlider({ events, title }: EventSliderProps) {
+export default function EventSlider({ events, title, locale = "tr", noEventsText = "Yaklaşan etkinlik bulunmamaktadır.", buyTicketText = "Bilet Al" }: EventSliderProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const fallbackImage =
@@ -77,7 +82,7 @@ export default function EventSlider({ events, title }: EventSliderProps) {
         <h2 className="text-xl font-bold text-slate-900 mb-4">{title}</h2>
         <div className="text-center py-8">
           <Music2 className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-          <p className="text-slate-500">Yaklaşan etkinlik bulunmamaktadır.</p>
+          <p className="text-slate-500">{noEventsText}</p>
         </div>
       </div>
     );
@@ -85,6 +90,7 @@ export default function EventSlider({ events, title }: EventSliderProps) {
 
   const currentEvent = sliderEvents[currentIndex] ?? sliderEvents[0];
   if (!currentEvent) return null;
+  const localized = getLocalizedEvent(currentEvent as Record<string, unknown>, locale);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -100,7 +106,7 @@ export default function EventSlider({ events, title }: EventSliderProps) {
           {currentEvent.image_url ? (
             <img
               src={currentEvent.image_url}
-              alt={currentEvent.title}
+              alt={localized.title}
               className="w-full h-full object-cover object-top"
               onError={(e) => {
                 if (e.currentTarget.dataset.fallbackApplied === "1") return;
@@ -129,7 +135,7 @@ export default function EventSlider({ events, title }: EventSliderProps) {
             </div>
             
             <h3 className="text-2xl font-bold mb-2 line-clamp-2">
-              {currentEvent.title}
+              {localized.title}
             </h3>
             
             <div className="flex items-center gap-4 text-sm opacity-90 mb-4">
@@ -139,7 +145,7 @@ export default function EventSlider({ events, title }: EventSliderProps) {
               </div>
               <div className="flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
-                {currentEvent.venue ?? ""}
+                {localized.venue || currentEvent.venue ?? ""}
               </div>
             </div>
 
@@ -155,7 +161,7 @@ export default function EventSlider({ events, title }: EventSliderProps) {
                 href={`/etkinlik/${currentEvent.id}`}
                 className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
               >
-                Bilet Al
+                {buyTicketText}
               </Link>
             </div>
           </div>
@@ -215,7 +221,7 @@ export default function EventSlider({ events, title }: EventSliderProps) {
                 {event.image_url ? (
                   <img
                     src={event.image_url}
-                    alt={event.title}
+                    alt={getLocalizedEvent(event as Record<string, unknown>, locale).title}
                     className="w-full h-full object-cover object-top"
                     onError={(e) => {
                       if (e.currentTarget.dataset.fallbackApplied === "1") return;

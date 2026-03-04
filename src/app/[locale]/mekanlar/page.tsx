@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { useTranslations, useLocale } from "next-intl";
+import { getLocalizedVenue } from "@/lib/i18n-content";
 import { MapPin, Users, ChevronRight, ChevronDown, Car, DoorOpen, HelpCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
@@ -31,6 +33,8 @@ interface Venue {
 }
 
 export default function MekanlarPage() {
+  const t = useTranslations("venues");
+  const locale = useLocale() as "tr" | "de" | "en";
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -78,7 +82,7 @@ export default function MekanlarPage() {
   }
 
   const venuesByCity = venues.reduce<Record<string, Venue[]>>((acc, v) => {
-    const city = v.city || "Diğer";
+    const city = v.city || "__other__";
     if (!acc[city]) acc[city] = [];
     acc[city].push(v);
     return acc;
@@ -90,9 +94,9 @@ export default function MekanlarPage() {
 
       <div className="mx-auto max-w-5xl px-4 py-12">
         <div className="mb-10">
-          <h1 className="text-3xl font-bold text-slate-900">Mekanlar ve Salonlar</h1>
+          <h1 className="text-3xl font-bold text-slate-900">{t("title")}</h1>
           <p className="mt-2 text-slate-600">
-            Etkinlik mekanlarımız, oturma düzenleri, ulaşım ve giriş bilgileri.
+            {t("subtitle")}
           </p>
         </div>
 
@@ -103,13 +107,13 @@ export default function MekanlarPage() {
         ) : venues.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
             <MapPin className="mx-auto h-16 w-16 text-slate-300" />
-            <p className="mt-4 text-lg font-medium">Henüz mekan eklenmemiş</p>
+            <p className="mt-4 text-lg font-medium">{t("noVenues")}</p>
           </div>
         ) : (
           <div className="space-y-6">
             {Object.entries(venuesByCity).map(([city, cityVenues]) => (
               <section key={city}>
-                <h2 className="mb-3 text-lg font-semibold text-slate-800">{city}</h2>
+                <h2 className="mb-3 text-lg font-semibold text-slate-800">{city === "__other__" ? t("other") : city}</h2>
                 <div className="space-y-1 rounded-xl border border-slate-200 bg-white overflow-hidden">
                   {cityVenues.map((venue) => {
                     const isOpen = expandedId === venue.id;
@@ -123,7 +127,7 @@ export default function MekanlarPage() {
                           }}
                           className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
                         >
-                          <span className="font-semibold text-slate-900">{venue.name}</span>
+                          <span className="font-semibold text-slate-900">{getLocalizedVenue(venue as Record<string, unknown>, locale).name || venue.name}</span>
                           {venue.city && (
                             <span className="text-sm text-slate-500 hidden sm:inline">{venue.city}</span>
                           )}
@@ -142,14 +146,14 @@ export default function MekanlarPage() {
                                     {venue.image_url_1 && (
                                       <img
                                         src={venue.image_url_1}
-                                        alt={`${venue.name} - Fotoğraf 1`}
+                                        alt={`${venue.name} - ${t("photo")} 1`}
                                         className="h-full w-full object-cover rounded-lg"
                                       />
                                     )}
                                     {venue.image_url_2 && (
                                       <img
                                         src={venue.image_url_2}
-                                        alt={`${venue.name} - Fotoğraf 2`}
+                                        alt={`${venue.name} - ${t("photo")} 2`}
                                         className="h-full w-full object-cover rounded-lg"
                                       />
                                     )}
@@ -159,7 +163,7 @@ export default function MekanlarPage() {
                                   <div className="h-32 w-full md:w-64 rounded-lg overflow-hidden bg-slate-100">
                                     <img
                                       src={venue.seating_layout_image_url}
-                                      alt={`${venue.name} - Oturma planı`}
+                                      alt={`${venue.name} - ${t("seatingPlan")}`}
                                       className="h-full w-full object-cover"
                                     />
                                   </div>
@@ -171,45 +175,50 @@ export default function MekanlarPage() {
                                 )}
                               </div>
                               <div className="flex-1 min-w-0 space-y-4">
-                                {(venue.address || venue.city) && (
-                                  <p className="flex items-center gap-2 text-sm text-slate-600">
-                                    <MapPin className="h-4 w-4 flex-shrink-0" />
-                                    {[venue.address, venue.city].filter(Boolean).join(", ")}
-                                  </p>
-                                )}
+                                {(() => {
+                                  const loc = getLocalizedVenue(venue as Record<string, unknown>, locale);
+                                  const addr = loc.address || venue.address;
+                                  const city = loc.city || venue.city;
+                                  return (addr || city) ? (
+                                    <p className="flex items-center gap-2 text-sm text-slate-600">
+                                      <MapPin className="h-4 w-4 flex-shrink-0" />
+                                      {[addr, city].filter(Boolean).join(", ")}
+                                    </p>
+                                  ) : null;
+                                })()}
                                 {venue.capacity != null && (
                                   <p className="flex items-center gap-2 text-sm text-slate-600">
                                     <Users className="h-4 w-4 flex-shrink-0" />
-                                    Kapasite: {venue.capacity} kişi
+                                    {t("capacity")}: {venue.capacity} {t("persons")}
                                   </p>
                                 )}
-                                {venue.seating_layout_description && (
-                                  <p className="text-sm text-slate-700">{venue.seating_layout_description}</p>
+                                {(getLocalizedVenue(venue as Record<string, unknown>, locale).seating_layout_description || venue.seating_layout_description) && (
+                                  <p className="text-sm text-slate-700">{getLocalizedVenue(venue as Record<string, unknown>, locale).seating_layout_description || venue.seating_layout_description}</p>
                                 )}
-                                {venue.transport_info && (
+                                {(getLocalizedVenue(venue as Record<string, unknown>, locale).transport_info || venue.transport_info) && (
                                   <div className="flex items-start gap-2 text-sm">
                                     <Car className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-600" />
                                     <div className="flex-1 min-w-0">
-                                      <span className="font-medium text-slate-700">Ulaşım:</span>
+                                      <span className="font-medium text-slate-700">{t("transport")}:</span>
                                       <div
                                         className="text-slate-600 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-2"
-                                        dangerouslySetInnerHTML={{ __html: venue.transport_info }}
+                                        dangerouslySetInnerHTML={{ __html: getLocalizedVenue(venue as Record<string, unknown>, locale).transport_info || venue.transport_info || "" }}
                                       />
                                     </div>
                                   </div>
                                 )}
-                                {venue.entrance_info && (
+                                {(getLocalizedVenue(venue as Record<string, unknown>, locale).entrance_info || venue.entrance_info) && (
                                   <div className="flex items-start gap-2 text-sm">
                                     <DoorOpen className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-600" />
                                     <div>
-                                      <span className="font-medium text-slate-700">Giriş:</span>
-                                      <p className="text-slate-600">{venue.entrance_info}</p>
+                                      <span className="font-medium text-slate-700">{t("entrance")}:</span>
+                                      <p className="text-slate-600">{getLocalizedVenue(venue as Record<string, unknown>, locale).entrance_info || venue.entrance_info}</p>
                                     </div>
                                   </div>
                                 )}
-                                {venue.rules && (
+                                {(getLocalizedVenue(venue as Record<string, unknown>, locale).rules || venue.rules) && (
                                   <p className="text-sm text-slate-600">
-                                    <span className="font-medium">Kurallar:</span> {venue.rules}
+                                    <span className="font-medium">{t("rules")}:</span> {getLocalizedVenue(venue as Record<string, unknown>, locale).rules || venue.rules}
                                   </p>
                                 )}
                                 {venue.faq.length > 0 && (
@@ -221,7 +230,7 @@ export default function MekanlarPage() {
                                       className="flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700"
                                     >
                                       <HelpCircle className="h-4 w-4" />
-                                      {faqOpenInVenue === venue.id ? "SSS Gizle" : `${venue.faq.length} SSS`}
+                                      {faqOpenInVenue === venue.id ? t("faqShow") : `${venue.faq.length} ${t("faqCount")}`}
                                       <ChevronRight
                                         className={`h-4 w-4 transition-transform ${
                                           faqOpenInVenue === venue.id ? "rotate-90" : ""
@@ -246,7 +255,7 @@ export default function MekanlarPage() {
                               const mapUrl = extractMapEmbedUrl(venue.map_embed_url);
                               return mapUrl ? (
                                 <div className="mt-6">
-                                  <h4 className="text-sm font-semibold text-slate-800 mb-2">Harita</h4>
+                                  <h4 className="text-sm font-semibold text-slate-800 mb-2">{t("map")}</h4>
                                   <div className="aspect-video max-w-2xl overflow-hidden rounded-lg border border-slate-200">
                                     <iframe
                                       src={mapUrl}
@@ -256,7 +265,7 @@ export default function MekanlarPage() {
                                       allowFullScreen
                                       loading="lazy"
                                       referrerPolicy="no-referrer-when-downgrade"
-                                      title={`${venue.name} harita`}
+                                      title={`${venue.name} ${t("map")}`}
                                       className="h-full w-full"
                                     />
                                   </div>

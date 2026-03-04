@@ -1,45 +1,47 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
+import { useTranslations } from "next-intl";
 
 const policyLinks = [
-  { href: "/#guvenli-odeme", label: "Güvenli Ödeme" },
-  { href: "/#iade-politikasi", label: "İade Politikası" },
-  { href: "/#gonderim-politikasi", label: "Gönderim Politikası" },
-  { href: "/#canli-stok", label: "Canlı Stok" },
+  { href: "/#guvenli-odeme", labelKey: "footer.securePayment" },
+  { href: "/#iade-politikasi", labelKey: "footer.refundPolicy" },
+  { href: "/#gonderim-politikasi", labelKey: "footer.shippingPolicy" },
+  { href: "/#canli-stok", labelKey: "footer.liveStock" },
 ];
 
 export default function Footer() {
+  const t = useTranslations();
   return (
     <footer className="border-t border-slate-200 bg-white py-8">
       <div className="container mx-auto px-4">
         <div className="flex flex-wrap items-center justify-center gap-4 text-sm mb-4">
-          {policyLinks.map(({ href, label }) => (
+          {policyLinks.map(({ href, labelKey }) => (
             <Link
               key={href}
               href={href}
               className="text-slate-600 hover:text-primary-600"
             >
-              {label}
+              {t(labelKey)}
             </Link>
           ))}
         </div>
         <div className="space-y-4 text-center text-xs text-slate-500 max-w-2xl mx-auto">
           <section id="guvenli-odeme">
-            <strong>Güvenli Ödeme:</strong> 3D Secure destekli ödeme altyapısı kullanılmaktadır.
+            <strong>{t("footer.securePayment")}:</strong> {t("footer.securePaymentDesc")}
           </section>
           <section id="iade-politikasi">
-            <strong>İade Politikası:</strong> İade koşulları etkinlik organizatörü tarafından belirlenir. Etkinlik ve kampanya koşullarına göre iade veya değişiklik uygulanabilir. Satın alma öncesi ilgili etkinlik koşullarını inceleyiniz.
+            <strong>{t("footer.refundPolicy")}:</strong> {t("footer.refundPolicyDesc")}
           </section>
           <section id="gonderim-politikasi">
-            <strong>Gönderim Politikası:</strong> Standart kargo (DE): 2–4 iş günü. Ekspres kargo (DE): Öğleden önce (Pzt–Cuma) verilen siparişler ertesi iş günü teslim. Dijital bilet: Sözleşme sonrası anında yazdırılabilir. Basılı bilet ücretlidir; gönderim ücreti ödeyenlere teslim edilir. Gönderim seçenekleri alışveriş sepetinde sunulur.
+            <strong>{t("footer.shippingPolicy")}:</strong> {t("footer.shippingPolicyDesc")}
           </section>
           <section id="canli-stok">
-            <strong>Canlı Stok:</strong> Stok bilgisi anlık güncellenir.
+            <strong>{t("footer.liveStock")}:</strong> {t("footer.liveStockDesc")}
           </section>
         </div>
         <div className="text-center text-sm text-slate-500 mt-6" suppressHydrationWarning>
-          © {new Date().getFullYear()} Bilet Ekosistemi
+          {t("footer.copyright", { year: new Date().getFullYear() })}
         </div>
       </div>
     </footer>

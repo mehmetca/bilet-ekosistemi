@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
 import TicketPrint from "@/components/TicketPrint";
 import { parseEventDescription } from "@/lib/eventMeta";
+import { getLocalizedEvent } from "@/lib/i18n-content";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
 import Link from "next/link";
 
@@ -14,12 +15,14 @@ interface EventDetailClientProps {
   event: Event;
   tickets: EventTicket[];
   venue?: Venue | null;
+  locale?: "tr" | "de" | "en";
 }
 
-export default function EventDetailClient({ event, tickets, venue = null }: EventDetailClientProps) {
+export default function EventDetailClient({ event, tickets, venue = null, locale = "tr" }: EventDetailClientProps) {
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
-  const parsedDescription = useMemo(() => parseEventDescription(event.description), [event.description]);
+  const localized = useMemo(() => getLocalizedEvent(event as Record<string, unknown>, locale), [event, locale]);
+  const parsedDescription = useMemo(() => parseEventDescription(localized.description || event.description), [localized.description, event.description]);
   const externalTicketUrl = parsedDescription.externalTicketUrl;
   const isExternalOnlyEvent = Boolean(externalTicketUrl) && availableTickets.length === 0;
   const [selectedTicketType, setSelectedTicketType] = useState<string>(
@@ -137,8 +140,8 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
     try {
       if (navigator.share) {
         await navigator.share({
-          title: event.title,
-          text: `${event.title} etkinligini inceleyin.`,
+          title: localized.title,
+          text: `${localized.title} etkinligini inceleyin.`,
           url: shareUrl,
         });
         setActionMessage("Paylasim penceresi acildi.");
@@ -239,7 +242,7 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
           </p>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
             <div>
-              <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{event.title}</h1>
+              <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{localized.title}</h1>
               <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-700">
                 <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
                   <Calendar className="h-4 w-4" />
@@ -255,11 +258,11 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
                   <MapPin className="h-4 w-4" />
-                  {event.venue}
+                  {localized.venue || event.venue}
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
                   <MapPin className="h-4 w-4" />
-                  {event.location || event.venue}
+                  {event.location || localized.venue || event.venue}
                 </span>
               </div>
               <div className="mt-5">
@@ -279,7 +282,7 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
                 {event.image_url ? (
                   <Image
                     src={event.image_url}
-                    alt={event.title}
+                    alt={localized.title}
                     fill
                     priority
                     className="object-cover"
@@ -359,10 +362,10 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
                     quantity={result.orderDetails?.quantity || ticketCount}
                     ticketType={result.orderDetails?.ticketType || selectedTicket?.name || ""}
                     price={result.orderDetails?.price || totalPrice}
-                    eventTitle={event.title}
+                    eventTitle={localized.title}
                     eventDate={event.date}
                     eventTime={event.time}
-                    venue={event.venue}
+                    venue={localized.venue || event.venue}
                     location={event.location}
                   />
 
@@ -679,7 +682,7 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
                     <MapPin className="h-5 w-5 text-blue-500 mt-0.5" />
                     <div>
                       <p className="font-medium text-slate-900">Mekan</p>
-                      <p className="text-sm text-slate-600">{event.venue}</p>
+                      <p className="text-sm text-slate-600">{localized.venue || event.venue}</p>
                     </div>
                   </div>
 
@@ -687,7 +690,7 @@ export default function EventDetailClient({ event, tickets, venue = null }: Even
                     <MapPin className="h-5 w-5 text-blue-500 mt-0.5" />
                     <div>
                       <p className="font-medium text-slate-900">Konum</p>
-                      <p className="text-sm text-slate-600">{event.location || event.venue}</p>
+                      <p className="text-sm text-slate-600">{event.location || localized.venue || event.venue}</p>
                     </div>
                   </div>
                   

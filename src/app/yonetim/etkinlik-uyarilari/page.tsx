@@ -46,7 +46,7 @@ export default function EtkinlikUyarilariPage() {
         `)
         .order("created_at", { ascending: false });
 
-      setReminders((data as ReminderRow[]) || []);
+      setReminders((data as unknown as ReminderRow[]) || []);
     } catch (error) {
       console.error("Reminders fetch error:", error);
     } finally {
