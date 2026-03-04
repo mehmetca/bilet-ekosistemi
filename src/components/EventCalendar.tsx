@@ -160,9 +160,9 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                   <span className="text-xs font-medium text-primary-600">
                     {event.category ? t(`categories.${event.category}`) : t("categories.event")}
                   </span>
-                  <h3 className="mt-2 font-semibold text-slate-900 line-clamp-2">{getLocalizedEvent(event as Record<string, unknown>, locale as "tr" | "de" | "en").title || event.title ?? ""}</h3>
+                  <h3 className="mt-2 font-semibold text-slate-900 line-clamp-2">{(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").title || event.title) ?? ""}</h3>
                   <p className="mt-2 text-sm text-slate-600 line-clamp-2">
-                    {parseEventDescription(getLocalizedEvent(event as Record<string, unknown>, locale as "tr" | "de" | "en").description || event.description).content}
+                    {parseEventDescription(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").description || event.description).content}
                   </p>
                     <div className="mt-3 space-y-2 text-sm text-slate-500">
                     <div className="flex items-center gap-2">
@@ -171,7 +171,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 flex-shrink-0" />
-                      {getLocalizedEvent(event as Record<string, unknown>, locale as "tr" | "de" | "en").venue || event.venue ?? ""}, {event.location ?? ""}
+                      {(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").venue || event.venue) ?? ""}, {event.location ?? ""}
                     </div>
                   </div>
                   <div className="mt-4 flex justify-between items-center">
@@ -239,7 +239,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 flex-shrink-0" />
-                        {getLocalizedEvent(event as Record<string, unknown>, locale as "tr" | "de" | "en").venue || event.venue ?? ""}, {event.location ?? ""}
+                        {(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").venue || event.venue) ?? ""}, {event.location ?? ""}
                       </div>
                     </div>
                     <p className="mt-3 text-xs font-medium text-red-600">

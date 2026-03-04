@@ -110,7 +110,7 @@ export default function NewsSlider({ news, title, locale = "tr" }: NewsSliderPro
 
   const currentNews = safeNews[currentIndex];
   const localized = currentNews
-    ? getLocalizedNews(currentNews as Record<string, unknown>, locale)
+    ? getLocalizedNews(currentNews as unknown as Record<string, unknown>, locale)
     : { title: "", content: "", excerpt: "" };
 
   return (
@@ -161,7 +161,7 @@ export default function NewsSlider({ news, title, locale = "tr" }: NewsSliderPro
             </h3>
             
             <p className="text-sm opacity-90 line-clamp-3 mb-4">
-              {localized.excerpt || (currentNews as Record<string, unknown>).summary || (localized.content ? localized.content.substring(0, 150) + "..." : "")}
+              {localized.excerpt || currentNews.summary || (localized.content ? localized.content.substring(0, 150) + "..." : "")}
             </p>
 
             <div className="flex items-center justify-between">

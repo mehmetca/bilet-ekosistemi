@@ -12,8 +12,8 @@ interface HaberDetayClientProps {
 }
 
 export default function HaberDetayClient({ haber, locale = "tr" }: HaberDetayClientProps) {
-  const localized = getLocalizedNews(haber as Record<string, unknown>, locale);
-  const excerpt = localized.excerpt || (haber as Record<string, unknown>).summary || (localized.content ? localized.content.substring(0, 150) + "..." : "");
+  const localized = getLocalizedNews(haber as unknown as Record<string, unknown>, locale);
+  const excerpt = localized.excerpt || haber.summary || (localized.content ? localized.content.substring(0, 150) + "..." : "");
 
   const handleShare = () => {
     if (navigator.share) {

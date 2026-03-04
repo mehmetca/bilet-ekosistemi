@@ -90,7 +90,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
 
   const currentEvent = sliderEvents[currentIndex] ?? sliderEvents[0];
   if (!currentEvent) return null;
-  const localized = getLocalizedEvent(currentEvent as Record<string, unknown>, locale);
+  const localized = getLocalizedEvent(currentEvent as unknown as Record<string, unknown>, locale);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -145,7 +145,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
               </div>
               <div className="flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
-                {localized.venue || currentEvent.venue ?? ""}
+                {(localized.venue || currentEvent.venue) ?? ""}
               </div>
             </div>
 
@@ -221,7 +221,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
                 {event.image_url ? (
                   <img
                     src={event.image_url}
-                    alt={getLocalizedEvent(event as Record<string, unknown>, locale).title}
+                    alt={getLocalizedEvent(event as unknown as Record<string, unknown>, locale).title}
                     className="w-full h-full object-cover object-top"
                     onError={(e) => {
                       if (e.currentTarget.dataset.fallbackApplied === "1") return;

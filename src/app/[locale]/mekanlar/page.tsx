@@ -127,7 +127,7 @@ export default function MekanlarPage() {
                           }}
                           className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
                         >
-                          <span className="font-semibold text-slate-900">{getLocalizedVenue(venue as Record<string, unknown>, locale).name || venue.name}</span>
+                          <span className="font-semibold text-slate-900">{getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).name || venue.name}</span>
                           {venue.city && (
                             <span className="text-sm text-slate-500 hidden sm:inline">{venue.city}</span>
                           )}
@@ -176,7 +176,7 @@ export default function MekanlarPage() {
                               </div>
                               <div className="flex-1 min-w-0 space-y-4">
                                 {(() => {
-                                  const loc = getLocalizedVenue(venue as Record<string, unknown>, locale);
+                                  const loc = getLocalizedVenue(venue as unknown as Record<string, unknown>, locale);
                                   const addr = loc.address || venue.address;
                                   const city = loc.city || venue.city;
                                   return (addr || city) ? (
@@ -192,33 +192,33 @@ export default function MekanlarPage() {
                                     {t("capacity")}: {venue.capacity} {t("persons")}
                                   </p>
                                 )}
-                                {(getLocalizedVenue(venue as Record<string, unknown>, locale).seating_layout_description || venue.seating_layout_description) && (
-                                  <p className="text-sm text-slate-700">{getLocalizedVenue(venue as Record<string, unknown>, locale).seating_layout_description || venue.seating_layout_description}</p>
+                                {(getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).seating_layout_description || venue.seating_layout_description) && (
+                                  <p className="text-sm text-slate-700">{getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).seating_layout_description || venue.seating_layout_description}</p>
                                 )}
-                                {(getLocalizedVenue(venue as Record<string, unknown>, locale).transport_info || venue.transport_info) && (
+                                {(getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).transport_info || venue.transport_info) && (
                                   <div className="flex items-start gap-2 text-sm">
                                     <Car className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-600" />
                                     <div className="flex-1 min-w-0">
                                       <span className="font-medium text-slate-700">{t("transport")}:</span>
                                       <div
                                         className="text-slate-600 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-2"
-                                        dangerouslySetInnerHTML={{ __html: getLocalizedVenue(venue as Record<string, unknown>, locale).transport_info || venue.transport_info || "" }}
+                                        dangerouslySetInnerHTML={{ __html: getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).transport_info || venue.transport_info || "" }}
                                       />
                                     </div>
                                   </div>
                                 )}
-                                {(getLocalizedVenue(venue as Record<string, unknown>, locale).entrance_info || venue.entrance_info) && (
+                                {(getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).entrance_info || venue.entrance_info) && (
                                   <div className="flex items-start gap-2 text-sm">
                                     <DoorOpen className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-600" />
                                     <div>
                                       <span className="font-medium text-slate-700">{t("entrance")}:</span>
-                                      <p className="text-slate-600">{getLocalizedVenue(venue as Record<string, unknown>, locale).entrance_info || venue.entrance_info}</p>
+                                      <p className="text-slate-600">{getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).entrance_info || venue.entrance_info}</p>
                                     </div>
                                   </div>
                                 )}
-                                {(getLocalizedVenue(venue as Record<string, unknown>, locale).rules || venue.rules) && (
+                                {(getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).rules || venue.rules) && (
                                   <p className="text-sm text-slate-600">
-                                    <span className="font-medium">{t("rules")}:</span> {getLocalizedVenue(venue as Record<string, unknown>, locale).rules || venue.rules}
+                                    <span className="font-medium">{t("rules")}:</span> {getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).rules || venue.rules}
                                   </p>
                                 )}
                                 {venue.faq.length > 0 && (

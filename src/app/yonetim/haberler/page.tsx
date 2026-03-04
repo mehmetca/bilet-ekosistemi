@@ -133,7 +133,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   const handleEdit = (newsItem: News) => {
     setEditingNews(newsItem);
-    const item = newsItem as Record<string, unknown>;
+    const item = newsItem as unknown as Record<string, unknown>;
     setFormData({
       title: newsItem.title,
       content: newsItem.content,

@@ -21,7 +21,7 @@ interface EventDetailClientProps {
 export default function EventDetailClient({ event, tickets, venue = null, locale = "tr" }: EventDetailClientProps) {
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
-  const localized = useMemo(() => getLocalizedEvent(event as Record<string, unknown>, locale), [event, locale]);
+  const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
   const parsedDescription = useMemo(() => parseEventDescription(localized.description || event.description), [localized.description, event.description]);
   const externalTicketUrl = parsedDescription.externalTicketUrl;
   const isExternalOnlyEvent = Boolean(externalTicketUrl) && availableTickets.length === 0;

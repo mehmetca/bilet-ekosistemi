@@ -438,7 +438,7 @@ export default function ClientHomePage() {
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {filteredEvents.map((event) => {
               const eventStatus = getEventStatus(event);
-              const localized = getLocalizedEvent(event as Record<string, unknown>, locale as "tr" | "de" | "en");
+              const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
               const parsedMeta = parseEventDescription(localized.description || event.description);
               
               return (
@@ -577,7 +577,7 @@ export default function ClientHomePage() {
           <h2 className="text-2xl font-bold text-slate-900 mb-8">{t("pastEvents")}</h2>
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {pastEvents.map((event) => {
-              const pastLocalized = getLocalizedEvent(event as Record<string, unknown>, locale as "tr" | "de" | "en");
+              const pastLocalized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
               return (
               <div
                 key={`past-${event.id}`}
