@@ -9,7 +9,8 @@ interface SimpleAuthType {
   loading: boolean;
   isAdmin: boolean;
   isController: boolean;
-  userRole: "admin" | "controller" | null;
+  isOrganizer: boolean;
+  userRole: "admin" | "controller" | "organizer" | null;
   signOut: () => Promise<void>;
   refreshRole: () => Promise<void>;
 }
@@ -19,14 +20,15 @@ const SimpleAuthContext = createContext<SimpleAuthType | undefined>(undefined);
 export function SimpleAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<"admin" | "controller" | null>(null);
+  const [userRole, setUserRole] = useState<"admin" | "controller" | "organizer" | null>(null);
   const userRef = useRef<User | null>(null);
-  const userRoleRef = useRef<"admin" | "controller" | null>(null);
+  const userRoleRef = useRef<"admin" | "controller" | "organizer" | null>(null);
   const roleFetchInFlightForRef = useRef<string | null>(null);
   const lastAuthEventRef = useRef<{ key: string; at: number } | null>(null);
 
   const isAdmin = userRole === "admin";
   const isController = userRole === "controller";
+  const isOrganizer = userRole === "organizer";
 
   async function fetchUserRole(userId: string, force = false) {
     if (!force && roleFetchInFlightForRef.current === userId) {
@@ -51,7 +53,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
         return null;
       }
 
-      const role = (data && data.length > 0) ? (data[0].role as "admin" | "controller") : null;
+      const role = (data && data.length > 0) ? (data[0].role as "admin" | "controller" | "organizer") : null;
       setUserRole(role);
       userRoleRef.current = role;
       return role;
@@ -196,6 +198,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     loading,
     isAdmin,
     isController,
+    isOrganizer,
     userRole,
     signOut,
     refreshRole,

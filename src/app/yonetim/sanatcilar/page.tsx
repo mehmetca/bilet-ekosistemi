@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import MDEditor from "@uiw/react-md-editor";
 import AdminImageUploadFixed from "@/components/AdminImageUploadFixed";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { supabase } from "@/lib/supabase-client";
 import {
   buildArtistBio,
@@ -468,11 +469,8 @@ export default function SanatcilarPage() {
     return <div className="p-8 text-slate-500">Yükleniyor...</div>;
   }
 
-  if (!isAdmin) {
-    return <div className="p-8">Bu sayfayı görüntülemek için yönetici girişi gerekli.</div>;
-  }
-
   return (
+    <AdminOnlyGuard>
     <div className="p-6 md:p-8">
       {toast && (
         <div
@@ -793,6 +791,7 @@ export default function SanatcilarPage() {
         </section>
       </div>
     </div>
+    </AdminOnlyGuard>
   );
 }
 

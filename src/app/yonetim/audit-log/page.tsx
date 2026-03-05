@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
-import AdminGuard from "@/components/AdminGuard";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { FileText, ChevronDown, ChevronUp, RefreshCw } from "lucide-react";
 
 interface AuditLog {
@@ -18,9 +18,9 @@ interface AuditLog {
 
 export default function AuditLogPage() {
   return (
-    <AdminGuard>
+    <AdminOnlyGuard>
       <AuditLogContent />
-    </AdminGuard>
+    </AdminOnlyGuard>
   );
 }
 

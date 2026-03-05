@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Bell, Search } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { supabase } from "@/lib/supabase-client";
 import Link from "next/link";
 
@@ -60,18 +61,6 @@ export default function EtkinlikUyarilariPage() {
       (r.events?.title || "").toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (!isAdmin) {
-    return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <Bell className="h-12 w-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-red-800 mb-2">Erişim Reddedildi</h2>
-          <p className="text-red-600">Bu sayfaya sadece yöneticiler erişebilir.</p>
-        </div>
-      </div>
-    );
-  }
-
   if (authLoading || loading) {
     return (
       <div className="p-8">
@@ -81,6 +70,7 @@ export default function EtkinlikUyarilariPage() {
   }
 
   return (
+    <AdminOnlyGuard>
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">Etkinlik Uyarıları</h1>
@@ -161,5 +151,6 @@ export default function EtkinlikUyarilariPage() {
         </div>
       </div>
     </div>
+    </AdminOnlyGuard>
   );
 }

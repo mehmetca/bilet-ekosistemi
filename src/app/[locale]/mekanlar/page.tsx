@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "@/i18n/navigation";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { useTranslations, useLocale } from "next-intl";
 import { getLocalizedVenue } from "@/lib/i18n-content";
 import { MapPin, Users, ChevronRight, ChevronDown, Car, DoorOpen, HelpCircle } from "lucide-react";
@@ -284,7 +283,6 @@ export default function MekanlarPage() {
         )}
       </div>
 
-      <Footer />
     </div>
   );
 }

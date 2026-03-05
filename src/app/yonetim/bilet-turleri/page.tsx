@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Ticket, AlertCircle } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { supabase } from "@/lib/supabase-client";
 
 interface TicketType {
@@ -161,22 +162,6 @@ export default function BiletTurleriPage() {
     }
   }
 
-  if (!isAdmin) {
-    return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <AlertCircle className="h-12 w-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-red-800 mb-2">
-            Erişim Reddedildi
-          </h2>
-          <p className="text-red-600">
-            Bu sayfaya sadece yöneticiler erişebilir.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="p-8">
@@ -186,6 +171,7 @@ export default function BiletTurleriPage() {
   }
 
   return (
+    <AdminOnlyGuard>
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -405,5 +391,6 @@ export default function BiletTurleriPage() {
         )}
       </div>
     </div>
+    </AdminOnlyGuard>
   );
 }

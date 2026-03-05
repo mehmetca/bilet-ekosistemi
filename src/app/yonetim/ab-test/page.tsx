@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AdminGuard from "@/components/AdminGuard";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { FlaskConical, BarChart3 } from "lucide-react";
 import Link from "next/link";
 
@@ -41,7 +41,7 @@ export default function AbTestPage() {
   }, []);
 
   return (
-    <AdminGuard>
+    <AdminOnlyGuard>
       <div className="p-8">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
@@ -138,6 +138,6 @@ export default function AbTestPage() {
           )}
         </div>
       </div>
-    </AdminGuard>
+    </AdminOnlyGuard>
   );
 }

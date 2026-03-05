@@ -17,10 +17,10 @@ import {
   User,
   Megaphone,
   MapPin,
-  Bell
+  Bell,
+  Search
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
-import { useRouter } from "next/navigation";
 
 interface AdminNavigationFixedProps {
   isOpen?: boolean;
@@ -33,8 +33,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
   useEffect(() => {
     if (onClose) onClose();
   }, [pathname]);
-  const { user, isAdmin, isController, userRole, signOut } = useSimpleAuth();
-  const router = useRouter();
+  const { user, isAdmin, isController, isOrganizer, userRole, signOut } = useSimpleAuth();
 
   const isActive = (path: string) => pathname === path;
 
@@ -94,6 +93,12 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       description: "Rol ve yetki yönetimi"
     },
     {
+      href: "/yonetim/musteri-ara",
+      label: "Müşteri Ara",
+      icon: Search,
+      description: "Kundennummer ile müşteri bilgisi"
+    },
+    {
       href: "/yonetim/bilet-kontrol",
       label: "Bilet Kontrol",
       icon: Shield,
@@ -133,6 +138,12 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
 
   const controllerMenuItems = [
     {
+      href: "/yonetim",
+      label: "Dashboard",
+      icon: Calendar,
+      description: "Kontrolör paneli"
+    },
+    {
       href: "/yonetim/bilet-kontrol",
       label: "Bilet Kontrol",
       icon: Shield,
@@ -140,7 +151,22 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
     }
   ];
 
-  const menuItems = isAdmin ? adminMenuItems : controllerMenuItems;
+  const organizerMenuItems = [
+    {
+      href: "/yonetim",
+      label: "Dashboard",
+      icon: Calendar,
+      description: "Organizatör paneli"
+    },
+    {
+      href: "/yonetim/etkinlikler",
+      label: "Etkinlikler",
+      icon: Calendar,
+      description: "Etkinlik yönetimi"
+    }
+  ];
+
+  const menuItems = isAdmin ? adminMenuItems : isController ? controllerMenuItems : organizerMenuItems;
 
   const sidebarContent = (
     <div className="w-56 h-full bg-white flex flex-col overflow-hidden">
@@ -157,7 +183,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
             </div>
             <div className="mt-1">
               <span className="inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                {userRole === "admin" ? "Yön" : "K"}
+                {userRole === "admin" ? "Yönetici" : userRole === "controller" ? "Kontrolör" : "Organizatör"}
               </span>
             </div>
           </div>
@@ -205,7 +231,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
             if (typeof signOut === "function") {
               signOut();
             }
-            router.push("/giris");
+            window.location.href = "/";
           }}
           className="flex items-center gap-2 px-3 py-2 w-full text-left text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
         >
@@ -216,7 +242,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
           {user?.email}
         </p>
         <p className="text-xs text-slate-500 truncate px-3 mt-0.5">
-          {userRole === "admin" ? "Yönetici" : "Kontrolör"}
+          {userRole === "admin" ? "Yönetici" : userRole === "controller" ? "Kontrolör" : "Organizatör"}
         </p>
       </div>
     </div>

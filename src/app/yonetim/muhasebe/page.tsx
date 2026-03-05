@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import type { Order } from "@/types/database";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { BarChart3, TrendingUp, Calendar, CreditCard } from "lucide-react";
 import AdminKPIDashboard from "@/components/AdminKPIDashboard";
 
@@ -71,6 +72,7 @@ export default function MuhasebePage() {
   }
 
   return (
+    <AdminOnlyGuard>
     <div className="p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">
@@ -179,5 +181,6 @@ export default function MuhasebePage() {
         </div>
       </div>
     </div>
+    </AdminOnlyGuard>
   );
 }

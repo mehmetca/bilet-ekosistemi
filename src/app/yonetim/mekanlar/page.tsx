@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, MapPin, ChevronDown, ChevronUp, X } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
-import AdminGuard from "@/components/AdminGuard";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import AdminImageUpload from "@/components/AdminImageUpload";
 import RichTextEditor from "@/components/RichTextEditor";
 
@@ -91,9 +91,9 @@ const EMPTY_VENUE = {
 
 export default function MekanlarPage() {
   return (
-    <AdminGuard>
+    <AdminOnlyGuard>
       <MekanlarContent />
-    </AdminGuard>
+    </AdminOnlyGuard>
   );
 }
 

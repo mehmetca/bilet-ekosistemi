@@ -5,7 +5,8 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    instrumentationHook: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
+    instrumentationHook: false,
+    optimizePackageImports: ["lucide-react"],
   },
   async redirects() {
     return [

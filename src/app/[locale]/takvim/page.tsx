@@ -1,6 +1,6 @@
 import Header from "@/components/Header";
 import EventCalendar from "@/components/EventCalendar";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { createClient } from "@supabase/supabase-js";
 import type { Event } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -8,11 +8,15 @@ export const revalidate = 0;
 
 async function getEvents(): Promise<Event[]> {
   try {
-    const supabase = await createServerSupabase();
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (!url || !key) return [];
+    const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 
     const { data: events, error: eventsError } = await supabase
       .from("events")
       .select("*")
+      .eq("is_active", true)
       .order("date", { ascending: true });
 
     if (eventsError) {

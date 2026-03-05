@@ -4,9 +4,10 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import Header from "@/components/Header";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabase-client";
 import { parseArtistBio } from "@/lib/artistProfile";
+import { getLocalizedArtist } from "@/lib/i18n-content";
 import type { Artist } from "@/types/database";
 
 const PAGE_SIZE = 30;
@@ -40,6 +41,7 @@ function getLineClampClass(lines: number): string {
 
 function SanatciIndexContent() {
   const t = useTranslations("artists");
+  const locale = useLocale() as "tr" | "de" | "en";
   const router = useRouter();
   const searchParams = useSearchParams();
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -108,7 +110,8 @@ function SanatciIndexContent() {
           <>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
               {pagedArtists.map((artist) => {
-                const parsed = parseArtistBio(artist.bio);
+                const localized = getLocalizedArtist(artist as unknown as Record<string, unknown>, locale);
+                const parsed = parseArtistBio(localized.bio || artist.bio);
                 const excerpt =
                   parsed.cardText.trim() || stripMarkdown(parsed.content).slice(0, 140);
                 const lineClampClass = getLineClampClass(parsed.cardLines || 3);
@@ -122,7 +125,7 @@ function SanatciIndexContent() {
                       {artist.image_url ? (
                         <img
                           src={artist.image_url}
-                          alt={artist.name}
+                          alt={localized.name || artist.name}
                           className="h-full w-full object-cover object-top"
                         />
                       ) : (
@@ -132,7 +135,7 @@ function SanatciIndexContent() {
                       )}
                     </div>
                     <div className="p-4">
-                      <h2 className="font-semibold text-slate-900 line-clamp-1">{artist.name}</h2>
+                      <h2 className="font-semibold text-slate-900 line-clamp-1">{localized.name || artist.name}</h2>
                       <p className={`text-sm text-slate-600 mt-2 ${lineClampClass}`}>
                         {excerpt || t("bioPlaceholder")}
                       </p>

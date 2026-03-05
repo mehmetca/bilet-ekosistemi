@@ -1,5 +1,28 @@
 import ClientHomePage from "@/app/ClientHomePage";
+import { createServerSupabase } from "@/lib/supabase-server";
+import type { Event, News } from "@/types/database";
 
-export default function HomePage() {
-  return <ClientHomePage />;
+async function getHomeData() {
+  const supabase = await createServerSupabase();
+  const [eventsRes, newsRes, heroRes] = await Promise.all([
+    supabase.from("events").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+    supabase.from("news").select("*").eq("is_published", true).order("published_at", { ascending: false }).limit(5),
+    supabase.from("hero_backgrounds").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
+  ]);
+  return {
+    events: (eventsRes.data || []) as Event[],
+    news: (newsRes.data || []) as News[],
+    heroBackgrounds: heroRes.data || [],
+  };
+}
+
+export default async function HomePage() {
+  const { events, news, heroBackgrounds } = await getHomeData();
+  return (
+    <ClientHomePage
+      initialEvents={events}
+      initialNews={news}
+      initialHeroBackgrounds={heroBackgrounds}
+    />
+  );
 }

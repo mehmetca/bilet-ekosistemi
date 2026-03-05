@@ -76,6 +76,7 @@ async function getEventBySlug(slugOrId: string): Promise<Event | null> {
       .from("events")
       .select("*")
       .eq("slug", slugOrId)
+      .eq("is_active", true)
       .single();
 
     // Eğer slug ile bulunamazsa, ID ile dene (fallback)
@@ -84,6 +85,7 @@ async function getEventBySlug(slugOrId: string): Promise<Event | null> {
         .from("events")
         .select("*")
         .eq("id", slugOrId)
+        .eq("is_active", true)
         .single();
 
       if (idError) {
@@ -195,12 +197,12 @@ function buildEventStructuredData(event: Event, venue: Venue | null) {
 export default async function EventDetailPage({ params }: PageProps) {
   const { locale = "tr", id } = await params;
   const event = await getEventBySlug(id);
-  const tickets = event ? await getEventTickets(event.id) : [];
-  const venue = event?.venue_id ? await getVenue(event.venue_id) : null;
+  if (!event) notFound();
 
-  if (!event) {
-    notFound();
-  }
+  const [tickets, venue] = await Promise.all([
+    getEventTickets(event.id),
+    event.venue_id ? getVenue(event.venue_id) : Promise.resolve(null),
+  ]);
 
   const structuredData = buildEventStructuredData(event, venue);
 

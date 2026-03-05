@@ -4,18 +4,19 @@ import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Ticket } from "lucide-react";
 
+const menuLinks = [
+  { href: "/impressum", labelKey: "footer.impressum" },
+  { href: "/bilgilendirme", labelKey: "footer.information" },
+  { href: "/cerez-politikasi", labelKey: "footer.cookiePolicy" },
+  { href: "/mesafeli-satis-sozlesmesi", labelKey: "footer.distanceSales" },
+  { href: "/kullanim-kosullari", labelKey: "footer.terms" },
+];
+
 const policyLinks = [
   { href: "/#guvenli-odeme", labelKey: "footer.securePayment" },
   { href: "/#iade-politikasi", labelKey: "footer.refundPolicy" },
   { href: "/#gonderim-politikasi", labelKey: "footer.shippingPolicy" },
   { href: "/#canli-stok", labelKey: "footer.liveStock" },
-];
-
-const navLinks = [
-  { href: "/", labelKey: "nav.events" },
-  { href: "/takvim", labelKey: "nav.calendar" },
-  { href: "/mekanlar", labelKey: "nav.venues" },
-  { href: "/sanatci", labelKey: "nav.artists" },
 ];
 
 export default function Footer() {
@@ -43,7 +44,7 @@ export default function Footer() {
               {t("footer.menu")}
             </h3>
             <nav className="flex flex-col gap-2">
-              {navLinks.map(({ href, labelKey }) => (
+              {menuLinks.map(({ href, labelKey }) => (
                 <Link
                   key={href}
                   href={href}

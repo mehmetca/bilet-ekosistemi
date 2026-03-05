@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Search, Ticket, QrCode, Eye } from "lucide-react";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import type { Order } from "@/types/database";
 import QRScanner from "@/components/QRScanner";
 
@@ -87,6 +88,7 @@ export default function BiletListesiPage() {
   }
 
   return (
+    <AdminOnlyGuard>
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-5">
@@ -244,5 +246,6 @@ export default function BiletListesiPage() {
         )}
       </div>
     </div>
+    </AdminOnlyGuard>
   );
 }

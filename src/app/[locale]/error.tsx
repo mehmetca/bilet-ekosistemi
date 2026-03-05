@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect } from "react";
-import { Link } from "@/i18n/navigation";
 
 export default function LocaleError({
   error,
@@ -15,48 +14,26 @@ export default function LocaleError({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 max-w-md w-full text-center">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg
-            className="w-8 h-8 text-red-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-            />
-          </svg>
-        </div>
-        <h2 className="text-xl font-semibold text-slate-900 mb-2">Bir Hata Oluştu</h2>
-        <p className="text-slate-600 mb-6">
-          Uygulamada beklenmedik bir hata oluştu. Lütfen tekrar deneyin.
-        </p>
+    <div style={{ minHeight: "100vh", background: "#f8fafc", display: "flex", alignItems: "center", justifyContent: "center", padding: "1rem" }}>
+      <div style={{ background: "white", borderRadius: "1rem", border: "1px solid #e2e8f0", padding: "2rem", maxWidth: "28rem", width: "100%", textAlign: "center" }}>
+        <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0f172a", marginBottom: "0.5rem" }}>Bir Hata Oluştu</h2>
+        <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>Uygulamada beklenmedik bir hata oluştu. Lütfen tekrar deneyin.</p>
         {error?.message && (
-          <details className="mb-4 text-left">
-            <summary className="text-sm text-slate-500 cursor-pointer">Hata detayları</summary>
-            <pre className="mt-2 text-xs text-slate-400 bg-slate-50 p-2 rounded overflow-auto max-h-32">
-              {error.message}
-            </pre>
+          <details style={{ marginBottom: "1rem", textAlign: "left" }}>
+            <summary style={{ fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }}>Hata detayları</summary>
+            <pre style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#94a3b8", background: "#f1f5f9", padding: "0.5rem", borderRadius: "0.25rem", overflow: "auto", maxHeight: "8rem" }}>{error.message}</pre>
           </details>
         )}
-        <div className="space-y-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <button
             onClick={reset}
-            className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-primary-700"
+            style={{ width: "100%", padding: "0.5rem 1rem", background: "#2563eb", color: "white", border: "none", borderRadius: "0.5rem", fontWeight: 600, cursor: "pointer" }}
           >
             Tekrar Dene
           </button>
-          <Link
-            href="/"
-            className="block w-full border border-slate-300 text-slate-700 py-2 px-4 rounded-lg font-semibold hover:bg-slate-50 text-center"
-          >
+          <a href="/" style={{ display: "block", width: "100%", padding: "0.5rem 1rem", border: "1px solid #cbd5e1", color: "#334155", borderRadius: "0.5rem", fontWeight: 600, textAlign: "center", textDecoration: "none" }}>
             Ana Sayfaya Dön
-          </Link>
+          </a>
         </div>
       </div>
     </div>

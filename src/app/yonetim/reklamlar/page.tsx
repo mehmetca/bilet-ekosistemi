@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, ExternalLink, Image as ImageIcon } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import AdminImageUploadFixed from "@/components/AdminImageUploadFixed";
 
 interface Advertisement {
@@ -175,21 +176,6 @@ export default function ReklamlarPage() {
     );
   }
 
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">🔒</div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Yetkisiz Erişim</h1>
-          <p className="text-slate-600 mb-4">Bu sayfaya erişim için admin yetkisi gereklidir.</p>
-          <a href="/" className="text-primary-600 hover:text-primary-700 underline">
-            Ana Sayfaya Dön
-          </a>
-        </div>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
@@ -199,6 +185,7 @@ export default function ReklamlarPage() {
   }
 
   return (
+    <AdminOnlyGuard>
     <div className="min-h-screen bg-slate-50">
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-8">
@@ -386,5 +373,6 @@ export default function ReklamlarPage() {
         </div>
       </div>
     </div>
+    </AdminOnlyGuard>
   );
 }

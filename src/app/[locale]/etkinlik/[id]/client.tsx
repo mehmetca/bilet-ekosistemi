@@ -20,6 +20,8 @@ interface EventDetailClientProps {
 }
 
 const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
+/** Sipariş başına en fazla kaç bilet seçilebilir */
+const MAX_TICKETS_PER_ORDER = 10;
 
 export default function EventDetailClient({ event, tickets, venue = null, locale: localeProp = "tr" }: EventDetailClientProps) {
   const t = useTranslations("eventDetail");
@@ -400,6 +402,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                     {availableTickets.map((ticketType) => {
                       const isSelected = selectedTicketType === ticketType.id;
                       const availableAmount = Number(ticketType.available || 0);
+                      const maxSelectable = Math.min(availableAmount, MAX_TICKETS_PER_ORDER);
                       const rowCount = isSelected ? ticketCount : 0;
 
                       return (
@@ -412,7 +415,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                             setSelectedTicketType(ticketType.id);
                             setTicketCount((current) => {
                               if (!isSelected) return 1;
-                              return Math.min(Math.max(1, current), availableAmount || 1);
+                              return Math.min(Math.max(1, current), maxSelectable || 1);
                             });
                           }}
                         >
@@ -448,10 +451,10 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                                   setSelectedTicketType(ticketType.id);
                                   setTicketCount((current) => {
                                     if (!isSelected) return 1;
-                                    return Math.min(availableAmount || 1, current + 1);
+                                    return Math.min(maxSelectable || 1, current + 1);
                                   });
                                 }}
-                                disabled={availableAmount <= 0 || isPastEvent}
+                                disabled={availableAmount <= 0 || isPastEvent || rowCount >= maxSelectable}
                                 className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 +

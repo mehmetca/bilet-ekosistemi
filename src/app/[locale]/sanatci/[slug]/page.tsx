@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabase-client";
 import type { Artist } from "@/types/database";
 import { Music2, Share2, Heart, ExternalLink } from "lucide-react";
 import MDEditor from "@uiw/react-md-editor";
 import { parseArtistBio } from "@/lib/artistProfile";
+import { getLocalizedArtist } from "@/lib/i18n-content";
 import Header from "@/components/Header";
 
 function getYouTubeEmbedUrl(url?: string): string | null {
@@ -37,6 +39,9 @@ function getYouTubeEmbedUrl(url?: string): string | null {
 
 export default function ArtistPage({ params }: { params: { slug: string } }) {
   const resolvedParams = params;
+  const locale = useLocale() as "tr" | "de" | "en";
+  const t = useTranslations("artists");
+  const tCommon = useTranslations("common");
   const [artist, setArtist] = useState<Artist | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -113,7 +118,8 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
     fetchData();
   }, [resolvedParams.slug]);
 
-  const parsedProfile = parseArtistBio(artist?.bio);
+  const localized = artist ? getLocalizedArtist(artist as unknown as Record<string, unknown>, locale) : { name: "", bio: "" };
+  const parsedProfile = parseArtistBio(localized.bio || artist?.bio);
   const topGallery = parsedProfile.gallery.filter((item) => item.position === "top");
   const bottomGallery = parsedProfile.gallery.filter((item) => item.position === "bottom");
   const leftGallery = parsedProfile.gallery.filter((item) => item.position === "left");
@@ -167,7 +173,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-slate-600">Yükleniyor...</p>
+          <p className="text-slate-600">{t("loading")}</p>
         </div>
       </div>
     );
@@ -179,24 +185,24 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
         <div className="text-center max-w-md mx-auto px-4">
           <div className="text-6xl mb-4">🎭</div>
           <h1 className="text-2xl font-bold text-slate-900 mb-2">
-            Sanatçı Bulunamadı
+            {t("artistNotFound")}
           </h1>
           <p className="text-slate-600 mb-6">
-            <strong>"{resolvedParams.slug}"</strong> slug'ına sahip sanatçı sistemde kayıtlı değil.
+            {t("artistNotFoundDesc", { slug: resolvedParams.slug })}
           </p>
           <div className="space-y-3">
             <a
               href="/"
               className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
-              Ana Sayfaya Dön
+              {tCommon("backToHome")}
             </a>
             <div className="text-sm text-slate-500">
-              <p>Olası nedenler:</p>
+              <p>{t("possibleReasons")}</p>
               <ul className="text-left mt-2 space-y-1">
-                <li>• Sanatçı slug'ı yanlış yazılmış olabilir</li>
-                <li>• Sanatçı sistemden kaldırılmış olabilir</li>
-                <li>• URL adresi hatalı olabilir</li>
+                <li>• {t("reason1")}</li>
+                <li>• {t("reason2")}</li>
+                <li>• {t("reason3")}</li>
               </ul>
             </div>
           </div>
@@ -231,7 +237,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
               
               {/* Artist Info */}
               <div className="flex-1 text-white">
-                <h1 className="text-4xl font-bold mb-2">{artist.name}</h1>
+                <h1 className="text-4xl font-bold mb-2">{localized.name || artist.name}</h1>
                 <p className="text-xl text-white/90 mb-4">{artist.tour_name}</p>
                 
                 {/* Action Buttons */}
@@ -241,14 +247,14 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                     className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
                   >
                     <Heart className="h-4 w-4" />
-                    {isFollowing ? "Takiptesin" : "Takip Et"}
+                    {isFollowing ? t("following") : t("follow")}
                   </button>
                   <button
                     onClick={handleShare}
                     className="flex items-center gap-2 bg-white/10 hover:bg-white/20 text-white px-6 py-3 rounded-lg font-medium transition-colors backdrop-blur-sm"
                   >
                     <Share2 className="h-4 w-4" />
-                    Paylaş
+                    {tCommon("share")}
                   </button>
                 </div>
                 {actionMessage && <p className="mt-3 text-sm text-white/90">{actionMessage}</p>}
@@ -268,7 +274,9 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
           parsedProfile.socials.instagram ||
           parsedProfile.socials.website) && (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">Sanatçı Hakkında</h2>
+            <h2 className="text-2xl font-bold text-slate-900 mb-4">
+              {t("aboutArtist", { name: localized.name || artist.name })}
+            </h2>
             <div className="bg-white border border-slate-200 rounded-xl p-6">
               {topGallery.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
@@ -279,7 +287,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                     >
                       <img
                         src={item.url}
-                        alt={`${artist.name} galeri`}
+                        alt={`${localized.name || artist.name} galeri`}
                         className="h-full w-full object-cover object-top"
                       />
                     </div>
@@ -297,7 +305,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                         >
                           <img
                             src={item.url}
-                            alt={`${artist.name} galeri`}
+                            alt={`${localized.name || artist.name} galeri`}
                             className="h-full w-full object-cover object-top"
                           />
                         </div>
@@ -313,7 +321,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                         >
                           <img
                             src={item.url}
-                            alt={`${artist.name} galeri`}
+                            alt={`${localized.name || artist.name} galeri`}
                             className="h-full w-full object-cover object-top"
                           />
                         </div>
@@ -325,7 +333,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                   </div>
                 </div>
               ) : (
-                <p className="text-slate-600">Biyografi bilgisi yakında eklenecek.</p>
+                <p className="text-slate-600">{t("bioPlaceholder")}</p>
               )}
               {bottomGallery.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
@@ -336,7 +344,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                     >
                       <img
                         src={item.url}
-                        alt={`${artist.name} galeri`}
+                        alt={`${localized.name || artist.name} galeri`}
                         className="h-full w-full object-cover object-top"
                       />
                     </div>
@@ -349,7 +357,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                 parsedProfile.socials.website ||
                 youtubeEmbedUrls.length > 0) && (
                 <div className="mt-6 pt-5 border-t border-slate-200">
-                  <h3 className="text-sm font-semibold text-slate-800 mb-3">Sosyal Bağlantılar</h3>
+                  <h3 className="text-sm font-semibold text-slate-800 mb-3">{t("socialLinks")}</h3>
                   <div className="flex flex-wrap gap-2">
                     {parsedProfile.socials.youtube && (
                       <a
@@ -394,7 +402,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                   </div>
                   {youtubeEmbedUrls.length > 0 && (
                     <div className="mt-5">
-                      <h4 className="text-sm font-semibold text-slate-800 mb-3">Video</h4>
+                      <h4 className="text-sm font-semibold text-slate-800 mb-3">{t("video")}</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {youtubeEmbedUrls.map((embedUrl, index) => (
                           <div
@@ -403,7 +411,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                           >
                             <iframe
                               src={embedUrl}
-                              title={`${artist.name} YouTube videosu ${index + 1}`}
+                              title={`${localized.name || artist.name} video ${index + 1}`}
                               className="h-full w-full"
                               loading="lazy"
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"

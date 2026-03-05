@@ -18,7 +18,8 @@ const navLinks = [
 const LOCALE_LABELS: Record<string, string> = { tr: "Türkçe", de: "Deutsch", en: "English" };
 
 export default function Header() {
-  const { user, isAdmin } = useSimpleAuth();
+  const { user, isAdmin, isController, isOrganizer } = useSimpleAuth();
+  const hasManagementRole = isAdmin || isController || isOrganizer;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const langDropdownDesktopRef = useRef<HTMLDivElement>(null);
@@ -105,27 +106,37 @@ export default function Header() {
             )}
           </div>
           {user ? (
-            <NextLink
-              href="/yonetim"
-              className="flex items-center gap-2 text-slate-600 hover:text-primary-600 font-medium transition-colors"
-            >
-              <User className="h-4 w-4" />
-              {t(isAdmin ? "nav.management" : "nav.profile")}
-            </NextLink>
+            hasManagementRole ? (
+              <NextLink
+                href="/yonetim"
+                className="flex items-center gap-2 text-slate-600 hover:text-primary-600 font-medium transition-colors"
+              >
+                <User className="h-4 w-4" />
+                {t("nav.management")}
+              </NextLink>
+            ) : (
+              <Link
+                href="/panel"
+                className="flex items-center gap-2 text-slate-600 hover:text-primary-600 font-medium transition-colors"
+              >
+                <User className="h-4 w-4" />
+                {t("nav.myInfo")}
+              </Link>
+            )
           ) : (
             <NextLink
               href="/giris"
               className="flex items-center gap-2 text-slate-600 hover:text-primary-600 font-medium transition-colors"
             >
               <LogIn className="h-4 w-4" />
-              {t("nav.login")}
+              {t("nav.login")} / {t("nav.signup")}
             </NextLink>
           )}
         </nav>
 
         {/* Mobil: hamburger + açılır menü */}
         <div className="flex md:hidden items-center gap-2">
-          {user && isAdmin && (
+          {user && hasManagementRole && (
             <NextLink href="/yonetim" className="text-sm text-slate-500 hover:text-primary-600">
               {t("nav.admin")}
             </NextLink>
@@ -197,14 +208,25 @@ export default function Header() {
               )}
             </div>
             {user ? (
-              <NextLink
-                href="/yonetim"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
-              >
-                <User className="h-4 w-4" />
-                {t(isAdmin ? "nav.management" : "nav.profile")}
-              </NextLink>
+              hasManagementRole ? (
+                <NextLink
+                  href="/yonetim"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
+                >
+                  <User className="h-4 w-4" />
+                  {t("nav.management")}
+                </NextLink>
+              ) : (
+                <Link
+                  href="/panel"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
+                >
+                  <User className="h-4 w-4" />
+                  {t("nav.myInfo")}
+                </Link>
+              )
             ) : (
               <NextLink
                 href="/giris"
@@ -212,7 +234,7 @@ export default function Header() {
                 className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
               >
                 <LogIn className="h-4 w-4" />
-                {t("nav.login")}
+                {t("nav.login")} / {t("nav.signup")}
               </NextLink>
             )}
           </nav>

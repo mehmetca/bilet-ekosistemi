@@ -1,8 +1,10 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
+import AdminGuard from "@/components/AdminGuard";
 import AdminNavigationFixed from "@/components/AdminNavigationFixed";
 import AdminPolicyHeader from "@/components/AdminPolicyHeader";
+import Footer from "@/components/Footer";
 
 export default function AdminLayout({
   children,
@@ -23,6 +25,7 @@ export default function AdminLayout({
   }, [sidebarOpen]);
 
   return (
+    <AdminGuard>
     <div className="flex min-h-screen bg-slate-50">
       <AdminNavigationFixed
         isOpen={sidebarOpen}
@@ -39,7 +42,9 @@ export default function AdminLayout({
             {children}
           </Suspense>
         </div>
+        <Footer />
       </div>
     </div>
+    </AdminGuard>
   );
 }

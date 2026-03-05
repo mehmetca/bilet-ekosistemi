@@ -10,11 +10,29 @@ import type { Event, News } from "@/types/database";
 import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
 import EventSlider from "@/components/EventSlider";
 import NewsSlider from "@/components/NewsSlider";
-import { supabase } from "@/lib/supabase-client";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 
-export default function ClientHomePage() {
+interface HeroBg {
+  id: string;
+  title: string;
+  image_url: string;
+  is_active: boolean;
+  sort_order: number;
+  transition_duration: number;
+}
+
+interface ClientHomePageProps {
+  initialEvents?: Event[];
+  initialNews?: News[];
+  initialHeroBackgrounds?: HeroBg[];
+}
+
+export default function ClientHomePage({
+  initialEvents = [],
+  initialNews = [],
+  initialHeroBackgrounds = [],
+}: ClientHomePageProps) {
   const t = useTranslations("home");
   const locale = useLocale();
   const [searchTerm, setSearchTerm] = useState("");
@@ -25,8 +43,8 @@ export default function ClientHomePage() {
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [sortBy, setSortBy] = useState<"yaklasan" | "en-ucuz" | "populer">("yaklasan");
-  const [events, setEvents] = useState<Event[]>([]);
-  const [news, setNews] = useState<News[]>([]);
+  const [events, setEvents] = useState<Event[]>(initialEvents);
+  const [news, setNews] = useState<News[]>(initialNews);
   const [heroVariant, setHeroVariant] = useState<{
     variant: string;
     hero_title: string;
@@ -37,34 +55,20 @@ export default function ClientHomePage() {
   const fallbackImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
 
+  // Sayfa geri dönüşünde (pageshow) hafif yenileme - ilk yükleme server'dan gelir
   const fetchData = useCallback(async () => {
+    const { supabase } = await import("@/lib/supabase-client");
     try {
-      const { data: eventsData, error: eventsError } = await supabase
-        .from("events")
-        .select("*")
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
-
-      if (eventsError) {
-        console.error("Events fetch error:", eventsError);
-      } else if (isMountedRef.current) {
-        setEvents(eventsData || []);
+      const [eventsRes, newsRes] = await Promise.all([
+        supabase.from("events").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+        supabase.from("news").select("*").eq("is_published", true).order("published_at", { ascending: false }).limit(5),
+      ]);
+      if (isMountedRef.current) {
+        if (!eventsRes.error) setEvents(eventsRes.data || []);
+        if (!newsRes.error) setNews(newsRes.data || []);
       }
-
-      const { data: newsData, error: newsError } = await supabase
-        .from("news")
-        .select("*")
-        .eq("is_published", true)
-        .order("published_at", { ascending: false })
-        .limit(5);
-
-      if (newsError) {
-        console.error("News fetch error:", newsError);
-      } else if (isMountedRef.current) {
-        setNews(newsData || []);
-      }
-    } catch (error) {
-      console.error("Data fetch error:", error);
+    } catch {
+      /* ignore */
     }
   }, []);
 
@@ -111,14 +115,11 @@ export default function ClientHomePage() {
       });
   }, []);
 
-  // İlk yükleme + browser ileri/geri dönüşlerinde yeniden veri çek
+  // Sadece sayfa geri dönüşünde yenile (ilk yükleme server'dan gelir)
   useEffect(() => {
-    // StrictMode'da effect cleanup -> re-run döngüsünde mount bayrağını geri aç.
     isMountedRef.current = true;
-    fetchData();
-
-    const handlePageShow = () => {
-      fetchData();
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) fetchData(); // bfcache'den dönüş
     };
     const handleFocus = () => {
       fetchData();
@@ -235,7 +236,7 @@ export default function ClientHomePage() {
       {/* Hero */}
       <section className="relative min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
         {/* Dynamic Background Slider */}
-        <HeroBackgroundSlider />
+        <HeroBackgroundSlider initialBackgrounds={initialHeroBackgrounds} />
         
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4 text-center">

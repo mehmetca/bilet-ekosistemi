@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import AdminGuard from "@/components/AdminGuard";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { BarChart3, Eye, ShoppingCart, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -47,7 +47,7 @@ export default function HuniAnalitigiPage() {
   }
 
   return (
-    <AdminGuard>
+    <AdminOnlyGuard>
       <div className="p-8">
         <div className="max-w-6xl mx-auto">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -184,6 +184,6 @@ export default function HuniAnalitigiPage() {
           )}
         </div>
       </div>
-    </AdminGuard>
+    </AdminOnlyGuard>
   );
 }

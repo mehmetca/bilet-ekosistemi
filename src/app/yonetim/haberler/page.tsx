@@ -7,6 +7,7 @@ import type { News } from "@/types/database";
 import MDEditor from '@uiw/react-md-editor';
 
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 
 export default function HaberlerPage() {
   const { isAdmin, loading: authLoading } = useSimpleAuth();
@@ -218,18 +219,8 @@ const handleSubmit = async (e: React.FormEvent) => {
     );
   }
 
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center p-8 bg-white rounded-xl shadow-sm border border-slate-200">
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">Yetkisiz Erişim</h1>
-          <p className="text-slate-600">Bu sayfaya erişim yetkiniz bulunmamaktadır.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
+    <AdminOnlyGuard>
     <div className="space-y-6">
       {/* Başlık */}
       <div className="flex items-center justify-between">
@@ -541,5 +532,6 @@ const handleSubmit = async (e: React.FormEvent) => {
         )}
       </div>
     </div>
+    </AdminOnlyGuard>
   );
 }

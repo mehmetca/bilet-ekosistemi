@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { supabase } from "@/lib/supabase-client";
 
 interface HeroBackground {
   id: string;
@@ -13,32 +12,41 @@ interface HeroBackground {
   transition_duration: number;
 }
 
-export default function HeroBackgroundSlider() {
-  const [backgrounds, setBackgrounds] = useState<HeroBackground[]>([]);
+interface HeroBackgroundSliderProps {
+  initialBackgrounds?: HeroBackground[];
+}
+
+export default function HeroBackgroundSlider({ initialBackgrounds = [] }: HeroBackgroundSliderProps) {
+  const [backgrounds, setBackgrounds] = useState<HeroBackground[]>(initialBackgrounds);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(initialBackgrounds.length === 0);
 
   useEffect(() => {
+    if (initialBackgrounds.length > 0) {
+      setBackgrounds(initialBackgrounds);
+      setLoading(false);
+      return;
+    }
+    let cancelled = false;
     async function fetchBackgrounds() {
       try {
+        const { supabase } = await import("@/lib/supabase-client");
         const { data, error } = await supabase
           .from("hero_backgrounds")
           .select("*")
           .eq("is_active", true)
           .order("sort_order", { ascending: true });
-
         if (error) throw error;
-        
-        setBackgrounds(data || []);
+        if (!cancelled) setBackgrounds(data || []);
       } catch (error) {
-        console.error("Background fetch error:", error);
+        if (!cancelled) console.error("Background fetch error:", error);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
-
     fetchBackgrounds();
-  }, []);
+    return () => { cancelled = true; };
+  }, [initialBackgrounds.length]);
 
   useEffect(() => {
     if (backgrounds.length <= 1) return;

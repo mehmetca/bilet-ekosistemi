@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Upload, Image as ImageIcon, Eye, EyeOff, MoveUp, MoveDown } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
-import AdminGuard from "@/components/AdminGuard";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 
 interface HeroBackground {
   id: string;
@@ -179,7 +179,7 @@ export default function HeroBackgroundManagement() {
 
   if (loading) {
     return (
-      <AdminGuard>
+      <AdminOnlyGuard>
         <div className="p-6">
           <div className="animate-pulse">
             <div className="h-8 bg-slate-200 rounded w-1/4 mb-6"></div>
@@ -190,12 +190,12 @@ export default function HeroBackgroundManagement() {
             </div>
           </div>
         </div>
-      </AdminGuard>
+      </AdminOnlyGuard>
     );
   }
 
   return (
-    <AdminGuard>
+    <AdminOnlyGuard>
       <div className="p-6">
         <h1 className="text-2xl font-bold text-slate-900 mb-6">Hero Background Yönetimi</h1>
 
@@ -349,6 +349,6 @@ export default function HeroBackgroundManagement() {
           )}
         </div>
       </div>
-    </AdminGuard>
+    </AdminOnlyGuard>
   );
 }

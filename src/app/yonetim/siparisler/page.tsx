@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import type { Order } from "@/types/database";
 import { CreditCard, Search, Filter, Download } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { supabase } from "@/lib/supabase-client";
 
 export default function SiparislerPage() {
@@ -58,23 +59,6 @@ export default function SiparislerPage() {
     order.buyer_email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Sadece admin erişebilir
-  if (!isAdmin) {
-    return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <CreditCard className="h-12 w-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-red-800 mb-2">
-            Erişim Reddedildi
-          </h2>
-          <p className="text-red-600">
-            Bu sayfaya sadece yöneticiler erişebilir.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (authLoading || loading) {
     return (
       <div className="p-8">
@@ -84,6 +68,7 @@ export default function SiparislerPage() {
   }
 
   return (
+    <AdminOnlyGuard>
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">
@@ -193,5 +178,6 @@ export default function SiparislerPage() {
         </div>
       </div>
     </div>
+    </AdminOnlyGuard>
   );
 }

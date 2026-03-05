@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import { Settings, Save, Database, Shield, Bell } from "lucide-react";
-import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 
 export default function AyarlarPage() {
-  const { isAdmin } = useSimpleAuth();
   const [loading, setLoading] = useState(false);
   const [settings, setSettings] = useState({
     siteName: "Bilet Ekosistemi",
@@ -15,23 +14,6 @@ export default function AyarlarPage() {
     enableNotifications: true,
     maintenanceMode: false
   });
-
-  // Sadece admin erişebilir
-  if (!isAdmin) {
-    return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <Settings className="h-12 w-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-red-800 mb-2">
-            Erişim Reddedildi
-          </h2>
-          <p className="text-red-600">
-            Bu sayfaya sadece yöneticiler erişebilir.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   async function handleSave() {
     setLoading(true);
@@ -49,6 +31,7 @@ export default function AyarlarPage() {
   }
 
   return (
+    <AdminOnlyGuard>
     <div className="p-8">
       <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">
@@ -209,5 +192,6 @@ export default function AyarlarPage() {
         </div>
       </div>
     </div>
+    </AdminOnlyGuard>
   );
 }

@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Copy, Calendar, MapPin, Music2, X } from "lucide-react";
+import { Plus, Edit2, Trash2, Copy, Calendar, MapPin, Music2, X, CheckCircle } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import type { Event, EventCategory } from "@/types/database";
 import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
 import AdminImageUpload from "@/components/AdminImageUpload";
-import AdminGuard from "@/components/AdminGuard";
 import { buildEventDescription, parseEventDescription } from "@/lib/eventMeta";
 import { logAudit } from "@/lib/audit";
 
@@ -54,15 +53,11 @@ async function withTimeout(
 }
 
 export default function EtkinliklerPage() {
-  return (
-    <AdminGuard>
-      <EtkinliklerContent />
-    </AdminGuard>
-  );
+  return <EtkinliklerContent />;
 }
 
 function EtkinliklerContent() {
-  const { isAdmin } = useSimpleAuth();
+  const { user, isAdmin, isOrganizer } = useSimpleAuth();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -86,9 +81,9 @@ function EtkinliklerContent() {
   const [selectedVenueId, setSelectedVenueId] = useState<string>("");
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isOrganizer) return;
     fetchEvents();
-  }, [isAdmin]);
+  }, [isAdmin, isOrganizer]);
 
   useEffect(() => {
     if (showForm) {
@@ -100,17 +95,35 @@ function EtkinliklerContent() {
 
   async function fetchEvents() {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from("events")
         .select("*")
         .order("created_at", { ascending: false });
-
+      if (isOrganizer && user?.id) {
+        query = query.eq("created_by_user_id", user.id);
+      }
+      const { data, error } = await query;
       if (error) throw error;
       setEvents(data || []);
     } catch (error) {
       console.error("Etkinlikler yüklenemedi:", error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleApprove(eventId: string) {
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({ is_approved: true })
+        .eq("id", eventId);
+      if (error) throw error;
+      await fetchEvents();
+      alert("Etkinlik onaylandı!");
+    } catch (error) {
+      console.error("Onay hatası:", error);
+      alert("Etkinlik onaylanamadı: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
     }
   }
 
@@ -190,7 +203,7 @@ function EtkinliklerContent() {
     setSubmitting(true);
     try {
       const ev = event as Event & Record<string, unknown>;
-      const copyPayload = {
+      const copyPayload: Record<string, unknown> = {
         title: ev.title,
         description: ev.description,
         date: ev.date,
@@ -212,6 +225,10 @@ function EtkinliklerContent() {
         venue_de: ev.venue_de ?? null,
         venue_en: ev.venue_en ?? null,
       };
+      if (isOrganizer && user?.id) {
+        copyPayload.created_by_user_id = user.id;
+        copyPayload.is_approved = false;
+      }
 
       const { data: newEvent, error: insertError } = await withTimeout(
         (signal) =>
@@ -442,8 +459,10 @@ function EtkinliklerContent() {
         venue_de: venueDe || null,
         venue_en: venueEn || null,
       };
-
-      
+      if (isOrganizer && user?.id && !editingEvent) {
+        (eventData as Record<string, unknown>).created_by_user_id = user.id;
+        (eventData as Record<string, unknown>).is_approved = false;
+      }
 
       if (editingEvent) {
         // Güncelleme
@@ -497,22 +516,6 @@ function EtkinliklerContent() {
     } finally {
       setSubmitting(false);
     }
-  }
-
-  if (!isAdmin) {
-    return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
-          <Music2 className="h-12 w-12 text-red-600 mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-red-800 mb-2">
-            Erişim Reddedildi
-          </h2>
-          <p className="text-red-600">
-            Bu sayfaya sadece yöneticiler erişebilir.
-          </p>
-        </div>
-      </div>
-    );
   }
 
   if (loading) {
@@ -877,9 +880,16 @@ function EtkinliklerContent() {
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <span className="text-xs font-medium text-primary-600">
-                        {CATEGORY_LABELS[event.category]}
-                      </span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-xs font-medium text-primary-600">
+                          {CATEGORY_LABELS[event.category]}
+                        </span>
+                        {(event as Event & { is_approved?: boolean }).is_approved === false && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                            Onay Bekliyor
+                          </span>
+                        )}
+                      </div>
                       <h3 className="mt-1 text-lg font-semibold text-slate-900">
                         {event.title}
                       </h3>
@@ -905,6 +915,16 @@ function EtkinliklerContent() {
                         : "Ücretsiz"}
                     </span>
                     <div className="flex gap-2">
+                      {isAdmin && (event as Event & { is_approved?: boolean }).is_approved === false && (
+                        <button
+                          onClick={() => handleApprove(event.id)}
+                          disabled={submitting}
+                          title="Etkinliği onayla"
+                          className="p-2 rounded-lg border border-green-200 text-green-600 hover:bg-green-50 disabled:opacity-50"
+                        >
+                          <CheckCircle className="h-4 w-4" />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleCopy(event)}
                         disabled={submitting}

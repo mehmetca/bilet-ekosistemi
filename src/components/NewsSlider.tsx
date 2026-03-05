@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import type { News } from "@/types/database";
 import { Link } from "@/i18n/navigation";
-import { isImageReachable } from "@/lib/image-utils";
 import { getLocalizedNews, type Locale } from "@/lib/i18n-content";
 
 interface NewsSliderProps {
@@ -25,24 +24,8 @@ interface Advertisement {
 export default function NewsSlider({ news, title, locale = "tr" }: NewsSliderProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
-  const [safeNews, setSafeNews] = useState<News[]>(news || []);
+  const safeNews = news || [];
   const [advertisement, setAdvertisement] = useState<Advertisement | null>(null);
-
-  useEffect(() => {
-    async function validateNewsImages() {
-      const inputNews = news || [];
-      const validatedNews = await Promise.all(
-        inputNews.map(async (item) => {
-          if (!item.image_url) return item;
-          const imageIsReachable = await isImageReachable(item.image_url);
-          return imageIsReachable ? item : { ...item, image_url: undefined };
-        })
-      );
-      setSafeNews(validatedNews);
-    }
-
-    validateNewsImages();
-  }, [news]);
 
   useEffect(() => {
     async function fetchNewsSliderAd() {
@@ -54,10 +37,7 @@ export default function NewsSlider({ news, title, locale = "tr" }: NewsSliderPro
         const targetAd = ads.find(
           (ad) => ad.is_active && ad.placement === "news_slider" && !!ad.image_url
         );
-        if (!targetAd) return;
-
-        const imageOk = await isImageReachable(targetAd.image_url);
-        setAdvertisement(imageOk ? targetAd : null);
+        if (targetAd) setAdvertisement(targetAd);
       } catch {
         setAdvertisement(null);
       }
@@ -125,11 +105,25 @@ export default function NewsSlider({ news, title, locale = "tr" }: NewsSliderPro
         {/* Ana Haber Kartı */}
         <div className="relative h-96 bg-gradient-to-br from-slate-100 to-slate-50">
           {currentNews.image_url ? (
-            <img
-              src={currentNews.image_url}
-              alt={localized.title || currentNews.title}
-              className="w-full h-full object-cover"
-            />
+            <>
+              <img
+                src={currentNews.image_url}
+                alt={localized.title || currentNews.title}
+                className="w-full h-full object-cover"
+                loading="lazy"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  const ph = e.currentTarget.parentElement?.querySelector(".news-img-placeholder");
+                  if (ph) ph.classList.remove("hidden");
+                }}
+              />
+              <div className="news-img-placeholder hidden absolute inset-0 w-full h-full flex items-center justify-center bg-slate-100">
+                <div className="text-center">
+                  <span className="text-4xl">📰</span>
+                  <p className="text-slate-500 mt-2">Görsel yüklenemedi</p>
+                </div>
+              </div>
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <div className="text-center">

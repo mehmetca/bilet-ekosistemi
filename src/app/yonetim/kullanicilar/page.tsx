@@ -1,147 +1,169 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, UserCheck } from "lucide-react";
-import { supabase } from "@/lib/supabase-client";
+import { Plus, Trash2, UserCheck, CheckCircle, XCircle, Calendar } from "lucide-react";
+import AdminOnlyGuard from "@/components/AdminOnlyGuard";
+
+type OrganizerRequest = {
+  id: string;
+  user_id: string;
+  email: string;
+  status: string;
+  created_at: string;
+};
+
+type DisplayUser = {
+  user_id: string;
+  email: string | null;
+  created_at?: string;
+  roles: string[];
+};
 
 export default function KullanicilarPage() {
-  type UserRole = { id?: string; user_id?: string; role?: string; created_at?: string; email?: string | null };
-  const [users, setUsers] = useState<UserRole[]>([]);
+  const [users, setUsers] = useState<DisplayUser[]>([]);
+  const [organizerRequests, setOrganizerRequests] = useState<OrganizerRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<"admin" | "controller">("controller");
 
   useEffect(() => {
-    fetchUsers();
+    fetchData();
   }, []);
 
-  async function fetchUsers() {
+  async function fetchData() {
     try {
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (error) {
-        console.error("Users fetch error:", error);
-        alert(`Kullanıcılar listelenemedi: ${error.message}`);
-        return;
+      const res = await fetch("/api/admin/users");
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as { error?: string }).error || "Veriler yüklenemedi");
       }
-
-      if (data) {
-        setUsers(data);
-      } else {
-        setUsers([]);
-      }
+      const data = (await res.json()) as { users?: DisplayUser[]; organizerRequests?: OrganizerRequest[] };
+      setUsers(data.users || []);
+      setOrganizerRequests((data.organizerRequests as OrganizerRequest[]) || []);
     } catch (error) {
-      console.error("Users fetch error:", error);
-      alert(`Kullanıcılar listelenemedi: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
+      console.error("Fetch error:", error);
+      alert(`Kullanıcılar listelenemedi: ${error instanceof Error ? error.message : "Bilinmeyen hata"}`);
     } finally {
       setLoading(false);
     }
   }
 
-  // Kullanıcı ekleme fonksiyonu (Service role key gerekli)
+
   async function handleAddUser() {
+    if (!newUserEmail) {
+      alert("E-posta adresi giriniz!");
+      return;
+    }
     try {
-      
-      
-      if (!newUserEmail) {
-        alert("E-posta adresi giriniz!");
-        return;
-      }
-
-      // Service role key kontrolü
-      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-      if (!serviceKey) {
-        alert("Kullanıcı oluşturmak için Supabase Service Role Key gerekli!\n\nLütfen .env.local dosyasına ekleyin:\nSUPABASE_SERVICE_ROLE_KEY=service_role_key_here");
-        return;
-      }
-
-      // Service role key varsa bu kod çalışır:
-      const { data: existingUsers, error: listError } = await supabase.auth.admin.listUsers();
-      
-      if (listError) {
-        console.error("List users error:", listError);
-        alert("Kullanıcılar listelenemedi: " + listError.message);
-        return;
-      }
-      
-      const userExists = existingUsers.users?.some((user: { email?: string } ) => user.email === newUserEmail);
-      
-      if (userExists) {
-        alert("Bu e-posta adresi zaten kayıtlı!");
-        return;
-      }
-
-      
-
-      const { data, error } = await supabase.auth.admin.createUser({
-        email: newUserEmail,
-        password: Math.random().toString(36).substring(2, 15),
-        email_confirm: true,
-        user_metadata: {
-          role: newUserRole,
-          created_by: 'admin'
-        }
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "add", email: newUserEmail, role: newUserRole }),
       });
-
-      
-
-      if (error) {
-        console.error("User creation error:", error);
-        alert("Kullanıcı oluşturulamadı: " + error.message);
-      } else {
-        if (data.user?.id) {
-          
-          const { error: roleError } = await supabase
-            .from("user_roles")
-            .insert({
-              user_id: data.user.id,
-              role: newUserRole
-            });
-
-          if (roleError) {
-            console.error("Role insertion error:", roleError);
-            alert("Rol atanamadı: " + roleError.message);
-          } else {
-            
-            alert("Kullanıcı başarıyla oluşturuldu!");
-            setNewUserEmail("");
-            setNewUserRole("controller");
-            setShowAddForm(false);
-            fetchUsers();
-          }
-        }
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        alert(data.error || "Kullanıcı eklenemedi");
+        return;
       }
+      alert("Kullanıcı başarıyla oluşturuldu!");
+      setNewUserEmail("");
+      setNewUserRole("controller");
+      setShowAddForm(false);
+      fetchData();
     } catch (error) {
       console.error("Add user error:", error);
-      alert("İşlem başarısız oldu: " + (error instanceof Error ? error.message : 'Bilinmeyen hata'));
+      alert("İşlem başarısız oldu: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
+    }
+  }
+
+  async function handleApproveOrganizer(req: OrganizerRequest) {
+    if (!confirm(`${req.email} adresli kullanıcıyı organizatör olarak onaylamak istediğinize emin misiniz?`)) return;
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "approve", requestId: req.id }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        alert(data.error || "Onaylama başarısız");
+        return;
+      }
+      alert("Organizatör onaylandı!");
+      fetchData();
+    } catch (error) {
+      alert("Hata: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
+    }
+  }
+
+  async function handleRejectOrganizer(req: OrganizerRequest) {
+    if (!confirm(`${req.email} adresli başvuruyu reddetmek istediğinize emin misiniz?`)) return;
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reject", requestId: req.id }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        alert(data.error || "Reddetme başarısız");
+        return;
+      }
+      alert("Başvuru reddedildi.");
+      fetchData();
+    } catch (error) {
+      alert("Hata: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
+    }
+  }
+
+  async function handleDeleteUser(user: DisplayUser) {
+    const label = user.email || user.user_id;
+    if (
+      !confirm(
+        `${label} kullanıcısını kalıcı olarak silmek istediğinize emin misiniz?\n\nKullanıcı tekrar üye olarak kayıt olabilir. Bu işlem geri alınamaz.`
+      )
+    )
+      return;
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete", userId: user.user_id }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        alert(data.error || "Kullanıcı silinemedi");
+        return;
+      }
+      alert("Kullanıcı silindi. Tekrar üye olarak kayıt olabilir.");
+      fetchData();
+    } catch (error) {
+      console.error("Delete user error:", error);
+      alert("Bir hata oluştu.");
     }
   }
 
   async function removeRole(userId?: string, role?: string) {
     if (!userId || !role) {
-      alert('Kullanıcı bilgisi eksik.');
+      alert("Kullanıcı bilgisi eksik.");
       return;
     }
-    if (!confirm(`Bu kullanıcının ${role === 'admin' ? 'yönetici' : 'kontrolör'} rolünü kaldırmak istediğinize emin misiniz?`)) {
-      return;
-    }
-
+    const roleLabel = role === "admin" ? "yönetici" : role === "organizer" ? "organizatör" : "kontrolör";
+    if (!confirm(`Bu kullanıcının ${roleLabel} rolünü kaldırmak istediğinize emin misiniz?`)) return;
     try {
-      const { error } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("user_id", userId)
-        .eq("role", role);
-
-      if (error) {
-        alert("Rol kaldırılamadı: " + error.message);
-      } else {
-        alert("Kullanıcı rolü başarıyla kaldırıldı.");
-        fetchUsers();
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "removeRole", userId, role }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        alert(data.error || "Rol kaldırılamadı");
+        return;
       }
+      alert("Kullanıcı rolü başarıyla kaldırıldı.");
+      fetchData();
     } catch (error) {
       console.error("Remove role error:", error);
       alert("Bir hata oluştu.");
@@ -174,6 +196,7 @@ export default function KullanicilarPage() {
   }
 
   return (
+    <AdminOnlyGuard>
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -239,69 +262,128 @@ export default function KullanicilarPage() {
           </div>
         )}
 
-        {/* Kullanıcı Listesi */}
+        {/* Bekleyen Organizatör Başvuruları */}
+        {organizerRequests.length > 0 && (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-6">
+            <h3 className="text-lg font-semibold text-amber-900 mb-4 flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Bekleyen Organizatör Başvuruları ({organizerRequests.length})
+            </h3>
+            <div className="space-y-3">
+              {organizerRequests.map((req) => (
+                <div
+                  key={req.id}
+                  className="flex items-center justify-between gap-4 p-4 bg-white rounded-lg border border-amber-100"
+                >
+                  <div>
+                    <p className="font-medium text-slate-900">{req.email}</p>
+                    <p className="text-sm text-slate-500">
+                      Başvuru: {new Date(req.created_at).toLocaleString("tr-TR")}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleApproveOrganizer(req)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Onayla
+                    </button>
+                    <button
+                      onClick={() => handleRejectOrganizer(req)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-lg hover:bg-red-200"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Reddet
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Tüm Üyeler (Organizatör, Bilet Alıcı, Yönetici, Kontrolör) */}
         <div className="bg-white rounded-xl border border-slate-200">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">Kullanıcı ID</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700">E-posta</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Rol</th>
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">Rol Tarihi</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Kayıt Tarihi</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">İşlemler</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} className="border-b border-slate-100">
+                  <tr key={user.user_id} className="border-b border-slate-100">
                     <td className="p-4 text-sm text-slate-900">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center">
                           <UserCheck className="h-4 w-4 text-slate-600" />
                         </div>
                         <div>
-                          <div className="font-medium">{user.user_id}</div>
+                          <div className="font-medium">{user.email || "(e-posta yok)"}</div>
                           <div className="text-xs text-slate-500">
-                            ID: {user.user_id ? String(user.user_id).slice(-8) : '-'}
+                            ID: {user.user_id ? String(user.user_id).slice(-8) : "-"}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="p-4 text-sm">
-                      <div className="flex gap-2">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          user.role === 'admin' 
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {user.role === 'admin' ? '🛡️ Yönetici' : '🔍 Kontrolör'}
-                        </span>
+                      <div className="flex flex-wrap gap-2">
+                        {user.roles.length > 0 ? (
+                          user.roles.map((role) => (
+                            <span
+                              key={role}
+                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                role === "admin"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : role === "organizer"
+                                  ? "bg-amber-100 text-amber-800"
+                                  : "bg-blue-100 text-blue-800"
+                              }`}
+                            >
+                              {role === "admin"
+                                ? "Yönetici"
+                                : role === "organizer"
+                                ? "Organizatör"
+                                : "Kontrolör"}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700">
+                            Bilet Alıcı
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="p-4 text-sm text-slate-600">
-                      {'Hiç giriş yapmadı'}
-                    </td>
-                    <td className="p-4 text-sm text-slate-600">
-                      {user.created_at 
+                      {user.created_at
                         ? new Date(user.created_at).toLocaleString("tr-TR")
-                        : 'Bilinmiyor'
-                      }
-                    </td>
-                    <td className="p-4 text-sm text-slate-600">
-                      {user.created_at 
-                        ? new Date(user.created_at).toLocaleString("tr-TR")
-                        : 'Bilinmiyor'
-                      }
+                        : "Bilinmiyor"}
                     </td>
                     <td className="p-4 text-sm">
-                      <button
-                        onClick={() => removeRole(user.user_id, user.role)}
-                        className="p-1 text-red-600 hover:bg-red-50 rounded"
-                        title="Rolü kaldır"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {user.roles.map((role) => (
+                          <button
+                            key={role}
+                            onClick={() => removeRole(user.user_id, role)}
+                            className="p-1 text-amber-600 hover:bg-amber-50 rounded"
+                            title={`${role} rolünü kaldır`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        ))}
+                        <button
+                          onClick={() => handleDeleteUser(user)}
+                          className="p-1.5 px-2 text-red-600 hover:bg-red-50 rounded text-xs font-medium border border-red-200"
+                          title="Kullanıcıyı sil (tekrar üye olabilir)"
+                        >
+                          Sil
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -311,5 +393,6 @@ export default function KullanicilarPage() {
         </div>
       </div>
     </div>
+    </AdminOnlyGuard>
   );
 }
