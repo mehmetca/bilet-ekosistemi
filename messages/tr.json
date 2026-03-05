@@ -41,8 +41,8 @@
       "allCities": "Tüm Şehirler",
       "allCategories": "Tüm Kategoriler",
       "clear": "Filtreleri Temizle",
-      "startDate": "Başlangıç tarihi",
-      "endDate": "Bitiş tarihi",
+      "startDate": "Başlangıç tarihi (gg.aa.yyyy)",
+      "endDate": "Bitiş tarihi (gg.aa.yyyy)",
       "minPrice": "Min €",
       "maxPrice": "Max €"
     },
@@ -90,6 +90,7 @@
   "calendar": {
     "title": "Etkinlik Takvimi",
     "allCategories": "Tüm Türler",
+    "datePlaceholder": "Tarih (gg.aa.yyyy)",
     "clear": "Temizle",
     "eventsCount": "etkinlik",
     "noImage": "Görsel Yok",

@@ -12,6 +12,7 @@ import EventSlider from "@/components/EventSlider";
 import NewsSlider from "@/components/NewsSlider";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { getLocalizedEvent } from "@/lib/i18n-content";
+import { parseDateInput } from "@/lib/date-utils";
 
 interface HeroBg {
   id: string;
@@ -175,8 +176,8 @@ export default function ClientHomePage({
     const matchesCategory = selectedCategory === "all" || event.category === selectedCategory;
 
     const eventDate = new Date(event.date);
-    const start = startDate ? new Date(startDate) : null;
-    const end = endDate ? new Date(endDate) : null;
+    const start = startDate ? parseDateInput(startDate) : null;
+    const end = endDate ? parseDateInput(endDate) : null;
     const matchesStart = !start || eventDate >= start;
     const matchesEnd = !end || eventDate <= end;
 
@@ -375,14 +376,14 @@ export default function ClientHomePage({
             ))}
           </select>
           <input
-            type="date"
+            type="text"
             value={startDate}
             onChange={(e) => setStartDate(e.target.value)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             placeholder={t("filters.startDate")}
           />
           <input
-            type="date"
+            type="text"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm"

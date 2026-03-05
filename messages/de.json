@@ -41,8 +41,8 @@
       "allCities": "Alle Städte",
       "allCategories": "Alle Kategorien",
       "clear": "Filter zurücksetzen",
-      "startDate": "Startdatum",
-      "endDate": "Enddatum",
+      "startDate": "Startdatum (tt.mm.jjjj)",
+      "endDate": "Enddatum (tt.mm.jjjj)",
       "minPrice": "Min €",
       "maxPrice": "Max €"
     },
@@ -90,6 +90,7 @@
   "calendar": {
     "title": "Veranstaltungskalender",
     "allCategories": "Alle Kategorien",
+    "datePlaceholder": "Datum (tt.mm.jjjj)",
     "clear": "Löschen",
     "eventsCount": "Veranstaltungen",
     "noImage": "Kein Bild",

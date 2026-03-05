@@ -8,6 +8,7 @@ import { Link } from "@/i18n/navigation";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { useTranslations, useLocale } from "next-intl";
+import { parseDateInput, toISODateString } from "@/lib/date-utils";
 
 interface EventCalendarProps {
   events: Event[];
@@ -80,13 +81,14 @@ export default function EventCalendar({ events }: EventCalendarProps) {
             </select>
           </div>
 
-          {/* Tarih Seçimi */}
+          {/* Tarih Seçimi (elle girilebilir: gg.aa.yyyy) */}
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 text-slate-500" />
             <input
-              type="date"
+              type="text"
               value={selectedDate}
               onChange={(e) => setSelectedDate(e.target.value)}
+              placeholder={t("calendar.datePlaceholder")}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
             />
             {selectedDate && (
@@ -104,12 +106,14 @@ export default function EventCalendar({ events }: EventCalendarProps) {
       {/* Etkinlik Listesi */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <h2 className="text-lg font-semibold text-slate-900 mb-4">
-          {selectedDate 
-            ? `${new Date(selectedDate).toLocaleDateString(dateLocale)} ${t("calendar.eventsOnDate")}`
-            : selectedCategory !== "all" 
-              ? `${t(`categories.${selectedCategory}`)} ${t("calendar.eventsOfCategory")}`
-              : t("home.upcomingEvents")
-          }
+          {(() => {
+            const parsed = selectedDate.trim() ? parseDateInput(selectedDate) : null;
+            return parsed
+              ? `${parsed.toLocaleDateString(dateLocale)} ${t("calendar.eventsOnDate")}`
+              : selectedCategory !== "all" 
+                ? `${t(`categories.${selectedCategory}`)} ${t("calendar.eventsOfCategory")}`
+                : t("home.upcomingEvents");
+          })()}
           <span className="ml-2 text-sm font-normal text-slate-500">
             ({upcomingEvents.length} {t("calendar.eventsCount")})
           </span>
