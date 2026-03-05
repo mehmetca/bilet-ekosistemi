@@ -11,7 +11,37 @@
     "newsNotFoundDesc": "Aradığınız haber mevcut değil veya kaldırılmış."
   },
   "auth": {
-    "passwordRequirements": "Şifre en az bir küçük harf, bir büyük harf ve bir rakam içermelidir."
+    "passwordRequirements": "Şifre en az bir küçük harf, bir büyük harf ve bir rakam içermelidir.",
+    "loginTitle": "Giriş Yap",
+    "loginSubtitle": "Bilet alıcılar, organizatörler, yöneticiler ve kontrolörler buradan giriş yapabilir",
+    "email": "E-posta",
+    "password": "Şifre",
+    "emailPlaceholder": "admin@bilet-ekosistemi.com",
+    "passwordPlaceholder": "•••••••••",
+    "loggingIn": "Giriş Yapılıyor...",
+    "login": "Giriş Yap",
+    "noAccount": "Hesabınız yok mu?",
+    "signUpLink": "Üye olun",
+    "signUpTitle": "Üye Ol",
+    "signUpSubtitle": "Bilet satın almak için ücretsiz hesap oluşturun",
+    "registering": "Kayıt Yapılıyor...",
+    "signUp": "Üye Ol",
+    "errorEmailExists": "Bu e-posta adresi zaten kayıtlı. Giriş yapabilirsiniz.",
+    "errorRegisterFailed": "Kayıt oluşturulamadı.",
+    "successRegistered": "Hesabınız oluşturuldu! Giriş yaparak bilet satın alabilirsiniz.",
+    "errorGeneric": "Beklenmeyen bir hata oluştu.",
+    "organizerTitle": "Organizatör Başvurusu",
+    "organizerSubtitle": "Etkinlik ekleyip yönetmek istiyorsanız aşağıdaki formu doldurarak başvurunuzu yapın. Yönetici onayından sonra etkinlik ekleyebileceksiniz.",
+    "submitting": "Başvuru Gönderiliyor...",
+    "organizerApply": "Organizatör Olarak Başvur",
+    "errorEmailExistsOrganizer": "Bu e-posta adresi zaten kayıtlı. Üstteki giriş formunu kullanarak giriş yapabilirsiniz.",
+    "errorOrganizerApplyFailed": "Hesap oluşturuldu ancak başvuru kaydedilemedi. Lütfen giriş yapıp tekrar deneyin.",
+    "errorOrganizerApplyFailedShort": "Başvuru kaydedilemedi.",
+    "successOrganizerApplied": "Organizatör başvurunuz alındı! Yönetici onayından sonra etkinlik ekleyebileceksiniz. E-posta ile bilgilendirileceksiniz.",
+    "errorInvalidCredentials": "E-posta veya şifre hatalı. E-posta onayı gerekiyorsa, kayıt sonrası gelen onay linkine tıklayıp tekrar deneyin.",
+    "errorLoginFailed": "Giriş yapılamadı. Lütfen tekrar deneyin.",
+    "regEmailPlaceholder": "ornek@email.com",
+    "regPasswordPlaceholder": "En az 6 karakter"
   },
   "nav": {
     "events": "Etkinlikler",
@@ -47,6 +77,7 @@
       "maxPrice": "Max €"
     },
     "noEvents": "Henüz etkinlik yok",
+    "noEventsForFilter": "Arama kriterlerinize uygun etkinlik bulunamadı.",
     "noEventsSlider": "Yaklaşan etkinlik bulunmamaktadır.",
     "otherNews": "Diğer Haberler",
     "trustBadges": {
@@ -80,12 +111,16 @@
   "categories": {
     "konser": "Konser",
     "tiyatro": "Tiyatro",
-    "sinema": "Sinema",
     "festival": "Festival",
-    "spor": "Spor",
     "stand-up": "Stand-Up",
     "diger": "Diğer",
     "event": "Etkinlik"
+  },
+  "currency": {
+    "label": "Para Birimi",
+    "EUR": "€ Euro",
+    "TL": "₺ Türk Lirası",
+    "USD": "$ US Doları"
   },
   "calendar": {
     "title": "Etkinlik Takvimi",
@@ -165,6 +200,7 @@
     "tickets": "Biletler",
     "comingSoon": "Yakında",
     "externalTicketSupport": "Tüm destek taleplerinizi ilgili satış kanalıyla iletmeniz gerekir.",
+    "from": "ab",
     "priceFrom": "Başlangıç fiyatı",
     "removedFromFavorites": "Favorilerden çıkarıldı.",
     "addedToFavorites": "Favorilere eklendi.",
@@ -179,6 +215,16 @@
     "securePayment": "Güvenli Ödeme",
     "instantDelivery": "Anında Teslimat",
     "shareEventText": "{title} etkinliğini inceleyin."
+  },
+  "showDetail": {
+    "selectCity": "Seansları görmek için şehir seçiniz",
+    "allCities": "Tüm Şehirler",
+    "ticketsAndPrices": "Biletler ve Fiyatlar",
+    "ticketsIn": "Biletleri",
+    "tickets": "Biletleri",
+    "performances": "seans",
+    "noUpcomingPerformances": "Yaklaşan seans bulunmuyor.",
+    "noPerformancesInCity": "{city} şehrinde seans bulunmuyor."
   },
   "artists": {
     "title": "Sanatçılar",

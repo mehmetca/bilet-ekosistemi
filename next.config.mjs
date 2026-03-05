@@ -4,9 +4,9 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  transpilePackages: ["lucide-react"],
   experimental: {
     instrumentationHook: false,
-    optimizePackageImports: ["lucide-react"],
   },
   async redirects() {
     return [
@@ -53,6 +53,7 @@ export default async function config() {
       org: process.env.SENTRY_ORG || "bilet-ekosistemi",
       project: process.env.SENTRY_PROJECT || "bilet-ekosistemi",
       silent: !process.env.CI,
+      reactComponentAnnotation: { enabled: false },
     });
   }
   return configWithIntl;

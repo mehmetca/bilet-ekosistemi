@@ -11,6 +11,7 @@ import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
 import EventSlider from "@/components/EventSlider";
 import NewsSlider from "@/components/NewsSlider";
 import { parseEventDescription } from "@/lib/eventMeta";
+import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { parseDateInput } from "@/lib/date-utils";
 
@@ -164,13 +165,26 @@ export default function ClientHomePage({
     new Set(upcomingEvents.map((event) => (event.location || "").trim()).filter(Boolean))
   ).sort((a, b) => a.localeCompare(b, "tr"));
 
+  // Tüm çok dilli alanlarda ara (title, title_tr, title_de, title_en, venue, venue_tr, venue_de, venue_en)
+  const getSearchableText = (event: Event) => {
+    const parts = [
+      event.title,
+      (event as Event & { title_tr?: string }).title_tr,
+      (event as Event & { title_de?: string }).title_de,
+      (event as Event & { title_en?: string }).title_en,
+      event.venue,
+      (event as Event & { venue_tr?: string }).venue_tr,
+      (event as Event & { venue_de?: string }).venue_de,
+      (event as Event & { venue_en?: string }).venue_en,
+      event.location,
+    ].filter(Boolean) as string[];
+    return parts.join(" ").toLowerCase();
+  };
+
   const filteredEventsRaw = upcomingEvents.filter((event) => {
     const term = searchTerm.trim().toLowerCase();
-    const matchesSearch =
-      !term ||
-      event.title.toLowerCase().includes(term) ||
-      (event.venue || "").toLowerCase().includes(term) ||
-      (event.location || "").toLowerCase().includes(term);
+    const searchableText = getSearchableText(event);
+    const matchesSearch = !term || searchableText.includes(term);
 
     const matchesCity = selectedCity === "all" || event.location === selectedCity;
     const matchesCategory = selectedCategory === "all" || event.category === selectedCategory;
@@ -216,6 +230,26 @@ export default function ClientHomePage({
     }
     return 0;
   });
+
+  // Aynı gösteri/turden en fazla 2 etkinlik (show_slug, image_url veya başlık ile grupla)
+  const MAX_PER_SHOW = 2;
+  const getShowKey = (event: Event) => {
+    const e = event as Event & { show_slug?: string };
+    if (e.show_slug) return e.show_slug;
+    if (event.image_url) return event.image_url;
+    const title = event.title ?? "";
+    return title.includes(" - ") ? title.split(" - ")[0].trim() : title.split(/\s+/).slice(0, 2).join(" ") || event.id;
+  };
+  const displayEvents = (() => {
+    const countByKey = new Map<string, number>();
+    return filteredEvents.filter((event) => {
+      const key = getShowKey(event);
+      const count = countByKey.get(key) || 0;
+      if (count >= MAX_PER_SHOW) return false;
+      countByKey.set(key, count + 1);
+      return true;
+    });
+  })();
 
   // Etkinlik durumunu kontrol et
   const getEventStatus = (event: Event) => {
@@ -320,7 +354,7 @@ export default function ClientHomePage({
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Yaklaşan Etkinlikler Slider */}
           <EventSlider 
-            events={filteredEvents} 
+            events={displayEvents} 
             title={t("upcomingEvents")} 
             locale={locale as "tr" | "de" | "en"}
             noEventsText={t("noEventsSlider")}
@@ -422,24 +456,30 @@ export default function ClientHomePage({
           </button>
         </div>
         
-        {filteredEvents.length === 0 ? (
+        {displayEvents.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
-            <Music2 className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-            <p className="text-lg font-medium">{t("noEvents")}</p>
-            <p className="mt-2 text-sm">{t("supabaseHint")}</p>
-            <div className="mt-4 p-4 bg-slate-100 rounded-lg text-left">
-              <p className="font-medium mb-2">{t("solutionSteps")}</p>
-              <ol className="text-sm space-y-1">
-                <li>1. {t("solution1")}</li>
-                <li>2. {t("solution2")}</li>
-                <li>3. <code className="bg-slate-200 px-1 rounded">quick-fix.sql</code> {t("solution3")}</li>
-                <li>4. {t("solution4")}</li>
-              </ol>
-            </div>
+            {events.length === 0 ? (
+              <>
+                <Music2 className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+                <p className="text-lg font-medium">{t("noEvents")}</p>
+                <p className="mt-2 text-sm">{t("supabaseHint")}</p>
+                <div className="mt-4 p-4 bg-slate-100 rounded-lg text-left">
+                  <p className="font-medium mb-2">{t("solutionSteps")}</p>
+                  <ol className="text-sm space-y-1">
+                    <li>1. {t("solution1")}</li>
+                    <li>2. {t("solution2")}</li>
+                    <li>3. <code className="bg-slate-200 px-1 rounded">quick-fix.sql</code> {t("solution3")}</li>
+                    <li>4. {t("solution4")}</li>
+                  </ol>
+                </div>
+              </>
+            ) : (
+              <p className="text-lg font-medium">{t("noEventsForFilter")}</p>
+            )}
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {filteredEvents.map((event) => {
+            {displayEvents.map((event) => {
               const eventStatus = getEventStatus(event);
               const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
               const parsedMeta = parseEventDescription(localized.description || event.description);
@@ -453,7 +493,7 @@ export default function ClientHomePage({
                       : 'bg-white border-slate-200'
                   }`}
                 >
-                  <Link href={`/etkinlik/${event.id}`}>
+                  <Link href={`/etkinlik/${(event as Event & { show_slug?: string }).show_slug || event.id}`}>
                     <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden cursor-pointer relative">
                       {event.image_url ? (
                         <img
@@ -539,7 +579,7 @@ export default function ClientHomePage({
                         eventStatus.isPast ? 'text-slate-500' : 'text-primary-600'
                       }`}>
                         {Number(event.price_from) > 0
-                          ? `${t("from")} €${Number(event.price_from).toLocaleString("de-DE")}`
+                          ? `${t("from")} ${formatPrice(Number(event.price_from), event.currency)}`
                           : t("free")}
                       </span>
                       <button
@@ -573,6 +613,7 @@ export default function ClientHomePage({
             })}
           </div>
         )}
+
       </section>
 
       {pastEvents.length > 0 && (

@@ -5,6 +5,7 @@ import { Plus, Edit2, Trash2, Calendar, MapPin, Music2 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import type { Event, EventCategory } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
+import { formatPrice } from "@/lib/formatPrice";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
 export default function AdminEvents() {
@@ -143,7 +144,7 @@ export default function AdminEvents() {
                       <div className="text-right">
                         <span className="font-bold text-primary-600">
                           {Number(event.price_from) > 0
-                            ? `€${Number(event.price_from).toLocaleString("de-DE")}`
+                            ? formatPrice(Number(event.price_from), event.currency)
                             : "Ücretsiz"}
                         </span>
                       </div>

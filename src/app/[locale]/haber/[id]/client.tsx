@@ -6,6 +6,7 @@ import Image from "next/image";
 import type { News, Event } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
 import { getLocalizedNews, getLocalizedEvent, type Locale } from "@/lib/i18n-content";
+import { formatPrice } from "@/lib/formatPrice";
 import Header from "@/components/Header";
 import { useTranslations } from "next-intl";
 
@@ -235,7 +236,7 @@ export default function HaberDetayClient({ haber, events, otherNews, locale = "t
                               }`}
                             >
                               {Number(event.price_from) > 0
-                                ? `${t("from")} €${Number(event.price_from).toLocaleString("de-DE")}`
+                                ? `${t("from")} ${formatPrice(Number(event.price_from), event.currency)}`
                                 : t("free")}
                             </span>
                           </div>

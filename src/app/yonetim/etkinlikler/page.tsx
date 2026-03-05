@@ -4,11 +4,13 @@ import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, Copy, Calendar, MapPin, Music2, X, CheckCircle } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
-import type { Event, EventCategory } from "@/types/database";
-import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
+import type { Event, EventCategory, EventCurrency } from "@/types/database";
+import { CATEGORY_LABELS, CURRENCY_SYMBOLS, DISPLAY_CATEGORIES } from "@/types/database";
 import AdminImageUpload from "@/components/AdminImageUpload";
 import { buildEventDescription, parseEventDescription } from "@/lib/eventMeta";
+import { formatPrice } from "@/lib/formatPrice";
 import { logAudit } from "@/lib/audit";
+import { useTranslations } from "next-intl";
 
 const PRESET_TICKET_TYPES = [
   { key: "standart", name: "Standart Bilet", type: "normal", multiplier: 1 },
@@ -58,6 +60,7 @@ export default function EtkinliklerPage() {
 
 function EtkinliklerContent() {
   const { user, isAdmin, isOrganizer } = useSimpleAuth();
+  const tCurrency = useTranslations("currency");
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -212,6 +215,7 @@ function EtkinliklerContent() {
         location: ev.location,
         category: ev.category,
         price_from: Number(ev.price_from) || 0,
+        currency: (ev.currency as EventCurrency) || "EUR",
         image_url: ev.image_url ?? null,
         venue_id: ev.venue_id ?? null,
         is_active: true,
@@ -224,6 +228,7 @@ function EtkinliklerContent() {
         venue_tr: ev.venue_tr ?? null,
         venue_de: ev.venue_de ?? null,
         venue_en: ev.venue_en ?? null,
+        show_slug: ev.show_slug ?? null,
       };
       if (isOrganizer && user?.id) {
         copyPayload.created_by_user_id = user.id;
@@ -447,6 +452,7 @@ function EtkinliklerContent() {
         location: formData.get("location") as string,
         category: formData.get("category") as EventCategory,
         price_from: derivedBasePrice,
+        currency: (formData.get("currency") as EventCurrency) || "EUR",
         image_url: imageUrl || null,
         venue_id: selectedVenueId || null,
         title_tr: titleTrVal || null,
@@ -458,6 +464,7 @@ function EtkinliklerContent() {
         venue_tr: venueTrVal || null,
         venue_de: venueDe || null,
         venue_en: venueEn || null,
+        show_slug: (formData.get("show_slug") as string)?.trim() || null,
       };
       if (isOrganizer && user?.id && !editingEvent) {
         (eventData as Record<string, unknown>).created_by_user_id = user.id;
@@ -726,6 +733,22 @@ function EtkinliklerContent() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Tur/Gösteri Slug (Biletinial tarzı - opsiyonel)
+                  </label>
+                  <input
+                    type="text"
+                    name="show_slug"
+                    defaultValue={(editingEvent as Event & { show_slug?: string })?.show_slug || ""}
+                    placeholder="erdal-kaya-zikopisto"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Aynı slug&apos;a sahip 2+ etkinlik tek sayfada şehir seçerek gösterilir (Biletinial gibi).
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
@@ -746,7 +769,21 @@ function EtkinliklerContent() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Başlangıç Fiyatı (€)
+                      {tCurrency("label")}
+                    </label>
+                    <select
+                      name="currency"
+                      defaultValue={editingEvent?.currency || "EUR"}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    >
+                      <option value="EUR">{tCurrency("EUR") || `${CURRENCY_SYMBOLS.EUR} Euro`}</option>
+                      <option value="TL">{tCurrency("TL") || `${CURRENCY_SYMBOLS.TL} Türk Lirası`}</option>
+                      <option value="USD">{tCurrency("USD") || `${CURRENCY_SYMBOLS.USD} US Doları`}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Başlangıç Fiyatı
                     </label>
                     <input
                       type="number"
@@ -911,7 +948,7 @@ function EtkinliklerContent() {
                   <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 border-t sm:border-t-0 pt-4 sm:pt-0">
                     <span className="font-bold text-primary-600">
                       {Number(event.price_from) > 0
-                        ? `€${Number(event.price_from).toLocaleString("de-DE")}`
+                        ? formatPrice(Number(event.price_from), event.currency)
                         : "Ücretsiz"}
                     </span>
                     <div className="flex gap-2">

@@ -8,10 +8,13 @@ export interface Event {
   venue: string;
   venue_id?: string | null;
   price_from: number;
+  currency?: EventCurrency | null;
   image_url?: string;
   category: EventCategory;
   is_active: boolean;
   slug?: string;
+  /** Tur/gösteri gruplaması - aynı show_slug'a sahip etkinlikler tek sayfada (Biletinial tarzı) */
+  show_slug?: string | null;
   ticket_url?: string | null;
   created_at: string;
   updated_at: string;
@@ -176,24 +179,27 @@ export interface Ticket {
 export type EventCategory = 
   | 'konser' 
   | 'tiyatro' 
-  | 'sinema' 
-  | 'festival' 
-  | 'spor' 
   | 'stand-up' 
+  | 'festival' 
   | 'diger';
 
 export const CATEGORY_LABELS: Record<EventCategory, string> = {
   konser: 'Konser',
   tiyatro: 'Tiyatro',
-  sinema: 'Sinema',
-  festival: 'Festival',
-  spor: 'Spor',
   'stand-up': 'Stand-Up',
+  festival: 'Festival',
   diger: 'Diğer',
 };
 
-/** Ana sayfa filtre ve etkinlik formunda gösterilecek kategoriler (spor çıkarıldı) */
 export const DISPLAY_CATEGORIES: EventCategory[] = ['konser', 'tiyatro', 'stand-up', 'festival', 'diger'];
+
+export type EventCurrency = 'EUR' | 'TL' | 'USD';
+
+export const CURRENCY_SYMBOLS: Record<EventCurrency, string> = {
+  EUR: '€',
+  TL: '₺',
+  USD: '$',
+};
 
 export const TICKET_TYPE_LABELS: Record<TicketType, string> = {
   normal: "Normal",

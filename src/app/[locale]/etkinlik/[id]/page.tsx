@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { Event, Ticket, Venue } from "@/types/database";
 import EventDetailClient from "./client";
+import ShowDetailClient from "./ShowDetailClient";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +22,7 @@ function getSiteUrl(): string {
 async function getVenue(venueId: string | null | undefined): Promise<Venue | null> {
   if (!venueId) return null;
   try {
-    const supabase = await createServerSupabase();
+    const supabase = createServerSupabase();
     const { data, error } = await supabase.from("venues").select("*").eq("id", venueId).single();
     if (error || !data) return null;
     return {
@@ -67,9 +68,26 @@ function getTicketSortRank(name?: string): number {
   return idx === -1 ? 999 : idx;
 }
 
+async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {
+  try {
+    const supabase = createServerSupabase();
+    const { data, error } = await supabase
+      .from("events")
+      .select("*")
+      .eq("show_slug", showSlug)
+      .eq("is_active", true)
+      .order("date", { ascending: true })
+      .order("time", { ascending: true });
+    if (error || !data || data.length < 2) return [];
+    return data as Event[];
+  } catch {
+    return [];
+  }
+}
+
 async function getEventBySlug(slugOrId: string): Promise<Event | null> {
   try {
-    const supabase = await createServerSupabase();
+    const supabase = createServerSupabase();
 
     // Önce slug ile dene
     const { data, error } = await supabase
@@ -110,7 +128,7 @@ async function getEventBySlug(slugOrId: string): Promise<Event | null> {
 
 async function getEventTickets(eventId: string): Promise<Ticket[]> {
   try {
-    const supabase = await createServerSupabase();
+    const supabase = createServerSupabase();
     const { data, error } = await supabase
       .from("tickets")
       .select("*")
@@ -130,7 +148,8 @@ async function getEventTickets(eventId: string): Promise<Ticket[]> {
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const event = await getEventBySlug(id);
+  const showEvents = await getEventsByShowSlug(id);
+  const event = showEvents[0] || (await getEventBySlug(id));
   if (!event) return { title: "Etkinlik Bulunamadı" };
 
   const title = `${event.title} | Bilet Ekosistemi`;
@@ -138,7 +157,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     event.description?.replace(/<[^>]*>/g, "").slice(0, 160) ||
     `${event.title} - ${event.date} ${event.time || ""} ${event.venue || ""}. Bilet alın.`;
   const imageUrl = event.image_url || undefined;
-  const url = `${getSiteUrl()}/etkinlik/${event.slug || event.id}`;
+  const url = `${getSiteUrl()}/etkinlik/${showEvents.length >= 2 ? id : (event.slug || event.id)}`;
 
   return {
     title,
@@ -196,6 +215,13 @@ function buildEventStructuredData(event: Event, venue: Venue | null) {
 
 export default async function EventDetailPage({ params }: PageProps) {
   const { locale = "tr", id } = await params;
+
+  // Biletinial tarzı: show_slug ile gruplanmış tur/gösteri sayfası (2+ etkinlik)
+  const showEvents = await getEventsByShowSlug(id);
+  if (showEvents.length >= 2) {
+    return <ShowDetailClient events={showEvents} showSlug={id} locale={locale as "tr" | "de" | "en"} />;
+  }
+
   const event = await getEventBySlug(id);
   if (!event) notFound();
 

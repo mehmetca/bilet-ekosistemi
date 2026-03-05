@@ -6,6 +6,7 @@ import type { Event } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
 import { Link } from "@/i18n/navigation";
 import { getLocalizedEvent } from "@/lib/i18n-content";
+import { formatPrice } from "@/lib/formatPrice";
 import type { Locale } from "@/lib/i18n-content";
 
 interface EventSliderProps {
@@ -23,22 +24,28 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
   const fallbackImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
 
-  // Her sanatçıdan bir etkinlik filtrele
+  // Slider'da aynı gösteriden en fazla 1 etkinlik
+  const MAX_PER_SHOW = 1;
+  const getShowKey = (event: Event) => {
+    const e = event as Event & { show_slug?: string };
+    if (e.show_slug) return e.show_slug;
+    if (event?.image_url) return event.image_url;
+    const title = event?.title ?? "";
+    return title.includes(" - ") ? title.split(" - ")[0].trim() : title.split(/\s+/).slice(0, 2).join(" ") || event?.id;
+  };
   const sliderEvents = (() => {
-    const artistMap = new Map();
-    
-    events.forEach(event => {
-      const title = event?.title ?? "";
-      let artistName = title.includes(" - ") ? title.split(" - ")[0] : title;
-      
-      // Bu sanatçıdan daha önce etkinlik eklenmediyse ekle
-      if (!artistMap.has(artistName)) {
-        artistMap.set(artistName, event);
-      }
-    });
-    
-    // Array'e çevir ve ilk 5 tanesini al
-    return Array.from(artistMap.values()).slice(0, 5);
+    const countByKey = new Map<string, number>();
+    const result: Event[] = [];
+
+    for (const event of events) {
+      const key = getShowKey(event);
+      const count = countByKey.get(key) || 0;
+      if (count >= MAX_PER_SHOW) continue;
+      countByKey.set(key, count + 1);
+      result.push(event);
+      if (result.length >= 5) break;
+    }
+    return result;
   })();
 
   // Otomatik oynatma
@@ -154,13 +161,13 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
             <div className="flex items-center justify-between">
               <div className="text-xl font-bold">
                 {Number(currentEvent.price_from) > 0
-                  ? `€${Number(currentEvent.price_from).toLocaleString("de-DE")}`
+                  ? formatPrice(Number(currentEvent.price_from), currentEvent.currency)
                   : freeText
                 }
               </div>
               
               <Link
-                href={`/etkinlik/${currentEvent.id}`}
+                href={`/etkinlik/${(currentEvent as Event & { show_slug?: string }).show_slug || currentEvent.id}`}
                 className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
               >
                 {buyTicketText}

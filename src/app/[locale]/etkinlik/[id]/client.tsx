@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
 import TicketPrint from "@/components/TicketPrint";
 import { parseEventDescription } from "@/lib/eventMeta";
+import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
 import Link from "next/link";
@@ -279,9 +280,9 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                 <p className="text-sm text-slate-600">{t("tickets")}</p>
                 <p className="text-2xl font-bold text-primary-700">
                   {availableTickets.length > 0
-                    ? `ab €${Math.min(...availableTickets.map((t) => Number(t.price || 0))).toFixed(2)}`
+                    ? `${t("from")} ${formatPrice(Math.min(...availableTickets.map((t) => Number(t.price || 0))), event.currency)}`
                     : isExternalOnlyEvent
-                      ? `ab €${Number(event.price_from || 0).toFixed(2)}`
+                      ? `${t("from")} ${formatPrice(Number(event.price_from || 0), event.currency)}`
                       : t("comingSoon")}
                 </p>
               </div>
@@ -340,7 +341,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                 <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
                   <p className="text-sm text-blue-900 mb-4">
                     {t("externalTicketInfo")}{" "}
-                    {t("priceFrom")}: <strong>€{Number(event.price_from || 0).toFixed(2)}</strong>
+                    {t("priceFrom")}: <strong>{formatPrice(Number(event.price_from || 0), event.currency)}</strong>
                   </p>
                   <p className="text-sm text-blue-800 mb-3">
                     {t("externalTicketDisclaimer")}
@@ -371,6 +372,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                     quantity={result.orderDetails?.quantity || ticketCount}
                     ticketType={result.orderDetails?.ticketType || selectedTicket?.name || ""}
                     price={result.orderDetails?.price || totalPrice}
+                    currency={event.currency}
                     eventTitle={localized.title}
                     eventDate={event.date}
                     eventTime={event.time}
@@ -425,7 +427,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                               <p className="text-xs text-slate-500">{t("remaining")}: {availableAmount}</p>
                             </div>
 
-                            <p className="text-lg font-bold text-primary-700">€{ticketType.price.toFixed(2)}</p>
+                            <p className="text-lg font-bold text-primary-700">{formatPrice(ticketType.price, event.currency)}</p>
 
                             <div className="flex items-center justify-end gap-2">
                               <button

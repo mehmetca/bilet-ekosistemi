@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import QRCode from "qrcode";
 import { Download, Printer, Share2 } from "lucide-react";
+import type { EventCurrency } from "@/types/database";
+import { formatPrice } from "@/lib/formatPrice";
 
 interface TicketPrintProps {
   ticketCode: string;
@@ -15,6 +17,7 @@ interface TicketPrintProps {
   quantity: number;
   ticketType: string;
   price: number;
+  currency?: EventCurrency | null;
 }
 
 export default function TicketPrint({
@@ -28,6 +31,7 @@ export default function TicketPrint({
   quantity,
   ticketType,
   price,
+  currency,
 }: TicketPrintProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -269,7 +273,7 @@ export default function TicketPrint({
               <div>
                 <h3 className="text-xs font-medium text-slate-500 mb-1">Fiyat</h3>
                 <p className="text-sm font-bold text-primary-600">
-                  €{Number(price).toLocaleString("de-DE")}
+                  {formatPrice(Number(price), currency)}
                 </p>
               </div>
 

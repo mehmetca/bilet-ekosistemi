@@ -7,7 +7,9 @@ import { useTranslations } from "next-intl";
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase-client";
 
-const PASSWORD_VALIDATION_PATTERN = /password should contain at least one character of each/i;
+const PASSWORD_EXISTS_PATTERN = /already registered|already exists/i;
+const PASSWORD_VALIDATION_PATTERN = /password|weak|at least \d+ characters/i;
+
 
 type AuthTokenResponse = {
   access_token?: string;
@@ -19,6 +21,7 @@ type AuthTokenResponse = {
 
 export default function LoginPage() {
   const t = useTranslations("auth");
+  const tCommon = useTranslations("common");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -76,9 +79,7 @@ export default function LoginPage() {
         const rawMsg = payload.error_description || payload.msg || "Giris istegi basarisiz oldu.";
         // "Invalid login credentials" = yanlış şifre VEYA e-posta henüz onaylanmamış
         if (/invalid login credentials|invalid credentials/i.test(rawMsg)) {
-          throw new Error(
-            "E-posta veya şifre hatalı. E-posta onayı gerekiyorsa, kayıt sonrası gelen onay linkine tıklayıp tekrar deneyin."
-          );
+          throw new Error(t("errorInvalidCredentials"));
         }
         throw new Error(rawMsg);
       }
@@ -124,20 +125,20 @@ export default function LoginPage() {
 
       if (signUpError) {
         if (signUpError.message?.includes("already registered") || signUpError.message?.includes("already exists")) {
-          setRegError("Bu e-posta adresi zaten kayıtlı. Giriş yapabilirsiniz.");
+          setRegError(t("errorEmailExists"));
         } else if (PASSWORD_VALIDATION_PATTERN.test(signUpError.message || "")) {
           setRegError(t("passwordRequirements"));
         } else {
-          setRegError(signUpError.message || "Kayıt oluşturulamadı.");
+          setRegError(signUpError.message || t("errorRegisterFailed"));
         }
         return;
       }
 
-      setRegSuccess("Hesabınız oluşturuldu! Giriş yaparak bilet satın alabilirsiniz.");
+      setRegSuccess(t("successRegistered"));
       setRegEmail("");
       setRegPassword("");
     } catch (err) {
-      setRegError(err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu.");
+      setRegError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
       setRegLoading(false);
     }
@@ -158,18 +159,18 @@ export default function LoginPage() {
       });
 
       if (signUpError) {
-        if (signUpError.message?.includes("already registered") || signUpError.message?.includes("already exists")) {
-          setOrgError("Bu e-posta adresi zaten kayıtlı. Üstteki giriş formunu kullanarak giriş yapabilirsiniz.");
-        } else if (PASSWORD_VALIDATION_PATTERN.test(signUpError.message || "")) {
+        if (PASSWORD_EXISTS_PATTERN.test(signUpError.message || "")) {
+          setOrgError(t("errorEmailExistsOrganizer"));
+        } else if (/password should contain at least one character of each/i.test(signUpError.message || "")) {
           setOrgError(t("passwordRequirements"));
         } else {
-          setOrgError(signUpError.message || "Kayıt oluşturulamadı.");
+          setOrgError(signUpError.message || t("errorRegisterFailed"));
         }
         return;
       }
 
       if (!signUpData.user?.id) {
-        setOrgError("Hesap oluşturuldu ancak başvuru kaydedilemedi. Lütfen giriş yapıp tekrar deneyin.");
+        setOrgError(t("errorOrganizerApplyFailed"));
         return;
       }
 
@@ -184,15 +185,15 @@ export default function LoginPage() {
 
       const resData = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setOrgError(resData.error || "Başvuru kaydedilemedi.");
+        setOrgError(resData.error || t("errorOrganizerApplyFailedShort"));
         return;
       }
 
-      setOrgSuccess("Organizatör başvurunuz alındı! Yönetici onayından sonra etkinlik ekleyebileceksiniz. E-posta ile bilgilendirileceksiniz.");
+      setOrgSuccess(t("successOrganizerApplied"));
       setOrgEmail("");
       setOrgPassword("");
     } catch (err) {
-      setOrgError(err instanceof Error ? err.message : "Beklenmeyen bir hata oluştu.");
+      setOrgError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
       setOrgLoading(false);
     }
@@ -231,8 +232,8 @@ export default function LoginPage() {
       return;
     } catch (err: unknown) {
       if (activeLoginAttemptRef.current !== attemptId) return;
-      const message = err && typeof err === 'object' && 'message' in err ? (err as { message?: string }).message : 'Giriş yapılamadı. Lütfen tekrar deneyin.';
-      setError(message || 'Giriş yapılamadı. Lütfen tekrar deneyin.');
+      const message = err && typeof err === 'object' && 'message' in err ? (err as { message?: string }).message : t("errorLoginFailed");
+      setError(message || t("errorLoginFailed"));
     } finally {
       if (activeLoginAttemptRef.current === attemptId) {
         setLoading(false);
@@ -253,22 +254,22 @@ export default function LoginPage() {
             className="inline-flex items-center gap-2 text-slate-600 hover:text-primary-600 transition-colors mb-8"
           >
             <ArrowLeft className="h-4 w-4" />
-            Ana Sayfaya Dön
+            {tCommon("backToHome")}
           </Link>
 
           {/* Giriş formu */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-slate-900 mb-2">Giriş Yap</h1>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2">{t("loginTitle")}</h1>
               <p className="text-slate-600">
-                Bilet alıcılar, organizatörler, yöneticiler ve kontrolörler buradan giriş yapabilir
+                {t("loginSubtitle")}
               </p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
-                  E-posta
+                  {t("email")}
                 </label>
                 <input
                   id="email"
@@ -276,14 +277,14 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="admin@bilet-ekosistemi.com"
+                  placeholder={t("emailPlaceholder")}
                   className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
 
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
-                  Şifre
+                  {t("password")}
                 </label>
                 <div className="relative">
                   <input
@@ -292,7 +293,7 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    placeholder="•••••••••"
+                    placeholder={t("passwordPlaceholder")}
                     className="w-full rounded-lg border border-slate-300 px-4 py-3 pr-12 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                   <button
@@ -321,24 +322,24 @@ export default function LoginPage() {
                 className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
-                  "Giriş Yapılıyor..."
+                  t("loggingIn")
                 ) : (
                   <>
                     <LogIn className="h-5 w-5" />
-                    Giriş Yap
+                    {t("login")}
                   </>
                 )}
               </button>
             </form>
 
             <p className="mt-6 text-center text-sm text-slate-500">
-              Hesabınız yok mu?{" "}
+              {t("noAccount")}{" "}
               <button
                 type="button"
                 onClick={() => document.getElementById("uyelik-form")?.scrollIntoView({ behavior: "smooth" })}
                 className="text-primary-600 hover:text-primary-700 font-medium"
               >
-                Üye olun
+                {t("signUpLink")}
               </button>
             </p>
           </div>
@@ -350,16 +351,16 @@ export default function LoginPage() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 text-primary-600 mb-3">
                   <UserPlus className="h-6 w-6" />
                 </div>
-                <h2 className="text-xl font-bold text-slate-900 mb-2">Üye Ol</h2>
+                <h2 className="text-xl font-bold text-slate-900 mb-2">{t("signUpTitle")}</h2>
                 <p className="text-slate-600 text-sm">
-                  Bilet satın almak için ücretsiz hesap oluşturun
+                  {t("signUpSubtitle")}
                 </p>
               </div>
 
               <form onSubmit={handleRegister} className="space-y-5">
                 <div>
                   <label htmlFor="reg-email" className="block text-sm font-medium text-slate-700 mb-2">
-                    E-posta
+                    {t("email")}
                   </label>
                   <input
                     id="reg-email"
@@ -367,14 +368,14 @@ export default function LoginPage() {
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                     required
-                    placeholder="ornek@email.com"
+                    placeholder={t("regEmailPlaceholder")}
                     className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
 
                 <div>
                   <label htmlFor="reg-password" className="block text-sm font-medium text-slate-700 mb-2">
-                    Şifre
+                    {t("password")}
                   </label>
                   <div className="relative">
                     <input
@@ -384,7 +385,7 @@ export default function LoginPage() {
                       onChange={(e) => setRegPassword(e.target.value)}
                       required
                       minLength={6}
-                      placeholder="En az 6 karakter"
+                      placeholder={t("regPasswordPlaceholder")}
                       className="w-full rounded-lg border border-slate-300 px-4 py-3 pr-12 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                     <button
@@ -414,10 +415,10 @@ export default function LoginPage() {
                   disabled={regLoading}
                   className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
-                  {regLoading ? "Kayıt Yapılıyor..." : (
+                  {regLoading ? t("registering") : (
                     <>
                       <UserPlus className="h-5 w-5" />
-                      Üye Ol
+                      {t("signUp")}
                     </>
                   )}
                 </button>
@@ -432,16 +433,16 @@ export default function LoginPage() {
                 <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 text-primary-600 mb-3">
                   <Calendar className="h-6 w-6" />
                 </div>
-                <h2 className="text-xl font-bold text-slate-900 mb-2">Organizatör Başvurusu</h2>
+                <h2 className="text-xl font-bold text-slate-900 mb-2">{t("organizerTitle")}</h2>
                 <p className="text-slate-600 text-sm">
-                  Etkinlik ekleyip yönetmek istiyorsanız aşağıdaki formu doldurarak başvurunuzu yapın. Yönetici onayından sonra etkinlik ekleyebileceksiniz.
+                  {t("organizerSubtitle")}
                 </p>
               </div>
 
               <form onSubmit={handleOrganizerApply} className="space-y-5">
                 <div>
                   <label htmlFor="org-email" className="block text-sm font-medium text-slate-700 mb-2">
-                    E-posta
+                    {t("email")}
                   </label>
                   <input
                     id="org-email"
@@ -449,14 +450,14 @@ export default function LoginPage() {
                     value={orgEmail}
                     onChange={(e) => setOrgEmail(e.target.value)}
                     required
-                    placeholder="ornek@email.com"
+                    placeholder={t("regEmailPlaceholder")}
                     className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
 
                 <div>
                   <label htmlFor="org-password" className="block text-sm font-medium text-slate-700 mb-2">
-                    Şifre
+                    {t("password")}
                   </label>
                   <div className="relative">
                     <input
@@ -466,7 +467,7 @@ export default function LoginPage() {
                       onChange={(e) => setOrgPassword(e.target.value)}
                       required
                       minLength={6}
-                      placeholder="En az 6 karakter"
+                      placeholder={t("regPasswordPlaceholder")}
                       className="w-full rounded-lg border border-slate-300 px-4 py-3 pr-12 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                     <button
@@ -497,11 +498,11 @@ export default function LoginPage() {
                   className="w-full bg-slate-800 text-white py-3 rounded-lg font-semibold hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   {orgLoading ? (
-                    "Başvuru Gönderiliyor..."
+                    t("submitting")
                   ) : (
                     <>
                       <UserPlus className="h-5 w-5" />
-                      Organizatör Olarak Başvur
+                      {t("organizerApply")}
                     </>
                   )}
                 </button>

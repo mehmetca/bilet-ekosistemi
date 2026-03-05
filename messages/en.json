@@ -11,7 +11,37 @@
     "newsNotFoundDesc": "The news you are looking for does not exist or has been removed."
   },
   "auth": {
-    "passwordRequirements": "Password must contain at least one lowercase letter, one uppercase letter and one digit."
+    "passwordRequirements": "Password must contain at least one lowercase letter, one uppercase letter and one digit.",
+    "loginTitle": "Log In",
+    "loginSubtitle": "Ticket buyers, organisers, administrators and controllers can log in here",
+    "email": "Email",
+    "password": "Password",
+    "emailPlaceholder": "admin@bilet-ekosistemi.com",
+    "passwordPlaceholder": "•••••••••",
+    "loggingIn": "Logging in...",
+    "login": "Log In",
+    "noAccount": "Don't have an account?",
+    "signUpLink": "Sign up",
+    "signUpTitle": "Sign Up",
+    "signUpSubtitle": "Create a free account to purchase tickets",
+    "registering": "Registering...",
+    "signUp": "Sign Up",
+    "errorEmailExists": "This email address is already registered. You can log in.",
+    "errorRegisterFailed": "Registration could not be created.",
+    "successRegistered": "Your account has been created! You can log in and purchase tickets.",
+    "errorGeneric": "An unexpected error occurred.",
+    "organizerTitle": "Organiser Application",
+    "organizerSubtitle": "If you want to add and manage events, fill out the form below. After administrator approval you will be able to add events.",
+    "submitting": "Submitting application...",
+    "organizerApply": "Apply as Organiser",
+    "errorEmailExistsOrganizer": "This email address is already registered. Please use the login form above to log in.",
+    "errorOrganizerApplyFailed": "Account was created but the application could not be saved. Please log in and try again.",
+    "errorOrganizerApplyFailedShort": "Application could not be saved.",
+    "successOrganizerApplied": "Your organiser application has been received! After approval you will be able to add events. You will be notified by email.",
+    "errorInvalidCredentials": "Email or password incorrect. If email confirmation is required, click the confirmation link in the registration email.",
+    "errorLoginFailed": "Login failed. Please try again.",
+    "regEmailPlaceholder": "example@email.com",
+    "regPasswordPlaceholder": "At least 6 characters"
   },
   "nav": {
     "events": "Events",
@@ -47,6 +77,7 @@
       "maxPrice": "Max €"
     },
     "noEvents": "No events yet",
+    "noEventsForFilter": "No events match your search criteria.",
     "noEventsSlider": "No upcoming events.",
     "otherNews": "Other News",
     "trustBadges": {
@@ -80,12 +111,16 @@
   "categories": {
     "konser": "Concert",
     "tiyatro": "Theatre",
-    "sinema": "Cinema",
     "festival": "Festival",
-    "spor": "Sports",
     "stand-up": "Stand-Up",
     "diger": "Other",
     "event": "Event"
+  },
+  "currency": {
+    "label": "Currency",
+    "EUR": "€ Euro",
+    "TL": "₺ Turkish Lira",
+    "USD": "$ US Dollar"
   },
   "calendar": {
     "title": "Event Calendar",
@@ -165,6 +200,7 @@
     "tickets": "Tickets",
     "comingSoon": "Coming soon",
     "externalTicketSupport": "Please direct all support requests to the relevant sales channel.",
+    "from": "from",
     "priceFrom": "Starting price",
     "removedFromFavorites": "Removed from favorites.",
     "addedToFavorites": "Added to favorites.",
@@ -179,6 +215,16 @@
     "securePayment": "Secure Payment",
     "instantDelivery": "Instant Delivery",
     "shareEventText": "Check out {title}"
+  },
+  "showDetail": {
+    "selectCity": "Select a city to see performances",
+    "allCities": "All Cities",
+    "ticketsAndPrices": "Tickets and Prices",
+    "ticketsIn": "Tickets in",
+    "tickets": "Tickets",
+    "performances": "performances",
+    "noUpcomingPerformances": "No upcoming performances.",
+    "noPerformancesInCity": "No performances in {city}."
   },
   "artists": {
     "title": "Artists",

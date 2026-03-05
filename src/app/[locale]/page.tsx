@@ -1,9 +1,9 @@
-import ClientHomePage from "@/app/ClientHomePage";
+import ClientHomePage from "./ClientHomePage";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { Event, News } from "@/types/database";
 
 async function getHomeData() {
-  const supabase = await createServerSupabase();
+  const supabase = createServerSupabase();
   const [eventsRes, newsRes, heroRes] = await Promise.all([
     supabase.from("events").select("*").eq("is_active", true).order("created_at", { ascending: false }),
     supabase.from("news").select("*").eq("is_published", true).order("published_at", { ascending: false }).limit(5),

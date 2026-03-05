@@ -11,6 +11,18 @@ export default function LocaleError({
 }) {
   useEffect(() => {
     console.error("Locale error:", error);
+    if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      import("@sentry/nextjs")
+        .then((m) => {
+          m.captureException?.(error, {
+            tags: {
+              errorBoundary: "locale",
+              errorType: error?.message?.includes("lazy") ? "lazy_undefined" : "unknown",
+            },
+          });
+        })
+        .catch(() => {});
+    }
   }, [error]);
 
   return (

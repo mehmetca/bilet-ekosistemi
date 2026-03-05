@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Filter, MapPin, Music2 } from "lucide-react";
 import type { Event } from "@/types/database";
 import { DISPLAY_CATEGORIES } from "@/types/database";
+import { formatPrice } from "@/lib/formatPrice";
 import { Link } from "@/i18n/navigation";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { getLocalizedEvent } from "@/lib/i18n-content";
@@ -181,7 +182,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                   <div className="mt-4 flex justify-between items-center">
                     <span className="font-bold text-primary-600">
                       {Number(event.price_from) > 0
-                        ? `€${Number(event.price_from).toLocaleString("de-DE")}`
+                        ? formatPrice(Number(event.price_from), event.currency)
                         : t("home.free")}
                     </span>
                     <span className="text-sm font-medium text-primary-600">{t("calendar.buyTicket")} →</span>

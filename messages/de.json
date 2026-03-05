@@ -11,7 +11,37 @@
     "newsNotFoundDesc": "Die gesuchte Nachricht existiert nicht oder wurde entfernt."
   },
   "auth": {
-    "passwordRequirements": "Das Passwort muss mindestens einen Kleinbuchstaben, einen Großbuchstaben und eine Ziffer enthalten."
+    "passwordRequirements": "Das Passwort muss mindestens einen Kleinbuchstaben, einen Großbuchstaben und eine Ziffer enthalten.",
+    "loginTitle": "Anmelden",
+    "loginSubtitle": "Ticketkäufer, Veranstalter, Administratoren und Kontrolleure können sich hier anmelden",
+    "email": "E-Mail",
+    "password": "Passwort",
+    "emailPlaceholder": "admin@bilet-ekosistemi.com",
+    "passwordPlaceholder": "•••••••••",
+    "loggingIn": "Anmeldung läuft...",
+    "login": "Anmelden",
+    "noAccount": "Noch kein Konto?",
+    "signUpLink": "Registrieren Sie sich",
+    "signUpTitle": "Registrieren",
+    "signUpSubtitle": "Kostenloses Konto erstellen, um Tickets zu kaufen",
+    "registering": "Registrierung läuft...",
+    "signUp": "Registrieren",
+    "errorEmailExists": "Diese E-Mail-Adresse ist bereits registriert. Sie können sich anmelden.",
+    "errorRegisterFailed": "Registrierung konnte nicht erstellt werden.",
+    "successRegistered": "Ihr Konto wurde erstellt! Sie können sich anmelden und Tickets kaufen.",
+    "errorGeneric": "Ein unerwarteter Fehler ist aufgetreten.",
+    "organizerTitle": "Veranstalter-Bewerbung",
+    "organizerSubtitle": "Wenn Sie Veranstaltungen hinzufügen und verwalten möchten, füllen Sie das Formular aus. Nach Genehmigung durch den Administrator können Sie Veranstaltungen anlegen.",
+    "submitting": "Bewerbung wird gesendet...",
+    "organizerApply": "Als Veranstalter bewerben",
+    "errorEmailExistsOrganizer": "Diese E-Mail-Adresse ist bereits registriert. Melden Sie sich mit dem Anmeldeformular oben an.",
+    "errorOrganizerApplyFailed": "Konto wurde erstellt, aber die Bewerbung konnte nicht gespeichert werden. Bitte melden Sie sich an und versuchen Sie es erneut.",
+    "errorOrganizerApplyFailedShort": "Bewerbung konnte nicht gespeichert werden.",
+    "successOrganizerApplied": "Ihre Veranstalter-Bewerbung wurde erhalten! Nach Genehmigung können Sie Veranstaltungen hinzufügen. Sie werden per E-Mail benachrichtigt.",
+    "errorInvalidCredentials": "E-Mail oder Passwort falsch. Falls eine E-Mail-Bestätigung erforderlich ist, klicken Sie auf den Bestätigungslink in der Registrierungs-E-Mail.",
+    "errorLoginFailed": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "regEmailPlaceholder": "beispiel@email.de",
+    "regPasswordPlaceholder": "Mindestens 6 Zeichen"
   },
   "nav": {
     "events": "Veranstaltungen",
@@ -47,6 +77,7 @@
       "maxPrice": "Max €"
     },
     "noEvents": "Noch keine Veranstaltungen",
+    "noEventsForFilter": "Keine Veranstaltungen entsprechen Ihren Suchkriterien.",
     "noEventsSlider": "Keine kommenden Veranstaltungen.",
     "otherNews": "Weitere Nachrichten",
     "trustBadges": {
@@ -80,12 +111,16 @@
   "categories": {
     "konser": "Konzert",
     "tiyatro": "Theater",
-    "sinema": "Kino",
     "festival": "Festival",
-    "spor": "Sport",
     "stand-up": "Stand-Up",
     "diger": "Sonstige",
     "event": "Veranstaltung"
+  },
+  "currency": {
+    "label": "Währung",
+    "EUR": "€ Euro",
+    "TL": "₺ Türkische Lira",
+    "USD": "$ US-Dollar"
   },
   "calendar": {
     "title": "Veranstaltungskalender",
@@ -165,6 +200,7 @@
     "tickets": "Tickets",
     "comingSoon": "Demnächst",
     "externalTicketSupport": "Bitte richten Sie alle Supportanfragen an den zuständigen Vertriebskanal.",
+    "from": "ab",
     "priceFrom": "Startpreis",
     "removedFromFavorites": "Aus Favoriten entfernt.",
     "addedToFavorites": "Zu Favoriten hinzugefügt.",
@@ -179,6 +215,16 @@
     "securePayment": "Sichere Zahlung",
     "instantDelivery": "Sofortige Lieferung",
     "shareEventText": "Schauen Sie sich {title} an"
+  },
+  "showDetail": {
+    "selectCity": "Wählen Sie eine Stadt, um die Termine zu sehen",
+    "allCities": "Alle Städte",
+    "ticketsAndPrices": "Tickets und Preise",
+    "ticketsIn": "Tickets in",
+    "tickets": "Tickets",
+    "performances": "Termine",
+    "noUpcomingPerformances": "Keine bevorstehenden Termine.",
+    "noPerformancesInCity": "Keine Termine in {city}."
   },
   "artists": {
     "title": "Künstlerinnen und Künstler",
