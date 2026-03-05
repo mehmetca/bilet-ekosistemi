@@ -223,7 +223,7 @@ export default function ClientHomePage() {
     
     return {
       isPast,
-      statusText: isPast ? 'Sona Erdi' : 'Aktif',
+      statusText: isPast ? t("eventStatusEnded") : t("eventStatusActive"),
       statusColor: isPast ? 'text-red-600 bg-red-50' : 'text-green-600 bg-green-50'
     };
   };
@@ -323,6 +323,7 @@ export default function ClientHomePage() {
             locale={locale as "tr" | "de" | "en"}
             noEventsText={t("noEventsSlider")}
             buyTicketText={t("buyTicket")}
+            freeText={t("free")}
           />
           
           {/* Haberler Slider */}
@@ -495,7 +496,7 @@ export default function ClientHomePage() {
                         </span>
                         {eventStatus.isPast && (
                           <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
-                            SONA ERDİ
+                            {t("eventEnded")}
                           </span>
                         )}
                       </div>

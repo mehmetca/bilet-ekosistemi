@@ -26,19 +26,23 @@ ALTER TABLE public.purchase_intents ADD COLUMN IF NOT EXISTS hero_variant text;
 ALTER TABLE public.ab_experiments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.ab_variants ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can read active experiments" ON public.ab_experiments;
 CREATE POLICY "Anyone can read active experiments" ON public.ab_experiments
   FOR SELECT USING (is_active = true);
 
+DROP POLICY IF EXISTS "Anyone can read variants" ON public.ab_variants;
 CREATE POLICY "Anyone can read variants" ON public.ab_variants
   FOR SELECT USING (
     experiment_id IN (SELECT id FROM public.ab_experiments WHERE is_active = true)
   );
 
+DROP POLICY IF EXISTS "Admins can manage experiments" ON public.ab_experiments;
 CREATE POLICY "Admins can manage experiments" ON public.ab_experiments
   FOR ALL USING (
     auth.uid() IN (SELECT user_id FROM public.user_roles WHERE role IN ('admin', 'controller'))
   );
 
+DROP POLICY IF EXISTS "Admins can manage variants" ON public.ab_variants;
 CREATE POLICY "Admins can manage variants" ON public.ab_variants
   FOR ALL USING (
     auth.uid() IN (SELECT user_id FROM public.user_roles WHERE role IN ('admin', 'controller'))
@@ -51,7 +55,7 @@ ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.ab_variants (experiment_id, variant_key, hero_title, hero_subtitle, cta_text, weight) VALUES
   ('a0000000-0000-0000-0000-000000000001'::uuid, 'A', 'Hayalinizdaki Etkinliğe Bilet Bulun', 'Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.', 'Ara', 50),
-  ('a0000000-0000-0000-0000-000000000001'::uuid, 'B', 'Bilet Bul, Anında Al', 'Türkiye''nin en güvenilir bilet platformu. Binlerce etkinlik, tek tıkla bilet.', 'Etkinlikleri Keşfet', 50)
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'B', 'Bilet Bul, Anında Al', 'Güvenilir bilet platformu. Binlerce etkinlik, tek tıkla bilet.', 'Etkinlikleri Keşfet', 50)
 ON CONFLICT (experiment_id, variant_key) DO UPDATE SET
   hero_title = EXCLUDED.hero_title,
   hero_subtitle = EXCLUDED.hero_subtitle,

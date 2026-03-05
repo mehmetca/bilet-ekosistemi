@@ -14,9 +14,10 @@ interface EventSliderProps {
   locale?: Locale;
   noEventsText?: string;
   buyTicketText?: string;
+  freeText?: string;
 }
 
-export default function EventSlider({ events, title, locale = "tr", noEventsText = "Yaklaşan etkinlik bulunmamaktadır.", buyTicketText = "Bilet Al" }: EventSliderProps) {
+export default function EventSlider({ events, title, locale = "tr", noEventsText = "Yaklaşan etkinlik bulunmamaktadır.", buyTicketText = "Bilet Al", freeText = "Ücretsiz" }: EventSliderProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const fallbackImage =
@@ -91,6 +92,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
   const currentEvent = sliderEvents[currentIndex] ?? sliderEvents[0];
   if (!currentEvent) return null;
   const localized = getLocalizedEvent(currentEvent as unknown as Record<string, unknown>, locale);
+  const dateLocale = locale === "tr" ? "tr-TR" : locale === "de" ? "de-DE" : "en-US";
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -130,7 +132,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
                 {CATEGORY_LABELS[currentEvent.category as keyof typeof CATEGORY_LABELS] ?? currentEvent.category ?? "Etkinlik"}
               </span>
               <span className="text-xs opacity-90">
-                {new Date(currentEvent.date).toLocaleDateString("tr-TR")}
+                {new Date(currentEvent.date).toLocaleDateString(dateLocale)}
               </span>
             </div>
             
@@ -141,7 +143,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
             <div className="flex items-center gap-4 text-sm opacity-90 mb-4">
               <div className="flex items-center gap-1">
                 <Calendar className="h-4 w-4" />
-                {currentEvent.date ? new Date(currentEvent.date).toLocaleDateString("tr-TR") : ""} • {currentEvent.time ?? ""}
+                {currentEvent.date ? new Date(currentEvent.date).toLocaleDateString(dateLocale) : ""} • {currentEvent.time ?? ""}
               </div>
               <div className="flex items-center gap-1">
                 <MapPin className="h-4 w-4" />
@@ -153,7 +155,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
               <div className="text-xl font-bold">
                 {Number(currentEvent.price_from) > 0
                   ? `€${Number(currentEvent.price_from).toLocaleString("de-DE")}`
-                  : "Ücretsiz"
+                  : freeText
                 }
               </div>
               

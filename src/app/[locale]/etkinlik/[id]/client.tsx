@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
 import TicketPrint from "@/components/TicketPrint";
@@ -18,7 +19,14 @@ interface EventDetailClientProps {
   locale?: "tr" | "de" | "en";
 }
 
-export default function EventDetailClient({ event, tickets, venue = null, locale = "tr" }: EventDetailClientProps) {
+const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
+
+export default function EventDetailClient({ event, tickets, venue = null, locale: localeProp = "tr" }: EventDetailClientProps) {
+  const t = useTranslations("eventDetail");
+  const tCat = useTranslations("categories");
+  const locale = (useLocale() as "tr" | "de" | "en") || localeProp;
+  const dateLocale = dateLocaleMap[locale] || "tr-TR";
+
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
   const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
@@ -68,10 +76,10 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
         body: JSON.stringify({ email: reminderEmail.trim(), event_id: event.id }),
       });
       const data = await res.json();
-      setReminderResult({ success: data.success, message: data.message || "Bir hata oluştu." });
+      setReminderResult({ success: data.success, message: data.message || t("actionFailed") });
       if (data.success) setReminderEmail("");
     } catch {
-      setReminderResult({ success: false, message: "Bağlantı hatası." });
+      setReminderResult({ success: false, message: t("actionFailed") });
     } finally {
       setReminderPending(false);
     }
@@ -127,10 +135,10 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
         : [...favorites, event.id];
       window.localStorage.setItem("favorite_events", JSON.stringify(next));
       setIsFavorite(!alreadyFavorite);
-      setActionMessage(alreadyFavorite ? "Favorilerden cikarildi." : "Favorilere eklendi.");
+      setActionMessage(alreadyFavorite ? t("removedFromFavorites") : t("addedToFavorites"));
       window.setTimeout(() => setActionMessage(null), 2200);
     } catch {
-      setActionMessage("Islem tamamlanamadi.");
+      setActionMessage(t("actionFailed"));
       window.setTimeout(() => setActionMessage(null), 2200);
     }
   }
@@ -141,31 +149,31 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
       if (navigator.share) {
         await navigator.share({
           title: localized.title,
-          text: `${localized.title} etkinligini inceleyin.`,
+          text: t("shareEventText", { title: localized.title }),
           url: shareUrl,
         });
-        setActionMessage("Paylasim penceresi acildi.");
+        setActionMessage(t("shareOpened"));
         window.setTimeout(() => setActionMessage(null), 2200);
         return;
       }
 
       await navigator.clipboard.writeText(shareUrl);
-      setActionMessage("Etkinlik linki kopyalandi.");
+      setActionMessage(t("linkCopied"));
       window.setTimeout(() => setActionMessage(null), 2200);
     } catch {
-      setActionMessage("Paylasim tamamlanamadi.");
+      setActionMessage(t("shareFailed"));
       window.setTimeout(() => setActionMessage(null), 2200);
     }
   }
 
   async function handlePurchase() {
     if (!selectedTicket) {
-      setResult({ success: false, message: "Lütfen bir bilet türü seçin." });
+      setResult({ success: false, message: t("pleaseSelectTicket") });
       return;
     }
 
     if (!buyerName.trim() || !buyerEmail.trim()) {
-      setResult({ success: false, message: "Ad soyad ve e-posta zorunludur." });
+      setResult({ success: false, message: t("nameEmailRequired") });
       return;
     }
 
@@ -224,7 +232,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
     } catch {
       setResult({
         success: false,
-        message: "Bilet satın alınırken bir hata oluştu. Lütfen tekrar deneyin.",
+        message: t("purchaseError"),
       });
     } finally {
       setIsPending(false);
@@ -238,7 +246,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto w-full max-w-7xl px-4 py-8">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
-            {event.category}
+            {tCat((event.category || "diger").toLowerCase())}
           </p>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
             <div>
@@ -246,7 +254,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
               <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-700">
                 <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
                   <Calendar className="h-4 w-4" />
-                  {new Date(event.date).toLocaleDateString("tr-TR", {
+                  {new Date(event.date).toLocaleDateString(dateLocale, {
                     day: "numeric",
                     month: "long",
                     year: "numeric",
@@ -266,13 +274,13 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                 </span>
               </div>
               <div className="mt-5">
-                <p className="text-sm text-slate-600">Biletler</p>
+                <p className="text-sm text-slate-600">{t("tickets")}</p>
                 <p className="text-2xl font-bold text-primary-700">
                   {availableTickets.length > 0
                     ? `ab €${Math.min(...availableTickets.map((t) => Number(t.price || 0))).toFixed(2)}`
                     : isExternalOnlyEvent
                       ? `ab €${Number(event.price_from || 0).toFixed(2)}`
-                      : "Yakında"}
+                      : t("comingSoon")}
                 </p>
               </div>
             </div>
@@ -300,14 +308,14 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                   className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   <Heart className="h-4 w-4" />
-                  {isFavorite ? "Favoride" : "Favori"}
+                  {isFavorite ? t("favorited") : t("favorite")}
                 </button>
                 <button
                   onClick={handleShare}
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   <Share2 className="h-4 w-4" />
-                  Paylaş
+                  {t("share")}
                 </button>
               </div>
               {actionMessage && <p className="mt-2 text-xs text-slate-500">{actionMessage}</p>}
@@ -323,21 +331,20 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
           <div className="lg:col-span-2">
             <div className="bg-white rounded-xl border border-slate-200 p-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-6">
-                {isExternalOnlyEvent ? "Bilet Bilgisi" : "Bilet Seçimi"}
+                {isExternalOnlyEvent ? t("ticketInfo") : t("ticketSelection")}
               </h2>
 
               {isExternalOnlyEvent && (
                 <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
                   <p className="text-sm text-blue-900 mb-4">
-                    Bu etkinliğin bilet satışı harici bir platform üzerinden yapılmaktadır.
-                    Başlangıç fiyatı: <strong>€{Number(event.price_from || 0).toFixed(2)}</strong>
+                    {t("externalTicketInfo")}{" "}
+                    {t("priceFrom")}: <strong>€{Number(event.price_from || 0).toFixed(2)}</strong>
                   </p>
                   <p className="text-sm text-blue-800 mb-3">
-                    Bu etkinlik ile ilgili bilgi ve fotograflar tanitim amaciyla sitemize konulmustur.
+                    {t("externalTicketDisclaimer")}
                   </p>
                   <p className="text-sm text-blue-800 mb-4">
-                    Harici sitede gerçekleşen ödeme, iade, iptal ve bilet teslimat süreçlerinden platformumuz sorumlu değildir.
-                    Tüm destek taleplerinizi ilgili satış kanalıyla iletmeniz gerekir.
+                    {t("externalTicketDisclaimer2")} {t("externalTicketSupport")}
                   </p>
                   <a
                         href={externalTicketUrl || "#"}
@@ -345,7 +352,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
                   >
-                    Harici Siteden Bilet Al
+                    {t("buyExternal")}
                     <ChevronRight className="h-4 w-4" />
                   </a>
                 </div>
@@ -371,9 +378,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
 
                   {result.emailSent === false && (
                     <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                      Biletiniz başarıyla oluşturuldu ve yukarıda görüntüleniyor. 
-                      Ancak e-posta gönderiminde geçici bir sorun yaşandı; bu, sistemin test modunda olmasından kaynaklanıyor olabilir.
-                      Lütfen bu sayfadaki bileti kaydedin; e-posta altyapısı tamamlandığında biletler otomatik olarak e-posta ile de iletilecektir.
+                      {t("emailNotSent")}
                     </p>
                   )}
                 </div>
@@ -382,14 +387,14 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
               {/* Bilet Türleri - Eventim Benzeri Liste */}
               {!isExternalOnlyEvent && (availableTickets.length === 0 ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
-                  Bu etkinlik için satışa açık bilet bulunmuyor.
+                  {t("noTicketsAvailable")}
                 </div>
               ) : (
                 <div className="mb-8 overflow-hidden rounded-xl border border-slate-200">
                   <div className="hidden bg-slate-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid md:grid-cols-[minmax(0,1fr)_120px_170px]">
-                    <span>Bilet Türü</span>
-                    <span>Fiyat</span>
-                    <span className="text-right">Adet</span>
+                    <span>{t("ticketType")}</span>
+                    <span>{t("price")}</span>
+                    <span className="text-right">{t("quantity")}</span>
                   </div>
                   <div className="divide-y divide-slate-200">
                     {availableTickets.map((ticketType) => {
@@ -414,7 +419,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                           <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_120px_170px]">
                             <div>
                               <p className="text-sm font-semibold text-slate-900">{ticketType.name}</p>
-                              <p className="text-xs text-slate-500">Kalan bilet: {availableAmount}</p>
+                              <p className="text-xs text-slate-500">{t("remaining")}: {availableAmount}</p>
                             </div>
 
                             <p className="text-lg font-bold text-primary-700">€{ticketType.price.toFixed(2)}</p>
@@ -462,25 +467,25 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
 
               {!isExternalOnlyEvent && <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Ad Soyad</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">{t("fullName")}</label>
                   <input
                     type="text"
                     value={buyerName}
                     onChange={(e) => setBuyerName(e.target.value)}
                     disabled={isPastEvent}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                    placeholder="Adınız Soyadınız"
+                    placeholder={t("fullNamePlaceholder")}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">E-posta</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">{t("email")}</label>
                   <input
                     type="email"
                     value={buyerEmail}
                     onChange={(e) => setBuyerEmail(e.target.value)}
                     disabled={isPastEvent}
                     className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                    placeholder="ornek@mail.com"
+                    placeholder={t("reminderPlaceholder")}
                   />
                 </div>
               </div>}
@@ -488,7 +493,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
               {/* Toplam Fiyat ve Satın Al */}
               {!isExternalOnlyEvent && <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-6">
-                  <span className="text-lg font-semibold text-slate-900">Toplam Fiyat</span>
+                  <span className="text-lg font-semibold text-slate-900">{t("totalPrice")}</span>
                   <span className="text-3xl font-bold text-blue-600">€{totalPrice.toFixed(2)}</span>
                 </div>
 
@@ -500,7 +505,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
 
                 {isPastEvent && (
                   <p className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-                    Bu etkinlik tamamlanmıştır. Bilet satışı kapalıdır.
+                    {t("eventEnded")}
                   </p>
                 )}
 
@@ -510,17 +515,17 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                   disabled={isPending || !selectedTicket || isPastEvent}
                   className="w-full rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
                 >
-                  {isPending ? "İşleniyor..." : "BİLET SATIN AL"}
+                  {isPending ? t("processing") : t("buyTicket")}
                 </button>
               </div>}
             </div>
 
             {/* Etkinlik Detayları */}
             <div className="bg-white rounded-xl border border-slate-200 p-8 mt-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-6">Etkinlik Hakkında</h2>
+              <h2 className="text-2xl font-bold text-slate-900 mb-6">{t("aboutEvent")}</h2>
               <div className="prose prose-slate max-w-none">
                 <p className="text-slate-700 leading-relaxed">
-                  {parsedDescription.content || "Etkinlik hakkında detaylı bilgi yakında eklenecek."}
+                  {parsedDescription.content || t("aboutPlaceholder")}
                 </p>
               </div>
             </div>
@@ -529,12 +534,12 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
             {venue && (
               <div className="bg-white rounded-xl border border-slate-200 p-8 mt-8">
                 <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-slate-900">Mekan Bilgisi</h2>
+                  <h2 className="text-2xl font-bold text-slate-900">{t("venueInfo")}</h2>
                   <Link
-                    href="/mekanlar"
+                    href={`/${locale}/mekanlar`}
                     className="text-sm font-medium text-primary-600 hover:text-primary-700"
                   >
-                    Tüm mekanlar →
+                    {t("allVenues")} →
                   </Link>
                 </div>
                 <div className="space-y-6">
@@ -558,7 +563,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                   )}
                   {venue.seating_layout_description && (
                     <div>
-                      <h3 className="font-semibold text-slate-800 mb-2">Oturma Düzeni</h3>
+                      <h3 className="font-semibold text-slate-800 mb-2">{t("seatingPlan")}</h3>
                       <p className="text-slate-600">{venue.seating_layout_description}</p>
                       {venue.seating_layout_image_url && (
                         <img
@@ -573,7 +578,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                     <div className="flex items-start gap-3">
                       <Car className="h-5 w-5 text-primary-600 mt-0.5 flex-shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-slate-800 mb-1">Ulaşım</h3>
+                        <h3 className="font-semibold text-slate-800 mb-1">{t("transport")}</h3>
                         <div
                           className="text-slate-600 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-2"
                           dangerouslySetInnerHTML={{ __html: venue.transport_info }}
@@ -585,7 +590,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                     const mapUrl = extractMapEmbedUrl(venue.map_embed_url);
                     return mapUrl ? (
                       <div>
-                        <h3 className="font-semibold text-slate-800 mb-2">Harita</h3>
+                        <h3 className="font-semibold text-slate-800 mb-2">{t("map")}</h3>
                         <div className="aspect-video w-full max-w-2xl overflow-hidden rounded-lg border border-slate-200">
                           <iframe
                             src={mapUrl}
@@ -606,14 +611,14 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                     <div className="flex items-start gap-3">
                       <DoorOpen className="h-5 w-5 text-primary-600 mt-0.5 flex-shrink-0" />
                       <div>
-                        <h3 className="font-semibold text-slate-800 mb-1">Giriş Bilgileri</h3>
+                        <h3 className="font-semibold text-slate-800 mb-1">{t("entranceInfo")}</h3>
                         <p className="text-slate-600">{venue.entrance_info}</p>
                       </div>
                     </div>
                   )}
                   {venue.rules && (
                     <div>
-                      <h3 className="font-semibold text-slate-800 mb-1">Giriş Kuralları</h3>
+                      <h3 className="font-semibold text-slate-800 mb-1">{t("entranceRules")}</h3>
                       <p className="text-slate-600">{venue.rules}</p>
                     </div>
                   )}
@@ -624,7 +629,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                         className="flex items-center gap-2 text-slate-800 font-semibold hover:text-primary-600"
                       >
                         <HelpCircle className="h-5 w-5" />
-                        Sıkça Sorulan Sorular
+                        {t("faq")}
                         {venueFaqOpen ? (
                           <ChevronUp className="h-4 w-4" />
                         ) : (
@@ -653,14 +658,14 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
             <div className="sticky top-6 space-y-6">
               {/* Hızlı Bilgiler */}
               <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Etkinlik Bilgileri</h3>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">{t("eventInfo")}</h3>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3">
                     <Calendar className="h-5 w-5 text-blue-500 mt-0.5" />
                     <div>
-                      <p className="font-medium text-slate-900">Tarih</p>
+                      <p className="font-medium text-slate-900">{t("date")}</p>
                       <p className="text-sm text-slate-600">
-                        {new Date(event.date).toLocaleDateString('tr-TR', { 
+                        {new Date(event.date).toLocaleDateString(dateLocale, { 
                           weekday: 'long',
                           year: 'numeric', 
                           month: 'long', 
@@ -673,7 +678,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                   <div className="flex items-start gap-3">
                     <Clock className="h-5 w-5 text-blue-500 mt-0.5" />
                     <div>
-                      <p className="font-medium text-slate-900">Saat</p>
+                      <p className="font-medium text-slate-900">{t("time")}</p>
                       <p className="text-sm text-slate-600">{event.time}</p>
                     </div>
                   </div>
@@ -681,7 +686,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-blue-500 mt-0.5" />
                     <div>
-                      <p className="font-medium text-slate-900">Mekan</p>
+                      <p className="font-medium text-slate-900">{t("venue")}</p>
                       <p className="text-sm text-slate-600">{localized.venue || event.venue}</p>
                     </div>
                   </div>
@@ -689,7 +694,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                   <div className="flex items-start gap-3">
                     <MapPin className="h-5 w-5 text-blue-500 mt-0.5" />
                     <div>
-                      <p className="font-medium text-slate-900">Konum</p>
+                      <p className="font-medium text-slate-900">{t("location")}</p>
                       <p className="text-sm text-slate-600">{event.location || localized.venue || event.venue}</p>
                     </div>
                   </div>
@@ -697,8 +702,8 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                   <div className="flex items-start gap-3">
                     <Users className="h-5 w-5 text-blue-500 mt-0.5" />
                     <div>
-                      <p className="font-medium text-slate-900">Kategori</p>
-                      <p className="text-sm text-slate-600">{event.category}</p>
+                      <p className="font-medium text-slate-900">{t("category")}</p>
+                      <p className="text-sm text-slate-600">{tCat((event.category || "diger").toLowerCase())}</p>
                     </div>
                   </div>
                 </div>
@@ -709,17 +714,17 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                 <div className="bg-amber-50 rounded-xl border border-amber-200 p-6">
                   <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
                     <Bell className="h-5 w-5 text-amber-600" />
-                    Bilet Uyarısı
+                    {t("ticketReminder")}
                   </h3>
                   <p className="text-sm text-slate-600 mb-4">
-                    E-posta adresinizi girin, etkinlikten önce size hatırlatma gönderelim.
+                    {t("reminderDesc")}
                   </p>
                   <form onSubmit={handleReminderSubmit} className="space-y-3">
                     <input
                       type="email"
                       value={reminderEmail}
                       onChange={(e) => setReminderEmail(e.target.value)}
-                      placeholder="ornek@mail.com"
+                      placeholder={t("reminderPlaceholder")}
                       required
                       className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
                     />
@@ -728,7 +733,7 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                       disabled={reminderPending}
                       className="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
                     >
-                      {reminderPending ? "Kaydediliyor..." : "Hatırlatma Al"}
+                      {reminderPending ? t("saving") : t("getReminder")}
                     </button>
                   </form>
                   {reminderResult && (
@@ -741,25 +746,25 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
 
               {/* Güvenli Alışveriş */}
               <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">Güvenli Alışveriş</h3>
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">{t("secureShopping")}</h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
                       <Star className="h-4 w-4 text-white" />
                     </div>
-                    <span className="text-sm text-slate-700">100% Orijinal Bilet</span>
+                    <span className="text-sm text-slate-700">{t("originalTicket")}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
                       <Star className="h-4 w-4 text-white" />
                     </div>
-                    <span className="text-sm text-slate-700">Güvenli Ödeme</span>
+                    <span className="text-sm text-slate-700">{t("securePayment")}</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
                       <Star className="h-4 w-4 text-white" />
                     </div>
-                    <span className="text-sm text-slate-700">Anında Teslimat</span>
+                    <span className="text-sm text-slate-700">{t("instantDelivery")}</span>
                   </div>
                 </div>
               </div>

@@ -1,4 +1,15 @@
 {
+  "common": {
+    "backToHome": "Back to Home",
+    "home": "Home",
+    "share": "Share",
+    "shareNews": "Share News",
+    "linkCopied": "Link copied!"
+  },
+  "newsDetail": {
+    "newsNotFound": "News Not Found",
+    "newsNotFoundDesc": "The news you are looking for does not exist or has been removed."
+  },
   "nav": {
     "events": "Events",
     "calendar": "Calendar",
@@ -32,6 +43,7 @@
     },
     "noEvents": "No events yet",
     "noEventsSlider": "No upcoming events.",
+    "otherNews": "Other News",
     "trustBadges": {
       "verified": "Verified Tickets",
       "verifiedDesc": "100% original guarantee",
@@ -55,6 +67,8 @@
     "free": "Free",
     "pastEvents": "Past Events",
     "eventEnded": "ENDED",
+    "eventStatusEnded": "Ended",
+    "eventStatusActive": "Active",
     "eventEndedAlert": "This event has ended. Tickets can no longer be purchased.",
     "eventEndedBanner": "This event has ended. Ticket sales are closed."
   },
@@ -97,6 +111,69 @@
     "photo": "Photo",
     "seatingPlan": "Seating plan"
   },
+  "eventDetail": {
+    "ticketInfo": "Ticket Information",
+    "ticketSelection": "Ticket Selection",
+    "eventInfo": "Event Information",
+    "date": "Date",
+    "time": "Time",
+    "venue": "Venue",
+    "location": "Location",
+    "category": "Category",
+    "aboutEvent": "About the Event",
+    "aboutPlaceholder": "Detailed information about the event will be added soon.",
+    "venueInfo": "Venue Information",
+    "allVenues": "All venues",
+    "ticketReminder": "Ticket Reminder",
+    "reminderDesc": "Enter your email to receive a reminder before the event.",
+    "reminderPlaceholder": "example@mail.com",
+    "getReminder": "Get Reminder",
+    "saving": "Saving...",
+    "secureShopping": "Secure Shopping",
+    "favorite": "Favorite",
+    "favorited": "Favorited",
+    "share": "Share",
+    "externalTicketInfo": "Tickets for this event are sold through an external platform.",
+    "externalTicketDisclaimer": "Information and photos about this event are for promotional purposes.",
+    "externalTicketDisclaimer2": "We are not responsible for payment, refund, cancellation or ticket delivery on the external site.",
+    "buyExternal": "Buy Ticket on External Site",
+    "noTicketsAvailable": "No tickets available for this event.",
+    "ticketType": "Ticket Type",
+    "price": "Price",
+    "quantity": "Qty",
+    "remaining": "Remaining",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Your full name",
+    "email": "Email",
+    "totalPrice": "Total Price",
+    "processing": "Processing...",
+    "buyTicket": "BUY TICKET",
+    "eventEnded": "This event has ended. Ticket sales are closed.",
+    "emailNotSent": "Your ticket was created successfully and is displayed above. However, there was a temporary issue sending the email.",
+    "seatingPlan": "Seating Plan",
+    "transport": "Transport",
+    "map": "Map",
+    "entranceInfo": "Entrance Information",
+    "entranceRules": "Entrance Rules",
+    "faq": "Frequently Asked Questions",
+    "tickets": "Tickets",
+    "comingSoon": "Coming soon",
+    "externalTicketSupport": "Please direct all support requests to the relevant sales channel.",
+    "priceFrom": "Starting price",
+    "removedFromFavorites": "Removed from favorites.",
+    "addedToFavorites": "Added to favorites.",
+    "actionFailed": "Action could not be completed.",
+    "shareOpened": "Share dialog opened.",
+    "linkCopied": "Event link copied.",
+    "shareFailed": "Share could not be completed.",
+    "pleaseSelectTicket": "Please select a ticket type.",
+    "nameEmailRequired": "Full name and email are required.",
+    "purchaseError": "An error occurred while purchasing the ticket. Please try again.",
+    "originalTicket": "100% Original Ticket",
+    "securePayment": "Secure Payment",
+    "instantDelivery": "Instant Delivery",
+    "shareEventText": "Check out {title}"
+  },
   "artists": {
     "title": "Artists",
     "subtitle": "All artist biographies and images",
@@ -106,6 +183,9 @@
     "bioPlaceholder": "Biography information will be added soon."
   },
   "footer": {
+    "siteName": "Bilet Ekosistemi",
+    "tagline": "Management, Consultancy, Events and Organisation.",
+    "menu": "Menu",
     "about": "About",
     "contact": "Contact",
     "privacy": "Privacy",
@@ -118,6 +198,6 @@
     "refundPolicyDesc": "Refund conditions are determined by the event organiser. Refund or change may apply according to event and campaign conditions. Please review the relevant event conditions before purchase.",
     "shippingPolicyDesc": "Standard shipping (DE): 2–4 business days. Express shipping (DE): Orders placed before noon (Mon–Fri) delivered next business day. Digital ticket: Printable immediately after contract. Printed ticket is chargeable; delivered to those paying shipping. Shipping options are shown in the cart.",
     "liveStockDesc": "Stock information is updated in real time.",
-    "copyright": "© {year} Bilet Ekosistemi"
+    "copyright": "© 2026 Bilet Ekosistemi"
   }
 }

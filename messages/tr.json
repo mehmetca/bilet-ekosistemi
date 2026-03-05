@@ -1,4 +1,15 @@
 {
+  "common": {
+    "backToHome": "Ana Sayfaya Dön",
+    "home": "Ana Sayfa",
+    "share": "Paylaş",
+    "shareNews": "Haberi Paylaş",
+    "linkCopied": "Link kopyalandı!"
+  },
+  "newsDetail": {
+    "newsNotFound": "Haber Bulunamadı",
+    "newsNotFoundDesc": "Aradığınız haber mevcut değil veya kaldırılmış."
+  },
   "nav": {
     "events": "Etkinlikler",
     "calendar": "Takvim",
@@ -32,6 +43,7 @@
     },
     "noEvents": "Henüz etkinlik yok",
     "noEventsSlider": "Yaklaşan etkinlik bulunmamaktadır.",
+    "otherNews": "Diğer Haberler",
     "trustBadges": {
       "verified": "Doğrulanmış Biletler",
       "verifiedDesc": "100% orijinal garanti",
@@ -55,6 +67,8 @@
     "free": "Ücretsiz",
     "pastEvents": "Biten Etkinlikler",
     "eventEnded": "BİTTİ",
+    "eventStatusEnded": "Sona Erdi",
+    "eventStatusActive": "Aktif",
     "eventEndedAlert": "Bu etkinlik tamamlanmıştır. Bilet satılamaz.",
     "eventEndedBanner": "Bu etkinlik tamamlanmıştır. Bilet satışı kapalıdır."
   },
@@ -97,6 +111,69 @@
     "photo": "Fotoğraf",
     "seatingPlan": "Oturma planı"
   },
+  "eventDetail": {
+    "ticketInfo": "Bilet Bilgisi",
+    "ticketSelection": "Bilet Seçimi",
+    "eventInfo": "Etkinlik Bilgileri",
+    "date": "Tarih",
+    "time": "Saat",
+    "venue": "Mekan",
+    "location": "Konum",
+    "category": "Kategori",
+    "aboutEvent": "Etkinlik Hakkında",
+    "aboutPlaceholder": "Etkinlik hakkında detaylı bilgi yakında eklenecek.",
+    "venueInfo": "Mekan Bilgisi",
+    "allVenues": "Tüm mekanlar",
+    "ticketReminder": "Bilet Uyarısı",
+    "reminderDesc": "E-posta adresinizi girin, etkinlikten önce size hatırlatma gönderelim.",
+    "reminderPlaceholder": "ornek@mail.com",
+    "getReminder": "Hatırlatma Al",
+    "saving": "Kaydediliyor...",
+    "secureShopping": "Güvenli Alışveriş",
+    "favorite": "Favori",
+    "favorited": "Favoride",
+    "share": "Paylaş",
+    "externalTicketInfo": "Bu etkinliğin bilet satışı harici bir platform üzerinden yapılmaktadır.",
+    "externalTicketDisclaimer": "Bu etkinlik ile ilgili bilgi ve fotograflar tanitim amaciyla sitemize konulmustur.",
+    "externalTicketDisclaimer2": "Harici sitede gerçekleşen ödeme, iade, iptal ve bilet teslimat süreçlerinden platformumuz sorumlu değildir.",
+    "buyExternal": "Harici Siteden Bilet Al",
+    "noTicketsAvailable": "Bu etkinlik için satışa açık bilet bulunmuyor.",
+    "ticketType": "Bilet Türü",
+    "price": "Fiyat",
+    "quantity": "Adet",
+    "remaining": "Kalan bilet",
+    "fullName": "Ad Soyad",
+    "fullNamePlaceholder": "Adınız Soyadınız",
+    "email": "E-posta",
+    "totalPrice": "Toplam Fiyat",
+    "processing": "İşleniyor...",
+    "buyTicket": "BİLET SATIN AL",
+    "eventEnded": "Bu etkinlik tamamlanmıştır. Bilet satışı kapalıdır.",
+    "emailNotSent": "Biletiniz başarıyla oluşturuldu ve yukarıda görüntüleniyor. Ancak e-posta gönderiminde geçici bir sorun yaşandı.",
+    "seatingPlan": "Oturma Düzeni",
+    "transport": "Ulaşım",
+    "map": "Harita",
+    "entranceInfo": "Giriş Bilgileri",
+    "entranceRules": "Giriş Kuralları",
+    "faq": "Sıkça Sorulan Sorular",
+    "tickets": "Biletler",
+    "comingSoon": "Yakında",
+    "externalTicketSupport": "Tüm destek taleplerinizi ilgili satış kanalıyla iletmeniz gerekir.",
+    "priceFrom": "Başlangıç fiyatı",
+    "removedFromFavorites": "Favorilerden çıkarıldı.",
+    "addedToFavorites": "Favorilere eklendi.",
+    "actionFailed": "İşlem tamamlanamadı.",
+    "shareOpened": "Paylaşım penceresi açıldı.",
+    "linkCopied": "Etkinlik linki kopyalandı.",
+    "shareFailed": "Paylaşım tamamlanamadı.",
+    "pleaseSelectTicket": "Lütfen bir bilet türü seçin.",
+    "nameEmailRequired": "Ad soyad ve e-posta zorunludur.",
+    "purchaseError": "Bilet satın alınırken bir hata oluştu. Lütfen tekrar deneyin.",
+    "originalTicket": "100% Orijinal Bilet",
+    "securePayment": "Güvenli Ödeme",
+    "instantDelivery": "Anında Teslimat",
+    "shareEventText": "{title} etkinliğini inceleyin."
+  },
   "artists": {
     "title": "Sanatçılar",
     "subtitle": "Tüm sanatçı biyografileri ve görselleri",
@@ -106,6 +183,9 @@
     "bioPlaceholder": "Biyografi bilgisi yakında eklenecek."
   },
   "footer": {
+    "siteName": "Bilet Ekosistemi",
+    "tagline": "Menajerlik, Danışmanlık, Etkinlik ve Organizasyon.",
+    "menu": "Menü",
     "about": "Hakkımızda",
     "contact": "İletişim",
     "privacy": "Gizlilik",
@@ -118,6 +198,6 @@
     "refundPolicyDesc": "İade koşulları etkinlik organizatörü tarafından belirlenir. Etkinlik ve kampanya koşullarına göre iade veya değişiklik uygulanabilir. Satın alma öncesi ilgili etkinlik koşullarını inceleyiniz.",
     "shippingPolicyDesc": "Standart kargo (DE): 2–4 iş günü. Ekspres kargo (DE): Öğleden önce (Pzt–Cuma) verilen siparişler ertesi iş günü teslim. Dijital bilet: Sözleşme sonrası anında yazdırılabilir. Basılı bilet ücretlidir; gönderim ücreti ödeyenlere teslim edilir. Gönderim seçenekleri alışveriş sepetinde sunulur.",
     "liveStockDesc": "Stok bilgisi anlık güncellenir.",
-    "copyright": "© {year} Bilet Ekosistemi"
+    "copyright": "© 2026 Bilet Ekosistemi"
   }
 }

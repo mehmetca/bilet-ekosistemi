@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Calendar, MapPin, Music2, X } from "lucide-react";
+import { Plus, Edit2, Trash2, Copy, Calendar, MapPin, Music2, X } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import type { Event, EventCategory } from "@/types/database";
@@ -183,6 +183,101 @@ function EtkinliklerContent() {
     } catch {
       setTicketQuantities({ ...EMPTY_TICKET_QUANTITIES });
       setTicketPrices({ ...EMPTY_TICKET_PRICES });
+    }
+  }
+
+  async function handleCopy(event: Event) {
+    setSubmitting(true);
+    try {
+      const ev = event as Event & Record<string, unknown>;
+      const copyPayload = {
+        title: ev.title,
+        description: ev.description,
+        date: ev.date,
+        time: ev.time,
+        venue: ev.venue,
+        location: ev.location,
+        category: ev.category,
+        price_from: Number(ev.price_from) || 0,
+        image_url: ev.image_url ?? null,
+        venue_id: ev.venue_id ?? null,
+        is_active: true,
+        title_tr: ev.title_tr ?? null,
+        title_de: ev.title_de ?? null,
+        title_en: ev.title_en ?? null,
+        description_tr: ev.description_tr ?? null,
+        description_de: ev.description_de ?? null,
+        description_en: ev.description_en ?? null,
+        venue_tr: ev.venue_tr ?? null,
+        venue_de: ev.venue_de ?? null,
+        venue_en: ev.venue_en ?? null,
+      };
+
+      const { data: newEvent, error: insertError } = await withTimeout(
+        (signal) =>
+          supabase
+            .from("events")
+            .insert(copyPayload)
+            .select("*")
+            .abortSignal(signal)
+            .single(),
+        30000,
+        "Etkinlik kopyalanırken zaman aşımı oluştu."
+      );
+
+      if (insertError || !newEvent) {
+        const msg = insertError?.message || (insertError as { details?: string })?.details || "Etkinlik oluşturulamadı.";
+        throw new Error(String(msg));
+      }
+
+      const { data: tickets, error: ticketsFetchError } = await supabase
+        .from("tickets")
+        .select("name, type, price, quantity, available")
+        .eq("event_id", event.id);
+
+      if (!ticketsFetchError && tickets && tickets.length > 0) {
+        const qty = (t: { quantity?: number; available?: number }) =>
+          Number(t.quantity ?? t.available ?? 0);
+        const newTickets = tickets.map((t) => ({
+          event_id: newEvent.id,
+          name: t.name,
+          type: (t.type || "normal") as "normal" | "vip",
+          price: Number(t.price || 0),
+          quantity: qty(t),
+          available: qty(t),
+          description: `${t.name} - otomatik etkinlik bileti`,
+        }));
+        const { error: ticketsInsertError } = await supabase.from("tickets").insert(newTickets);
+        if (ticketsInsertError) {
+          console.warn("Biletler kopyalanamadı (etkinlik oluşturuldu):", ticketsInsertError);
+        }
+      }
+
+      await logAudit({
+        action: "copy",
+        entity_type: "event",
+        entity_id: newEvent.id,
+        details: { from_event_id: event.id, title: newEvent.title },
+      });
+
+      await fetchEvents();
+      await handleEdit(newEvent as Event);
+      alert("Etkinlik kopyalandı. Tarih, fiyat ve yer bilgilerini düzenleyebilirsiniz.");
+    } catch (err) {
+      console.error("Etkinlik kopyalanamadı:", err);
+      const errMsg =
+        err instanceof Error
+          ? err.message
+          : err && typeof err === "object" && "message" in err
+            ? String((err as { message: unknown }).message)
+            : err && typeof err === "object" && "details" in err
+              ? String((err as { details: unknown }).details)
+              : typeof err === "string"
+                ? err
+                : "Bilinmeyen hata";
+      alert("Etkinlik kopyalanamadı: " + (errMsg || "Bilinmeyen hata"));
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -768,66 +863,70 @@ function EtkinliklerContent() {
                 key={event.id}
                 className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
               >
-                <div className="flex gap-6">
-                  <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center flex-shrink-0">
-                    {event.image_url ? (
-                      <img
-                        src={event.image_url}
-                        alt={event.title}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
-                    ) : (
-                      <Music2 className="h-8 w-8 text-primary-400" />
-                    )}
+                <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+                  <div className="flex gap-4 sm:gap-6 flex-1 min-w-0">
+                    <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center flex-shrink-0">
+                      {event.image_url ? (
+                        <img
+                          src={event.image_url}
+                          alt={event.title}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <Music2 className="h-8 w-8 text-primary-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-xs font-medium text-primary-600">
+                        {CATEGORY_LABELS[event.category]}
+                      </span>
+                      <h3 className="mt-1 text-lg font-semibold text-slate-900">
+                        {event.title}
+                      </h3>
+                      <p className="mt-2 text-sm text-slate-600 line-clamp-2">
+                        {parseEventDescription(event.description).content}
+                      </p>
+                      <div className="mt-3 space-y-1 text-sm text-slate-500">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 flex-shrink-0" />
+                          {new Date(event.date).toLocaleDateString("tr-TR")} • {event.time}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <MapPin className="h-4 w-4 flex-shrink-0" />
+                          {event.venue}, {event.location}
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <span className="text-xs font-medium text-primary-600">
-                          {CATEGORY_LABELS[event.category]}
-                        </span>
-                        <h3 className="mt-1 text-lg font-semibold text-slate-900">
-                          {event.title}
-                        </h3>
-                        <p className="mt-2 text-sm text-slate-600 line-clamp-2">
-                          {parseEventDescription(event.description).content}
-                        </p>
-                        <div className="mt-3 space-y-1 text-sm text-slate-500">
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4" />
-                            {new Date(event.date).toLocaleDateString("tr-TR")} • {event.time}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4" />
-                            {event.venue}, {event.location}
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-col items-end gap-2 ml-4">
-                        <div className="text-right">
-                          <span className="font-bold text-primary-600">
-                            {Number(event.price_from) > 0
-                              ? `€${Number(event.price_from).toLocaleString("de-DE")}`
-                              : "Ücretsiz"}
-                          </span>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleEdit(event)}
-                            className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(event.id)}
-                            className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
+                  <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 border-t sm:border-t-0 pt-4 sm:pt-0">
+                    <span className="font-bold text-primary-600">
+                      {Number(event.price_from) > 0
+                        ? `€${Number(event.price_from).toLocaleString("de-DE")}`
+                        : "Ücretsiz"}
+                    </span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleCopy(event)}
+                        disabled={submitting}
+                        title="Etkinliği kopyala"
+                        className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                      >
+                        <Copy className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleEdit(event)}
+                        title="Düzenle"
+                        className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(event.id)}
+                        title="Sil"
+                        className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 </div>
