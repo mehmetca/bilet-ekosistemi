@@ -31,6 +31,15 @@ export default function ShowDetailClient({ events, showSlug, locale: localeProp 
   const localized = getLocalizedEvent(firstEvent as unknown as Record<string, unknown>, locale);
   const parsedDescription = parseEventDescription(localized.description || firstEvent.description);
 
+  const hasExternalTickets = useMemo(() => {
+    return events.some((e) => {
+      const parsed = parseEventDescription(
+        getLocalizedEvent(e as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").description || e.description
+      );
+      return Boolean(parsed.externalTicketUrl || (e as Event & { ticket_url?: string }).ticket_url);
+    });
+  }, [events, locale]);
+
   const [selectedCity, setSelectedCity] = useState<string>("all");
 
   const cities = useMemo(() => {
@@ -104,6 +113,17 @@ export default function ShowDetailClient({ events, showSlug, locale: localeProp 
 
       {/* Şehir seçimi ve seanslar - Biletinial tarzı */}
       <div className="mx-auto w-full max-w-7xl px-4 py-10">
+        {hasExternalTickets && (
+          <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
+            <h2 className="text-lg font-semibold text-blue-900 mb-2">{t("ticketInfo")}</h2>
+            <p className="text-sm text-blue-900 mb-2">
+              {t("externalTicketInfo")}{" "}
+              {t("priceFrom")}: <strong>{formatPrice(minPrice, firstEvent.currency)}</strong>
+            </p>
+            <p className="text-sm text-blue-800 mb-2">{t("externalTicketDisclaimer")}</p>
+            <p className="text-sm text-blue-800 mb-2">{t("externalTicketDisclaimer2")} {t("externalTicketSupport")}</p>
+          </div>
+        )}
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
           <h2 className="text-xl font-bold text-slate-900 mb-4">{tShow("selectCity")}</h2>
           <select
@@ -250,7 +270,7 @@ function CityEventsSection({
                   </span>
                 ) : (
                   <Link
-                    href={`/${locale}/etkinlik/${event.slug || event.id}`}
+                    href={`/etkinlik/${event.id}`}
                     className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700 transition-colors"
                   >
                     {t("buyTicket")}
