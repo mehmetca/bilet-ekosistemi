@@ -91,7 +91,7 @@ async function getEventsForCity(citySlug: string, city?: { name_tr?: string | nu
   return filtered.map((e: Record<string, unknown>) => {
     const { venues, ...ev } = e;
     return ev;
-  }) as Event[];
+  }) as unknown as Event[];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
