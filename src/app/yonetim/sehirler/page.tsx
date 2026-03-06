@@ -243,10 +243,8 @@ function SehirlerContent() {
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Hero Görsel (URL)</label>
                 <AdminImageUpload
-                  bucket="hero-backgrounds"
                   value={form.image_url}
                   onChange={(url) => setForm((p) => ({ ...p, image_url: url }))}
-                  placeholder="Şehir hero görseli"
                 />
               </div>
 
