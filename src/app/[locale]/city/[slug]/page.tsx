@@ -46,7 +46,7 @@ function getMatchTerms(slug: string, city?: { name_tr?: string | null; name_de?:
       if (n) terms.add(n.toLowerCase().trim());
     });
   }
-  return [...terms];
+  return Array.from(terms);
 }
 
 function matchesCity(loc: string, vc: string, matchTerms: string[]): boolean {
