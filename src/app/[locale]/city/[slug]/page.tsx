@@ -40,13 +40,19 @@ function normalizeForMatch(s: string): string {
 function getMatchTerms(slug: string, city?: { name_tr?: string | null; name_de?: string | null; name_en?: string | null } | null): string[] {
   const slugLower = slug.toLowerCase().trim();
   const parts = slugLower.split(/-+/).filter(Boolean);
-  const terms = new Set<string>([slugLower, ...parts]);
+  const arr: string[] = [slugLower];
+  parts.forEach((p) => {
+    if (p && arr.indexOf(p) === -1) arr.push(p);
+  });
   if (city) {
     [city.name_tr, city.name_de, city.name_en].filter(Boolean).forEach((n) => {
-      if (n) terms.add(n.toLowerCase().trim());
+      if (n) {
+        const t = n.toLowerCase().trim();
+        if (t && arr.indexOf(t) === -1) arr.push(t);
+      }
     });
   }
-  return Array.from(terms);
+  return arr;
 }
 
 function matchesCity(loc: string, vc: string, matchTerms: string[]): boolean {
