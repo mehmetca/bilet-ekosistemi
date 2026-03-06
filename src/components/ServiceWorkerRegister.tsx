@@ -19,11 +19,7 @@ export default function ServiceWorkerRegister() {
         caches
           .keys()
           .then((keys) =>
-            Promise.all(
-              keys
-                .filter((key) => key.startsWith("bilet-"))
-                .map((key) => caches.delete(key))
-            )
+            Promise.all(keys.map((key) => caches.delete(key)))
           )
           .catch((error) => {
             console.error("Cache cleanup failed:", error);

@@ -57,6 +57,12 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       description: "Salon ve mekan bilgileri"
     },
     {
+      href: "/yonetim/sehirler",
+      label: "Şehirler",
+      icon: MapPin,
+      description: "Das ist los in deiner Stadt!"
+    },
+    {
       href: "/yonetim/reklamlar",
       label: "Reklamlar",
       icon: Megaphone,

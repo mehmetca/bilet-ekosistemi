@@ -562,12 +562,14 @@ async function sendTicketEmail(payload: TicketMailPayload) {
 
 export async function POST(request: NextRequest) {
   try {
-    
     const formData = await request.formData();
     const ticketId = formData.get("ticket_id") as string;
     const quantity = parseInt(formData.get("quantity") as string, 10);
     const buyerName = (formData.get("buyer_name") as string)?.trim();
     const buyerEmail = (formData.get("buyer_email") as string)?.trim();
+    const buyerAddress = (formData.get("buyer_address") as string)?.trim() || null;
+    const buyerPlz = (formData.get("buyer_plz") as string)?.trim() || null;
+    const buyerCity = (formData.get("buyer_city") as string)?.trim() || null;
 
     if (!ticketId || !quantity || !buyerName || !buyerEmail) {
       return NextResponse.json(
@@ -606,6 +608,14 @@ export async function POST(request: NextRequest) {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.replace("Bearer ", "");
+    let userId: string | null = null;
+    if (token) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) userId = user.id;
+    }
+
     // Get ticket details
     const { data: ticket, error: ticketError } = await supabase
       .from("tickets")
@@ -641,7 +651,11 @@ export async function POST(request: NextRequest) {
         ticket_code: ticketCode,
         status: 'completed',
         buyer_name: buyerName,
-        buyer_email: buyerEmail
+        buyer_email: buyerEmail,
+        ...(buyerAddress ? { buyer_address: buyerAddress } : {}),
+        ...(buyerPlz ? { buyer_plz: buyerPlz } : {}),
+        ...(buyerCity ? { buyer_city: buyerCity } : {}),
+        ...(userId ? { user_id: userId } : {}),
       })
       .select()
       .single();

@@ -77,3 +77,13 @@ export function getLocalizedNews(
     excerpt: getLocalizedText(news, "excerpt", locale),
   };
 }
+
+export function getLocalizedCity(
+  city: Record<string, unknown>,
+  locale: Locale
+): { name: string; description: string } {
+  return {
+    name: getLocalizedText(city, "name", locale),
+    description: getLocalizedText(city, "description", locale),
+  };
+}

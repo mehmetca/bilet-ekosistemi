@@ -6,12 +6,12 @@ import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Use
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
-import TicketPrint from "@/components/TicketPrint";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
 import Link from "next/link";
+import { useCart } from "@/context/CartContext";
 
 interface EventDetailClientProps {
   event: Event;
@@ -26,8 +26,10 @@ const MAX_TICKETS_PER_ORDER = 10;
 
 export default function EventDetailClient({ event, tickets, venue = null, locale: localeProp = "tr" }: EventDetailClientProps) {
   const t = useTranslations("eventDetail");
+  const tCheckout = useTranslations("checkout");
   const tCat = useTranslations("categories");
   const locale = (useLocale() as "tr" | "de" | "en") || localeProp;
+  const { addItem, totalItems } = useCart();
   const dateLocale = dateLocaleMap[locale] || "tr-TR";
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
@@ -40,22 +42,6 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
     availableTickets[0]?.id || ""
   );
   const [ticketCount, setTicketCount] = useState<number>(1);
-  const [buyerName, setBuyerName] = useState("");
-  const [buyerEmail, setBuyerEmail] = useState("");
-  const [isPending, setIsPending] = useState(false);
-  const [result, setResult] = useState<{
-    success: boolean;
-    message: string;
-    ticketCode?: string;
-    emailSent?: boolean;
-    emailError?: string;
-    orderDetails?: {
-      buyerName: string;
-      quantity: number;
-      ticketType: string;
-      price: number;
-    };
-  } | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [venueFaqOpen, setVenueFaqOpen] = useState(false);
@@ -166,79 +152,6 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
     } catch {
       setActionMessage(t("shareFailed"));
       window.setTimeout(() => setActionMessage(null), 2200);
-    }
-  }
-
-  async function handlePurchase() {
-    if (!selectedTicket) {
-      setResult({ success: false, message: t("pleaseSelectTicket") });
-      return;
-    }
-
-    if (!buyerName.trim() || !buyerEmail.trim()) {
-      setResult({ success: false, message: t("nameEmailRequired") });
-      return;
-    }
-
-    setIsPending(true);
-    try {
-      // Huni analitiği: ödeme başlatma
-      let sid = "";
-      let heroVariant: string | undefined;
-      try {
-        sid = sessionStorage.getItem("analytics_session") || "";
-        const hv = sessionStorage.getItem("hero_ab_variant");
-        if (hv) {
-          const parsed = JSON.parse(hv) as { variant?: string };
-          heroVariant = parsed?.variant;
-        }
-      } catch {
-        /* ignore */
-      }
-      fetch("/api/analytics/funnel", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "purchase_intent",
-          event_id: event.id,
-          ticket_id: selectedTicket.id,
-          session_id: sid || undefined,
-          hero_variant: heroVariant,
-        }),
-      }).catch(() => {});
-
-      const formData = new FormData();
-      formData.append("ticket_id", selectedTicket.id);
-      formData.append("quantity", String(ticketCount));
-      formData.append("buyer_name", buyerName.trim());
-      formData.append("buyer_email", buyerEmail.trim());
-
-      const response = await fetch("/api/purchase", {
-        method: "POST",
-        body: formData,
-      });
-
-      const purchaseResult = await response.json();
-      setResult(purchaseResult);
-
-      if (purchaseResult?.success) {
-        setBuyerName("");
-        setBuyerEmail("");
-        setTicketState((prev) =>
-          prev.map((ticket) =>
-            ticket.id === selectedTicket.id
-              ? { ...ticket, available: Math.max(0, Number(ticket.available || 0) - ticketCount) }
-              : ticket
-          )
-        );
-      }
-    } catch {
-      setResult({
-        success: false,
-        message: t("purchaseError"),
-      });
-    } finally {
-      setIsPending(false);
     }
   }
 
@@ -361,33 +274,6 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                 </div>
               )}
 
-              {result?.success && result.ticketCode && (
-                <div className="mb-8 rounded-xl border border-green-200 bg-green-50 p-4">
-                  <p className="mb-3 text-sm font-medium text-green-800">
-                    {result.message}
-                  </p>
-                  <TicketPrint
-                    ticketCode={result.ticketCode}
-                    buyerName={result.orderDetails?.buyerName || buyerName}
-                    quantity={result.orderDetails?.quantity || ticketCount}
-                    ticketType={result.orderDetails?.ticketType || selectedTicket?.name || ""}
-                    price={result.orderDetails?.price || totalPrice}
-                    currency={event.currency}
-                    eventTitle={localized.title}
-                    eventDate={event.date}
-                    eventTime={event.time}
-                    venue={localized.venue || event.venue}
-                    location={event.location}
-                  />
-
-                  {result.emailSent === false && (
-                    <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                      {t("emailNotSent")}
-                    </p>
-                  )}
-                </div>
-              )}
-              
               {/* Bilet Türleri - Eventim Benzeri Liste */}
               {!isExternalOnlyEvent && (availableTickets.length === 0 ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
@@ -470,43 +356,12 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                 </div>
               ))}
 
-              {!isExternalOnlyEvent && <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">{t("fullName")}</label>
-                  <input
-                    type="text"
-                    value={buyerName}
-                    onChange={(e) => setBuyerName(e.target.value)}
-                    disabled={isPastEvent}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                    placeholder={t("fullNamePlaceholder")}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">{t("email")}</label>
-                  <input
-                    type="email"
-                    value={buyerEmail}
-                    onChange={(e) => setBuyerEmail(e.target.value)}
-                    disabled={isPastEvent}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                    placeholder={t("reminderPlaceholder")}
-                  />
-                </div>
-              </div>}
-
-              {/* Toplam Fiyat ve Satın Al */}
+              {/* Toplam Fiyat ve Sepete Ekle */}
               {!isExternalOnlyEvent && <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-lg font-semibold text-slate-900">{t("totalPrice")}</span>
                   <span className="text-3xl font-bold text-blue-600">€{totalPrice.toFixed(2)}</span>
                 </div>
-
-                {result && !result.success && (
-                  <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                    {result.message}
-                  </p>
-                )}
 
                 {isPastEvent && (
                   <p className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
@@ -516,12 +371,38 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
 
                 <button
                   type="button"
-                  onClick={handlePurchase}
-                  disabled={isPending || !selectedTicket || isPastEvent}
+                  onClick={() => {
+                    if (!selectedTicket || isPastEvent) return;
+                    addItem({
+                      ticketId: selectedTicket.id,
+                      eventId: event.id,
+                      eventTitle: localized.title || event.title,
+                      eventDate: event.date,
+                      eventTime: event.time || "20:00",
+                      venue: localized.venue || event.venue,
+                      location: event.location,
+                      imageUrl: event.image_url,
+                      ticketName: selectedTicket.name || selectedTicket.ticket_type || "Standart",
+                      price: Number(selectedTicket.price || 0),
+                      currency: event.currency,
+                      quantity: ticketCount,
+                      available: Number(selectedTicket.available || 0),
+                    });
+                    setActionMessage(tCheckout("addedToCart"));
+                  }}
+                  disabled={!selectedTicket || isPastEvent}
                   className="w-full rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
                 >
-                  {isPending ? t("processing") : t("buyTicket")}
+                  {tCheckout("addToCart")}
                 </button>
+                {totalItems > 0 && (
+                  <Link
+                    href={`/${locale}/sepet`}
+                    className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-200"
+                  >
+                    {tCheckout("goToCheckout")} ({totalItems})
+                  </Link>
+                )}
               </div>}
             </div>
 

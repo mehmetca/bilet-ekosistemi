@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useRef } from "react";
 import NextLink from "next/link";
-import { Ticket, User, LogIn, Menu, X, Globe, ChevronDown } from "lucide-react";
+import { Ticket, User, LogIn, Menu, X, Globe, ChevronDown, ShoppingCart } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import { useCart } from "@/context/CartContext";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 
 const navLinks = [
   { href: "/", labelKey: "nav.events" },
+  { href: "/sehirler", labelKey: "nav.cities" },
   { href: "/takvim", labelKey: "nav.calendar" },
   { href: "/mekanlar", labelKey: "nav.venues" },
   { href: "/sanatci", labelKey: "nav.artists" },
@@ -19,6 +21,7 @@ const LOCALE_LABELS: Record<string, string> = { tr: "Türkçe", de: "Deutsch", e
 
 export default function Header() {
   const { user, isAdmin, isController, isOrganizer } = useSimpleAuth();
+  const { totalItems } = useCart();
   const hasManagementRole = isAdmin || isController || isOrganizer;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -61,6 +64,17 @@ export default function Header() {
 
         {/* Masaüstü menü */}
         <nav className="hidden md:flex items-center gap-6">
+          <NextLink
+            href={`/${locale}/sepet`}
+            className="relative flex items-center gap-1 text-slate-600 hover:text-primary-600 font-medium transition-colors"
+          >
+            <ShoppingCart className="h-5 w-5" />
+            {totalItems > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">
+                {totalItems > 9 ? "9+" : totalItems}
+              </span>
+            )}
+          </NextLink>
           {navLinks.map(({ href, labelKey }) => (
             <Link
               key={href}
@@ -164,6 +178,14 @@ export default function Header() {
             className="absolute left-0 right-0 top-full z-50 flex flex-col gap-1 border-b border-slate-200 bg-white py-3 px-4 shadow-lg md:hidden"
             role="navigation"
           >
+            <NextLink
+              href={`/${locale}/sepet`}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              Sepet {totalItems > 0 && `(${totalItems})`}
+            </NextLink>
             {navLinks.map(({ href, labelKey }) => (
               <Link
                 key={href}

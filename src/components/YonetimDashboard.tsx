@@ -103,6 +103,10 @@ export default function YonetimDashboard() {
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Hero Background</h3>
           <p className="text-sm text-slate-500">Ana sayfa arka planı</p>
         </Link>
+        <Link href="/yonetim/sehirler" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
+          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Şehirler</h3>
+          <p className="text-sm text-slate-500">Das ist los in deiner Stadt!</p>
+        </Link>
         <Link href="/yonetim/ayarlar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Ayarlar</h3>
           <p className="text-sm text-slate-500">Sistem ayarları</p>

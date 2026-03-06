@@ -14,6 +14,20 @@ const nextConfig = {
       { source: "/turne/:path*", destination: "/", permanent: true },
     ];
   },
+  async headers() {
+    if (process.env.NODE_ENV !== "development") return [];
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, max-age=0",
+          },
+        ],
+      },
+    ];
+  },
   // Vercel build'in lint uyarılarından düşmemesi için (lint yerelde npm run lint ile çalıştırılabilir)
   eslint: { ignoreDuringBuilds: true },
   webpack: (config, { dev }) => {

@@ -7,6 +7,13 @@ const intlMiddleware = createMiddleware(routing);
 export default function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // /sepet veya /sepet/ -> /tr/sepet (locale prefix zorunlu)
+  if (pathname === "/sepet" || pathname === "/sepet/") {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${routing.defaultLocale}/sepet`;
+    return NextResponse.redirect(url);
+  }
+
   // /yonetim ve /giris locale prefix olmadan erişilebilir; sadece header set et, intl redirect yapma
   if (pathname.startsWith("/yonetim") || pathname.startsWith("/giris")) {
     const requestHeaders = new Headers(request.headers);

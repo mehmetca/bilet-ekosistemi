@@ -45,6 +45,7 @@
   },
   "nav": {
     "events": "Etkinlikler",
+    "cities": "Şehirler",
     "calendar": "Takvim",
     "venues": "Mekanlar",
     "artists": "Sanatçılar",
@@ -61,6 +62,8 @@
     "search": "Ara",
     "searchPlaceholder": "Etkinlik, sanatçı veya venue ara...",
     "upcomingEvents": "Yaklaşan Etkinlikler",
+    "inYourCity": "Şehrinize göre etkinlikleri keşfedin.",
+    "viewAllCities": "Tümünü Görün",
     "news": "Haberler",
     "sortBy": {
       "upcoming": "Yaklaşan",
@@ -135,6 +138,10 @@
     "eventsOnDate": "Tarihli Etkinlikler",
     "eventsOfCategory": "Etkinlikleri",
     "buyTicket": "Bilet Al"
+  },
+  "cities": {
+    "title": "Şehirler",
+    "subtitle": "Şehrinize göre etkinlikleri keşfedin."
   },
   "venues": {
     "title": "Mekanlar ve Salonlar",
@@ -215,6 +222,48 @@
     "securePayment": "Güvenli Ödeme",
     "instantDelivery": "Anında Teslimat",
     "shareEventText": "{title} etkinliğini inceleyin."
+  },
+  "checkout": {
+    "title": "Alışveriş Sepeti",
+    "stepCart": "Sepet",
+    "stepDelivery": "Teslimat",
+    "stepPayment": "Ödeme",
+    "yourOrder": "Sipariş Özeti",
+    "deliveryMethod": "Teslimat Yöntemi",
+    "eTicket": "E-Bilet (Elektronik)",
+    "eTicketDesc": "Biletiniz sipariş sonrası e-posta ile gönderilir.",
+    "customerInfo": "Müşteri Bilgileri",
+    "fullName": "Ad Soyad",
+    "email": "E-posta",
+    "addressOptional": "Adres (opsiyonel)",
+    "addressHint": "Fiziksel teslimat veya fatura için adresinizi ekleyebilirsiniz.",
+    "address": "Sokak, bina no.",
+    "plz": "Posta Kodu",
+    "city": "Şehir",
+    "fillFromProfile": "Bilgilerim sayfasından adresinizi ekleyebilirsiniz.",
+    "subtotal": "Ara Toplam",
+    "fees": "İşlem Ücreti",
+    "total": "Toplam",
+    "completeOrder": "Siparişi Tamamla",
+    "processing": "İşleniyor...",
+    "emptyCart": "Sepetiniz boş",
+    "emptyCartDesc": "Bilet eklemek için bir etkinlik sayfasına gidin.",
+    "continueShopping": "Alışverişe Devam Et",
+    "remove": "Kaldır",
+    "quantity": "Adet",
+    "addToCart": "Sepete Ekle",
+    "addedToCart": "Sepete eklendi",
+    "goToCheckout": "Ödemeye Geç",
+    "loginRequired": "Ödemeyi tamamlamak için giriş yapın veya üye olun.",
+    "redirectingToLogin": "Giriş sayfasına yönlendiriliyorsunuz...",
+    "loginOrSignup": "Giriş Yap / Üye Ol"
+  },
+  "city": {
+    "resultsCount": "{city} için {count} sonuç bulundu.",
+    "sortBy": "Sırala",
+    "noEvents": "Bu şehirde yaklaşan etkinlik bulunmuyor.",
+    "viewAllEvents": "Tüm etkinlikleri gör",
+    "aboutCity": "{city} Hakkında"
   },
   "showDetail": {
     "selectCity": "Seansları görmek için şehir seçiniz",
@@ -388,7 +437,10 @@
     "status": "Durum",
     "completed": "Tamamlandı",
     "pending": "Bekliyor",
-    "cancelled": "İptal"
+    "cancelled": "İptal",
+    "printTicket": "Biletimi Yazdır",
+    "deleteTicket": "Bileti Sil",
+    "deleteTicketConfirm": "Bu bileti silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
   },
   "myInfo": {
     "title": "Bilgilerim",

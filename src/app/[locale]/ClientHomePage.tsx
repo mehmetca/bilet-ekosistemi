@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "@/i18n/navigation";
-import { Calendar, MapPin, Music2, Search, ExternalLink, CheckCircle, Shield, Clock, Database } from "lucide-react";
+import { Calendar, MapPin, Music2, Search, ExternalLink, CheckCircle, Shield, Clock, Database, ChevronRight, ChevronLeft } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import HeroBackgroundSlider from "@/components/HeroBackgroundSlider";
@@ -24,16 +24,27 @@ interface HeroBg {
   transition_duration: number;
 }
 
+interface City {
+  id: string;
+  slug: string;
+  name_tr?: string | null;
+  name_de?: string | null;
+  name_en?: string | null;
+  image_url?: string | null;
+}
+
 interface ClientHomePageProps {
   initialEvents?: Event[];
   initialNews?: News[];
   initialHeroBackgrounds?: HeroBg[];
+  initialCities?: City[];
 }
 
 export default function ClientHomePage({
   initialEvents = [],
   initialNews = [],
   initialHeroBackgrounds = [],
+  initialCities = [],
 }: ClientHomePageProps) {
   const t = useTranslations("home");
   const locale = useLocale();
@@ -47,6 +58,8 @@ export default function ClientHomePage({
   const [sortBy, setSortBy] = useState<"yaklasan" | "en-ucuz" | "populer">("yaklasan");
   const [events, setEvents] = useState<Event[]>(initialEvents);
   const [news, setNews] = useState<News[]>(initialNews);
+  const [cities, setCities] = useState<City[]>(initialCities);
+  const cityScrollRef = useRef<HTMLDivElement>(null);
   const [heroVariant, setHeroVariant] = useState<{
     variant: string;
     hero_title: string;
@@ -61,13 +74,15 @@ export default function ClientHomePage({
   const fetchData = useCallback(async () => {
     const { supabase } = await import("@/lib/supabase-client");
     try {
-      const [eventsRes, newsRes] = await Promise.all([
+      const [eventsRes, newsRes, citiesRes] = await Promise.all([
         supabase.from("events").select("*").eq("is_active", true).order("created_at", { ascending: false }),
         supabase.from("news").select("*").eq("is_published", true).order("published_at", { ascending: false }).limit(5),
+        supabase.from("cities").select("id, slug, name_tr, name_de, name_en, image_url").eq("is_active", true).order("sort_order", { ascending: true }),
       ]);
       if (isMountedRef.current) {
         if (!eventsRes.error) setEvents(eventsRes.data || []);
         if (!newsRes.error) setNews(newsRes.data || []);
+        if (!citiesRes.error) setCities(citiesRes.data || []);
       }
     } catch {
       /* ignore */
@@ -369,7 +384,75 @@ export default function ClientHomePage({
             locale={locale as "tr" | "de" | "en"}
           />
         </div>
-        
+
+        {/* Şehirler - Yaklaşan etkinlikler ve Haberler slider'larının altında */}
+        {cities.length > 0 && (
+          <div className="mt-12">
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+              <h2 className="text-2xl font-bold text-slate-900">{t("inYourCity")}</h2>
+              <Link
+                href="/sehirler"
+                className="text-primary-600 font-semibold hover:text-primary-700 hover:underline"
+              >
+                {t("viewAllCities")} →
+              </Link>
+            </div>
+            <div className="relative -mx-2 md:-mx-4">
+              <button
+                type="button"
+                onClick={() => {
+                  cityScrollRef.current?.scrollBy({ left: -260, behavior: "smooth" });
+                }}
+                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/95 p-2.5 shadow-lg ring-1 ring-slate-200 transition-all hover:bg-white hover:shadow-xl md:left-4"
+                aria-label="Önceki"
+              >
+                <ChevronLeft className="h-6 w-6 text-slate-700" />
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  cityScrollRef.current?.scrollBy({ left: 240, behavior: "smooth" });
+                }}
+                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/95 p-2.5 shadow-lg ring-1 ring-slate-200 transition-all hover:bg-white hover:shadow-xl md:right-4"
+                aria-label="Sonraki"
+              >
+                <ChevronRight className="h-6 w-6 text-slate-700" />
+              </button>
+              <div
+                ref={cityScrollRef}
+                className="flex gap-3 overflow-x-auto scroll-smooth pb-2 scrollbar-hide"
+              >
+                {cities.map((city) => {
+                  const name = (locale === "de" ? city.name_de : locale === "en" ? city.name_en : city.name_tr) || city.name_tr || city.name_de || city.name_en || city.slug;
+                  return (
+                    <Link
+                      key={city.id}
+                      href={`/city/${city.slug}`}
+                      className="group flex min-w-[180px] max-w-[180px] flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 sm:min-w-[200px] sm:max-w-[200px] md:min-w-[220px] md:max-w-[220px] xl:min-w-[240px] xl:max-w-[240px]"
+                    >
+                      <div className="aspect-[16/9] overflow-hidden bg-slate-100">
+                        {city.image_url ? (
+                          <img
+                            src={city.image_url}
+                            alt={name}
+                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 to-primary-50">
+                            <MapPin className="h-12 w-12 text-primary-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="py-3 text-center">
+                        <h3 className="font-semibold text-slate-900 group-hover:text-primary-600">{name}</h3>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Events */}

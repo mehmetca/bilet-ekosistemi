@@ -1,0 +1,46 @@
+import { createServerSupabase } from "@/lib/supabase-server";
+import Header from "@/components/Header";
+import CitiesGrid from "./CitiesGrid";
+import type { Metadata } from "next";
+import { getTranslations } from "next-intl/server";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+async function getCities() {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from("cities")
+    .select("id, slug, name_tr, name_de, name_en, image_url")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .order("slug", { ascending: true });
+  if (error) return [];
+  return data || [];
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("cities");
+  return {
+    title: `${t("title")} - Etkinlikler`,
+    description: t("subtitle"),
+  };
+}
+
+export default async function SehirlerPage() {
+  const cities = await getCities();
+  const t = await getTranslations("cities");
+
+  return (
+    <div className="min-h-screen bg-[#f5f6f8]">
+      <Header />
+      <div className="mx-auto max-w-6xl px-4 py-12">
+        <div className="mb-10">
+          <h1 className="text-3xl font-bold text-slate-900">{t("title")}</h1>
+          <p className="mt-2 text-slate-600">{t("subtitle")}</p>
+        </div>
+        <CitiesGrid cities={cities} />
+      </div>
+    </div>
+  );
+}

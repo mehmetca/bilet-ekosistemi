@@ -3,6 +3,8 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import CookieConsent from "@/components/CookieConsent";
+import Providers from "@/components/Providers";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { NextIntlClientProvider } from "next-intl";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
@@ -54,8 +56,11 @@ export default async function RootLayout({
       <body className={inter.className}>
         <NextIntlClientProvider locale={validLocale} messages={messages}>
             <SimpleAuthProvider>
-              {children}
-              <CookieConsent />
+              <Providers>
+                {children}
+                <CookieConsent />
+                <ServiceWorkerRegister />
+              </Providers>
             </SimpleAuthProvider>
           </NextIntlClientProvider>
       </body>

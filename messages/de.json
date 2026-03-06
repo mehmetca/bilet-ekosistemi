@@ -45,6 +45,7 @@
   },
   "nav": {
     "events": "Veranstaltungen",
+    "cities": "Städte",
     "calendar": "Kalender",
     "venues": "Spielstätten",
     "artists": "Künstlerinnen und Künstler",
@@ -61,6 +62,8 @@
     "search": "Suchen",
     "searchPlaceholder": "Veranstaltung, Künstler oder Spielstätte suchen...",
     "upcomingEvents": "Kommende Veranstaltungen",
+    "inYourCity": "Entdecken Sie Veranstaltungen in Ihrer Stadt.",
+    "viewAllCities": "Alle anzeigen",
     "news": "Nachrichten",
     "sortBy": {
       "upcoming": "Demnächst",
@@ -135,6 +138,10 @@
     "eventsOnDate": "Veranstaltungen am",
     "eventsOfCategory": "Veranstaltungen",
     "buyTicket": "Ticket kaufen"
+  },
+  "cities": {
+    "title": "Städte",
+    "subtitle": "Entdecken Sie Veranstaltungen in Ihrer Stadt."
   },
   "venues": {
     "title": "Spielstätten und Säle",
@@ -215,6 +222,48 @@
     "securePayment": "Sichere Zahlung",
     "instantDelivery": "Sofortige Lieferung",
     "shareEventText": "Schauen Sie sich {title} an"
+  },
+  "checkout": {
+    "title": "Warenkorb",
+    "stepCart": "Warenkorb",
+    "stepDelivery": "Lieferung",
+    "stepPayment": "Zahlung",
+    "yourOrder": "Bestellübersicht",
+    "deliveryMethod": "Lieferart",
+    "eTicket": "E-Ticket (Elektronisch)",
+    "eTicketDesc": "Ihr Ticket wird nach der Bestellung per E-Mail versendet.",
+    "customerInfo": "Kundeninformationen",
+    "fullName": "Name",
+    "email": "E-Mail",
+    "addressOptional": "Adresse (optional)",
+    "addressHint": "Sie können Ihre Adresse für physische Lieferung oder Rechnung hinzufügen.",
+    "address": "Straße, Hausnr.",
+    "plz": "PLZ",
+    "city": "Stadt",
+    "fillFromProfile": "Sie können Ihre Adresse auf der Seite „Meine Daten“ hinzufügen.",
+    "subtotal": "Zwischensumme",
+    "fees": "Bearbeitungsgebühr",
+    "total": "Gesamt",
+    "completeOrder": "Bestellung abschließen",
+    "processing": "Wird verarbeitet...",
+    "emptyCart": "Ihr Warenkorb ist leer",
+    "emptyCartDesc": "Besuchen Sie eine Veranstaltungsseite, um Tickets hinzuzufügen.",
+    "continueShopping": "Weiter einkaufen",
+    "remove": "Entfernen",
+    "quantity": "Anzahl",
+    "addToCart": "In den Warenkorb",
+    "addedToCart": "Zum Warenkorb hinzugefügt",
+    "goToCheckout": "Zur Kasse",
+    "loginRequired": "Melden Sie sich an oder registrieren Sie sich, um die Bestellung abzuschließen.",
+    "redirectingToLogin": "Weiterleitung zur Anmeldung...",
+    "loginOrSignup": "Anmelden / Registrieren"
+  },
+  "city": {
+    "resultsCount": "{count} Ergebnisse in {city} gefunden.",
+    "sortBy": "Sortieren",
+    "noEvents": "Keine bevorstehenden Veranstaltungen in dieser Stadt.",
+    "viewAllEvents": "Alle Veranstaltungen anzeigen",
+    "aboutCity": "Über {city}"
   },
   "showDetail": {
     "selectCity": "Wählen Sie eine Stadt, um die Termine zu sehen",
@@ -388,7 +437,10 @@
     "status": "Status",
     "completed": "Abgeschlossen",
     "pending": "Ausstehend",
-    "cancelled": "Storniert"
+    "cancelled": "Storniert",
+    "printTicket": "Mein Ticket drucken",
+    "deleteTicket": "Ticket löschen",
+    "deleteTicketConfirm": "Möchten Sie dieses Ticket wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
   },
   "myInfo": {
     "title": "Meine Daten",

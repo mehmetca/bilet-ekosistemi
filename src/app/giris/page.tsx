@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Link } from "@/i18n/navigation";
 import { Eye, EyeOff, LogIn, ArrowLeft, UserPlus, Calendar } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -22,6 +23,8 @@ type AuthTokenResponse = {
 export default function LoginPage() {
   const t = useTranslations("auth");
   const tCommon = useTranslations("common");
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -228,7 +231,7 @@ export default function LoginPage() {
 
       if (activeLoginAttemptRef.current !== attemptId) return;
       setLoading(false);
-      window.location.href = hasManagementRole ? "/yonetim" : "/";
+      window.location.href = hasManagementRole ? "/yonetim" : (redirectTo || "/");
       return;
     } catch (err: unknown) {
       if (activeLoginAttemptRef.current !== attemptId) return;
