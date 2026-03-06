@@ -36,12 +36,17 @@ export default function EventCalendar({ events }: EventCalendarProps) {
       filtered = filtered.filter(event => event.category === selectedCategory);
     }
 
-    // Tarih filtresi
+    // Tarih filtresi - kullanıcı gg.aa.yyyy girebilir, event.date ISO (yyyy-mm-dd)
     if (selectedDate) {
-      filtered = filtered.filter(event => {
-        const eventDate = new Date(event.date).toISOString().split('T')[0];
-        return eventDate === selectedDate;
-      });
+      const parsedUserDate = parseDateInput(selectedDate);
+      const targetISO = parsedUserDate ? toISODateString(parsedUserDate) : null;
+      if (targetISO) {
+        filtered = filtered.filter(event => {
+          const d = String(event.date || "");
+          const eventDate = d.includes("T") ? d.split("T")[0] : d.slice(0, 10);
+          return eventDate === targetISO;
+        });
+      }
     }
 
     setFilteredEvents(filtered);

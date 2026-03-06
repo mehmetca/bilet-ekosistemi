@@ -52,11 +52,11 @@ export default function ShowDetailClient({ events, showSlug, locale: localeProp 
     return events.filter((e) => (e.location || "").trim() === selectedCity);
   }, [events, selectedCity]);
 
-  const upcomingEvents = useMemo(() => {
-    const now = new Date();
-    return filteredEvents
-      .filter((e) => new Date(`${e.date} ${e.time || "23:59"}`) >= now)
-      .sort((a, b) => new Date(`${a.date} ${a.time || "00:00"}`).getTime() - new Date(`${b.date} ${b.time || "00:00"}`).getTime());
+  // Tüm etkinlikler (biten + yaklaşan), en yeni tarih en başta
+  const displayEvents = useMemo(() => {
+    return [...filteredEvents].sort(
+      (a, b) => new Date(`${b.date} ${b.time || "00:00"}`).getTime() - new Date(`${a.date} ${a.time || "00:00"}`).getTime()
+    );
   }, [filteredEvents]);
 
   const minPrice = useMemo(() => {
@@ -144,7 +144,7 @@ export default function ShowDetailClient({ events, showSlug, locale: localeProp 
           {selectedCity === "all" ? tShow("ticketsAndPrices") : `${tShow("ticketsIn")} ${selectedCity}`}
         </h2>
 
-        {upcomingEvents.length === 0 ? (
+        {displayEvents.length === 0 ? (
           <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-500">
             <Calendar className="h-16 w-16 mx-auto text-slate-300 mb-4" />
             <p className="text-lg font-medium">
@@ -155,7 +155,7 @@ export default function ShowDetailClient({ events, showSlug, locale: localeProp 
           <div className="space-y-6">
             {selectedCity === "all"
               ? cities.map((city) => {
-                  const cityEvents = upcomingEvents.filter((e) => (e.location || "").trim() === city);
+                  const cityEvents = displayEvents.filter((e) => (e.location || "").trim() === city);
                   if (cityEvents.length === 0) return null;
                   return (
                     <CityEventsSection
@@ -172,7 +172,7 @@ export default function ShowDetailClient({ events, showSlug, locale: localeProp 
               : (
                 <CityEventsSection
                   city={selectedCity}
-                  events={upcomingEvents}
+                  events={displayEvents}
                   locale={locale}
                   dateLocale={dateLocale}
                   t={t}
