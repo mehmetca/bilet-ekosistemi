@@ -212,6 +212,7 @@ export default function MultiTicketScanner({ onBatchComplete, onClose }: MultiTi
             <QRScanner
               onScan={handleScan}
               onClose={() => setShowScanner(false)}
+              continuous
             />
           </div>
         )}

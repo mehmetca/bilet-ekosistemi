@@ -9,11 +9,15 @@ import { feedbackService } from "@/lib/feedbackService";
 interface QRScannerProps {
   onScan: (code: string) => void;
   onClose: () => void;
+  /** true = taramaya devam et (çoklu bilet), false = tek tarama sonrası dur */
+  continuous?: boolean;
 }
 
-export default function QRScanner({ onScan, onClose }: QRScannerProps) {
+export default function QRScanner({ onScan, onClose, continuous = false }: QRScannerProps) {
   const [error] = useState<string | null>(null);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
+  const onScanRef = useRef(onScan);
+  onScanRef.current = onScan;
 
   useEffect(() => {
     // Play scan start feedback
@@ -35,10 +39,18 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
 
     scannerRef.current.render(
       (decodedText) => {
-        // QR başarıyla okundu - play success feedback
         feedbackService.playSuccess();
-        onScan(decodedText.trim().toUpperCase());
-        stopScanning();
+        let code = decodedText.trim();
+        try {
+          const parsed = JSON.parse(code);
+          if (parsed && typeof parsed.code === "string") {
+            code = parsed.code;
+          }
+        } catch {
+          /* plain text ticket code */
+        }
+        onScanRef.current(code.toUpperCase());
+        if (!continuous) stopScanning();
       },
       (err) => {
         // Tarama hatası (genelde sessiz olur, önemli değil)
@@ -49,7 +61,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     return () => {
       stopScanning();
     };
-  }, [onScan]);
+  }, [continuous]);
 
   function stopScanning() {
     if (scannerRef.current) {
