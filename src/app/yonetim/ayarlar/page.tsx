@@ -1,11 +1,23 @@
 "use client";
 
-import { useState } from "react";
-import { Settings, Save, Database, Shield, Bell } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, Save, Database, Shield, Bell, Mail, CheckCircle, XCircle } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 
 export default function AyarlarPage() {
   const [loading, setLoading] = useState(false);
+  const [emailStatus, setEmailStatus] = useState<{
+    ready: boolean;
+    checks: { RESEND_API_KEY: string; TICKET_EMAIL_FROM: string };
+    message: string;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/email-status")
+      .then((r) => r.json())
+      .then(setEmailStatus)
+      .catch(() => setEmailStatus(null));
+  }, []);
   const [settings, setSettings] = useState({
     siteName: "Bilet Ekosistemi",
     siteDescription: "Modern bilet satış platformu",
@@ -42,6 +54,42 @@ export default function AyarlarPage() {
         </p>
 
         <div className="space-y-6">
+          {/* Bilet E-posta Yapılandırması */}
+          {emailStatus && (
+            <div
+              className={`rounded-xl border p-6 ${
+                emailStatus.ready
+                  ? "border-green-200 bg-green-50"
+                  : "border-amber-200 bg-amber-50"
+              }`}
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <Mail className="h-5 w-5 text-slate-600" />
+                Bilet E-postası
+              </h3>
+              <div className="flex items-start gap-3">
+                {emailStatus.ready ? (
+                  <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <XCircle className="h-6 w-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                )}
+                <div>
+                  <p className="font-medium text-slate-900">{emailStatus.message}</p>
+                  <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-600">
+                    <span>RESEND_API_KEY: {emailStatus.checks.RESEND_API_KEY}</span>
+                    <span>TICKET_EMAIL_FROM: {emailStatus.checks.TICKET_EMAIL_FROM}</span>
+                  </div>
+                  {!emailStatus.ready && (
+                    <p className="mt-2 text-sm text-slate-600">
+                      Vercel / .env.local içinde bu değişkenleri tanımlayın. Resend hesabında gönderici
+                      adresini doğrulayın.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Genel Ayarlar */}
           <div className="bg-white rounded-xl border border-slate-200 p-6">
             <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">

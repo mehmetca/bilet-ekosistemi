@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import QRCode from "qrcode";
-import { Download, Printer, Share2 } from "lucide-react";
+import { Printer } from "lucide-react";
 import type { EventCurrency } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 
@@ -36,7 +36,13 @@ export default function TicketPrint({
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
 
-  // QR kodu oluştur
+  const eventDateText = eventDate
+    ? new Date(eventDate).toLocaleDateString("tr-TR")
+    : "-";
+  const timeText = eventTime || "--:--";
+  const priceText = formatPrice(Number(price), currency);
+  const barcodeSrc = `/api/barcode?code=${encodeURIComponent(ticketCode)}`;
+
   useEffect(() => {
     const generateQR = async () => {
       try {
@@ -51,12 +57,9 @@ export default function TicketPrint({
         });
 
         const url = await QRCode.toDataURL(qrData, {
-          width: 200,
-          margin: 2,
-          color: {
-            dark: "#1e293b",
-            light: "#ffffff",
-          },
+          width: 130,
+          margin: 1,
+          color: { dark: "#1e293b", light: "#ffffff" },
         });
 
         setQrCodeUrl(url);
@@ -71,12 +74,72 @@ export default function TicketPrint({
   }, [ticketCode, eventTitle, eventDate, eventTime, venue, buyerName, quantity]);
 
   const handlePrint = () => {
-    // Sadece bilet kartını yazdırmak için
-    const printContent = document.getElementById('ticket-card');
-    if (!printContent) return;
-
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
     if (!printWindow) return;
+
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const barcodeFullUrl = `${origin}/api/barcode?code=${encodeURIComponent(ticketCode)}`;
+
+    const esc = (s: string) =>
+      String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+    const verticalCodeHtml = ticketCode
+      .split("")
+      .map((ch) => `<span style="display:block;line-height:9px;font-size:9px;font-family:monospace;">${esc(ch)}</span>`)
+      .join("");
+
+    const ticketHtml = `
+      <div style="max-width:900px;margin:0 auto;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#fff;">
+        <div style="background:#003f8c;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;letter-spacing:.4px;">
+          BILET EKOSISTEMI E-TICKET
+        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <tr>
+            <td style="width:73%;padding:14px 16px;vertical-align:top;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <tr>
+                  <td style="width:74px;vertical-align:top;padding-right:12px;">
+                    <div style="display:flex;gap:6px;align-items:flex-start;">
+                      <div style="width:42px;height:250px;border:1px solid #e2e8f0;background:#fff;overflow:hidden;">
+                        <img src="${barcodeFullUrl}" alt="Barkod" width="36" height="238" style="display:block;" />
+                      </div>
+                      <div style="font-size:9px;letter-spacing:.7px;font-family:monospace;color:#000;">${verticalCodeHtml}</div>
+                    </div>
+                  </td>
+                  <td style="vertical-align:top;">
+                    <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:.4px;color:#000;">MUSTERI/ETKINLIK BILETI</p>
+                    <p style="margin:6px 0 0;font-size:36px;line-height:42px;font-weight:900;color:#000;">${esc(eventTitle || "Etkinlik")}</p>
+                    <p style="margin:12px 0 0;font-size:18px;line-height:22px;font-weight:800;color:#000;">${eventDateText}, ${timeText}</p>
+                    <p style="margin:4px 0 0;font-size:13px;line-height:16px;color:#000;font-weight:700;">${esc(venue)}</p>
+                    <p style="margin:2px 0 0;font-size:13px;color:#000;">${esc(location)}</p>
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;border-collapse:collapse;font-size:12px;color:#000;">
+                      <tr><td style="padding:2px 0;">Bilet Turu</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(ticketType)}</td></tr>
+                      <tr><td style="padding:2px 0;">Kisi/Adet</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(buyerName)} / ${quantity}</td></tr>
+                      <tr><td style="padding:2px 0;">Toplam</td><td style="padding:2px 0;font-weight:800;text-align:right;">${esc(priceText)}</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td style="width:27%;padding:14px 16px;vertical-align:top;border-left:2px dashed #94a3b8;">
+              <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:.6px;color:#000;">KOPARILABILIR BOLUM</p>
+              <p style="margin:8px 0 0;font-size:12px;font-weight:700;color:#000;">Bilet Kodu</p>
+              <p style="margin:2px 0 0;font-size:18px;font-weight:800;letter-spacing:1px;font-family:monospace;color:#000;">${esc(ticketCode)}</p>
+              <p style="margin:10px 0 0;font-size:11px;color:#000;">Giris Noktasi</p>
+              <p style="margin:2px 0 0;font-size:13px;font-weight:700;color:#000;">EINGANG X</p>
+              <div style="margin-top:10px;text-align:center;">
+                <img src="${qrCodeUrl}" alt="QR" width="130" height="130" style="border:1px solid #e2e8f0;padding:6px;background:#fff;" />
+              </div>
+              <p style="margin:6px 0 0;font-size:10px;color:#000;text-align:center;">QR kodu giriste okutunuz</p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `;
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -84,275 +147,158 @@ export default function TicketPrint({
         <head>
           <title>Bilet - ${ticketCode}</title>
           <style>
-            body {
-              margin: 0;
-              padding: 20px;
-              font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-              print-color-adjust: exact;
-              -webkit-print-color-adjust: exact;
-            }
-            .ticket-card {
-              max-width: 400px;
-              margin: 0 auto;
-              background: white;
-              border: 2px solid #1e293b;
-              border-radius: 12px;
-              overflow: hidden;
-              box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            }
-            .ticket-header {
-              background: linear-gradient(to right, #2563eb, #1d4ed8);
-              color: white;
-              padding: 16px;
-              text-align: center;
-            }
-            .ticket-title {
-              font-size: 18px;
-              font-weight: bold;
-              margin: 0 0 8px 0;
-            }
-            .ticket-datetime {
-              font-size: 14px;
-              opacity: 0.9;
-            }
-            .ticket-body {
-              padding: 16px;
-            }
-            .ticket-grid {
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 16px;
-              margin-bottom: 16px;
-            }
-            .ticket-info {
-              space-y: 8px;
-            }
-            .ticket-label {
-              font-size: 12px;
-              color: #64748b;
-              margin-bottom: 4px;
-            }
-            .ticket-value {
-              font-size: 14px;
-              font-weight: 600;
-              color: #1e293b;
-            }
-            .ticket-code {
-              text-align: center;
-              margin: 16px 0;
-            }
-            .ticket-code-label {
-              font-size: 12px;
-              color: #64748b;
-              margin-bottom: 4px;
-            }
-            .ticket-code-value {
-              font-size: 20px;
-              font-weight: bold;
-              font-family: 'Courier New', monospace;
-              letter-spacing: 2px;
-              color: #1e293b;
-            }
-            .qr-section {
-              text-align: center;
-              margin: 16px 0;
-            }
-            .qr-code {
-              width: 120px;
-              height: 120px;
-              border: 1px solid #e2e8f0;
-              border-radius: 8px;
-              padding: 8px;
-              background: white;
-            }
-            .qr-instruction {
-              font-size: 11px;
-              color: #64748b;
-              margin-top: 8px;
-            }
-            .ticket-footer {
-              background: #f8fafc;
-              padding: 12px 16px;
-              border-top: 1px solid #e2e8f0;
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              font-size: 11px;
-              color: #64748b;
-            }
-            @media print {
-              body { margin: 0; padding: 10px; }
-              .ticket-card { 
-                max-width: 100%; 
-                box-shadow: none;
-                page-break-inside: avoid;
-              }
-            }
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 20px; font-family: Arial, sans-serif; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            @media print { body { padding: 10px; } }
           </style>
         </head>
-        <body>
-          ${printContent.innerHTML}
-        </body>
+        <body>${ticketHtml}</body>
       </html>
     `);
 
     printWindow.document.close();
     printWindow.focus();
-    
-    // Yazdırma dialogunu aç
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
-  };
 
-  const handleDownload = () => {
-    const link = document.createElement("a");
-    link.download = `bilet-${ticketCode}.png`;
-    link.href = qrCodeUrl;
-    link.click();
-  };
-
-  const handleShare = async () => {
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: `${eventTitle} Bileti`,
-          text: `${eventTitle} etkinliği için biletim. Bilet kodu: ${ticketCode}`,
-        });
-      } catch (error) {
-        console.error("Paylaşım hatası:", error);
+    const printWhenReady = () => {
+      const imgs = printWindow.document.images;
+      if (imgs.length === 0) {
+        printWindow.print();
+        printWindow.close();
+        return;
       }
-    }
+      let loaded = 0;
+      const check = () => {
+        loaded++;
+        if (loaded >= imgs.length) {
+          setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+          }, 100);
+        }
+      };
+      for (let i = 0; i < imgs.length; i++) {
+        if (imgs[i].complete) check();
+        else imgs[i].onload = check;
+      }
+    };
+    setTimeout(printWhenReady, 300);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+      <div className="flex justify-center py-8">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Bilet Kartı */}
-      <div id="ticket-card" className="bg-white rounded-xl border-2 border-slate-200 overflow-hidden print:border-2 print:border-black max-w-md mx-auto">
-        <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-4">
-          <h2 className="text-lg font-bold mb-1">{eventTitle}</h2>
-          <div className="flex items-center gap-3 text-primary-100 text-sm">
-            <span>{new Date(eventDate).toLocaleDateString("tr-TR")}</span>
-            <span>•</span>
-            <span>{eventTime}</span>
-          </div>
+      {/* Bilet Kartı - Tasarımlı (email/PDF ile aynı) */}
+      <div
+        id="ticket-card"
+        className="relative mx-auto max-w-[900px] overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm"
+      >
+        {/* Header */}
+        <div className="bg-[#003f8c] px-4 py-2.5 text-sm font-bold tracking-wide text-white">
+          BILET EKOSISTEMI E-TICKET
         </div>
 
-        <div className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Sol Taraf - Bilet Bilgileri */}
-            <div className="space-y-3">
-              <div>
-                <h3 className="text-xs font-medium text-slate-500 mb-1">Bilet Kodu</h3>
-                <p className="text-lg font-mono font-bold text-slate-900 tracking-wider">
-                  {ticketCode}
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-medium text-slate-500 mb-1">Bilet Sahibi</h3>
-                <p className="text-sm font-semibold text-slate-900">{buyerName}</p>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-medium text-slate-500 mb-1">Bilet Türü</h3>
-                <p className="text-sm font-semibold text-slate-900">
-                  {ticketType} ({quantity} adet)
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-medium text-slate-500 mb-1">Fiyat</h3>
-                <p className="text-sm font-bold text-primary-600">
-                  {formatPrice(Number(price), currency)}
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-xs font-medium text-slate-500 mb-1">Mekan</h3>
-                <p className="text-sm text-slate-900">{venue}</p>
-                <p className="text-xs text-slate-600">{location}</p>
-              </div>
-            </div>
-
-            {/* Sağ Taraf - QR Kod */}
-            <div className="flex flex-col items-center justify-center space-y-3">
-              <div className="bg-white p-3 rounded-lg border border-slate-200">
-                <img 
-                  src={qrCodeUrl} 
-                  alt="Bilet QR Kodu" 
-                  className="w-32 h-32"
+        {/* Ana içerik */}
+        <div className="relative flex">
+          {/* Sol: Barkod + Bilgiler (73%) */}
+          <div className="flex min-w-0 flex-1 gap-4 p-4" style={{ width: "73%" }}>
+            <div className="flex flex-shrink-0 items-start gap-1.5">
+              <div className="flex h-[250px] w-[42px] items-center justify-center overflow-hidden rounded border border-slate-200 bg-white">
+                <img
+                  src={barcodeSrc}
+                  alt="Bilet Barkod"
+                  className="h-[238px] w-[36px] object-contain"
                 />
               </div>
-              <p className="text-xs text-slate-500 text-center">
-                Bu QR kodu etkinlik giriş noktasında okutunuz
+              <div className="flex flex-col text-[9px] font-mono leading-[9px] tracking-wide text-black">
+                {ticketCode.split("").map((ch, i) => (
+                  <span key={i}>{ch}</span>
+                ))}
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold tracking-wide text-black">
+                MUSTERI/ETKINLIK BILETI
               </p>
+              <p className="mt-1.5 truncate text-4xl font-black leading-tight text-black md:text-5xl">
+                {eventTitle || "Etkinlik"}
+              </p>
+              <p className="mt-3 text-lg font-extrabold text-black">
+                {eventDateText}, {timeText}
+              </p>
+              <p className="mt-1 text-[13px] font-bold text-black">{venue}</p>
+              <p className="mt-0.5 text-[13px] text-black">{location}</p>
+              <table className="mt-3 w-full border-collapse text-xs text-black">
+                <tbody>
+                  <tr>
+                    <td className="py-0.5">Bilet Turu</td>
+                    <td className="py-0.5 text-right font-bold">{ticketType}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5">Kisi/Adet</td>
+                    <td className="py-0.5 text-right font-bold">
+                      {buyerName} / {quantity}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-0.5">Toplam</td>
+                    <td className="py-0.5 text-right font-extrabold">{priceText}</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
 
-        {/* Alt Bilgi */}
-        <div className="bg-slate-50 px-4 py-3 border-t border-slate-200">
-          <div className="flex items-center justify-between text-xs text-slate-600">
-            <span>Bilet Ekosistemi</span>
-            <span>{new Date().toLocaleDateString("tr-TR")}</span>
+          {/* Kesik çizgi */}
+          <div
+            className="absolute top-0 bottom-0 left-[73%] border-l-2 border-dashed border-slate-400"
+            style={{ width: 0 }}
+          />
+
+          {/* Sağ: Koparılabilir bölüm (27%) */}
+          <div
+            className="flex w-[27%] flex-shrink-0 flex-col p-4"
+            style={{ minWidth: "180px" }}
+          >
+            <p className="text-[10px] font-bold tracking-wide text-black">
+              KOPARILABILIR BOLUM
+            </p>
+            <p className="mt-2 text-xs font-bold text-black">Bilet Kodu</p>
+            <p className="mt-0.5 font-mono text-lg font-extrabold tracking-wide text-black">
+              {ticketCode}
+            </p>
+            <p className="mt-2.5 text-[11px] text-black">Giris Noktasi</p>
+            <p className="mt-0.5 text-[13px] font-bold text-black">EINGANG X</p>
+            <div className="mt-2.5 flex justify-center">
+              <img
+                src={qrCodeUrl}
+                alt="Bilet QR Kodu"
+                className="h-[130px] w-[130px] rounded border border-slate-200 bg-white p-1.5"
+              />
+            </div>
+            <p className="mt-1.5 text-center text-[10px] text-black">
+              QR kodu giriste okutunuz
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Aksiyon Butonları */}
-      <div className="flex flex-wrap gap-3 justify-center print:hidden">
+      {/* Yazdır butonu */}
+      <div className="flex justify-center print:hidden">
         <button
           onClick={handlePrint}
-          className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+          className="flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-primary-700"
         >
           <Printer className="h-5 w-5" />
           Yazdır
         </button>
-        
-        <button
-          onClick={handleDownload}
-          className="flex items-center gap-2 px-6 py-3 bg-slate-600 text-white rounded-lg font-semibold hover:bg-slate-700 transition-colors"
-        >
-          <Download className="h-5 w-5" />
-          QR Kod İndir
-        </button>
-        
-        <button
-          onClick={handleShare}
-          className="flex items-center gap-2 px-6 py-3 border border-slate-300 text-slate-700 rounded-lg font-semibold hover:bg-slate-50 transition-colors"
-        >
-          <Share2 className="h-5 w-5" />
-          Paylaş
-        </button>
       </div>
-
-      {/* Yazdırma Stilleri */}
-      <style jsx>{`
-        @media print {
-          body {
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
-          }
-          
-          .print\\:hidden {
-            display: none !important;
-          }
-          
-          .print\\:border-black {
-            border-color: black !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

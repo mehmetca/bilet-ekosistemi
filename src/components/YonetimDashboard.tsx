@@ -20,11 +20,14 @@ export default function YonetimDashboard() {
           <span className="text-lg">+</span>
           Yeni Etkinlik Ekle
         </Link>
-        <p className="text-sm text-slate-500 mt-4">
-          <Link href="/yonetim/etkinlikler" className="text-primary-600 hover:underline">
+        <div className="flex flex-wrap justify-center gap-4 mt-4">
+          <Link href="/yonetim/etkinlikler" className="text-sm text-primary-600 hover:underline">
             Mevcut etkinliklerinizi görüntüleyin →
           </Link>
-        </p>
+          <Link href="/yonetim/biletlerim" className="text-sm text-primary-600 hover:underline">
+            Biletlerim →
+          </Link>
+        </div>
       </div>
     );
   }

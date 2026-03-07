@@ -171,6 +171,12 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       description: "Etkinlik yönetimi"
     },
     {
+      href: "/yonetim/biletlerim",
+      label: "Biletlerim",
+      icon: Ticket,
+      description: "Satın aldığınız biletler"
+    },
+    {
       href: "/yonetim/bilgilerim",
       label: "Organizasyon Bilgileri",
       icon: User,

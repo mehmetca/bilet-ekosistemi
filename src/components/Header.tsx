@@ -53,8 +53,8 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="container mx-auto flex h-14 sm:h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg sm:text-xl text-primary-600">
+      <div className="container mx-auto flex h-14 sm:h-16 items-center px-4">
+        <Link href="/" className="flex items-center gap-2 font-bold text-lg sm:text-xl text-primary-600 shrink-0">
           <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary-600 text-white shrink-0">
             <Ticket className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
@@ -62,8 +62,17 @@ export default function Header() {
           <span className="sm:hidden">Bilet</span>
         </Link>
 
-        {/* Masaüstü menü */}
-        <nav className="hidden md:flex items-center gap-6">
+        {/* Masaüstü menü - ortada: nav + sepet + dil */}
+        <nav className="hidden md:flex flex-1 justify-center items-center gap-6">
+          {navLinks.map(({ href, labelKey }) => (
+            <Link
+              key={href}
+              href={href}
+              className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
+            >
+              {t(labelKey)}
+            </Link>
+          ))}
           <NextLink
             href={`/${locale}/sepet`}
             className="relative flex items-center gap-1 text-slate-600 hover:text-primary-600 font-medium transition-colors"
@@ -75,15 +84,6 @@ export default function Header() {
               </span>
             )}
           </NextLink>
-          {navLinks.map(({ href, labelKey }) => (
-            <Link
-              key={href}
-              href={href}
-              className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
-            >
-              {t(labelKey)}
-            </Link>
-          ))}
           <div className="relative" ref={langDropdownRef}>
             <button
               type="button"
@@ -119,6 +119,9 @@ export default function Header() {
               </div>
             )}
           </div>
+        </nav>
+        {/* Sağ: Yönetim / Giriş / Bilgilerim */}
+        <div className="hidden md:flex items-center shrink-0">
           {user ? (
             hasManagementRole ? (
               <NextLink
@@ -146,7 +149,7 @@ export default function Header() {
               {t("nav.login")} / {t("nav.signup")}
             </NextLink>
           )}
-        </nav>
+        </div>
 
         {/* Mobil: hamburger + açılır menü */}
         <div className="flex md:hidden items-center gap-2">
@@ -178,14 +181,6 @@ export default function Header() {
             className="absolute left-0 right-0 top-full z-50 flex flex-col gap-1 border-b border-slate-200 bg-white py-3 px-4 shadow-lg md:hidden"
             role="navigation"
           >
-            <NextLink
-              href={`/${locale}/sepet`}
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
-            >
-              <ShoppingCart className="h-5 w-5" />
-              Sepet {totalItems > 0 && `(${totalItems})`}
-            </NextLink>
             {navLinks.map(({ href, labelKey }) => (
               <Link
                 key={href}
@@ -196,6 +191,14 @@ export default function Header() {
                 {t(labelKey)}
               </Link>
             ))}
+            <NextLink
+              href={`/${locale}/sepet`}
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              Sepet {totalItems > 0 && `(${totalItems})`}
+            </NextLink>
             <div className="relative px-4 py-2" ref={langDropdownMobileRef}>
               <button
                 type="button"

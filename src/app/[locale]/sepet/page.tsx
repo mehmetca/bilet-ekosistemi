@@ -8,7 +8,7 @@ import { supabase } from "@/lib/supabase-client";
 import Header from "@/components/Header";
 import { Link, useRouter } from "@/i18n/navigation";
 import { formatPrice } from "@/lib/formatPrice";
-import { ShoppingCart, Trash2, Calendar, MapPin, Ticket, ChevronRight } from "lucide-react";
+import { ShoppingCart, Trash2, Calendar, MapPin, Ticket, ChevronRight, CreditCard, Lock } from "lucide-react";
 import TicketPrint from "@/components/TicketPrint";
 
 const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
@@ -27,6 +27,10 @@ export default function CheckoutPage() {
   const [buyerAddress, setBuyerAddress] = useState("");
   const [buyerPlz, setBuyerPlz] = useState("");
   const [buyerCity, setBuyerCity] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiry, setCardExpiry] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
+  const [cardHolderName, setCardHolderName] = useState("");
 
   // Giriş yapmış kullanıcının profilini çek ve alanları doldur (adres dahil)
   useEffect(() => {
@@ -63,12 +67,14 @@ export default function CheckoutPage() {
     }
     loadProfile();
   }, [user, user?.email]);
+  const [currentStep, setCurrentStep] = useState(1);
   const [isPending, setIsPending] = useState(false);
   const [results, setResults] = useState<
     Array<{
       success: boolean;
       ticketCode?: string;
       message: string;
+      emailSent?: boolean;
       orderDetails?: { buyerName: string; quantity: number; ticketType: string; price: number };
     }>
   >([]);
@@ -78,16 +84,23 @@ export default function CheckoutPage() {
   async function handleCompleteOrder(e: React.FormEvent) {
     e.preventDefault();
     if (items.length === 0) return;
-    if (!buyerName.trim() || !buyerEmail.trim()) {
-      setError(tEvent("nameEmailRequired"));
-      return;
+    const finalEmail = (buyerEmail.trim() || user?.email || "").trim();
+    const finalName = buyerName.trim() || (user?.email ? user.email.split("@")[0] : "") || "Müşteri";
+    if (!user) {
+      if (!buyerName.trim() || !buyerEmail.trim()) {
+        setError(tEvent("nameEmailRequired"));
+        return;
+      }
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(buyerEmail)) {
+    if (!finalEmail || !emailRegex.test(finalEmail)) {
       setError("Geçerli bir e-posta adresi girin.");
       return;
     }
-
+    if (!cardNumber.trim() || !cardExpiry.trim() || !cardCvc.trim() || !cardHolderName.trim()) {
+      setError(t("cardFieldsRequired"));
+      return;
+    }
     setError(null);
     setIsPending(true);
     const orderResults: typeof results = [];
@@ -106,8 +119,8 @@ export default function CheckoutPage() {
         const formData = new FormData();
         formData.append("ticket_id", item.ticketId);
         formData.append("quantity", String(item.quantity));
-        formData.append("buyer_name", buyerName.trim());
-        formData.append("buyer_email", buyerEmail.trim());
+        formData.append("buyer_name", finalName);
+        formData.append("buyer_email", finalEmail);
         if (buyerAddress.trim()) formData.append("buyer_address", buyerAddress.trim());
         if (buyerPlz.trim()) formData.append("buyer_plz", buyerPlz.trim());
         if (buyerCity.trim()) formData.append("buyer_city", buyerCity.trim());
@@ -124,8 +137,9 @@ export default function CheckoutPage() {
             success: true,
             ticketCode: data.ticketCode,
             message: data.message,
+            emailSent: data.emailSent !== false,
             orderDetails: {
-              buyerName: buyerName.trim(),
+              buyerName: finalName,
               quantity: item.quantity,
               ticketType: item.ticketName,
               price: item.price * item.quantity,
@@ -168,26 +182,56 @@ export default function CheckoutPage() {
       <div className="mx-auto max-w-4xl px-4 py-8">
         {/* Progress steps - Eventim style */}
         <div className="mb-10 flex items-center justify-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-sm font-bold text-white">
+          <button
+            type="button"
+            onClick={() => setCurrentStep(1)}
+            className="flex items-center gap-2 text-left"
+          >
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
+                currentStep >= 1 ? "bg-primary-600 text-white" : "bg-slate-200 text-slate-600"
+              }`}
+            >
               1
             </div>
-            <span className="text-sm font-semibold text-slate-900">{t("stepCart")}</span>
-          </div>
+            <span className={`text-sm font-semibold ${currentStep >= 1 ? "text-slate-900" : "text-slate-500"}`}>
+              {t("stepCart")}
+            </span>
+          </button>
           <ChevronRight className="h-5 w-5 text-slate-400" />
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
+          <button
+            type="button"
+            onClick={() => currentStep >= 2 && setCurrentStep(2)}
+            className="flex items-center gap-2 text-left disabled:cursor-not-allowed"
+          >
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
+                currentStep >= 2 ? "bg-primary-600 text-white" : "bg-slate-200 text-slate-600"
+              }`}
+            >
               2
             </div>
-            <span className="text-sm font-medium text-slate-500">{t("stepDelivery")}</span>
-          </div>
+            <span className={`text-sm font-medium ${currentStep >= 2 ? "text-slate-900" : "text-slate-500"}`}>
+              {t("stepDelivery")}
+            </span>
+          </button>
           <ChevronRight className="h-5 w-5 text-slate-400" />
-          <div className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-200 text-sm font-semibold text-slate-600">
+          <button
+            type="button"
+            onClick={() => currentStep >= 3 && setCurrentStep(3)}
+            className="flex items-center gap-2 text-left disabled:cursor-not-allowed"
+          >
+            <div
+              className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
+                currentStep >= 3 ? "bg-primary-600 text-white" : "bg-slate-200 text-slate-600"
+              }`}
+            >
               3
             </div>
-            <span className="text-sm font-medium text-slate-500">{t("stepPayment")}</span>
-          </div>
+            <span className={`text-sm font-medium ${currentStep >= 3 ? "text-slate-900" : "text-slate-500"}`}>
+              {t("stepPayment")}
+            </span>
+          </button>
         </div>
 
         <h1 className="mb-8 text-2xl font-bold text-slate-900 md:text-3xl">{t("title")}</h1>
@@ -205,6 +249,12 @@ export default function CheckoutPage() {
           </div>
         ) : allSuccess ? (
           <div className="space-y-6">
+            {results.some((r) => r.success && !r.emailSent) && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+                <p className="font-medium">{t("emailNotSent")}</p>
+                <p className="mt-1 text-sm">{t("emailNotSentHint")}</p>
+              </div>
+            )}
             {results.map((r, idx) =>
               r.success && r.ticketCode && r.orderDetails ? (
                 <div
@@ -248,10 +298,11 @@ export default function CheckoutPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid gap-8 lg:grid-cols-[1fr_360px] lg:items-start">
-            {/* Sol: Sepet */}
-            <div className="space-y-4">
-              {items.map((item) => (
+          <div className={currentStep === 3 ? "grid gap-8 lg:grid-cols-[1fr_360px] lg:items-start" : "space-y-6"}>
+            {/* Adım 1: Sepet */}
+            {currentStep === 1 && (
+              <div className="space-y-4">
+                {items.map((item) => (
                 <div
                   key={item.ticketId}
                   className="flex gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
@@ -315,8 +366,22 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               ))}
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700"
+                  >
+                    {t("stepContinue")}
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            )}
 
-              {/* Teslimat */}
+            {/* Adım 2: Teslimat */}
+            {currentStep === 2 && (
+              <div className="space-y-4">
               <div className="rounded-xl border border-slate-200 bg-white p-6">
                 <h2 className="mb-4 text-lg font-bold text-slate-900">{t("deliveryMethod")}</h2>
                 <div className="flex items-start gap-3 rounded-lg border-2 border-primary-500 bg-primary-50 p-4">
@@ -329,36 +394,138 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               </div>
+                <div className="flex justify-between">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    {t("stepBack")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(3)}
+                    className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700"
+                  >
+                    {t("stepContinue")}
+                    <ChevronRight className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            )}
 
-              {/* Müşteri bilgileri */}
+            {/* Adım 3: Ödeme bilgileri + Müşteri bilgileri + Sipariş özeti */}
+            {currentStep === 3 && (
+              <>
+              <div className="space-y-4">
+              {/* Kredi kartı - üstte */}
               <div className="rounded-xl border border-slate-200 bg-white p-6">
-                <h2 className="mb-4 text-lg font-bold text-slate-900">{t("customerInfo")}</h2>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <h2 className="mb-4 text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-slate-600" />
+                  {t("paymentDetails")}
+                </h2>
+                <p className="mb-4 flex items-center gap-2 text-sm text-slate-600">
+                  <Lock className="h-4 w-4" />
+                  {t("securePayment")}
+                </p>
+                <div className="space-y-4">
                   <div>
                     <label className="mb-2 block text-sm font-medium text-slate-700">
-                      {t("fullName")}
+                      {t("cardNumber")}
                     </label>
                     <input
                       type="text"
-                      value={buyerName}
-                      onChange={(e) => setBuyerName(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                      placeholder={tEvent("fullNamePlaceholder")}
+                      value={cardNumber}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 19);
+                        setCardNumber(v.replace(/(\d{4})(?=\d)/g, "$1 "));
+                      }}
+                      placeholder="1234 5678 9012 3456"
+                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-mono focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        {t("cardExpiry")}
+                      </label>
+                      <input
+                        type="text"
+                        value={cardExpiry}
+                        onChange={(e) => {
+                          let v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                          if (v.length >= 2) v = v.slice(0, 2) + "/" + v.slice(2);
+                          setCardExpiry(v);
+                        }}
+                        placeholder="MM/YY"
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-mono focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        {t("cardCvc")}
+                      </label>
+                      <input
+                        type="text"
+                        value={cardCvc}
+                        onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                        placeholder="123"
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-mono focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className="mb-2 block text-sm font-medium text-slate-700">
-                      {t("email")}
+                      {t("cardHolderName")}
                     </label>
                     <input
-                      type="email"
-                      value={buyerEmail}
-                      onChange={(e) => setBuyerEmail(e.target.value)}
+                      type="text"
+                      value={cardHolderName}
+                      onChange={(e) => setCardHolderName(e.target.value)}
+                      placeholder={t("cardHolderPlaceholder")}
                       className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                      placeholder={tEvent("reminderPlaceholder")}
                     />
                   </div>
                 </div>
+                <p className="mt-3 text-xs text-slate-500">{t("testModeHint")}</p>
+              </div>
+
+              {/* Müşteri bilgileri - altta */}
+              <div className="rounded-xl border border-slate-200 bg-white p-6">
+                <h2 className="mb-4 text-lg font-bold text-slate-900">{t("customerInfo")}</h2>
+                {user ? (
+                  <div className="mb-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
+                    <p><span className="font-medium">{t("fullName")}:</span> {buyerName || user.email?.split("@")[0] || "—"}</p>
+                    <p className="mt-1"><span className="font-medium">{t("email")}:</span> {buyerEmail || user.email || "—"}</p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        {t("fullName")}
+                      </label>
+                      <input
+                        type="text"
+                        value={buyerName}
+                        onChange={(e) => setBuyerName(e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                        placeholder={tEvent("fullNamePlaceholder")}
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-700">
+                        {t("email")}
+                      </label>
+                      <input
+                        type="email"
+                        value={buyerEmail}
+                        onChange={(e) => setBuyerEmail(e.target.value)}
+                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                        placeholder={tEvent("reminderPlaceholder")}
+                      />
+                    </div>
+                  </div>
+                )}
                 <p className="mt-3 text-xs text-slate-500">{t("addressHint")}</p>
                 <div className="mt-3 grid gap-4 sm:grid-cols-2">
                   <div className="sm:col-span-2">
@@ -399,6 +566,16 @@ export default function CheckoutPage() {
                     </Link>
                   </p>
                 )}
+              </div>
+
+              <div className="flex justify-between">
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(2)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  {t("stepBack")}
+                </button>
               </div>
             </div>
 
@@ -450,6 +627,8 @@ export default function CheckoutPage() {
                 </button>
               </div>
             </div>
+              </>
+            )}
           </div>
         )}
       </div>
