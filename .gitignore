@@ -16,6 +16,7 @@ node_modules
 out
 
 # misc
+bilet
 .DS_Store
 *.pem
 npm-debug.log*
