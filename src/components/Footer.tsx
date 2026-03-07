@@ -9,6 +9,7 @@ const menuLinks = [
   { href: "/bilgilendirme", labelKey: "footer.information", useNextLink: false },
   { href: "/bilgilendirme/sss", labelKey: "footer.faq", useNextLink: false },
   { href: "/bilgilendirme/b2b", labelKey: "footer.b2b", useNextLink: false },
+  { href: "/bilgilendirme/organizator-destek", labelKey: "footer.organizerSupport", useNextLink: false },
   { href: "/organizator-basvuru", labelKey: "nav.organizerApplication", useNextLink: false },
   { href: "/bilgilendirme/impressum", labelKey: "footer.impressum", useNextLink: false },
   { href: "/bilgilendirme/cerez-politikasi", labelKey: "footer.cookiePolicy", useNextLink: false },

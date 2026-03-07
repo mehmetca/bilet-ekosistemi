@@ -132,6 +132,26 @@ export default function ClientHomePage({
       });
   }, []);
 
+  // Şehir bölümü: sayfa yüklendiğinde rastgele bir şehre scroll
+  useEffect(() => {
+    if (cities.length <= 1 || !cityScrollRef.current) return;
+    const el = cityScrollRef.current;
+    const randomIndex = Math.floor(Math.random() * cities.length);
+    const scrollToRandom = () => {
+      const first = el.querySelector("a");
+      if (first) {
+        const card = first as HTMLElement;
+        const gap = 12;
+        const cardWidth = card.offsetWidth + gap;
+        const targetLeft = Math.min(randomIndex * cardWidth, el.scrollWidth - el.clientWidth);
+        el.scrollTo({ left: targetLeft, behavior: "auto" });
+      }
+    };
+    scrollToRandom();
+    const t = window.setTimeout(scrollToRandom, 100);
+    return () => clearTimeout(t);
+  }, [cities]);
+
   // Sadece sayfa geri dönüşünde yenile (ilk yükleme server'dan gelir)
   useEffect(() => {
     isMountedRef.current = true;
@@ -397,30 +417,38 @@ export default function ClientHomePage({
                 {t("viewAllCities")} →
               </Link>
             </div>
-            <div className="relative -mx-2 md:-mx-4">
+            <div className="relative -mx-4 md:-mx-4">
               <button
                 type="button"
                 onClick={() => {
-                  cityScrollRef.current?.scrollBy({ left: -260, behavior: "smooth" });
+                  const el = cityScrollRef.current;
+                  if (!el) return;
+                  const first = el.querySelector("a") as HTMLElement | null;
+                  const step = first ? first.offsetWidth + 12 : 220;
+                  el.scrollBy({ left: -step, behavior: "smooth" });
                 }}
-                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/95 p-2.5 shadow-lg ring-1 ring-slate-200 transition-all hover:bg-white hover:shadow-xl md:left-4"
+                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/20 p-2.5 text-white backdrop-blur-sm transition-all hover:bg-black/35 md:left-4"
                 aria-label="Önceki"
               >
-                <ChevronLeft className="h-6 w-6 text-slate-700" />
+                <ChevronLeft className="h-6 w-6" />
               </button>
               <button
                 type="button"
                 onClick={() => {
-                  cityScrollRef.current?.scrollBy({ left: 240, behavior: "smooth" });
+                  const el = cityScrollRef.current;
+                  if (!el) return;
+                  const first = el.querySelector("a") as HTMLElement | null;
+                  const step = first ? first.offsetWidth + 12 : 220;
+                  el.scrollBy({ left: step, behavior: "smooth" });
                 }}
-                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/95 p-2.5 shadow-lg ring-1 ring-slate-200 transition-all hover:bg-white hover:shadow-xl md:right-4"
+                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/20 p-2.5 text-white backdrop-blur-sm transition-all hover:bg-black/35 md:right-4"
                 aria-label="Sonraki"
               >
-                <ChevronRight className="h-6 w-6 text-slate-700" />
+                <ChevronRight className="h-6 w-6" />
               </button>
               <div
                 ref={cityScrollRef}
-                className="flex gap-3 overflow-x-auto scroll-smooth pb-2 scrollbar-hide"
+                className="flex gap-3 overflow-x-auto scroll-smooth pb-2 scrollbar-hide snap-x snap-mandatory"
               >
                 {cities.map((city) => {
                   const name = (locale === "de" ? city.name_de : locale === "en" ? city.name_en : city.name_tr) || city.name_tr || city.name_de || city.name_en || city.slug;
@@ -428,7 +456,7 @@ export default function ClientHomePage({
                     <Link
                       key={city.id}
                       href={`/city/${city.slug}`}
-                      className="group flex min-w-[180px] max-w-[180px] flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 sm:min-w-[200px] sm:max-w-[200px] md:min-w-[220px] md:max-w-[220px] xl:min-w-[240px] xl:max-w-[240px]"
+                      className="group flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 snap-center min-w-[100vw] max-w-[100vw] sm:min-w-[200px] sm:max-w-[200px] md:min-w-[220px] md:max-w-[220px] xl:min-w-[240px] xl:max-w-[240px]"
                     >
                       <div className="aspect-[16/9] overflow-hidden bg-slate-100">
                         {city.image_url ? (

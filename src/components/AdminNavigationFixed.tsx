@@ -169,6 +169,12 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       label: "Etkinlikler",
       icon: Calendar,
       description: "Etkinlik yönetimi"
+    },
+    {
+      href: "/yonetim/bilgilerim",
+      label: "Organizasyon Bilgileri",
+      icon: User,
+      description: "Başvuru formu ve bilgileriniz"
     }
   ];
 

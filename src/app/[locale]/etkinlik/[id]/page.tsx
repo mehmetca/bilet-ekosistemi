@@ -234,8 +234,10 @@ export default async function EventDetailPage({ params }: PageProps) {
   // Biletinial tarzı: show_slug ile gruplanmış tur/gösteri sayfası (2+ etkinlik)
   const showEvents = await getEventsByShowSlug(id);
   if (showEvents.length >= 2) {
-    const firstCreatorId = (showEvents[0] as { created_by_user_id?: string }).created_by_user_id;
-    const organizerDisplayName = await getOrganizerDisplayName(firstCreatorId);
+    const firstEvent = showEvents[0] as { created_by_user_id?: string; organizer_display_name?: string | null };
+    const lookedUp = await getOrganizerDisplayName(firstEvent.created_by_user_id);
+    const organizerDisplayName =
+      firstEvent.organizer_display_name?.trim() || lookedUp || null;
     return (
       <ShowDetailClient
         events={showEvents}
@@ -249,11 +251,15 @@ export default async function EventDetailPage({ params }: PageProps) {
   const event = await getEventBySlug(id);
   if (!event) notFound();
 
-  const [tickets, venue, organizerDisplayName] = await Promise.all([
+  const [tickets, venue, lookedUpOrganizer] = await Promise.all([
     getEventTickets(event.id),
     event.venue_id ? getVenue(event.venue_id) : Promise.resolve(null),
     getOrganizerDisplayName((event as { created_by_user_id?: string }).created_by_user_id),
   ]);
+  const organizerDisplayName =
+    (event as { organizer_display_name?: string | null }).organizer_display_name?.trim() ||
+    lookedUpOrganizer ||
+    null;
 
   const structuredData = buildEventStructuredData(event, venue);
 

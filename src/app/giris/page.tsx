@@ -452,7 +452,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Organizatör Başvurusu linki */}
+          {/* Organizasyon Başvurusu linki */}
           <div className="mt-12 pt-12 border-t border-slate-200 text-center">
             <p className="text-slate-600 text-sm mb-3">
               Etkinlik ekleyip bilet satmak mı istiyorsunuz?
@@ -462,7 +462,7 @@ export default function LoginPage() {
               className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-semibold"
             >
               <Calendar className="h-5 w-5" />
-              Organizatör Başvuru Formu
+              {t("organizerFormLink")}
             </NextLink>
           </div>
         </div>

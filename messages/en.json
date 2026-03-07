@@ -30,7 +30,8 @@
     "errorRegisterFailed": "Registration could not be created.",
     "successRegistered": "Your account has been created! You can log in and purchase tickets.",
     "errorGeneric": "An unexpected error occurred.",
-    "organizerTitle": "Organiser Application",
+    "organizerTitle": "Organization Application",
+    "organizerFormLink": "Organization Application Form",
     "organizerSubtitle": "If you want to add and manage events, fill out the form below. After administrator approval you will be able to add events.",
     "submitting": "Submitting application...",
     "organizerApply": "Apply as Organiser",
@@ -47,7 +48,7 @@
     "regPasswordPlaceholder": "At least 6 characters"
   },
   "organizerApplication": {
-    "title": "Organiser Application Form",
+    "title": "Organization Application Form",
     "subtitle": "If you want to add events and sell tickets, fill out the form below. The information requested is in accordance with DDG § 5 and the B2B contract. After approval you will be able to add events.",
     "accountSection": "Account Details",
     "companySection": "Company / DDG § 5 Information",
@@ -69,7 +70,7 @@
     "representativeNamePlaceholder": "Full name",
     "organizationDisplayName": "Name to display in events",
     "organizationDisplayNamePlaceholder": "e.g. Erdal Kaya, Concert Organisation Ltd.",
-    "organizationDisplayNameHelp": "This name will be shown as \"Organiser\" on event cards and detail pages.",
+    "organizationDisplayNameHelp": "This name will be shown as \"Organization\" on event cards and detail pages.",
     "termsSection": "Contract and Rules",
     "termsCheckbox": "I have read and accept the B2B rules, organiser contract and DDG § 5 obligations.",
     "termsB2BLink": "B2B rules and contracts",
@@ -89,7 +90,7 @@
     "login": "Log In",
     "signup": "Sign Up",
     "admin": "Admin",
-    "organizerApplication": "Organiser Application"
+    "organizerApplication": "Organization Application"
   },
   "home": {
     "heroTitle": "Find Tickets for Your Dream Event",
@@ -355,7 +356,8 @@
     "distanceSales": "Distance Sales Agreement",
     "terms": "Terms of Use",
     "faq": "FAQ",
-    "b2b": "B2B Terms"
+    "b2b": "B2B Terms",
+    "organizerSupport": "Organizer Support"
   },
   "infoMenu": {
     "title": "Information & Legal",
@@ -526,7 +528,14 @@
     "errorPasswordMinLength": "Password must be at least 6 characters",
     "errorPasswordUpdateFailed": "Password could not be updated",
     "successPasswordUpdated": "Password has been successfully updated.",
-    "backToPanel": "Back to My Account"
+    "backToPanel": "Back to My Account",
+    "organizationFormSection": "Organization Application Details",
+    "organizationFormStatusPending": "Your application is being reviewed.",
+    "organizationFormStatusApproved": "Your application has been approved.",
+    "organizationFormStatusRejected": "Your application has been rejected.",
+    "organizerNo": "Organizer Code",
+    "saveOrganizationInfo": "Save Organization Info",
+    "organizationInfoReadOnlyHint": "Cannot be changed after approval"
   },
   "terms": {
     "title": "Terms of Use",
@@ -617,5 +626,56 @@
     },
     "contact": "Contact",
     "contactDesc": "For B2B cooperation, organiser applications, advertising and sponsorship, use the contact details on the Impressum page. Organiser applications can also be submitted via the site."
+  },
+  "organizerSupport": {
+    "title": "Organizer Support",
+    "subtitle": "Guide to adding events and managing information",
+    "lastUpdated": "Last updated",
+    "intro": "This page is a support document for those who want to add and manage events as organisers on the Bilet Ekosistemi platform. It provides guidance on the application process, approval waiting period, completing your information, and which details can be changed.",
+    "howToAddEvents": {
+      "title": "How to Add Events?",
+      "step1": "Log in: Sign in with your organiser account.",
+      "step2": "Go to the management panel: Access the panel via \"Management\" or \"Login\" from the top menu.",
+      "step3": "Events page: Click \"Events\" in the left menu.",
+      "step4": "New event: Click \"New Event\" or \"Add Event\".",
+      "step5": "Fill in the form: Complete all required fields such as event name, date, venue, ticket types, prices and description.",
+      "step6": "Save: Submit the form to create your event. The event will enter the approval process."
+    },
+    "approvalProcess": {
+      "title": "Approval Process and Waiting",
+      "desc": "Your organiser application and events you add are reviewed by the platform administrator. This process is usually completed within a few business days.",
+      "pending": "While your application is \"Pending\", you cannot add events. Your organiser role must first be approved.",
+      "approved": "After approval, you can add, edit and start ticket sales for events from the management panel.",
+      "patience": "Please be patient during the approval process. You can contact us via the Impressum page for any questions."
+    },
+    "completeInfo": {
+      "title": "Complete Your Information Fully",
+      "desc": "For smooth operation as an organiser, all your information must be complete and accurate.",
+      "required": "The fields requested in the Organisation Application Details section (company name, legal form, address, phone, trade register, tax number, representative name, display name) are required under DDG § 5 and the B2B agreement.",
+      "where": "You can view and complete missing fields at \"Management\" → \"Organisation Details\".",
+      "tip": "Leaving no information incomplete is important for both legal compliance and building trust with your customers."
+    },
+    "editableInfo": {
+      "title": "Which Information Can Be Changed?",
+      "editable": {
+        "title": "Editable information",
+        "desc": "After approval, you can update the following at any time:",
+        "items": "Address, phone, legal form, trade register, registration number, VAT ID (USt-IdNr.)"
+      },
+      "readOnly": {
+        "title": "Non-editable information",
+        "desc": "After approval, the following fields cannot be changed for security and contract integrity. You can only fill them in for the first time if you left them empty:",
+        "items": "Company or business name, authorised representative (name), display name for organisations"
+      },
+      "profileNote": "Your first and last name in personal information also cannot be changed once saved in your organiser account."
+    },
+    "summary": {
+      "title": "Summary",
+      "list1": "Submit your organiser application and wait for approval.",
+      "list2": "Complete all your organisation information fully.",
+      "list3": "After approval, add events via Management → Events.",
+      "list4": "You can update address, phone, tax number etc. when needed.",
+      "list5": "Company name, representative name and organisation name cannot be changed after approval."
+    }
   }
 }

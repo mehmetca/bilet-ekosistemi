@@ -3,7 +3,7 @@
 import Header from "@/components/Header";
 import { Link, usePathname } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, HelpCircle, FileText, Scale, Building2 } from "lucide-react";
+import { ArrowLeft, HelpCircle, FileText, Scale, Building2, Users } from "lucide-react";
 
 const MENU_ITEMS = [
   { href: "/bilgilendirme/sss", labelKey: "footer.faq", icon: HelpCircle },
@@ -15,6 +15,7 @@ const MENU_ITEMS = [
 ];
 
 const B2B_MENU_ITEM = { href: "/bilgilendirme/b2b", labelKey: "footer.b2b", icon: Building2 };
+const ORGANIZATOR_DESTEK_ITEM = { href: "/bilgilendirme/organizator-destek", labelKey: "footer.organizerSupport", icon: Users };
 
 export default function BilgilendirmeLayout({
   children,
@@ -70,8 +71,25 @@ export default function BilgilendirmeLayout({
                   })}
                   <li className="pt-2 mt-2 border-t border-slate-200">
                     <Link
+                      href={ORGANIZATOR_DESTEK_ITEM.href}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        pathname === ORGANIZATOR_DESTEK_ITEM.href || pathname?.endsWith("/organizator-destek")
+                          ? "bg-primary-50 text-primary-700"
+                          : "text-slate-700 hover:bg-slate-100"
+                      }`}
+                    >
+                      <ORGANIZATOR_DESTEK_ITEM.icon className="h-4 w-4 shrink-0" />
+                      {t(ORGANIZATOR_DESTEK_ITEM.labelKey)}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
                       href={B2B_MENU_ITEM.href}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100"
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        pathname === B2B_MENU_ITEM.href || pathname?.endsWith("/b2b")
+                          ? "bg-primary-50 text-primary-700"
+                          : "text-slate-700 hover:bg-slate-100"
+                      }`}
                     >
                       <B2B_MENU_ITEM.icon className="h-4 w-4 shrink-0" />
                       {t(B2B_MENU_ITEM.labelKey)}

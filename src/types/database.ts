@@ -19,6 +19,8 @@ export interface Event {
   created_at: string;
   updated_at: string;
   created_by_user_id?: string | null;
+  /** Etkinlik sayfasında gösterilecek organizatör adı. Boşsa created_by_user_id üzerinden organizer_profiles'dan alınır. */
+  organizer_display_name?: string | null;
   /** Çok dilli alanlar */
   title_tr?: string | null;
   title_de?: string | null;

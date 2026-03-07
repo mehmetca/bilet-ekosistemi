@@ -84,6 +84,8 @@ function EtkinliklerContent() {
   const [selectedVenueId, setSelectedVenueId] = useState<string>("");
   const [eventStats, setEventStats] = useState<Record<string, { favorites: number; reminders: number }>>({});
   const [organizerNames, setOrganizerNames] = useState<Record<string, string>>({});
+  const [organizerDisplayName, setOrganizerDisplayName] = useState("");
+  const [currentUserOrganizerName, setCurrentUserOrganizerName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAdmin && !isOrganizer) return;
@@ -125,6 +127,17 @@ function EtkinliklerContent() {
         setOrganizerNames(map);
       } else {
         setOrganizerNames({});
+      }
+
+      if (isOrganizer && user?.id) {
+        const { data: myProfile } = await supabase
+          .from("organizer_profiles")
+          .select("organization_display_name")
+          .eq("user_id", user.id)
+          .single();
+        setCurrentUserOrganizerName(myProfile?.organization_display_name?.trim() || null);
+      } else {
+        setCurrentUserOrganizerName(null);
       }
 
       if (isAdmin) {
@@ -274,6 +287,9 @@ function EtkinliklerContent() {
       if (isOrganizer && user?.id) {
         copyPayload.created_by_user_id = user.id;
         copyPayload.is_approved = false;
+        if (currentUserOrganizerName) {
+          (copyPayload as Record<string, unknown>).organizer_display_name = currentUserOrganizerName;
+        }
       }
 
       const { data: newEvent, error: insertError } = await withTimeout(
@@ -361,6 +377,7 @@ function EtkinliklerContent() {
     setVenueDe((event as Event & { venue_de?: string }).venue_de || "");
     setVenueEn((event as Event & { venue_en?: string }).venue_en || "");
     setSelectedVenueId((event as Event & { venue_id?: string }).venue_id || "");
+    setOrganizerDisplayName((event as Event & { organizer_display_name?: string }).organizer_display_name || "");
     setShowForm(true);
     await loadTicketQuantities(event.id);
   }
@@ -384,6 +401,7 @@ function EtkinliklerContent() {
     setTicketQuantities({ ...EMPTY_TICKET_QUANTITIES });
     setTicketPrices({ ...EMPTY_TICKET_PRICES });
     setSelectedVenueId("");
+    setOrganizerDisplayName("");
   }
 
   async function syncPresetTickets(eventId: string, basePrice: number) {
@@ -506,10 +524,14 @@ function EtkinliklerContent() {
         venue_de: venueDe || null,
         venue_en: venueEn || null,
         show_slug: (formData.get("show_slug") as string)?.trim() || null,
+        organizer_display_name: organizerDisplayName?.trim() || null,
       };
       if (isOrganizer && user?.id && !editingEvent) {
         (eventData as Record<string, unknown>).created_by_user_id = user.id;
         (eventData as Record<string, unknown>).is_approved = false;
+        if (!organizerDisplayName?.trim() && currentUserOrganizerName) {
+          (eventData as Record<string, unknown>).organizer_display_name = currentUserOrganizerName;
+        }
       }
 
       if (editingEvent) {
@@ -597,6 +619,7 @@ function EtkinliklerContent() {
               setTicketQuantities({ ...EMPTY_TICKET_QUANTITIES });
               setTicketPrices({ ...EMPTY_TICKET_PRICES });
               setSelectedVenueId("");
+              setOrganizerDisplayName(currentUserOrganizerName || "");
             }}
             className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
           >
@@ -787,6 +810,22 @@ function EtkinliklerContent() {
                   />
                   <p className="mt-1 text-xs text-slate-500">
                     Aynı slug&apos;a sahip 2+ etkinlik tek sayfada şehir seçerek gösterilir (Biletinial gibi).
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Organizasyon (etkinlik sayfasında görünecek)
+                  </label>
+                  <input
+                    type="text"
+                    value={organizerDisplayName}
+                    onChange={(e) => setOrganizerDisplayName(e.target.value)}
+                    placeholder={isOrganizer ? "Profilinizden otomatik doldurulur" : "Örn: Erdal Kaya, Konser Org Ltd."}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">
+                    Bu isim etkinlik sayfasında &quot;Organizasyon&quot; olarak gösterilir.
                   </p>
                 </div>
 

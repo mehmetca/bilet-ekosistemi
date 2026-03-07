@@ -30,7 +30,8 @@
     "errorRegisterFailed": "Registrierung konnte nicht erstellt werden.",
     "successRegistered": "Ihr Konto wurde erstellt! Sie können sich anmelden und Tickets kaufen.",
     "errorGeneric": "Ein unerwarteter Fehler ist aufgetreten.",
-    "organizerTitle": "Veranstalter-Bewerbung",
+    "organizerTitle": "Organisations-Bewerbung",
+    "organizerFormLink": "Organisations-Bewerbungsformular",
     "organizerSubtitle": "Wenn Sie Veranstaltungen hinzufügen und verwalten möchten, füllen Sie das Formular aus. Nach Genehmigung durch den Administrator können Sie Veranstaltungen anlegen.",
     "submitting": "Bewerbung wird gesendet...",
     "organizerApply": "Als Veranstalter bewerben",
@@ -47,7 +48,7 @@
     "regPasswordPlaceholder": "Mindestens 6 Zeichen"
   },
   "organizerApplication": {
-    "title": "Veranstalter-Bewerbungsformular",
+    "title": "Organisations-Bewerbungsformular",
     "subtitle": "Wenn Sie Veranstaltungen hinzufügen und Tickets verkaufen möchten, füllen Sie das Formular aus. Die Angaben entsprechen DDG § 5 und den B2B-Vertragsbedingungen. Nach Genehmigung können Sie Veranstaltungen anlegen.",
     "accountSection": "Kontodaten",
     "companySection": "Firmen- / DDG § 5 Angaben",
@@ -69,7 +70,7 @@
     "representativeNamePlaceholder": "Name",
     "organizationDisplayName": "Name in Veranstaltungen",
     "organizationDisplayNamePlaceholder": "z.B. Erdal Kaya, Konzert Organisation GmbH",
-    "organizationDisplayNameHelp": "Dieser Name wird auf Event-Karten und Detailseiten als \"Veranstalter\" angezeigt.",
+    "organizationDisplayNameHelp": "Dieser Name wird auf Event-Karten und Detailseiten als \"Organisation\" angezeigt.",
     "termsSection": "Vertrag und Regeln",
     "termsCheckbox": "Ich habe die B2B-Regeln, den Veranstaltervertrag und die DDG § 5 Pflichten gelesen und akzeptiere sie.",
     "termsB2BLink": "B2B-Regeln und Verträge",
@@ -89,7 +90,7 @@
     "login": "Anmelden",
     "signup": "Registrieren",
     "admin": "Verwaltung",
-    "organizerApplication": "Veranstalter-Bewerbung"
+    "organizerApplication": "Organisations-Bewerbung"
   },
   "home": {
     "heroTitle": "Finden Sie Tickets für Ihre Traumveranstaltung",
@@ -355,7 +356,8 @@
     "distanceSales": "Fernabsatzvertrag",
     "terms": "Nutzungsbedingungen",
     "faq": "FAQ",
-    "b2b": "B2B-Bedingungen"
+    "b2b": "B2B-Bedingungen",
+    "organizerSupport": "Organisator-Support"
   },
   "infoMenu": {
     "title": "Informationen & Rechtliches",
@@ -526,7 +528,14 @@
     "errorPasswordMinLength": "Passwort muss mindestens 6 Zeichen haben",
     "errorPasswordUpdateFailed": "Passwort konnte nicht aktualisiert werden",
     "successPasswordUpdated": "Passwort wurde erfolgreich aktualisiert.",
-    "backToPanel": "Zurück zu Mein Konto"
+    "backToPanel": "Zurück zu Mein Konto",
+    "organizationFormSection": "Organisations-Bewerbungsdaten",
+    "organizationFormStatusPending": "Ihre Bewerbung wird geprüft.",
+    "organizationFormStatusApproved": "Ihre Bewerbung wurde genehmigt.",
+    "organizationFormStatusRejected": "Ihre Bewerbung wurde abgelehnt.",
+    "organizerNo": "Organisator-Code",
+    "saveOrganizationInfo": "Organisationsdaten speichern",
+    "organizationInfoReadOnlyHint": "Nach Genehmigung nicht änderbar"
   },
   "terms": {
     "title": "Nutzungsbedingungen",
@@ -617,5 +626,56 @@
     },
     "contact": "Kontakt",
     "contactDesc": "Für B2B-Kooperation, Veranstalter-Bewerbungen, Werbung und Sponsoring nutzen Sie die Kontaktdaten auf der Impressum-Seite. Veranstalter-Bewerbungen können auch über die Website eingereicht werden."
+  },
+  "organizerSupport": {
+    "title": "Organisator-Support",
+    "subtitle": "Leitfaden zum Hinzufügen von Events und zur Informationsverwaltung",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "intro": "Diese Seite ist ein Support-Dokument für alle, die als Organisatoren auf der Bilet-Ekosistemi-Plattform Events hinzufügen und verwalten möchten. Sie enthält Anleitungen zum Bewerbungsprozess, zur Wartezeit auf die Genehmigung, zur Vollständigkeit Ihrer Angaben und zur Änderbarkeit von Daten.",
+    "howToAddEvents": {
+      "title": "Wie fügt man Events hinzu?",
+      "step1": "Anmelden: Melden Sie sich mit Ihrem Organisator-Konto an.",
+      "step2": "Zum Verwaltungsbereich: Gehen Sie über „Verwaltung“ oder „Anmelden“ im oberen Menü zum Panel.",
+      "step3": "Events-Seite: Klicken Sie im linken Menü auf „Events“.",
+      "step4": "Neues Event: Klicken Sie auf „Neues Event“ oder „Event hinzufügen“.",
+      "step5": "Formular ausfüllen: Füllen Sie alle Pflichtfelder aus (Eventname, Datum, Venue, Ticketarten, Preise, Beschreibung).",
+      "step6": "Speichern: Senden Sie das Formular ab, um Ihr Event zu erstellen. Das Event wird in den Genehmigungsprozess aufgenommen."
+    },
+    "approvalProcess": {
+      "title": "Genehmigungsprozess und Wartezeit",
+      "desc": "Ihre Organisator-Bewerbung und die von Ihnen hinzugefügten Events werden vom Plattformadministrator geprüft. Dieser Prozess dauert in der Regel einige Werktage.",
+      "pending": "Solange Ihre Bewerbung „Ausstehend“ ist, können Sie keine Events hinzufügen. Zuerst muss Ihre Organisator-Rolle genehmigt werden.",
+      "approved": "Nach der Genehmigung können Sie im Verwaltungsbereich Events hinzufügen, bearbeiten und den Ticketverkauf starten.",
+      "patience": "Bitte haben Sie während des Genehmigungsprozesses Geduld. Bei Fragen erreichen Sie uns über die Impressum-Seite."
+    },
+    "completeInfo": {
+      "title": "Vervollständigen Sie Ihre Angaben vollständig",
+      "desc": "Für einen reibungslosen Ablauf als Organisator müssen alle Ihre Angaben vollständig und korrekt sein.",
+      "required": "Die im Bereich „Organisations-Bewerbungsdaten“ angeforderten Felder (Firmenname, Rechtsform, Adresse, Telefon, Handelsregister, Steuernummer, Vertreter, Anzeigename) sind unter DDG § 5 und dem B2B-Vertrag erforderlich.",
+      "where": "Diese Angaben können Sie unter „Verwaltung“ → „Organisationsdaten“ einsehen und fehlende Felder ergänzen.",
+      "tip": "Keine Angaben unvollständig zu lassen ist wichtig für sowohl rechtliche Compliance als auch das Vertrauen Ihrer Kunden."
+    },
+    "editableInfo": {
+      "title": "Welche Angaben können geändert werden?",
+      "editable": {
+        "title": "Änderbare Angaben",
+        "desc": "Nach der Genehmigung können Sie Folgendes jederzeit aktualisieren:",
+        "items": "Adresse, Telefon, Rechtsform, Handelsregister, Registernummer, USt-IdNr."
+      },
+      "readOnly": {
+        "title": "Nicht änderbare Angaben",
+        "desc": "Nach der Genehmigung können folgende Felder aus Sicherheits- und Vertragsgründen nicht geändert werden. Sie können sie nur bei Leerstand erstmals ausfüllen:",
+        "items": "Firmen- oder Unternehmensname, Vertretungsberechtigter (Name), Anzeigename für Organisationen"
+      },
+      "profileNote": "Ihr Vor- und Nachname in den persönlichen Daten können nach dem Speichern in Ihrem Organisator-Konto ebenfalls nicht mehr geändert werden."
+    },
+    "summary": {
+      "title": "Zusammenfassung",
+      "list1": "Organisator-Bewerbung einreichen und auf Genehmigung warten.",
+      "list2": "Alle Organisationsdaten vollständig ergänzen.",
+      "list3": "Nach Genehmigung Events über Verwaltung → Events hinzufügen.",
+      "list4": "Adresse, Telefon, Steuernummer können Sie bei Bedarf aktualisieren.",
+      "list5": "Firmenname, Vertretername und Organisationsname können nach Genehmigung nicht geändert werden."
+    }
   }
 }

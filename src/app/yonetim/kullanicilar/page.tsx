@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Trash2, UserCheck, CheckCircle, XCircle, Calendar } from "lucide-react";
+import { Plus, Trash2, UserCheck, CheckCircle, XCircle, Calendar, Eye, X } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 
 type OrganizerRequest = {
@@ -10,7 +10,15 @@ type OrganizerRequest = {
   email: string;
   status: string;
   created_at: string;
-  organization_display_name?: string;
+  organization_display_name?: string | null;
+  company_name?: string | null;
+  legal_form?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  trade_register?: string | null;
+  trade_register_number?: string | null;
+  vat_id?: string | null;
+  representative_name?: string | null;
 };
 
 type DisplayUser = {
@@ -25,6 +33,7 @@ export default function KullanicilarPage() {
   const [organizerRequests, setOrganizerRequests] = useState<OrganizerRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [viewingRequest, setViewingRequest] = useState<OrganizerRequest | null>(null);
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<"admin" | "controller">("controller");
 
@@ -268,7 +277,7 @@ export default function KullanicilarPage() {
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 mb-6">
             <h3 className="text-lg font-semibold text-amber-900 mb-4 flex items-center gap-2">
               <Calendar className="h-5 w-5" />
-              Bekleyen Organizatör Başvuruları ({organizerRequests.length})
+              Bekleyen Organizasyon Başvuruları ({organizerRequests.length})
             </h3>
             <div className="space-y-3">
               {organizerRequests.map((req) => (
@@ -287,6 +296,13 @@ export default function KullanicilarPage() {
                   </div>
                   <div className="flex gap-2">
                     <button
+                      onClick={() => setViewingRequest(req)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 text-slate-700 text-sm font-medium rounded-lg hover:bg-slate-200"
+                    >
+                      <Eye className="h-4 w-4" />
+                      Görüntüle
+                    </button>
+                    <button
                       onClick={() => handleApproveOrganizer(req)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
                     >
@@ -303,6 +319,101 @@ export default function KullanicilarPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* Başvuru Formu Görüntüleme Modal */}
+        {viewingRequest && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setViewingRequest(null)}>
+            <div
+              className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="sticky top-0 bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-slate-900">Organizasyon Başvuru Formu</h3>
+                <button
+                  onClick={() => setViewingRequest(null)}
+                  className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <span className="text-xs font-medium text-slate-500 block mb-1">E-posta</span>
+                  <span className="text-slate-900">{viewingRequest.email}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-slate-500 block mb-1">Firma / İşletme Adı</span>
+                  <span className="text-slate-900">{viewingRequest.company_name || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-slate-500 block mb-1">Hukuki Şekil</span>
+                  <span className="text-slate-900">{viewingRequest.legal_form || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-slate-500 block mb-1">Adres</span>
+                  <span className="text-slate-900">{viewingRequest.address || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-slate-500 block mb-1">Telefon</span>
+                  <span className="text-slate-900">{viewingRequest.phone || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-slate-500 block mb-1">Yetkili Temsilci</span>
+                  <span className="text-slate-900">{viewingRequest.representative_name || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-slate-500 block mb-1">Organizasyonlarda Görünecek İsim</span>
+                  <span className="text-slate-900">{viewingRequest.organization_display_name || "—"}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 block mb-1">Ticaret Sicili</span>
+                    <span className="text-slate-900">{viewingRequest.trade_register || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-slate-500 block mb-1">Registernummer</span>
+                    <span className="text-slate-900">{viewingRequest.trade_register_number || "—"}</span>
+                  </div>
+                </div>
+                <div>
+                  <span className="text-xs font-medium text-slate-500 block mb-1">USt-IdNr. / WiIdNr.</span>
+                  <span className="text-slate-900">{viewingRequest.vat_id || "—"}</span>
+                </div>
+                <p className="text-xs text-slate-500 pt-2">
+                  Başvuru: {new Date(viewingRequest.created_at).toLocaleString("tr-TR")}
+                </p>
+              </div>
+              <div className="sticky bottom-0 bg-white border-t border-slate-200 px-6 py-4 flex gap-3 justify-end">
+                <button
+                  onClick={() => setViewingRequest(null)}
+                  className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
+                >
+                  Kapat
+                </button>
+                <button
+                  onClick={() => {
+                    handleApproveOrganizer(viewingRequest);
+                    setViewingRequest(null);
+                  }}
+                  className="inline-flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  <CheckCircle className="h-4 w-4" />
+                  Onayla
+                </button>
+                <button
+                  onClick={() => {
+                    handleRejectOrganizer(viewingRequest);
+                    setViewingRequest(null);
+                  }}
+                  className="inline-flex items-center gap-1 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Reddet
+                </button>
+              </div>
             </div>
           </div>
         )}

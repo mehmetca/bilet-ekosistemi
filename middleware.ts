@@ -21,6 +21,13 @@ export default function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // /bilgilerim -> /tr/bilgilerim (yonetim panelinden link)
+  if (pathname === "/bilgilerim" || pathname === "/bilgilerim/") {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${routing.defaultLocale}/bilgilerim`;
+    return NextResponse.redirect(url);
+  }
+
   // /yonetim, /giris ve /auth locale prefix olmadan erişilebilir; sadece header set et, intl redirect yapma
   if (pathname.startsWith("/yonetim") || pathname.startsWith("/giris") || pathname.startsWith("/auth")) {
     const requestHeaders = new Headers(request.headers);

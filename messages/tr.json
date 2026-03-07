@@ -30,7 +30,8 @@
     "errorRegisterFailed": "Kayıt oluşturulamadı.",
     "successRegistered": "Hesabınız oluşturuldu! Giriş yaparak bilet satın alabilirsiniz.",
     "errorGeneric": "Beklenmeyen bir hata oluştu.",
-    "organizerTitle": "Organizatör Başvurusu",
+    "organizerTitle": "Organizasyon Başvurusu",
+    "organizerFormLink": "Organizasyon Başvuru Formu",
     "organizerSubtitle": "Etkinlik ekleyip yönetmek istiyorsanız aşağıdaki formu doldurarak başvurunuzu yapın. Yönetici onayından sonra etkinlik ekleyebileceksiniz.",
     "submitting": "Başvuru Gönderiliyor...",
     "organizerApply": "Organizatör Olarak Başvur",
@@ -47,7 +48,7 @@
     "regPasswordPlaceholder": "En az 6 karakter"
   },
   "organizerApplication": {
-    "title": "Organizatör Başvuru Formu",
+    "title": "Organizasyon Başvuru Formu",
     "subtitle": "Etkinlik ekleyip bilet satmak istiyorsanız aşağıdaki formu doldurun. DDG § 5 ve B2B sözleşmesinde belirtilen bilgiler talep edilmektedir. Yönetici onayından sonra etkinlik ekleyebileceksiniz.",
     "accountSection": "Hesap Bilgileri",
     "companySection": "Firma / DDG § 5 Bilgileri",
@@ -69,7 +70,7 @@
     "representativeNamePlaceholder": "Ad Soyad",
     "organizationDisplayName": "Organizasyonlarda görünecek isim",
     "organizationDisplayNamePlaceholder": "Örn: Erdal Kaya, Konser Organizasyon Ltd.",
-    "organizationDisplayNameHelp": "Bu isim etkinlik kartlarında ve detay sayfalarında \"Organizatör\" olarak gösterilir.",
+    "organizationDisplayNameHelp": "Bu isim etkinlik kartlarında ve detay sayfalarında \"Organizasyon\" olarak gösterilir.",
     "termsSection": "Sözleşme ve Kurallar",
     "termsCheckbox": "B2B kurallarını, organizatör sözleşmesini ve DDG § 5 yükümlülüklerini okudum ve kabul ediyorum.",
     "termsB2BLink": "B2B kuralları ve sözleşmeler",
@@ -89,7 +90,7 @@
     "login": "Giriş Yap",
     "signup": "Üye Ol",
     "admin": "Yönetim",
-    "organizerApplication": "Organizatör Başvurusu"
+    "organizerApplication": "Organizasyon Başvurusu"
   },
   "home": {
     "heroTitle": "Hayalinizdeki Etkinliğe Bilet Bulun",
@@ -355,7 +356,8 @@
     "distanceSales": "Mesafeli Satış Sözleşmesi",
     "terms": "Kullanım Koşulları",
     "faq": "Sık Sorulan Sorular",
-    "b2b": "B2B Kurallar"
+    "b2b": "B2B Kurallar",
+    "organizerSupport": "Organizatör Desteği"
   },
   "infoMenu": {
     "title": "Bilgilendirme & Sözleşmeler",
@@ -526,7 +528,14 @@
     "errorPasswordMinLength": "Şifre en az 6 karakter olmalı",
     "errorPasswordUpdateFailed": "Şifre güncellenemedi",
     "successPasswordUpdated": "Şifre başarıyla güncellendi.",
-    "backToPanel": "Hesabıma Dön"
+    "backToPanel": "Hesabıma Dön",
+    "organizationFormSection": "Organizasyon Başvuru Bilgileri",
+    "organizationFormStatusPending": "Başvurunuz inceleniyor.",
+    "organizationFormStatusApproved": "Başvurunuz onaylandı.",
+    "organizationFormStatusRejected": "Başvurunuz reddedildi.",
+    "organizerNo": "Organizatör Kodu",
+    "saveOrganizationInfo": "Organizasyon Bilgilerini Kaydet",
+    "organizationInfoReadOnlyHint": "Onay sonrası değiştirilemez"
   },
   "terms": {
     "title": "Kullanım Koşulları",
@@ -667,5 +676,56 @@
     },
     "contact": "İletişim",
     "contactDesc": "B2B işbirliği, organizatör başvurusu, reklam ve sponsorluk hakkında sorularınız için Impressum sayfasındaki iletişim bilgilerini kullanabilirsiniz. Organizatör başvurusu site üzerinden de yapılabilir."
+  },
+  "organizerSupport": {
+    "title": "Organizatör Desteği",
+    "subtitle": "Etkinlik ekleme ve bilgi yönetimi rehberi",
+    "lastUpdated": "Son güncelleme",
+    "intro": "Bu sayfa, Bilet Ekosistemi platformunda organizatör olarak etkinlik eklemek ve yönetmek isteyenler için hazırlanmış bir destek metnidir. Başvuru süreci, onay bekleme, bilgi tamamlama ve hangi bilgilerin değiştirilebileceği konularında rehberlik sunar.",
+    "howToAddEvents": {
+      "title": "Etkinlik Nasıl Eklenir?",
+      "step1": "Giriş yapın: Organizatör hesabınızla giriş yapın.",
+      "step2": "Yönetim paneline gidin: Sağ üstteki menüden \"Yönetim\" veya \"Giriş\" ile yönetim paneline erişin.",
+      "step3": "Etkinlikler sayfası: Sol menüden \"Etkinlikler\" seçeneğine tıklayın.",
+      "step4": "Yeni etkinlik: \"Yeni Etkinlik\" veya \"Etkinlik Ekle\" butonuna tıklayın.",
+      "step5": "Formu doldurun: Etkinlik adı, tarih, mekân, bilet türleri, fiyatlar ve açıklama gibi tüm zorunlu alanları eksiksiz doldurun.",
+      "step6": "Kaydedin: Formu göndererek etkinliğinizi oluşturun. Etkinlik onay sürecine alınır."
+    },
+    "approvalProcess": {
+      "title": "Onay Süreci ve Bekleme",
+      "desc": "Organizatör başvurunuz ve eklediğiniz etkinlikler, platform yöneticisi tarafından incelenir. Bu süreç genellikle birkaç iş günü içinde tamamlanır.",
+      "pending": "Başvurunuz \"Beklemede\" (pending) durumundayken etkinlik ekleyemezsiniz. Önce organizatör rolünüzün onaylanması gerekir.",
+      "approved": "Onaylandıktan sonra yönetim panelinden etkinlik ekleyebilir, düzenleyebilir ve bilet satışını başlatabilirsiniz.",
+      "patience": "Onay süreci sırasında lütfen sabırlı olun. Sorularınız için Impressum sayfasındaki iletişim bilgilerinden bize ulaşabilirsiniz."
+    },
+    "completeInfo": {
+      "title": "Bilgilerinizi Eksiksiz Tamamlayın",
+      "desc": "Organizatör olarak platformda sorunsuz çalışabilmeniz için tüm bilgilerinizin eksiksiz ve doğru olması gerekmektedir.",
+      "required": "Organizasyon Başvuru Bilgileri bölümünde talep edilen alanlar (firma adı, hukuki şekil, adres, telefon, ticaret sicili, vergi numarası, yetkili temsilci, organizasyonlarda görünecek isim) DDG § 5 ve B2B sözleşmesi kapsamında zorunludur.",
+      "where": "Bu bilgileri \"Yönetim\" → \"Organizasyon Bilgileri\" sayfasından görüntüleyebilir ve eksik alanları tamamlayabilirsiniz.",
+      "tip": "Eksik bilgi bırakmamanız, hem yasal uyum hem de müşterilerinize güven vermek açısından önemlidir."
+    },
+    "editableInfo": {
+      "title": "Hangi Bilgiler Değiştirilebilir?",
+      "editable": {
+        "title": "Değiştirilebilir bilgiler",
+        "desc": "Onaylandıktan sonra aşağıdaki bilgileri istediğiniz zaman güncelleyebilirsiniz:",
+        "items": "Adres, telefon, hukuki şekil, ticaret sicili, kayıt numarası, vergi kimlik numarası (USt-IdNr.)"
+      },
+      "readOnly": {
+        "title": "Değiştirilemeyen bilgiler",
+        "desc": "Onay sonrası aşağıdaki alanlar güvenlik ve sözleşme bütünlüğü nedeniyle değiştirilemez. Bu bilgileri yalnızca boş bıraktıysanız ilk kez doldurabilirsiniz:",
+        "items": "Firma veya işletme adı, yetkili temsilci (ad soyad), organizasyonlarda görünecek isim"
+      },
+      "profileNote": "Kişisel bilgilerinizden ad ve soyad da, bir kez kaydedildikten sonra organizatör hesabınızda değiştirilemez."
+    },
+    "summary": {
+      "title": "Özet",
+      "list1": "Organizatör başvurusu yapın ve onay bekleyin.",
+      "list2": "Tüm organizasyon bilgilerinizi eksiksiz tamamlayın.",
+      "list3": "Onaylandıktan sonra Yönetim → Etkinlikler üzerinden etkinlik ekleyin.",
+      "list4": "Adres, telefon, vergi no gibi bilgileri gerektiğinde güncelleyebilirsiniz.",
+      "list5": "Firma adı, yetkili adı ve organizasyon adı onay sonrası değiştirilemez."
+    }
   }
 }
