@@ -117,6 +117,7 @@ async function withTimeout<T>(
 export default function SanatcilarPage() {
   const { isAdmin, loading: authLoading } = useSimpleAuth();
   const [artists, setArtists] = useState<Array<{ id: string; name: string; slug: string; image_url?: string | null }>>([]);
+  const [artistFollowCounts, setArtistFollowCounts] = useState<Record<string, number>>({});
   const [form, setForm] = useState<ArtistFormState>(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -192,6 +193,15 @@ export default function SanatcilarPage() {
       }
 
       setArtists(data || []);
+
+      if (isAdmin) {
+        const { data: follows } = await supabase.from("artist_follows").select("artist_id");
+        const counts: Record<string, number> = {};
+        for (const r of follows || []) {
+          counts[r.artist_id] = (counts[r.artist_id] || 0) + 1;
+        }
+        setArtistFollowCounts(counts);
+      }
     } catch (error) {
       if (!options?.quiet) {
         setToast({ type: "error", message: `Sanatçılar yüklenemedi: ${(error as Error).message}` });
@@ -526,8 +536,20 @@ export default function SanatcilarPage() {
                     : "border-slate-200 hover:bg-slate-50"
                 }`}
               >
-                <p className="font-medium text-slate-900">{artist.name}</p>
-                <p className="text-xs text-slate-500">/{artist.slug}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-900 truncate">{artist.name}</p>
+                    <p className="text-xs text-slate-500">/{artist.slug}</p>
+                  </div>
+                  {isAdmin && (artistFollowCounts[artist.id] ?? 0) > 0 && (
+                    <span
+                      title="Takip eden kişi sayısı"
+                      className="flex-shrink-0 text-xs text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded"
+                    >
+                      {artistFollowCounts[artist.id]} takip
+                    </span>
+                  )}
+                </div>
               </button>
             ))}
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { Link } from "@/i18n/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { MapPin } from "lucide-react";
 
 interface City {
@@ -15,12 +15,13 @@ interface City {
 
 export default function CitiesGrid({ cities }: { cities: City[] }) {
   const locale = useLocale() as "tr" | "de" | "en";
+  const t = useTranslations("cities");
 
   if (cities.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
         <MapPin className="mx-auto mb-4 h-16 w-16 text-slate-300" />
-        <p className="text-slate-600">Henüz şehir eklenmemiş.</p>
+        <p className="text-slate-600">{t("noCities")}</p>
       </div>
     );
   }

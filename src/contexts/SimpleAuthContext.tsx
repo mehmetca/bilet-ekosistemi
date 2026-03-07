@@ -72,6 +72,12 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     userRef.current = user;
     userRoleRef.current = userRole;
 
+    const loadingTimeout = window.setTimeout(() => {
+      if (mounted) {
+        setLoading(false);
+      }
+    }, 8000);
+
     const checkAuth = async () => {
       try {
         let data: { session: { user?: unknown; access_token?: string } | null };
@@ -91,6 +97,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
         }
         if (error) {
           console.error("Auth getSession error:", error);
+          if (mounted) setLoading(false);
           return;
         }
 
@@ -101,7 +108,16 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             const u = session.user as User;
             setUser(u);
             userRef.current = u;
-            await fetchUserRole(u.id, true);
+            try {
+              await Promise.race([
+                fetchUserRole(u.id, true),
+                new Promise<void>((_, reject) =>
+                  setTimeout(() => reject(new Error("Role fetch timeout")), 5000)
+                ),
+              ]);
+            } catch (roleErr) {
+              console.warn("Role fetch error (continuing):", roleErr);
+            }
           } else {
             setUser(null);
             setUserRole(null);
@@ -178,6 +194,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
     return () => {
       mounted = false;
+      window.clearTimeout(loadingTimeout);
       subscription?.unsubscribe?.();
     };
   }, []);

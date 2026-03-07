@@ -160,12 +160,42 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
     .map((url) => getYouTubeEmbedUrl(url))
     .filter(Boolean) as string[];
 
-  function handleFollowToggle() {
+  async function handleFollowToggle() {
     if (!artist) return;
+    const stored = window.localStorage.getItem("followed_artists");
+    const followed = stored ? (JSON.parse(stored) as string[]) : [];
+    const alreadyFollowing = followed.includes(artist.id);
+    const action = alreadyFollowing ? "unfollow" : "follow";
+
     try {
-      const stored = window.localStorage.getItem("followed_artists");
-      const followed = stored ? (JSON.parse(stored) as string[]) : [];
-      const alreadyFollowing = followed.includes(artist.id);
+      let sessionId = "";
+      try {
+        sessionId = sessionStorage.getItem("follow_session") || "";
+        if (!sessionId) {
+          sessionId = `fs_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+          sessionStorage.setItem("follow_session", sessionId);
+        }
+      } catch {
+        /* ignore */
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/artist-follow", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          artist_id: artist.id,
+          action,
+          session_id: sessionId || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success && res.status >= 400) {
+        throw new Error(data.message || "İşlem başarısız");
+      }
+
       const next = alreadyFollowing
         ? followed.filter((id) => id !== artist.id)
         : [...followed, artist.id];

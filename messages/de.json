@@ -40,8 +40,42 @@
     "successOrganizerApplied": "Ihre Veranstalter-Bewerbung wurde erhalten! Nach Genehmigung können Sie Veranstaltungen hinzufügen. Sie werden per E-Mail benachrichtigt.",
     "errorInvalidCredentials": "E-Mail oder Passwort falsch. Falls eine E-Mail-Bestätigung erforderlich ist, klicken Sie auf den Bestätigungslink in der Registrierungs-E-Mail.",
     "errorLoginFailed": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "or": "oder",
+    "loginWithGoogle": "Mit Google anmelden",
+    "signUpWithGoogle": "Mit Google registrieren",
     "regEmailPlaceholder": "beispiel@email.de",
     "regPasswordPlaceholder": "Mindestens 6 Zeichen"
+  },
+  "organizerApplication": {
+    "title": "Veranstalter-Bewerbungsformular",
+    "subtitle": "Wenn Sie Veranstaltungen hinzufügen und Tickets verkaufen möchten, füllen Sie das Formular aus. Die Angaben entsprechen DDG § 5 und den B2B-Vertragsbedingungen. Nach Genehmigung können Sie Veranstaltungen anlegen.",
+    "accountSection": "Kontodaten",
+    "companySection": "Firmen- / DDG § 5 Angaben",
+    "companyName": "Firmen- oder Unternehmensname",
+    "companyNamePlaceholder": "z.B. Konzert Organisation GmbH",
+    "legalForm": "Rechtsform",
+    "legalFormPlaceholder": "GmbH, AG, Einzelunternehmen usw.",
+    "address": "Anschrift (ladungsfähig)",
+    "addressPlaceholder": "Straße, Hausnummer, PLZ, Ort",
+    "phone": "Telefon",
+    "phonePlaceholder": "+49 123 456789",
+    "tradeRegister": "Handelsregister / Registergericht",
+    "tradeRegisterPlaceholder": "z.B. Amtsgericht Berlin-Charlottenburg",
+    "tradeRegisterNumber": "Registernummer",
+    "tradeRegisterNumberPlaceholder": "HRB 12345",
+    "vatId": "USt-IdNr. oder WiIdNr.",
+    "vatIdPlaceholder": "DE123456789",
+    "representativeName": "Vertretungsberechtigter",
+    "representativeNamePlaceholder": "Name",
+    "organizationDisplayName": "Name in Veranstaltungen",
+    "organizationDisplayNamePlaceholder": "z.B. Erdal Kaya, Konzert Organisation GmbH",
+    "organizationDisplayNameHelp": "Dieser Name wird auf Event-Karten und Detailseiten als \"Veranstalter\" angezeigt.",
+    "termsSection": "Vertrag und Regeln",
+    "termsCheckbox": "Ich habe die B2B-Regeln, den Veranstaltervertrag und die DDG § 5 Pflichten gelesen und akzeptiere sie.",
+    "termsB2BLink": "B2B-Regeln und Verträge",
+    "termsB2BLinkSuffix": "können Sie hier einsehen.",
+    "termsRequired": "Sie müssen die Regeln akzeptieren, um fortzufahren.",
+    "backToLogin": "Zurück zur Anmeldeseite"
   },
   "nav": {
     "events": "Veranstaltungen",
@@ -54,7 +88,8 @@
     "myInfo": "Meine Daten",
     "login": "Anmelden",
     "signup": "Registrieren",
-    "admin": "Verwaltung"
+    "admin": "Verwaltung",
+    "organizerApplication": "Veranstalter-Bewerbung"
   },
   "home": {
     "heroTitle": "Finden Sie Tickets für Ihre Traumveranstaltung",
@@ -141,7 +176,9 @@
   },
   "cities": {
     "title": "Städte",
-    "subtitle": "Entdecken Sie Veranstaltungen in Ihrer Stadt."
+    "subtitle": "Entdecken Sie Veranstaltungen in Ihrer Stadt.",
+    "metaTitleSuffix": "Veranstaltungen",
+    "noCities": "Noch keine Städte hinzugefügt."
   },
   "venues": {
     "title": "Spielstätten und Säle",
@@ -160,6 +197,7 @@
     "seatingPlan": "Sitzplan"
   },
   "eventDetail": {
+    "organizer": "Veranstalter",
     "ticketInfo": "Ticketinformation",
     "ticketSelection": "Ticketauswahl",
     "eventInfo": "Veranstaltungsinformationen",
@@ -315,7 +353,13 @@
     "information": "Informationen",
     "impressum": "Impressum",
     "distanceSales": "Fernabsatzvertrag",
-    "terms": "Nutzungsbedingungen"
+    "terms": "Nutzungsbedingungen",
+    "faq": "FAQ",
+    "b2b": "B2B-Bedingungen"
+  },
+  "infoMenu": {
+    "title": "Informationen & Rechtliches",
+    "backToInfo": "Zurück zu Informationen"
   },
   "cookies": {
     "title": "Cookie-Richtlinie",
@@ -420,6 +464,7 @@
   "panel": {
     "title": "Mein Konto",
     "loading": "Wird geladen...",
+    "redirecting": "Weiterleitung zur Anmeldung...",
     "welcome": "Willkommen",
     "myTickets": "Meine Tickets",
     "myEvents": "Meine Veranstaltungen",
@@ -507,5 +552,70 @@
     "lawDesc": "Es gilt deutsches Recht. Für Streitigkeiten ist das Gericht am Sitz des Verkäufers zuständig. EU-Verbraucher können sich an die Gerichte ihres Wohnsitzlandes wenden.",
     "contact": "Kontakt",
     "contactDesc": "Bei Fragen nutzen Sie bitte die Kontaktdaten auf der Impressum-Seite."
+  },
+  "b2b": {
+    "title": "B2B-Bedingungen und Verträge",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "intro": "Diese Seite enthält die für Veranstalter, Werbetreibende und Sponsoren geltenden Regeln und Vertragsbedingungen. Erstellt gemäß deutschem Recht (BGB, HGB, UWG, DSGVO) und Branchenpraxis.",
+    "organizers": {
+      "title": "Veranstalter",
+      "registration": "Registrierung und Bewerbung",
+      "registrationDesc": "Verträge werden nur mit Unternehmern im Sinne von § 14 BGB geschlossen. Der Veranstalter bestätigt mit der Annahme den Unternehmerstatus. Die Registrierung erfolgt über das Online-Formular. Die Daten müssen wahr und vollständig sein. Bilet Ekosistemi kann Anträge annehmen oder ablehnen. Vor Annahme können Bonitätsprüfungen angefordert werden.",
+      "contract": "Vertragsschluss",
+      "contractDesc": "Der Vertrag kommt mit der Bestätigungs-E-Mail von Bilet Ekosistemi zustande. Nach der Registrierung kann der Veranstalter die Plattform testen; die Freigabe für den Verkauf erfolgt erst nach Vertragsschluss. Veranstaltungen dürfen nur für eigene Events eingegeben werden.",
+      "use": "Plattformnutzung",
+      "useDesc": "Der Veranstalter muss die technischen Voraussetzungen (Hardware, OS, Internet, Browser) bereitstellen. Zugangsdaten müssen sicher aufbewahrt werden; unbefugte Nutzung ist unverzüglich zu melden. Bilet Ekosistemi kann den Zugang vorübergehend sperren.",
+      "services": "Leistungen",
+      "servicesDesc": "Bilet Ekosistemi ermöglicht dem Veranstalter den Ticketverkauf für eigene Events. Die durchschnittliche Plattformverfügbarkeit beträgt 96 % pro Jahr. Bilet Ekosistemi behält sich Änderungen und Verbesserungen vor.",
+      "duties": "Pflichten des Veranstalters",
+      "dutiesDesc": "Der Veranstalter muss die erforderlichen rechtlichen Angaben bereitstellen und deren Richtigkeit garantieren. Er gewährleistet die rechtmäßige Nutzung von Bildern und Inhalten. Der Veranstalter haftet für alle eingegebenen Daten und stellt Bilet Ekosistemi von Drittansprüchen frei.",
+      "ddgInfo": "DDG § 5 Rechtliche Informationspflichten",
+      "ddgInfoDesc": "Gemäß Digitale-Dienste-Gesetz (DDG) § 5 müssen Veranstalter als Anbieter digitaler Dienste folgende Angaben bereitstellen:",
+      "ddgInfo1": "Firmen- oder Unternehmensname",
+      "ddgInfo2": "Rechtsform (GmbH, AG, Einzelunternehmen usw.)",
+      "ddgInfo3": "Ladungsfähige Anschrift",
+      "ddgInfo4": "Kontaktdaten (E-Mail, Telefon)",
+      "ddgInfo5": "Handelsregister und Registernummer",
+      "ddgInfo6": "USt-IdNr. oder WiIdNr.",
+      "ddgInfo7": "Vertretungsberechtigter",
+      "ddgInfoHow": "Diese Angaben werden im Organisatoren-Bewerbungsformular abgefragt und im Rahmen des B2B-Vertrags gespeichert.",
+      "fees": "Gebühren und Preise",
+      "feesDesc": "Die Ticketpreise legt der Veranstalter fest. Plattform- und Transaktionsgebühren werden nach der gültigen Gebührenliste berechnet. Gebühren fallen in der Regel auch bei Event-Absage an, sofern Bilet Ekosistemi nicht allein verantwortlich ist. Eine Stornogebühr pro Ticket kann anfallen.",
+      "settlement": "Abrechnung und Zahlung",
+      "settlementDesc": "Von den Einnahmen werden zuerst die Gebühren von Bilet Ekosistemi abgezogen; der Rest geht an den Veranstalter. Vergangene Events werden innerhalb von fünf Werktagen nach dem Eventdatum abgerechnet. Die Zahlung erfolgt auf das Bankkonto des Veranstalters. Ein SEPA-Lastschriftmandat ist erforderlich. Einwendungen gegen Abrechnungen müssen schriftlich innerhalb von zwei Wochen erfolgen.",
+      "disruption": "Event-Absage und Störungen",
+      "disruptionDesc": "Absagen, Verschiebungen oder andere Störungen sind Bilet Ekosistemi unverzüglich mitzuteilen; der Ticketverkauf muss eingestellt werden. Der Veranstalter bevollmächtigt Bilet Ekosistemi zur Durchführung von Rückerstattungen. Erstattungen erfolgen nur an Ticketkäufer. Vorauszahlungen können zurückgefordert werden.",
+      "liability": "Haftung",
+      "liabilityDesc": "Zwischen Bilet Ekosistemi und Ticketkäufern besteht kein Vertragsverhältnis bezüglich der Veranstaltung. Der Veranstalter trägt die volle Verantwortung für die Durchführung und rechtliche Compliance. Der Veranstalter stellt Bilet Ekosistemi von Drittansprüchen frei.",
+      "applyCTA": "Als Veranstalter bewerben",
+      "applyCTADesc": "Füllen Sie das Bewerbungsformular aus, das die in DDG § 5 und dem B2B-Vertrag genannten Angaben erfasst.",
+      "applyCTAButton": "Zum Bewerbungsformular",
+      "menuOrganizerApplication": "Veranstalter-Bewerbungsformular",
+      "menuAdvertiserApplication": "Werbebewerbung"
+    },
+    "advertisers": {
+      "title": "Werbetreibende",
+      "eligibility": "Voraussetzungen",
+      "eligibilityDesc": "Werbetreibende müssen Unternehmer im Sinne von § 14 BGB sein. Es wird ein separater Werbevertrag geschlossen. Inhalte müssen deutschem Recht (UWG, TMG, DSGVO) und den Plattformregeln entsprechen.",
+      "content": "Inhaltsregeln",
+      "contentDesc": "Werbung darf nicht irreführend, anstößig oder rechtswidrig sein. Der Werbetreibende garantiert die Rechte an bereitgestellten Materialien. Er stellt Bilet Ekosistemi von Drittansprüchen frei. Bilet Ekosistemi kann Inhalte bei Verstößen oder aus wichtigem Grund entfernen.",
+      "pricing": "Preise, Zahlung und Laufzeit",
+      "pricingDesc": "Werbegebühren richten sich nach Platzierung, Dauer und Zielgruppe. Die Zahlung muss innerhalb der vereinbarten Frist erfolgen. Bilet Ekosistemi behält sich Preisänderungen vor. Vertragslaufzeit und Kündigung werden im Werbevertrag festgelegt.",
+      "terms": "Allgemeine Bedingungen",
+      "termsDesc": "Der Werbetreibende muss die Datenschutzbestimmungen (DSGVO) einhalten. Kundendaten dürfen nur für vereinbarte Zwecke verwendet werden. Die Werbepartnerschaft kann von beiden Seiten schriftlich gekündigt werden. Vertraulichkeitspflichten überdauern den Vertragsende."
+    },
+    "sponsors": {
+      "title": "Event-Sponsoren",
+      "overview": "Überblick",
+      "overviewDesc": "Sponsoren schließen einen separaten Sponsoring-Vertrag mit Bilet Ekosistemi oder dem Veranstalter. Sponsoring kann Markenpräsenz, Venue-Nutzung oder andere Vereinbarungen umfassen. Die Bedingungen werden projektspezifisch festgelegt.",
+      "branding": "Markennutzung",
+      "brandingDesc": "Der Sponsor garantiert die Rechte an bereitgestellten Logos und Materialien. Bilet Ekosistemi und der Veranstalter dürfen die Marke in Event-Materialien (Plakate, digitale Kanäle, Tickets) nutzen. Dauer und Umfang werden im Sponsoring-Vertrag festgelegt.",
+      "contract": "Vertrag und Zahlung",
+      "contractDesc": "Sponsoring-Gebühren und gewährte Rechte werden im Vertrag festgelegt. Der Sponsor muss die vertraglichen Pflichten erfüllen. Erstattungs- oder Verschiebungsbedingungen bei Event-Absage werden im Sponsoring-Vertrag geregelt.",
+      "contact": "Bewerbung",
+      "contactDesc": "Für Sponsoring-Anfragen kontaktieren Sie uns über die Impressum-Seite oder b2b@bilet-ekosistemi.com. Detaillierte Angebote und Vertragsentwürfe werden auf Anfrage bereitgestellt."
+    },
+    "contact": "Kontakt",
+    "contactDesc": "Für B2B-Kooperation, Veranstalter-Bewerbungen, Werbung und Sponsoring nutzen Sie die Kontaktdaten auf der Impressum-Seite. Veranstalter-Bewerbungen können auch über die Website eingereicht werden."
   }
 }

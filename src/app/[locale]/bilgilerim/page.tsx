@@ -405,7 +405,7 @@ export default function BilgilerimPage() {
         {/* Veri koruması */}
         <p className="mt-6 text-sm text-slate-600">
           {t("dataProtection")}{" "}
-          <Link href="/cerez-politikasi" className="text-primary-600 hover:underline">
+          <Link href="/bilgilendirme/cerez-politikasi" className="text-primary-600 hover:underline">
             {t("dataProtectionLink")}
           </Link>{" "}
           {t("dataProtectionSuffix")}

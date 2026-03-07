@@ -22,6 +22,7 @@ Supabase Dashboard → **Authentication** → **URL Configuration**:
 
 - **Site URL:** Vercel sitenizin adresi (örn. `https://bilet-ekosistemi-xxx.vercel.app`)
 - **Redirect URLs:** Aynı adresi ekleyin, örn. `https://bilet-ekosistemi-xxx.vercel.app/**`
+  - Google ile giriş için: `https://bilet-ekosistemi-xxx.vercel.app/auth/callback` adresini de ekleyin
 
 Bunlar yanlışsa oturum / cookie davranışı bozulabilir.
 
@@ -66,7 +67,7 @@ Kaydettikten sonra sitede tekrar giriş yapıp `/yonetim` sayfasını deneyin.
 
 ## 5. Hâlâ giremiyorsanız
 
-- Giriş sayfasında (**/giris**) e-posta/şifre ile giriş yapın.
+- Giriş sayfasında (**/giris**) e-posta/şifre veya Google ile giriş yapın.
 - Girişten sonra “Yönetim paneline erişim yetkiniz yok” mesajı görüyorsanız: giriş **çalışıyor**, sorun rol/yetki veya `user_roles`/RLS.
 - Doğrudan giriş sayfasına atılıyorsanız: oturum tutulmuyor; 1. ve 2. adımları (env, Site URL, Redirect URLs) tekrar kontrol edin.
 

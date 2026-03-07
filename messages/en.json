@@ -40,8 +40,42 @@
     "successOrganizerApplied": "Your organiser application has been received! After approval you will be able to add events. You will be notified by email.",
     "errorInvalidCredentials": "Email or password incorrect. If email confirmation is required, click the confirmation link in the registration email.",
     "errorLoginFailed": "Login failed. Please try again.",
+    "or": "or",
+    "loginWithGoogle": "Sign in with Google",
+    "signUpWithGoogle": "Sign up with Google",
     "regEmailPlaceholder": "example@email.com",
     "regPasswordPlaceholder": "At least 6 characters"
+  },
+  "organizerApplication": {
+    "title": "Organiser Application Form",
+    "subtitle": "If you want to add events and sell tickets, fill out the form below. The information requested is in accordance with DDG § 5 and the B2B contract. After approval you will be able to add events.",
+    "accountSection": "Account Details",
+    "companySection": "Company / DDG § 5 Information",
+    "companyName": "Company or business name",
+    "companyNamePlaceholder": "e.g. Concert Organisation Ltd.",
+    "legalForm": "Legal form",
+    "legalFormPlaceholder": "GmbH, AG, sole proprietorship, etc.",
+    "address": "Address (for service of process)",
+    "addressPlaceholder": "Street, number, postcode, city",
+    "phone": "Phone",
+    "phonePlaceholder": "+49 123 456789",
+    "tradeRegister": "Trade register / Registergericht",
+    "tradeRegisterPlaceholder": "e.g. Amtsgericht Berlin-Charlottenburg",
+    "tradeRegisterNumber": "Registration number",
+    "tradeRegisterNumberPlaceholder": "HRB 12345",
+    "vatId": "VAT ID or WiIdNr.",
+    "vatIdPlaceholder": "DE123456789",
+    "representativeName": "Authorised representative",
+    "representativeNamePlaceholder": "Full name",
+    "organizationDisplayName": "Name to display in events",
+    "organizationDisplayNamePlaceholder": "e.g. Erdal Kaya, Concert Organisation Ltd.",
+    "organizationDisplayNameHelp": "This name will be shown as \"Organiser\" on event cards and detail pages.",
+    "termsSection": "Contract and Rules",
+    "termsCheckbox": "I have read and accept the B2B rules, organiser contract and DDG § 5 obligations.",
+    "termsB2BLink": "B2B rules and contracts",
+    "termsB2BLinkSuffix": "can be viewed here.",
+    "termsRequired": "You must accept the rules to continue.",
+    "backToLogin": "Back to login page"
   },
   "nav": {
     "events": "Events",
@@ -54,7 +88,8 @@
     "myInfo": "My Information",
     "login": "Log In",
     "signup": "Sign Up",
-    "admin": "Admin"
+    "admin": "Admin",
+    "organizerApplication": "Organiser Application"
   },
   "home": {
     "heroTitle": "Find Tickets for Your Dream Event",
@@ -141,7 +176,9 @@
   },
   "cities": {
     "title": "Cities",
-    "subtitle": "Discover events in your city."
+    "subtitle": "Discover events in your city.",
+    "metaTitleSuffix": "Events",
+    "noCities": "No cities added yet."
   },
   "venues": {
     "title": "Venues and Halls",
@@ -160,6 +197,7 @@
     "seatingPlan": "Seating plan"
   },
   "eventDetail": {
+    "organizer": "Organiser",
     "ticketInfo": "Ticket Information",
     "ticketSelection": "Ticket Selection",
     "eventInfo": "Event Information",
@@ -315,7 +353,13 @@
     "information": "Information",
     "impressum": "Legal Notice",
     "distanceSales": "Distance Sales Agreement",
-    "terms": "Terms of Use"
+    "terms": "Terms of Use",
+    "faq": "FAQ",
+    "b2b": "B2B Terms"
+  },
+  "infoMenu": {
+    "title": "Information & Legal",
+    "backToInfo": "Back to Information"
   },
   "cookies": {
     "title": "Cookie Policy",
@@ -420,6 +464,7 @@
   "panel": {
     "title": "My Account",
     "loading": "Loading...",
+    "redirecting": "Redirecting to sign in...",
     "welcome": "Welcome",
     "myTickets": "My Tickets",
     "myEvents": "My Events",
@@ -507,5 +552,70 @@
     "lawDesc": "German law applies. The competent court for disputes is the seller's place of business. EU consumers may refer to the courts of their country of residence.",
     "contact": "Contact",
     "contactDesc": "For questions, use the contact details on the Impressum page."
+  },
+  "b2b": {
+    "title": "B2B Terms and Conditions",
+    "lastUpdated": "Last updated",
+    "intro": "This page contains the rules and contract terms applicable to organisers, advertisers and sponsors who wish to partner with Bilet Ekosistemi. Prepared in accordance with German law (BGB, HGB, UWG, DSGVO) and industry practice.",
+    "organizers": {
+      "title": "Organisers",
+      "registration": "Registration and Application",
+      "registrationDesc": "Contracts are concluded only with entrepreneurs within the meaning of BGB § 14. By accepting these terms, the organiser confirms entrepreneur status. Registration is done via the online form. Data must be true and complete. Bilet Ekosistemi may accept or reject applications. Credit checks may be requested before acceptance.",
+      "contract": "Contract Formation",
+      "contractDesc": "The contract is formed when Bilet Ekosistemi sends the confirmation email. After registration, organisers may test platform functions but cannot release events for sale until the contract is concluded. Events may only be entered for events organised by the organiser.",
+      "use": "Platform Use",
+      "useDesc": "The organiser must maintain technical requirements (hardware, OS, internet, browser). Access credentials must be kept secure; unauthorised use must be reported immediately. Bilet Ekosistemi may temporarily block access.",
+      "services": "Services Provided",
+      "servicesDesc": "Bilet Ekosistemi enables organisers to sell tickets for their events via the platform. Average platform availability is 96% per year. Bilet Ekosistemi reserves the right to modify and improve the platform.",
+      "duties": "Organiser Obligations",
+      "dutiesDesc": "The organiser must provide required legal information and guarantee its correctness. The organiser warrants that event images and content are lawfully used. The organiser is responsible for all data entered and indemnifies Bilet Ekosistemi against third-party claims.",
+      "ddgInfo": "DDG § 5 Legal Information Requirements",
+      "ddgInfoDesc": "Under Digitale-Dienste-Gesetz (DDG) § 5, organisers as providers of digital services must provide the following information:",
+      "ddgInfo1": "Company or business name (Unternehmen)",
+      "ddgInfo2": "Legal form (Rechtsform: GmbH, AG, sole proprietorship, etc.)",
+      "ddgInfo3": "Address for service of process (ladungsfähige Anschrift)",
+      "ddgInfo4": "Contact details (email, phone)",
+      "ddgInfo5": "Trade register and registration number (Handelsregister, Registernummer)",
+      "ddgInfo6": "VAT ID or WiIdNr. (USt-IdNr.)",
+      "ddgInfo7": "Authorised representative (Vertretungsberechtigter)",
+      "ddgInfoHow": "This information is requested in the organiser application form and stored under the B2B contract.",
+      "fees": "Fees and Pricing",
+      "feesDesc": "Ticket prices are set by the organiser. Platform and transaction fees are calculated per the applicable fee schedule. Fees are generally due even in case of event cancellation, unless Bilet Ekosistemi is solely responsible. A cancellation fee per ticket may apply.",
+      "settlement": "Settlement and Payment",
+      "settlementDesc": "From collected proceeds, Bilet Ekosistemi first deducts its fees; the remainder is passed to the organiser. Past events are accounted within five business days after the event date. Payment is made to the organiser's bank account. SEPA direct debit mandate is required. Objections to statements must be made in writing within two weeks.",
+      "disruption": "Event Cancellation and Disruptions",
+      "disruptionDesc": "Cancellations, postponements or other disruptions must be reported to Bilet Ekosistemi immediately and ticket sales must be stopped. The organiser authorises Bilet Ekosistemi to process refunds. Refunds are made only to ticket buyers. Advance payments may need to be returned.",
+      "liability": "Liability",
+      "liabilityDesc": "No contractual relationship exists between Bilet Ekosistemi and ticket buyers regarding the event. The organiser bears full responsibility for conducting the event and legal compliance. The organiser indemnifies Bilet Ekosistemi against third-party claims arising from disruptions or breaches.",
+      "applyCTA": "Apply as organiser",
+      "applyCTADesc": "Fill out the application form that collects the information specified in DDG § 5 and the B2B contract.",
+      "applyCTAButton": "Go to application form",
+      "menuOrganizerApplication": "Organiser Application Form",
+      "menuAdvertiserApplication": "Advertiser Application"
+    },
+    "advertisers": {
+      "title": "Advertisers",
+      "eligibility": "Eligibility",
+      "eligibilityDesc": "Parties wishing to purchase advertising space must be entrepreneurs within the meaning of BGB § 14. A separate advertising contract is concluded. Content must comply with German law (UWG, TMG, DSGVO) and platform rules.",
+      "content": "Content Rules",
+      "contentDesc": "Advertising must not be misleading, offensive or illegal. The advertiser warrants ownership or licence of provided materials. The advertiser indemnifies Bilet Ekosistemi against third-party claims. Bilet Ekosistemi may remove content in case of infringement or for good cause.",
+      "pricing": "Pricing, Payment and Duration",
+      "pricingDesc": "Advertising fees depend on placement type, duration and target audience. Payment must be made within the agreed period. Bilet Ekosistemi reserves the right to change prices. Contract duration and termination are set in the advertising agreement.",
+      "terms": "General Terms",
+      "termsDesc": "The advertiser must comply with data protection (GDPR). Customer data may only be used for agreed purposes. The advertising partnership may be terminated by either party in writing. Confidentiality obligations survive contract termination."
+    },
+    "sponsors": {
+      "title": "Event Sponsors",
+      "overview": "Overview",
+      "overviewDesc": "Those wishing to sponsor events enter a separate sponsorship agreement with Bilet Ekosistemi or the organiser. Sponsorship may include brand visibility, venue use or other arrangements. Terms are determined on a project basis.",
+      "branding": "Brand Use",
+      "brandingDesc": "The sponsor warrants ownership or licence of provided logos and materials. Bilet Ekosistemi and the organiser may use the brand in event materials (posters, digital channels, tickets). Duration and scope are set in the sponsorship agreement.",
+      "contract": "Contract and Payment",
+      "contractDesc": "Sponsorship fees and provided rights are set in the contract. The sponsor must fulfil contractual obligations. Refund or postponement terms in case of event cancellation are set in the sponsorship agreement.",
+      "contact": "Application",
+      "contactDesc": "For sponsorship enquiries, contact us via the Impressum page or b2b@bilet-ekosistemi.com. Detailed offers and contract drafts are provided on request."
+    },
+    "contact": "Contact",
+    "contactDesc": "For B2B cooperation, organiser applications, advertising and sponsorship, use the contact details on the Impressum page. Organiser applications can also be submitted via the site."
   }
 }

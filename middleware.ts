@@ -14,8 +14,15 @@ export default function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // /yonetim ve /giris locale prefix olmadan erişilebilir; sadece header set et, intl redirect yapma
-  if (pathname.startsWith("/yonetim") || pathname.startsWith("/giris")) {
+  // /organizator-basvuru -> /tr/organizator-basvuru (geriye dönük uyumluluk)
+  if (pathname === "/organizator-basvuru" || pathname === "/organizator-basvuru/") {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${routing.defaultLocale}/organizator-basvuru`;
+    return NextResponse.redirect(url);
+  }
+
+  // /yonetim, /giris ve /auth locale prefix olmadan erişilebilir; sadece header set et, intl redirect yapma
+  if (pathname.startsWith("/yonetim") || pathname.startsWith("/giris") || pathname.startsWith("/auth")) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-next-intl-locale", routing.defaultLocale);
     requestHeaders.set("X-NEXT-INTL-LOCALE", routing.defaultLocale);

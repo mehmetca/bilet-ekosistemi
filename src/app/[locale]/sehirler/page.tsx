@@ -22,7 +22,7 @@ async function getCities() {
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("cities");
   return {
-    title: `${t("title")} - Etkinlikler`,
+    title: `${t("title")} - ${t("metaTitleSuffix")}`,
     description: t("subtitle"),
   };
 }

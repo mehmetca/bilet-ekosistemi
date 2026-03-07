@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Copy, Calendar, MapPin, Music2, X, CheckCircle } from "lucide-react";
+import { Plus, Edit2, Trash2, Copy, Calendar, MapPin, Music2, X, CheckCircle, Heart, Bell, Building2 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import type { Event, EventCategory, EventCurrency } from "@/types/database";
@@ -82,6 +82,8 @@ function EtkinliklerContent() {
   const [ticketPrices, setTicketPrices] = useState<Record<string, number>>(EMPTY_TICKET_PRICES);
   const [venues, setVenues] = useState<Array<{ id: string; name: string; address: string | null; city: string | null }>>([]);
   const [selectedVenueId, setSelectedVenueId] = useState<string>("");
+  const [eventStats, setEventStats] = useState<Record<string, { favorites: number; reminders: number }>>({});
+  const [organizerNames, setOrganizerNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!isAdmin && !isOrganizer) return;
@@ -107,7 +109,46 @@ function EtkinliklerContent() {
       }
       const { data, error } = await query;
       if (error) throw error;
-      setEvents(data || []);
+      const eventsData = data || [];
+      setEvents(eventsData);
+
+      const creatorIds = [...new Set(eventsData.map((e: Event & { created_by_user_id?: string }) => e.created_by_user_id).filter(Boolean))] as string[];
+      if (creatorIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("organizer_profiles")
+          .select("user_id, organization_display_name")
+          .in("user_id", creatorIds);
+        const map: Record<string, string> = {};
+        for (const p of profiles || []) {
+          if (p.user_id && p.organization_display_name) map[p.user_id] = p.organization_display_name;
+        }
+        setOrganizerNames(map);
+      } else {
+        setOrganizerNames({});
+      }
+
+      if (isAdmin) {
+        const [favRes, remRes] = await Promise.all([
+          supabase.from("event_favorites").select("event_id"),
+          supabase.from("event_reminders").select("event_id"),
+        ]);
+        const favCounts: Record<string, number> = {};
+        for (const r of favRes.data || []) {
+          favCounts[r.event_id] = (favCounts[r.event_id] || 0) + 1;
+        }
+        const remCounts: Record<string, number> = {};
+        for (const r of remRes.data || []) {
+          remCounts[r.event_id] = (remCounts[r.event_id] || 0) + 1;
+        }
+        const stats: Record<string, { favorites: number; reminders: number }> = {};
+        for (const e of eventsData) {
+          stats[e.id] = {
+            favorites: favCounts[e.id] || 0,
+            reminders: remCounts[e.id] || 0,
+          };
+        }
+        setEventStats(stats);
+      }
     } catch (error) {
       console.error("Etkinlikler yüklenemedi:", error);
     } finally {
@@ -921,6 +962,22 @@ function EtkinliklerContent() {
                         <span className="text-xs font-medium text-primary-600">
                           {CATEGORY_LABELS[event.category]}
                         </span>
+                        {isAdmin && ((eventStats[event.id]?.favorites ?? 0) > 0 || (eventStats[event.id]?.reminders ?? 0) > 0) && (
+                          <span className="flex items-center gap-2 text-xs text-slate-500">
+                            {(eventStats[event.id]?.favorites ?? 0) > 0 && (
+                              <span title="Favoriye ekleyen kişi sayısı" className="inline-flex items-center gap-1">
+                                <Heart className="h-3.5 w-3.5" />
+                                {eventStats[event.id].favorites}
+                              </span>
+                            )}
+                            {(eventStats[event.id]?.reminders ?? 0) > 0 && (
+                              <span title="Hatırlatma talebinde bulunan kişi sayısı" className="inline-flex items-center gap-1">
+                                <Bell className="h-3.5 w-3.5" />
+                                {eventStats[event.id].reminders}
+                              </span>
+                            )}
+                          </span>
+                        )}
                         {(event as Event & { is_approved?: boolean }).is_approved === false && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
                             Onay Bekliyor
@@ -942,6 +999,13 @@ function EtkinliklerContent() {
                           <MapPin className="h-4 w-4 flex-shrink-0" />
                           {event.venue}, {event.location}
                         </div>
+                        {(event as Event & { created_by_user_id?: string }).created_by_user_id &&
+                          organizerNames[(event as Event & { created_by_user_id?: string }).created_by_user_id!] && (
+                          <div className="flex items-center gap-2 text-primary-600">
+                            <Building2 className="h-4 w-4 flex-shrink-0" />
+                            Organizatör: {organizerNames[(event as Event & { created_by_user_id?: string }).created_by_user_id!]}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>

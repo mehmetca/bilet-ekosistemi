@@ -13,6 +13,13 @@
 -- Site URL: http://localhost:3000
 -- Redirect URLs: http://localhost:3000/auth/callback
 
+-- 3b. Google OAuth (isteğe bağlı):
+-- Dashboard > Authentication > Providers > Google > Enable
+-- Google Cloud Console'da OAuth 2.0 Client ID oluşturun (Web application)
+-- Authorized redirect URIs: https://<SUPABASE_PROJECT_REF>.supabase.co/auth/v1/callback
+-- (Supabase Dashboard > Auth > Providers > Google sayfasında gösterilir)
+-- Client ID ve Client Secret'ı Supabase'e girin
+
 -- 4. Yönetici kullanıcıları oluşturmak için:
 -- Dashboard > Authentication > Users > Add user
 -- Email: admin@bilet-ekosistemi.com

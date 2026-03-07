@@ -111,7 +111,11 @@ export async function POST(request: NextRequest) {
       if (!requestId) {
         return NextResponse.json({ error: "requestId gerekli" }, { status: 400 });
       }
-      const { data: req } = await supabase.from("organizer_requests").select("user_id, email").eq("id", requestId).single();
+      const { data: req } = await supabase
+        .from("organizer_requests")
+        .select("user_id, email, organization_display_name, company_name, representative_name")
+        .eq("id", requestId)
+        .single();
       if (!req) {
         return NextResponse.json({ error: "Başvuru bulunamadı" }, { status: 404 });
       }
@@ -119,6 +123,19 @@ export async function POST(request: NextRequest) {
       if (roleErr) {
         return NextResponse.json({ error: "Rol eklenemedi: " + roleErr.message }, { status: 500 });
       }
+      const displayName =
+        (req as { organization_display_name?: string }).organization_display_name?.trim() ||
+        (req as { company_name?: string }).company_name?.trim() ||
+        (req as { representative_name?: string }).representative_name?.trim() ||
+        "Organizatör";
+      await supabase.from("organizer_profiles").upsert(
+        {
+          user_id: req.user_id,
+          organization_display_name: displayName,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
       await supabase
         .from("organizer_requests")
         .update({ status: "approved", approved_at: new Date().toISOString(), reviewed_at: new Date().toISOString() })

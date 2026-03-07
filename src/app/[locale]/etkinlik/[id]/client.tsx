@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell } from "lucide-react";
+import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell, Building2 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
@@ -12,11 +12,13 @@ import { getLocalizedEvent } from "@/lib/i18n-content";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
+import { supabase } from "@/lib/supabase-client";
 
 interface EventDetailClientProps {
   event: Event;
   tickets: EventTicket[];
   venue?: Venue | null;
+  organizerDisplayName?: string | null;
   locale?: "tr" | "de" | "en";
 }
 
@@ -24,7 +26,7 @@ const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
 /** Sipariş başına en fazla kaç bilet seçilebilir */
 const MAX_TICKETS_PER_ORDER = 10;
 
-export default function EventDetailClient({ event, tickets, venue = null, locale: localeProp = "tr" }: EventDetailClientProps) {
+export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr" }: EventDetailClientProps) {
   const t = useTranslations("eventDetail");
   const tCheckout = useTranslations("checkout");
   const tCat = useTranslations("categories");
@@ -114,11 +116,41 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
     }).catch(() => {});
   }, [event.id]);
 
-  function toggleFavorite() {
+  async function toggleFavorite() {
+    const stored = window.localStorage.getItem("favorite_events");
+    const favorites = stored ? (JSON.parse(stored) as string[]) : [];
+    const alreadyFavorite = favorites.includes(event.id);
+    const action = alreadyFavorite ? "remove" : "add";
+
     try {
-      const stored = window.localStorage.getItem("favorite_events");
-      const favorites = stored ? (JSON.parse(stored) as string[]) : [];
-      const alreadyFavorite = favorites.includes(event.id);
+      let sessionId = "";
+      try {
+        sessionId = sessionStorage.getItem("follow_session") || "";
+        if (!sessionId) {
+          sessionId = `fs_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+          sessionStorage.setItem("follow_session", sessionId);
+        }
+      } catch {
+        /* ignore */
+      }
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/event-favorite", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({
+          event_id: event.id,
+          action,
+          session_id: sessionId || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!data.success && res.status >= 400) {
+        throw new Error(data.message || "İşlem başarısız");
+      }
+
       const next = alreadyFavorite
         ? favorites.filter((id) => id !== event.id)
         : [...favorites, event.id];
@@ -188,6 +220,12 @@ export default function EventDetailClient({ event, tickets, venue = null, locale
                   <MapPin className="h-4 w-4" />
                   {event.location || localized.venue || event.venue}
                 </span>
+                {organizerDisplayName && (
+                  <span className="inline-flex items-center gap-2 rounded-md bg-primary-50 px-3 py-1.5 text-primary-700">
+                    <Building2 className="h-4 w-4" />
+                    {t("organizer")}: {organizerDisplayName}
+                  </span>
+                )}
               </div>
               <div className="mt-5">
                 <p className="text-sm text-slate-600">{t("tickets")}</p>

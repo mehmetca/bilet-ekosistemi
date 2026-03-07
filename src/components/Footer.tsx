@@ -1,15 +1,19 @@
 "use client";
 
+import NextLink from "next/link";
 import { Link } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { Ticket } from "lucide-react";
 
 const menuLinks = [
-  { href: "/impressum", labelKey: "footer.impressum" },
-  { href: "/bilgilendirme", labelKey: "footer.information" },
-  { href: "/cerez-politikasi", labelKey: "footer.cookiePolicy" },
-  { href: "/mesafeli-satis-sozlesmesi", labelKey: "footer.distanceSales" },
-  { href: "/kullanim-kosullari", labelKey: "footer.terms" },
+  { href: "/bilgilendirme", labelKey: "footer.information", useNextLink: false },
+  { href: "/bilgilendirme/sss", labelKey: "footer.faq", useNextLink: false },
+  { href: "/bilgilendirme/b2b", labelKey: "footer.b2b", useNextLink: false },
+  { href: "/organizator-basvuru", labelKey: "nav.organizerApplication", useNextLink: false },
+  { href: "/bilgilendirme/impressum", labelKey: "footer.impressum", useNextLink: false },
+  { href: "/bilgilendirme/cerez-politikasi", labelKey: "footer.cookiePolicy", useNextLink: false },
+  { href: "/bilgilendirme/mesafeli-satis-sozlesmesi", labelKey: "footer.distanceSales", useNextLink: false },
+  { href: "/bilgilendirme/kullanim-kosullari", labelKey: "footer.terms", useNextLink: false },
 ];
 
 const policyLinks = [
@@ -44,15 +48,25 @@ export default function Footer() {
               {t("footer.menu")}
             </h3>
             <nav className="flex flex-col gap-2">
-              {menuLinks.map(({ href, labelKey }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="text-slate-600 hover:text-primary-600 text-sm transition-colors"
-                >
-                  {t(labelKey)}
-                </Link>
-              ))}
+              {menuLinks.map(({ href, labelKey, useNextLink }) =>
+                useNextLink ? (
+                  <NextLink
+                    key={href}
+                    href={href}
+                    className="text-slate-600 hover:text-primary-600 text-sm transition-colors"
+                  >
+                    {t(labelKey)}
+                  </NextLink>
+                ) : (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="text-slate-600 hover:text-primary-600 text-sm transition-colors"
+                  >
+                    {t(labelKey)}
+                  </Link>
+                )
+              )}
             </nav>
           </div>
 

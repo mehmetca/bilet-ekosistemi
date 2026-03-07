@@ -42,7 +42,7 @@ export default function CookieConsent() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-slate-700 flex-1">
             {t("message")}{" "}
-            <Link href="/cerez-politikasi" className="text-primary-600 hover:text-primary-700 font-medium underline">
+            <Link href="/bilgilendirme/cerez-politikasi" className="text-primary-600 hover:text-primary-700 font-medium underline">
               {t("learnMore")}
             </Link>
           </p>

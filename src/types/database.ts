@@ -18,6 +18,7 @@ export interface Event {
   ticket_url?: string | null;
   created_at: string;
   updated_at: string;
+  created_by_user_id?: string | null;
   /** Çok dilli alanlar */
   title_tr?: string | null;
   title_de?: string | null;

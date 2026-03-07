@@ -47,9 +47,10 @@ export default function PanelPage() {
   }, [user]);
 
   if (authLoading || !user) {
+    const isRedirecting = !authLoading && !user;
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-slate-500">{t("loading")}</div>
+        <div className="text-slate-500">{isRedirecting ? t("redirecting") : t("loading")}</div>
       </div>
     );
   }

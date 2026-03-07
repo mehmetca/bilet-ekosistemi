@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, ChevronRight, Music2 } from "lucide-react";
+import { Calendar, MapPin, ChevronRight, Music2, Building2 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import { Link } from "@/i18n/navigation";
@@ -15,12 +15,13 @@ import { parseEventDescription } from "@/lib/eventMeta";
 interface ShowDetailClientProps {
   events: Event[];
   showSlug: string;
+  organizerDisplayName?: string | null;
   locale?: "tr" | "de" | "en";
 }
 
 const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
 
-export default function ShowDetailClient({ events, showSlug, locale: localeProp = "tr" }: ShowDetailClientProps) {
+export default function ShowDetailClient({ events, showSlug, organizerDisplayName = null, locale: localeProp = "tr" }: ShowDetailClientProps) {
   const t = useTranslations("eventDetail");
   const tShow = useTranslations("showDetail");
   const tCat = useTranslations("categories");
@@ -77,6 +78,12 @@ export default function ShowDetailClient({ events, showSlug, locale: localeProp 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
             <div>
               <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{localized.title}</h1>
+              {organizerDisplayName && (
+                <p className="mt-3 inline-flex items-center gap-2 rounded-md bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700">
+                  <Building2 className="h-4 w-4" />
+                  {t("organizer")}: {organizerDisplayName}
+                </p>
+              )}
               {parsedDescription.content && (
                 <p className="mt-4 text-slate-600 leading-relaxed line-clamp-3">{parsedDescription.content}</p>
               )}
@@ -162,6 +169,7 @@ export default function ShowDetailClient({ events, showSlug, locale: localeProp 
                       key={city}
                       city={city}
                       events={cityEvents}
+                      organizerDisplayName={organizerDisplayName}
                       locale={locale}
                       dateLocale={dateLocale}
                       t={t}
@@ -173,6 +181,7 @@ export default function ShowDetailClient({ events, showSlug, locale: localeProp 
                 <CityEventsSection
                   city={selectedCity}
                   events={displayEvents}
+                  organizerDisplayName={organizerDisplayName}
                   locale={locale}
                   dateLocale={dateLocale}
                   t={t}
@@ -199,6 +208,7 @@ export default function ShowDetailClient({ events, showSlug, locale: localeProp 
 function CityEventsSection({
   city,
   events,
+  organizerDisplayName,
   locale,
   dateLocale,
   t,
@@ -206,6 +216,7 @@ function CityEventsSection({
 }: {
   city: string;
   events: Event[];
+  organizerDisplayName?: string | null;
   locale: string;
   dateLocale: string;
   t: (key: string) => string;
@@ -251,6 +262,12 @@ function CityEventsSection({
                     <MapPin className="h-4 w-4 flex-shrink-0" />
                     {eventLocalized.venue || event.venue}
                   </p>
+                  {organizerDisplayName && (
+                    <p className="text-xs text-primary-600 flex items-center gap-1 mt-1">
+                      <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                      {t("organizer")}: {organizerDisplayName}
+                    </p>
+                  )}
                   {isPast && (
                     <span className="inline-block mt-2 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded">
                       {t("eventEnded")}

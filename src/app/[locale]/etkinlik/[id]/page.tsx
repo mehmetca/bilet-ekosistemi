@@ -126,6 +126,21 @@ async function getEventBySlug(slugOrId: string): Promise<Event | null> {
   }
 }
 
+async function getOrganizerDisplayName(userId: string | null | undefined): Promise<string | null> {
+  if (!userId) return null;
+  try {
+    const supabase = createServerSupabase();
+    const { data } = await supabase
+      .from("organizer_profiles")
+      .select("organization_display_name")
+      .eq("user_id", userId)
+      .single();
+    return data?.organization_display_name?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 async function getEventTickets(eventId: string): Promise<Ticket[]> {
   try {
     const supabase = createServerSupabase();
@@ -219,15 +234,25 @@ export default async function EventDetailPage({ params }: PageProps) {
   // Biletinial tarzı: show_slug ile gruplanmış tur/gösteri sayfası (2+ etkinlik)
   const showEvents = await getEventsByShowSlug(id);
   if (showEvents.length >= 2) {
-    return <ShowDetailClient events={showEvents} showSlug={id} locale={locale as "tr" | "de" | "en"} />;
+    const firstCreatorId = (showEvents[0] as { created_by_user_id?: string }).created_by_user_id;
+    const organizerDisplayName = await getOrganizerDisplayName(firstCreatorId);
+    return (
+      <ShowDetailClient
+        events={showEvents}
+        showSlug={id}
+        organizerDisplayName={organizerDisplayName}
+        locale={locale as "tr" | "de" | "en"}
+      />
+    );
   }
 
   const event = await getEventBySlug(id);
   if (!event) notFound();
 
-  const [tickets, venue] = await Promise.all([
+  const [tickets, venue, organizerDisplayName] = await Promise.all([
     getEventTickets(event.id),
     event.venue_id ? getVenue(event.venue_id) : Promise.resolve(null),
+    getOrganizerDisplayName((event as { created_by_user_id?: string }).created_by_user_id),
   ]);
 
   const structuredData = buildEventStructuredData(event, venue);
@@ -238,7 +263,13 @@ export default async function EventDetailPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <EventDetailClient event={event} tickets={tickets} venue={venue} locale={locale as "tr" | "de" | "en"} />
+      <EventDetailClient
+        event={event}
+        tickets={tickets}
+        venue={venue}
+        organizerDisplayName={organizerDisplayName}
+        locale={locale as "tr" | "de" | "en"}
+      />
     </>
   );
 }

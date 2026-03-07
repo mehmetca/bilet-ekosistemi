@@ -10,6 +10,7 @@ type OrganizerRequest = {
   email: string;
   status: string;
   created_at: string;
+  organization_display_name?: string;
 };
 
 type DisplayUser = {
@@ -277,6 +278,9 @@ export default function KullanicilarPage() {
                 >
                   <div>
                     <p className="font-medium text-slate-900">{req.email}</p>
+                    {req.organization_display_name && (
+                      <p className="text-sm text-primary-600">Organizasyon: {req.organization_display_name}</p>
+                    )}
                     <p className="text-sm text-slate-500">
                       Başvuru: {new Date(req.created_at).toLocaleString("tr-TR")}
                     </p>
