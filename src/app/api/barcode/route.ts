@@ -24,7 +24,9 @@ export async function GET(request: NextRequest) {
       backgroundcolor: "FFFFFF",
     });
 
-    return new NextResponse(buffer, {
+    const bytes = new Uint8Array(buffer.length);
+    bytes.set(buffer as Uint8Array);
+    return new NextResponse(bytes, {
       headers: {
         "Content-Type": "image/png",
         "Cache-Control": "public, max-age=86400",
