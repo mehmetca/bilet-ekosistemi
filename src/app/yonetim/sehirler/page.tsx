@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Edit2, Trash2, MapPin, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
-import AdminImageUpload from "@/components/AdminImageUpload";
+import AdminImageUploadFixed from "@/components/AdminImageUploadFixed";
 import RichTextEditor from "@/components/RichTextEditor";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
@@ -242,9 +242,10 @@ function SehirlerContent() {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Hero Görsel (URL)</label>
-                <AdminImageUpload
-                  value={form.image_url}
+                <AdminImageUploadFixed
+                  value={form.image_url || ""}
                   onChange={(url) => setForm((p) => ({ ...p, image_url: url }))}
+                  folder="hero-backgrounds"
                 />
               </div>
 

@@ -1,5 +1,11 @@
-import { redirect } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 
-export default function BilgilendirmeIndexPage() {
-  redirect("/bilgilendirme/sss");
+export default async function BilgilendirmeIndexPage({
+  params,
+}: {
+  params: Promise<{ locale: string }> | { locale: string };
+}) {
+  const resolved = "then" in params ? await params : params;
+  const locale = resolved?.locale || "tr";
+  redirect(`/${locale}/bilgilendirme/sss`);
 }

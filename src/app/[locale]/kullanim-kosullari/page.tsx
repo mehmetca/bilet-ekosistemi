@@ -1,5 +1,11 @@
-import { redirect } from "@/i18n/navigation";
+import { redirect } from "next/navigation";
 
-export default function KullanimKosullariRedirectPage() {
-  redirect("/bilgilendirme/kullanim-kosullari");
+export default async function KullanimKosullariRedirectPage({
+  params,
+}: {
+  params: Promise<{ locale: string }> | { locale: string };
+}) {
+  const resolved = "then" in params ? await params : params;
+  const locale = resolved?.locale || "tr";
+  redirect(`/${locale}/bilgilendirme/kullanim-kosullari`);
 }
