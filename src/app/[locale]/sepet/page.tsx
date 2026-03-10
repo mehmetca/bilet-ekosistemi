@@ -74,17 +74,20 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (items.length === 0) return;
     const ticketIds = [...new Set(items.map((i) => i.ticketId))];
-    supabase
-      .from("tickets")
-      .select("id, available")
-      .in("id", ticketIds)
-      .then(({ data }) => {
+    void (async () => {
+      try {
+        const { data } = await supabase
+          .from("tickets")
+          .select("id, available")
+          .in("id", ticketIds);
         if (!data) return;
-        data.forEach((row: { id: string; available: number }) => {
+        for (const row of data as { id: string; available: number }[]) {
           updateItemAvailable(row.id, Number(row.available ?? 0));
-        });
-      })
-      .catch(() => {});
+        }
+      } catch {
+        /* ignore */
+      }
+    })();
   }, [items.length, updateItemAvailable]);
   const [results, setResults] = useState<
     Array<{
