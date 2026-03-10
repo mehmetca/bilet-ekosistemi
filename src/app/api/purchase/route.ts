@@ -578,9 +578,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (quantity < 1 || quantity > 10) {
+    if (quantity < 1) {
       return NextResponse.json(
-        { success: false, message: "Miktar 1–10 arasında olmalıdır." },
+        { success: false, message: "Miktar en az 1 olmalıdır." },
         { status: 400 }
       );
     }
@@ -607,6 +607,27 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+
+    // Site ayarından maksimum bilet adedini al (varsayılan 10; tablo yoksa 10 kullanılır)
+    let maxTicketQuantity = 10;
+    try {
+      const { data: settingsRow } = await supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", "max_ticket_quantity")
+        .maybeSingle();
+      if (settingsRow && typeof (settingsRow as { value?: number }).value === "number") {
+        maxTicketQuantity = Math.max(1, Math.min(100, (settingsRow as { value: number }).value));
+      }
+    } catch {
+      /* tablo yok veya hata: varsayılan 10 */
+    }
+    if (quantity > maxTicketQuantity) {
+      return NextResponse.json(
+        { success: false, message: `Sipariş başına en fazla ${maxTicketQuantity} bilet alabilirsiniz.` },
+        { status: 400 }
+      );
+    }
 
     const authHeader = request.headers.get("authorization");
     const token = authHeader?.replace("Bearer ", "");

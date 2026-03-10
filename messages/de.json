@@ -230,6 +230,7 @@
     "price": "Preis",
     "quantity": "Anz.",
     "remaining": "Verbleibend",
+    "soldOut": "Ausverkauft",
     "fullName": "Vollständiger Name",
     "fullNamePlaceholder": "Ihr vollständiger Name",
     "email": "E-Mail",

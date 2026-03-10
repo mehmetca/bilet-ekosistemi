@@ -152,9 +152,10 @@ export default function ClientHomePage({
     return () => clearTimeout(t);
   }, [cities]);
 
-  // Sadece sayfa geri dönüşünde yenile (ilk yükleme server'dan gelir)
+  // Mount'ta bir kez veri yenile (Alışverişe devam et sonrası güncel liste görünsün); sayfa geri dönüşünde de yenile
   useEffect(() => {
     isMountedRef.current = true;
+    fetchData(); // İlk açılışta / sepet sonrası ana sayfada güncel etkinlik listesi
     const handlePageShow = (e: PageTransitionEvent) => {
       if (e.persisted) fetchData(); // bfcache'den dönüş
     };

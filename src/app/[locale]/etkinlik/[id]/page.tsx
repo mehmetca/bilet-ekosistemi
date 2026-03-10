@@ -155,8 +155,7 @@ async function getEventTickets(eventId: string): Promise<Ticket[]> {
     const { data, error } = await supabase
       .from("tickets")
       .select("*")
-      .eq("event_id", eventId)
-      .gt("available", 0);
+      .eq("event_id", eventId);
 
     if (error) return [];
     return ((data || []) as Ticket[]).sort((a, b) => {

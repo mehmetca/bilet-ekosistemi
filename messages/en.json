@@ -230,6 +230,7 @@
     "price": "Price",
     "quantity": "Qty",
     "remaining": "Remaining",
+    "soldOut": "Sold out",
     "fullName": "Full Name",
     "fullNamePlaceholder": "Your full name",
     "email": "Email",

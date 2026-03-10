@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Save, Database, Shield, Bell, Mail, CheckCircle, XCircle } from "lucide-react";
+import { Save, Database, Shield, Bell, Mail, CheckCircle, XCircle } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
+import { supabase } from "@/lib/supabase-client";
 
 export default function AyarlarPage() {
   const [loading, setLoading] = useState(false);
@@ -18,6 +19,7 @@ export default function AyarlarPage() {
       .then(setEmailStatus)
       .catch(() => setEmailStatus(null));
   }, []);
+
   const [settings, setSettings] = useState({
     siteName: "Bilet Ekosistemi",
     siteDescription: "Modern bilet satış platformu",
@@ -27,12 +29,36 @@ export default function AyarlarPage() {
     maintenanceMode: false
   });
 
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((data) => {
+        if (typeof data?.maxTicketQuantity === "number") {
+          setSettings((s) => ({ ...s, maxTicketQuantity: Math.max(1, Math.min(100, data.maxTicketQuantity)) }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   async function handleSave() {
     setLoading(true);
     try {
-      // Burada ayarları kaydetme işlemi yapılacak
-      // Şimdilik sadece gösterim amaçlı
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        alert("Oturum açmanız gerekiyor.");
+        return;
+      }
+      const res = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ maxTicketQuantity: settings.maxTicketQuantity }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(json?.error || "Ayarlar kaydedilemedi.");
+        return;
+      }
       alert("Ayarlar başarıyla kaydedildi!");
     } catch (error) {
       console.error("Settings save error:", error);
@@ -141,9 +167,9 @@ export default function AyarlarPage() {
                 <input
                   type="number"
                   value={settings.maxTicketQuantity}
-                  onChange={(e) => setSettings({...settings, maxTicketQuantity: parseInt(e.target.value)})}
-                  min="1"
-                  max="20"
+                  onChange={(e) => setSettings({...settings, maxTicketQuantity: Math.max(1, Math.min(100, parseInt(e.target.value, 10) || 1))})}
+                  min={1}
+                  max={100}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
                 />
               </div>

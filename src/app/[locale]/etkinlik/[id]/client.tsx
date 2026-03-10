@@ -25,8 +25,6 @@ interface EventDetailClientProps {
 }
 
 const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
-/** Sipariş başına en fazla kaç bilet seçilebilir */
-const MAX_TICKETS_PER_ORDER = 10;
 
 /** Oturum planı: bölüm > sıra > koltuk (koltuk seçimi UI için); bölümde ticket_type_label etkinlikteki bilet adıyla eşlenir */
 type SeatPlanSeat = { id: string; seat_label: string };
@@ -327,10 +325,22 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [reminderEmail, setReminderEmail] = useState("");
   const [reminderPending, setReminderPending] = useState(false);
   const [reminderResult, setReminderResult] = useState<{ success: boolean; message: string } | null>(null);
+  /** Site ayarı: sipariş başına max bilet (varsayılan 10) */
+  const [maxTicketsPerOrder, setMaxTicketsPerOrder] = useState(10);
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => r.json())
+      .then((data) => {
+        if (typeof data?.maxTicketQuantity === "number") {
+          setMaxTicketsPerOrder(Math.max(1, Math.min(100, data.maxTicketQuantity)));
+        }
+      })
+      .catch(() => {});
+  }, []);
   const selectedTicket = availableTickets.find((t) => t.id === selectedTicketType);
   const selectedMinQ = selectedTicket ? getMinQuantityFromDescription(selectedTicket.description) : 1;
   const selectedMaxQ = selectedTicket
-    ? Math.min(Number(selectedTicket.available || 0), MAX_TICKETS_PER_ORDER)
+    ? Math.min(Number(selectedTicket.available || 0), maxTicketsPerOrder)
     : 1;
   const totalPrice = selectedTicket ? selectedTicket.price * ticketCount : 0;
 
@@ -850,8 +860,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               )}
 
-              {/* Bilet Türleri - Fiyat kategorisine göre (mevcut akış) */}
-              {!isExternalOnlyEvent && bookingMode === "price" && (availableTickets.length === 0 ? (
+              {/* Bilet Türleri - Fiyat kategorisine göre (mevcut akış); tükenen kategoriler "Sold out" ile gösterilir */}
+              {!isExternalOnlyEvent && bookingMode === "price" && (ticketState.length === 0 ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
                   {t("noTicketsAvailable")}
                 </div>
@@ -863,11 +873,31 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     <span className="text-right">{t("quantity")}</span>
                   </div>
                   <div className="divide-y divide-slate-200">
-                    {availableTickets.map((ticketType) => {
-                      const isSelected = selectedTicketType === ticketType.id;
+                    {ticketState.map((ticketType) => {
                       const availableAmount = Number(ticketType.available || 0);
+                      const isSoldOut = availableAmount <= 0;
+                      if (isSoldOut) {
+                        return (
+                          <div
+                            key={ticketType.id}
+                            className="flex items-center justify-between gap-4 px-5 py-4 bg-slate-50 cursor-default"
+                          >
+                            <div>
+                              <p className="text-sm font-semibold text-slate-700">{ticketType.name}</p>
+                              <p className="text-xs text-slate-500">{t("remaining")}: 0</p>
+                            </div>
+                            <p className="text-lg font-bold text-slate-400">{formatPrice(ticketType.price, event.currency)}</p>
+                            <div className="flex items-center justify-end min-w-[100px]">
+                              <span className="text-lg font-bold uppercase tracking-wider text-red-600" aria-label={t("soldOut")}>
+                                {t("soldOut")}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      const isSelected = selectedTicketType === ticketType.id;
                       const minSelectable = getMinQuantityFromDescription(ticketType.description);
-                      const maxSelectable = Math.min(availableAmount, MAX_TICKETS_PER_ORDER);
+                      const maxSelectable = Math.min(availableAmount, maxTicketsPerOrder);
                       const effectiveMin = Math.min(minSelectable, maxSelectable);
                       const rowCount = isSelected ? ticketCount : 0;
 

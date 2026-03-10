@@ -21,7 +21,7 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useSimpleAuth();
 
-  const { items, removeItem, updateQuantity, clearCart, totalPrice } = useCart();
+  const { items, removeItem, updateQuantity, updateItemAvailable, clearCart, totalPrice } = useCart();
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerAddress, setBuyerAddress] = useState("");
@@ -69,6 +69,23 @@ export default function CheckoutPage() {
   }, [user, user?.email]);
   const [currentStep, setCurrentStep] = useState(1);
   const [isPending, setIsPending] = useState(false);
+
+  // Sepet açıldığında güncel stok bilgisini çek; stoktan fazla adet varsa stoka indir
+  useEffect(() => {
+    if (items.length === 0) return;
+    const ticketIds = [...new Set(items.map((i) => i.ticketId))];
+    supabase
+      .from("tickets")
+      .select("id, available")
+      .in("id", ticketIds)
+      .then(({ data }) => {
+        if (!data) return;
+        data.forEach((row: { id: string; available: number }) => {
+          updateItemAvailable(row.id, Number(row.available ?? 0));
+        });
+      })
+      .catch(() => {});
+  }, [items.length, updateItemAvailable]);
   const [results, setResults] = useState<
     Array<{
       success: boolean;
@@ -189,7 +206,7 @@ export default function CheckoutPage() {
           >
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
-                currentStep >= 1 ? "bg-primary-600 text-white" : "bg-slate-200 text-slate-600"
+                currentStep >= 1 ? "!bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
               }`}
             >
               1
@@ -206,7 +223,7 @@ export default function CheckoutPage() {
           >
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
-                currentStep >= 2 ? "bg-primary-600 text-white" : "bg-slate-200 text-slate-600"
+                currentStep >= 2 ? "!bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
               }`}
             >
               2
@@ -223,7 +240,7 @@ export default function CheckoutPage() {
           >
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
-                currentStep >= 3 ? "bg-primary-600 text-white" : "bg-slate-200 text-slate-600"
+                currentStep >= 3 ? "!bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
               }`}
             >
               3
@@ -242,7 +259,7 @@ export default function CheckoutPage() {
             <p className="mb-6 text-sm text-slate-500">{t("redirectingToLogin")}</p>
             <Link
               href={`/giris?redirect=/${locale}/sepet`}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700"
+              className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
             >
               {t("loginOrSignup")}
             </Link>
@@ -280,7 +297,7 @@ export default function CheckoutPage() {
             )}
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700"
+              className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
             >
               {t("continueShopping")}
             </Link>
@@ -292,7 +309,7 @@ export default function CheckoutPage() {
             <p className="mb-6 text-slate-600">{t("emptyCartDesc")}</p>
             <Link
               href="/"
-              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700"
+              className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
             >
               {t("continueShopping")}
             </Link>
@@ -370,7 +387,7 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(2)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700"
+                    className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
                   >
                     {t("stepContinue")}
                     <ChevronRight className="h-5 w-5" />
@@ -384,8 +401,8 @@ export default function CheckoutPage() {
               <div className="space-y-4">
               <div className="rounded-xl border border-slate-200 bg-white p-6">
                 <h2 className="mb-4 text-lg font-bold text-slate-900">{t("deliveryMethod")}</h2>
-                <div className="flex items-start gap-3 rounded-lg border-2 border-primary-500 bg-primary-50 p-4">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-primary-600 text-white">
+                <div className="flex items-start gap-3 rounded-lg border-2 border-blue-500 bg-blue-50 p-4">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
                     <Ticket className="h-5 w-5" />
                   </div>
                   <div>
@@ -405,7 +422,7 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     onClick={() => setCurrentStep(3)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700"
+                    className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
                   >
                     {t("stepContinue")}
                     <ChevronRight className="h-5 w-5" />
@@ -621,7 +638,7 @@ export default function CheckoutPage() {
                     handleCompleteOrder(e as unknown as React.FormEvent);
                   }}
                   disabled={isPending || items.length === 0 || !user}
-                  className="mt-6 w-full rounded-lg bg-primary-600 py-4 font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
+                  className="mt-6 w-full rounded-lg !bg-blue-600 py-4 font-semibold text-white transition-colors hover:!bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"
                 >
                   {isPending ? t("processing") : t("completeOrder")}
                 </button>

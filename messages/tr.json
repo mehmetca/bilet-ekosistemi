@@ -230,6 +230,7 @@
     "price": "Fiyat",
     "quantity": "Adet",
     "remaining": "Kalan bilet",
+    "soldOut": "Sold out",
     "fullName": "Ad Soyad",
     "fullNamePlaceholder": "Adınız Soyadınız",
     "email": "E-posta",
