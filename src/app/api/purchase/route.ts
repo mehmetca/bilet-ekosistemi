@@ -57,7 +57,7 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
     ? new Date(payload.eventDate).toLocaleDateString("tr-TR")
     : "-";
   const timeText = payload.eventTime || "--:--";
-  const priceText = Number(payload.totalPrice).toLocaleString("de-DE");
+  const priceText = Number(payload.totalPrice).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const locationText = payload.location || "-";
   const venueText = payload.venue || "-";
   const leftVerticalTicketCodeHtml = payload.ticketCode
@@ -400,7 +400,7 @@ async function buildTicketPdfBase64(payload: TicketMailPayload) {
   const rows: Array<[string, string]> = [
     ["Bilet Turu", safeTicketType],
     ["Kisi/Adet", `${safeBuyerName} / ${payload.quantity}`],
-    ["Toplam", `EUR ${Number(payload.totalPrice).toLocaleString("de-DE")}`],
+    ["Toplam", `EUR ${Number(payload.totalPrice).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
     ["Giris", "EINGANG X"],
   ];
   let y = ticketY + 92;
@@ -627,6 +627,30 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, message: "Bilet bulunamadı." },
         { status: 404 }
+      );
+    }
+
+    // Sadece onaylanmış etkinliklerde bilet satışı
+    const { data: eventRow } = await supabase
+      .from("events")
+      .select("id, is_approved")
+      .eq("id", ticket.event_id)
+      .single();
+    if (!eventRow || eventRow.is_approved !== true) {
+      return NextResponse.json(
+        { success: false, message: "Bu etkinlik henüz onaylanmadığı için bilet satın alınamaz." },
+        { status: 403 }
+      );
+    }
+
+    // Grup indirimli bilet: minimum adet (açıklamadaki "Min. X adet." ile uyumlu)
+    const desc = (ticket.description || "").toString();
+    const minAdetMatch = desc.match(/Min\.\s*(\d+)\s*adet/i);
+    const minQuantity = minAdetMatch ? Math.max(1, parseInt(minAdetMatch[1], 10)) : 1;
+    if (quantity < minQuantity) {
+      return NextResponse.json(
+        { success: false, message: `Bu bilet türünden en az ${minQuantity} adet alınmalıdır.` },
+        { status: 400 }
       );
     }
 

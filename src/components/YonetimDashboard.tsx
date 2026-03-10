@@ -2,34 +2,13 @@
 
 import Link from "next/link";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import OrganizerDashboard from "@/components/OrganizerDashboard";
 
 export default function YonetimDashboard() {
   const { isAdmin, isController, isOrganizer } = useSimpleAuth();
 
   if (isOrganizer) {
-    return (
-      <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-        <h2 className="text-xl font-semibold text-slate-900 mb-4">Organizatör Paneli</h2>
-        <p className="text-slate-600 mb-6">
-          Etkinliklerinizi ekleyebilir ve düzenleyebilirsiniz. Eklediğiniz etkinlikler yönetici onayından sonra sitede yayınlanır.
-        </p>
-        <Link
-          href="/yonetim/etkinlikler?yeni=true"
-          className="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          <span className="text-lg">+</span>
-          Yeni Etkinlik Ekle
-        </Link>
-        <div className="flex flex-wrap justify-center gap-4 mt-4">
-          <Link href="/yonetim/etkinlikler" className="text-sm text-primary-600 hover:underline">
-            Mevcut etkinliklerinizi görüntüleyin →
-          </Link>
-          <Link href="/yonetim/biletlerim" className="text-sm text-primary-600 hover:underline">
-            Biletlerim →
-          </Link>
-        </div>
-      </div>
-    );
+    return <OrganizerDashboard />;
   }
 
   if (isController) {
@@ -57,6 +36,10 @@ export default function YonetimDashboard() {
         <Link href="/yonetim/etkinlikler" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Etkinlikler</h3>
           <p className="text-sm text-slate-500">Tüm etkinlikleri yönetin</p>
+        </Link>
+        <Link href="/yonetim/mekanlar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
+          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Mekanlar / Salon ayarları</h3>
+          <p className="text-sm text-slate-500">Mekanlar ve oturum planı (bölüm, sıra, koltuk)</p>
         </Link>
         <Link href="/yonetim/haberler" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Haberler</h3>

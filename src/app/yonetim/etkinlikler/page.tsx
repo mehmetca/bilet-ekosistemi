@@ -1,38 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Copy, Calendar, MapPin, Music2, X, CheckCircle, Heart, Bell, Building2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Plus, Edit2, Trash2, Copy, Calendar, MapPin, Music2, CheckCircle, Heart, Bell, Building2 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import type { Event, EventCategory, EventCurrency } from "@/types/database";
-import { CATEGORY_LABELS, CURRENCY_SYMBOLS, DISPLAY_CATEGORIES } from "@/types/database";
-import AdminImageUpload from "@/components/AdminImageUpload";
-import { buildEventDescription, parseEventDescription } from "@/lib/eventMeta";
+import { CATEGORY_LABELS } from "@/types/database";
+import { parseEventDescription } from "@/lib/eventMeta";
 import { formatPrice } from "@/lib/formatPrice";
 import { logAudit } from "@/lib/audit";
-import { useTranslations } from "next-intl";
-
-const PRESET_TICKET_TYPES = [
-  { key: "standart", name: "Standart Bilet", type: "normal", multiplier: 1 },
-  { key: "vip", name: "VIP Bilet", type: "vip", multiplier: 1 },
-  { key: "kategori1", name: "Kategori 1", type: "normal", multiplier: 1 },
-  { key: "kategori2", name: "Kategori 2", type: "normal", multiplier: 1 },
-  { key: "kategori3", name: "Kategori 3", type: "normal", multiplier: 1 },
-  { key: "kategori4", name: "Kategori 4", type: "normal", multiplier: 1 },
-  { key: "kategori5", name: "Kategori 5", type: "normal", multiplier: 1 },
-  { key: "kategori6", name: "Kategori 6", type: "normal", multiplier: 1 },
-  { key: "kategori7", name: "Kategori 7", type: "normal", multiplier: 1 },
-  { key: "kategori8", name: "Kategori 8", type: "normal", multiplier: 1 },
-  { key: "kategori9", name: "Kategori 9", type: "normal", multiplier: 1 },
-  { key: "kategori10", name: "Kategori 10", type: "normal", multiplier: 1 },
-] as const;
-
-const EMPTY_TICKET_QUANTITIES: Record<string, number> = Object.fromEntries(
-  PRESET_TICKET_TYPES.map((ticket) => [ticket.key, 0])
-);
-const EMPTY_TICKET_PRICES: Record<string, number> = Object.fromEntries(
-  PRESET_TICKET_TYPES.map((ticket) => [ticket.key, 0])
-);
 
 async function withTimeout(
   requestFactory: (signal: AbortSignal) => any,
@@ -60,45 +38,17 @@ export default function EtkinliklerPage() {
 
 function EtkinliklerContent() {
   const { user, isAdmin, isOrganizer } = useSimpleAuth();
-  const tCurrency = useTranslations("currency");
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [showForm, setShowForm] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [imageUrl, setImageUrl] = useState<string>("");
-  const [imageUploading, setImageUploading] = useState(false);
-  const [descriptionText, setDescriptionText] = useState("");
-  const [descriptionTextDe, setDescriptionTextDe] = useState("");
-  const [descriptionTextEn, setDescriptionTextEn] = useState("");
-  const [externalTicketUrl, setExternalTicketUrl] = useState("");
-  const [titleTr, setTitleTr] = useState("");
-  const [titleDe, setTitleDe] = useState("");
-  const [titleEn, setTitleEn] = useState("");
-  const [venueTr, setVenueTr] = useState("");
-  const [venueDe, setVenueDe] = useState("");
-  const [venueEn, setVenueEn] = useState("");
-  const [ticketQuantities, setTicketQuantities] = useState<Record<string, number>>(EMPTY_TICKET_QUANTITIES);
-  const [ticketPrices, setTicketPrices] = useState<Record<string, number>>(EMPTY_TICKET_PRICES);
-  const [venues, setVenues] = useState<Array<{ id: string; name: string; address: string | null; city: string | null }>>([]);
-  const [selectedVenueId, setSelectedVenueId] = useState<string>("");
   const [eventStats, setEventStats] = useState<Record<string, { favorites: number; reminders: number }>>({});
   const [organizerNames, setOrganizerNames] = useState<Record<string, string>>({});
-  const [organizerDisplayName, setOrganizerDisplayName] = useState("");
   const [currentUserOrganizerName, setCurrentUserOrganizerName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAdmin && !isOrganizer) return;
     fetchEvents();
   }, [isAdmin, isOrganizer]);
-
-  useEffect(() => {
-    if (showForm) {
-      supabase.from("venues").select("id,name,address,city").order("name").then(({ data }) => {
-        setVenues(data || []);
-      });
-    }
-  }, [showForm]);
 
   async function fetchEvents() {
     try {
@@ -169,6 +119,28 @@ function EtkinliklerContent() {
     }
   }
 
+  async function handleSetFeaturedOrder(eventId: string, order: number | null) {
+    if (!isAdmin) return;
+    try {
+      if (order === 1 || order === 2) {
+        await supabase
+          .from("events")
+          .update({ homepage_featured_order: null })
+          .eq("homepage_featured_order", order)
+          .neq("id", eventId);
+      }
+      const { error } = await supabase
+        .from("events")
+        .update({ homepage_featured_order: order })
+        .eq("id", eventId);
+      if (error) throw error;
+      await fetchEvents();
+    } catch (err) {
+      console.error("Öne çıkan ayarı güncellenemedi:", err);
+      alert("Öne çıkan ayarı güncellenemedi. " + (err instanceof Error ? err.message : ""));
+    }
+  }
+
   async function handleApprove(eventId: string) {
     try {
       const { error } = await supabase
@@ -232,30 +204,6 @@ function EtkinliklerContent() {
     }
   }
 
-  async function loadTicketQuantities(eventId: string) {
-    try {
-      const { data, error } = await supabase
-        .from("tickets")
-        .select("name, quantity, price")
-        .eq("event_id", eventId);
-
-      if (error) throw error;
-
-      const nextQty = { ...EMPTY_TICKET_QUANTITIES };
-      const nextPrice = { ...EMPTY_TICKET_PRICES };
-      for (const preset of PRESET_TICKET_TYPES) {
-        const match = (data || []).find((row) => row.name === preset.name);
-        nextQty[preset.key] = Number(match?.quantity || 0);
-        nextPrice[preset.key] = Number(match?.price || 0);
-      }
-      setTicketQuantities(nextQty);
-      setTicketPrices(nextPrice);
-    } catch {
-      setTicketQuantities({ ...EMPTY_TICKET_QUANTITIES });
-      setTicketPrices({ ...EMPTY_TICKET_PRICES });
-    }
-  }
-
   async function handleCopy(event: Event) {
     setSubmitting(true);
     try {
@@ -283,6 +231,7 @@ function EtkinliklerContent() {
         venue_de: ev.venue_de ?? null,
         venue_en: ev.venue_en ?? null,
         show_slug: ev.show_slug ?? null,
+        homepage_featured_order: null,
       };
       if (isOrganizer && user?.id) {
         copyPayload.created_by_user_id = user.id;
@@ -340,8 +289,8 @@ function EtkinliklerContent() {
       });
 
       await fetchEvents();
-      await handleEdit(newEvent as Event);
       alert("Etkinlik kopyalandı. Tarih, fiyat ve yer bilgilerini düzenleyebilirsiniz.");
+      handleEdit(newEvent as Event);
     } catch (err) {
       console.error("Etkinlik kopyalanamadı:", err);
       const errMsg =
@@ -360,232 +309,9 @@ function EtkinliklerContent() {
     }
   }
 
-  async function handleEdit(event: Event) {
-    const parsed = parseEventDescription(event.description);
-    const parsedDe = parseEventDescription((event as Event & { description_de?: string }).description_de);
-    const parsedEn = parseEventDescription((event as Event & { description_en?: string }).description_en);
-    setEditingEvent(event);
-    setImageUrl(event.image_url || "");
-    setDescriptionText(parsed.content || "");
-    setDescriptionTextDe(parsedDe.content || "");
-    setDescriptionTextEn(parsedEn.content || "");
-    setExternalTicketUrl(parsed.externalTicketUrl || "");
-    setTitleTr((event as Event & { title_tr?: string }).title_tr || event.title);
-    setTitleDe((event as Event & { title_de?: string }).title_de || "");
-    setTitleEn((event as Event & { title_en?: string }).title_en || "");
-    setVenueTr((event as Event & { venue_tr?: string }).venue_tr || event.venue);
-    setVenueDe((event as Event & { venue_de?: string }).venue_de || "");
-    setVenueEn((event as Event & { venue_en?: string }).venue_en || "");
-    setSelectedVenueId((event as Event & { venue_id?: string }).venue_id || "");
-    setOrganizerDisplayName((event as Event & { organizer_display_name?: string }).organizer_display_name || "");
-    setShowForm(true);
-    await loadTicketQuantities(event.id);
-  }
-
-  function handleFormClose() {
-    if (submitting) return;
-    setShowForm(false);
-    setEditingEvent(null);
-    setImageUrl("");
-    setImageUploading(false);
-    setDescriptionText("");
-    setDescriptionTextDe("");
-    setDescriptionTextEn("");
-    setExternalTicketUrl("");
-    setTitleTr("");
-    setTitleDe("");
-    setTitleEn("");
-    setVenueTr("");
-    setVenueDe("");
-    setVenueEn("");
-    setTicketQuantities({ ...EMPTY_TICKET_QUANTITIES });
-    setTicketPrices({ ...EMPTY_TICKET_PRICES });
-    setSelectedVenueId("");
-    setOrganizerDisplayName("");
-  }
-
-  async function syncPresetTickets(eventId: string, basePrice: number) {
-    const { data: existingRows, error: fetchError } = await withTimeout(
-      (signal) =>
-        supabase
-          .from("tickets")
-          .select("id, name, quantity, available")
-          .eq("event_id", eventId)
-          .abortSignal(signal),
-      30000,
-      "Bilet bilgileri okunurken zaman asimi olustu."
-    );
-
-    if (fetchError) throw fetchError;
-
-    for (const preset of PRESET_TICKET_TYPES) {
-      const qty = Math.max(0, Number(ticketQuantities[preset.key] || 0));
-      const enteredPrice = Math.max(0, Number(ticketPrices[preset.key] || 0));
-      const fallbackPrice = Math.max(0, Number(basePrice || 0) * preset.multiplier);
-      const price = enteredPrice > 0 ? enteredPrice : fallbackPrice;
-      const existing = (existingRows || []).find((row) => row.name === preset.name);
-
-      // Quantity 0 ise bu bilet türünü etkinlikte tutma.
-      if (qty <= 0) {
-        if (existing) {
-          const { error: deleteError } = await supabase
-            .from("tickets")
-            .delete()
-            .eq("id", existing.id);
-          if (deleteError) throw deleteError;
-        }
-        continue;
-      }
-
-      if (existing) {
-        const sold = Math.max(0, Number(existing.quantity || 0) - Number(existing.available || 0));
-        const safeQuantity = Math.max(qty, sold);
-        const available = Math.max(0, safeQuantity - sold);
-        const { error: updateError } = await withTimeout(
-          (signal) =>
-            supabase
-              .from("tickets")
-              .update({
-                name: preset.name,
-                type: preset.type,
-                price,
-                quantity: safeQuantity,
-                available,
-                description: `${preset.name} - otomatik etkinlik bileti`,
-              })
-              .eq("id", existing.id)
-              .abortSignal(signal),
-          30000,
-          `${preset.name} guncellenirken zaman asimi olustu.`
-        );
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await withTimeout(
-          (signal) =>
-            supabase
-              .from("tickets")
-              .insert({
-                event_id: eventId,
-                name: preset.name,
-                type: preset.type,
-                price,
-                quantity: qty,
-                available: qty,
-                description: `${preset.name} - otomatik etkinlik bileti`,
-              })
-              .abortSignal(signal),
-          30000,
-          `${preset.name} eklenirken zaman asimi olustu.`
-        );
-        if (insertError) throw insertError;
-      }
-    }
-  }
-
-  async function handleFormSubmit(formData: FormData) {
-    if (imageUploading) {
-      alert("Gorsel yukleniyor, lutfen tamamlanmasini bekleyin.");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      const fallbackBasePrice = parseFloat(formData.get("price_from") as string) || 0;
-      const activePrices = PRESET_TICKET_TYPES.map((ticketType) => {
-        const qty = Math.max(0, Number(ticketQuantities[ticketType.key] || 0));
-        if (qty <= 0) return 0;
-        const entered = Math.max(0, Number(ticketPrices[ticketType.key] || 0));
-        return entered > 0 ? entered : fallbackBasePrice;
-      }).filter((value) => value > 0);
-      const derivedBasePrice =
-        activePrices.length > 0 ? Math.min(...activePrices) : fallbackBasePrice;
-
-      const titleTrVal = titleTr || (formData.get("title") as string) || "";
-      const venueTrVal = venueTr || (formData.get("venue") as string) || "";
-      const eventData = {
-        title: titleTrVal,
-        description: buildEventDescription(descriptionText, externalTicketUrl),
-        date: formData.get("date") as string,
-        time: formData.get("time") as string,
-        venue: venueTrVal,
-        location: formData.get("location") as string,
-        category: formData.get("category") as EventCategory,
-        price_from: derivedBasePrice,
-        currency: (formData.get("currency") as EventCurrency) || "EUR",
-        image_url: imageUrl || null,
-        venue_id: selectedVenueId || null,
-        title_tr: titleTrVal || null,
-        title_de: titleDe || null,
-        title_en: titleEn || null,
-        description_tr: buildEventDescription(descriptionText, externalTicketUrl) || null,
-        description_de: descriptionTextDe ? buildEventDescription(descriptionTextDe, externalTicketUrl) : null,
-        description_en: descriptionTextEn ? buildEventDescription(descriptionTextEn, externalTicketUrl) : null,
-        venue_tr: venueTrVal || null,
-        venue_de: venueDe || null,
-        venue_en: venueEn || null,
-        show_slug: (formData.get("show_slug") as string)?.trim() || null,
-        organizer_display_name: organizerDisplayName?.trim() || null,
-      };
-      if (isOrganizer && user?.id && !editingEvent) {
-        (eventData as Record<string, unknown>).created_by_user_id = user.id;
-        (eventData as Record<string, unknown>).is_approved = false;
-        if (!organizerDisplayName?.trim() && currentUserOrganizerName) {
-          (eventData as Record<string, unknown>).organizer_display_name = currentUserOrganizerName;
-        }
-      }
-
-      if (editingEvent) {
-        // Güncelleme
-        const { error } = await withTimeout(
-          (signal) =>
-            supabase
-              .from("events")
-              .update(eventData)
-              .eq("id", editingEvent.id)
-              .abortSignal(signal),
-          30000,
-          "Etkinlik guncellenirken zaman asimi olustu."
-        );
-
-        if (error) {
-          console.error("Update error:", error);
-          throw error;
-        }
-
-        await syncPresetTickets(editingEvent.id, eventData.price_from);
-      } else {
-        // Yeni etkinlik
-        const { data: insertedEvent, error } = await withTimeout(
-          (signal) =>
-            supabase
-              .from("events")
-              .insert(eventData)
-              .select("id")
-              .abortSignal(signal)
-              .single(),
-          30000,
-          "Etkinlik olusturulurken zaman asimi olustu."
-        );
-
-        if (error) {
-          console.error("Insert error:", error);
-          throw error;
-        }
-
-        if (insertedEvent?.id) {
-          await syncPresetTickets(insertedEvent.id, eventData.price_from);
-        }
-      }
-
-      await fetchEvents();
-      handleFormClose();
-      alert(editingEvent ? "Etkinlik güncellendi!" : "Etkinlik oluşturuldu!");
-    } catch (error) {
-      console.error("Form submit error:", error);
-      alert("İşlem başarısız oldu: " + (error as Error).message);
-    } finally {
-      setSubmitting(false);
-    }
+  const router = useRouter();
+  function handleEdit(event: Event) {
+    router.push("/yonetim/etkinlikler/yeni?id=" + event.id);
   }
 
   if (loading) {
@@ -601,374 +327,14 @@ function EtkinliklerContent() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-slate-900">Etkinlik Yönetimi</h1>
-          <button
-            onClick={() => {
-              setShowForm(true);
-              setEditingEvent(null);
-              setImageUrl("");
-              setDescriptionText("");
-              setDescriptionTextDe("");
-              setDescriptionTextEn("");
-              setExternalTicketUrl("");
-              setTitleTr("");
-              setTitleDe("");
-              setTitleEn("");
-              setVenueTr("");
-              setVenueDe("");
-              setVenueEn("");
-              setTicketQuantities({ ...EMPTY_TICKET_QUANTITIES });
-              setTicketPrices({ ...EMPTY_TICKET_PRICES });
-              setSelectedVenueId("");
-              setOrganizerDisplayName(currentUserOrganizerName || "");
-            }}
+          <Link
+            href="/yonetim/etkinlikler/yeni"
             className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
           >
             <Plus className="h-4 w-4" />
             Yeni Etkinlik
-          </button>
+          </Link>
         </div>
-
-        {showForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 relative">
-              <button
-                type="button"
-                onClick={handleFormClose}
-                className="absolute top-4 right-4 p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-                aria-label="Kapat"
-              >
-                <X className="h-5 w-5" />
-              </button>
-              <h2 className="text-xl font-bold text-slate-900 mb-6 pr-10">
-                {editingEvent ? "Etkinlik Düzenle" : "Yeni Etkinlik"}
-              </h2>
-              
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleFormSubmit(new FormData(e.currentTarget));
-                }}
-                className="space-y-4"
-              >
-                <div className="space-y-4">
-                  <h3 className="font-semibold text-slate-800">Çok Dilli İçerik (TR, DE, EN)</h3>
-                  <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50 space-y-3">
-                    <h4 className="text-sm font-medium text-slate-700">Türkçe (zorunlu)</h4>
-                    <input type="hidden" name="title" value={titleTr} />
-                    <input
-                      type="text"
-                      placeholder="Etkinlik Adı (TR)"
-                      required
-                      value={titleTr}
-                      onChange={(e) => setTitleTr(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                    <textarea
-                      placeholder="Açıklama (TR)"
-                      rows={2}
-                      value={descriptionText}
-                      onChange={(e) => setDescriptionText(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Mekan Adı (TR)"
-                      value={venueTr}
-                      onChange={(e) => setVenueTr(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50 space-y-3">
-                    <h4 className="text-sm font-medium text-slate-700">Deutsch (opsiyonel)</h4>
-                    <input
-                      type="text"
-                      placeholder="Etkinlik Adı (DE)"
-                      value={titleDe}
-                      onChange={(e) => setTitleDe(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                    <textarea
-                      placeholder="Açıklama (DE)"
-                      rows={2}
-                      value={descriptionTextDe}
-                      onChange={(e) => setDescriptionTextDe(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Mekan Adı (DE)"
-                      value={venueDe}
-                      onChange={(e) => setVenueDe(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50 space-y-3">
-                    <h4 className="text-sm font-medium text-slate-700">English (opsiyonel)</h4>
-                    <input
-                      type="text"
-                      placeholder="Etkinlik Adı (EN)"
-                      value={titleEn}
-                      onChange={(e) => setTitleEn(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                    <textarea
-                      placeholder="Açıklama (EN)"
-                      rows={2}
-                      value={descriptionTextEn}
-                      onChange={(e) => setDescriptionTextEn(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Mekan Adı (EN)"
-                      value={venueEn}
-                      onChange={(e) => setVenueEn(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Tarih
-                    </label>
-                    <input
-                      type="date"
-                      name="date"
-                      required
-                      defaultValue={editingEvent?.date || ""}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Saat
-                    </label>
-                    <input
-                      type="time"
-                      name="time"
-                      required
-                      defaultValue={editingEvent?.time || ""}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Mekan (Opsiyonel - SSS/ulaşım için)
-                  </label>
-                  <select
-                    value={selectedVenueId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      setSelectedVenueId(id);
-                      if (id) {
-                        const v = venues.find((x) => x.id === id);
-                        if (v) {
-                          setVenueTr(v.name);
-                          const locationInput = document.querySelector<HTMLInputElement>('input[name="location"]');
-                          if (locationInput) locationInput.value = [v.address, v.city].filter(Boolean).join(", ") || v.name;
-                        }
-                      }
-                    }}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  >
-                    <option value="">— Mekan seçin veya manuel girin —</option>
-                    {venues.map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name} {v.city ? `(${v.city})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Konum (şehir/adres - tüm dillerde ortak)
-                  </label>
-                  <input
-                    type="text"
-                    name="location"
-                    required
-                    defaultValue={editingEvent?.location || ""}
-                    key={editingEvent?.id || "new"}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Tur/Gösteri Slug (Biletinial tarzı - opsiyonel)
-                  </label>
-                  <input
-                    type="text"
-                    name="show_slug"
-                    defaultValue={(editingEvent as Event & { show_slug?: string })?.show_slug || ""}
-                    placeholder="erdal-kaya-zikopisto"
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">
-                    Aynı slug&apos;a sahip 2+ etkinlik tek sayfada şehir seçerek gösterilir (Biletinial gibi).
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Organizasyon (etkinlik sayfasında görünecek)
-                  </label>
-                  <input
-                    type="text"
-                    value={organizerDisplayName}
-                    onChange={(e) => setOrganizerDisplayName(e.target.value)}
-                    placeholder={isOrganizer ? "Profilinizden otomatik doldurulur" : "Örn: Erdal Kaya, Konser Org Ltd."}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">
-                    Bu isim etkinlik sayfasında &quot;Organizasyon&quot; olarak gösterilir.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Kategori
-                    </label>
-                    <select
-                      name="category"
-                      required
-                      defaultValue={editingEvent?.category || "konser"}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    >
-                      {DISPLAY_CATEGORIES.map((key) => (
-                        <option key={key} value={key}>
-                          {CATEGORY_LABELS[key]}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      {tCurrency("label")}
-                    </label>
-                    <select
-                      name="currency"
-                      defaultValue={editingEvent?.currency || "EUR"}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    >
-                      <option value="EUR">{tCurrency("EUR") || `${CURRENCY_SYMBOLS.EUR} Euro`}</option>
-                      <option value="TL">{tCurrency("TL") || `${CURRENCY_SYMBOLS.TL} Türk Lirası`}</option>
-                      <option value="USD">{tCurrency("USD") || `${CURRENCY_SYMBOLS.USD} US Doları`}</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Başlangıç Fiyatı
-                    </label>
-                    <input
-                      type="number"
-                      name="price_from"
-                      min="0"
-                      step="0.01"
-                      defaultValue={editingEvent?.price_from || ""}
-                      className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
-                    Harici Bilet Linki (Opsiyonel)
-                  </label>
-                  <input
-                    type="url"
-                    value={externalTicketUrl}
-                    onChange={(e) => setExternalTicketUrl(e.target.value)}
-                    placeholder="https://..."
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div>
-                  <AdminImageUpload
-                    value={imageUrl}
-                    onChange={setImageUrl}
-                    onUploadingChange={setImageUploading}
-                  />
-                </div>
-
-                <div className="rounded-lg border border-slate-200 p-4">
-                  <h3 className="font-semibold text-slate-900 mb-3">Bilet Türleri ve Adetleri</h3>
-                  <p className="text-xs text-slate-500 mb-3">
-                    Standart, VIP ve Kategori 1-10 her etkinlikte hazır olur. Sadece adet girin.
-                  </p>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {PRESET_TICKET_TYPES.map((ticketType) => (
-                      <div key={ticketType.key}>
-                        <label className="block text-xs font-medium text-slate-700 mb-1">
-                          {ticketType.name}
-                        </label>
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="number"
-                            min="0"
-                            value={ticketQuantities[ticketType.key] ?? 0}
-                            onChange={(e) =>
-                              setTicketQuantities((prev) => ({
-                                ...prev,
-                                [ticketType.key]: Math.max(0, Number(e.target.value || 0)),
-                              }))
-                            }
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                            placeholder="Adet"
-                          />
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={ticketPrices[ticketType.key] ?? 0}
-                            onChange={(e) =>
-                              setTicketPrices((prev) => ({
-                                ...prev,
-                                [ticketType.key]: Math.max(0, Number(e.target.value || 0)),
-                              }))
-                            }
-                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                            placeholder="Fiyat €"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    type="submit"
-                    disabled={submitting || imageUploading}
-                    className="flex-1 bg-primary-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {imageUploading
-                      ? "Gorsel Yukleniyor..."
-                      : submitting
-                        ? "Kaydediliyor..."
-                        : editingEvent
-                          ? "Güncelle"
-                          : "Oluştur"}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleFormClose}
-                    disabled={submitting}
-                    className="px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
-                  >
-                    İptal
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
 
         {events.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
@@ -1048,12 +414,27 @@ function EtkinliklerContent() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 border-t sm:border-t-0 pt-4 sm:pt-0">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 flex-shrink-0 border-t sm:border-t-0 pt-4 sm:pt-0 flex-wrap">
                     <span className="font-bold text-primary-600">
                       {Number(event.price_from) > 0
                         ? formatPrice(Number(event.price_from), event.currency)
                         : "Ücretsiz"}
                     </span>
+                    {isAdmin && (
+                      <select
+                        value={(event as Event & { homepage_featured_order?: number | null }).homepage_featured_order ?? ""}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          handleSetFeaturedOrder(event.id, v === "" ? null : parseInt(v, 10));
+                        }}
+                        className="text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
+                        title="Ana sayfa öne çıkan"
+                      >
+                        <option value="">Ana sayfa: —</option>
+                        <option value="1">1. sıra (sol)</option>
+                        <option value="2">2. sıra (sağ)</option>
+                      </select>
+                    )}
                     <div className="flex gap-2">
                       {isAdmin && (event as Event & { is_approved?: boolean }).is_approved === false && (
                         <button

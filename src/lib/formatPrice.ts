@@ -9,7 +9,7 @@ const LOCALE_MAP: Record<EventCurrency, string> = {
   USD: "en-US",
 };
 
-/** Fiyatı para birimi sembolü ile formatlar (tüm diller için) */
+/** Fiyatı para birimi sembolü ile formatlar; virgül/noktadan sonra her zaman 2 basamak (50,00 / 50.30) */
 export function formatPrice(
   amount: number,
   currency?: EventCurrency | null
@@ -17,5 +17,8 @@ export function formatPrice(
   const curr = currency || DEFAULT_CURRENCY;
   const symbol = CURRENCY_SYMBOLS[curr];
   const locale = LOCALE_MAP[curr];
-  return `${symbol}${Number(amount).toLocaleString(locale)}`;
+  return `${symbol}${Number(amount).toLocaleString(locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }

@@ -154,7 +154,7 @@ export default function BiletlerPage() {
                         {ticket.type === 'vip' && ' 🌟'}
                       </td>
                       <td className="p-4 text-sm font-medium text-slate-900">
-                        €{Number(ticket.price).toLocaleString("de-DE")}
+                        €{Number(ticket.price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-4 text-sm text-slate-900">{ticket.available}</td>
                       <td className="p-4 text-sm">
@@ -206,7 +206,7 @@ export default function BiletlerPage() {
                       <td className="p-4 text-sm text-slate-900">{order.buyer_email || '-'}</td>
                       <td className="p-4 text-sm text-slate-900">{order.quantity}</td>
                       <td className="p-4 text-sm font-medium text-slate-900">
-                        €{Number(order.total_price).toLocaleString("de-DE")}
+                        €{Number(order.total_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-4 text-sm">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${

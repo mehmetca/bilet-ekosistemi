@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, MapPin, ChevronDown, ChevronUp, X } from "lucide-react";
+import Link from "next/link";
+import { Plus, Edit2, Trash2, MapPin, ChevronDown, ChevronUp, X, LayoutGrid } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
-import AdminOnlyGuard from "@/components/AdminOnlyGuard";
+import OrganizerOrAdminGuard from "@/components/OrganizerOrAdminGuard";
 import AdminImageUpload from "@/components/AdminImageUpload";
 import RichTextEditor from "@/components/RichTextEditor";
 
@@ -91,14 +92,14 @@ const EMPTY_VENUE = {
 
 export default function MekanlarPage() {
   return (
-    <AdminOnlyGuard>
+    <OrganizerOrAdminGuard>
       <MekanlarContent />
-    </AdminOnlyGuard>
+    </OrganizerOrAdminGuard>
   );
 }
 
 function MekanlarContent() {
-  const { isAdmin } = useSimpleAuth();
+  const { isAdmin, isOrganizer } = useSimpleAuth();
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -345,6 +346,15 @@ function MekanlarContent() {
     if (!confirm("Bu mekanı silmek istediğinizden emin misiniz?")) return;
 
     try {
+      const { data: usedByEvents } = await supabase
+        .from("events")
+        .select("id")
+        .eq("venue_id", id)
+        .limit(1);
+      if (usedByEvents && usedByEvents.length > 0) {
+        alert("Bu mekan en az bir etkinlikte kullanıldığı için kaldırılamaz. Kayıtlı mekanlar etkinlik bitiminde de listede kalır.");
+        return;
+      }
       const { error } = await supabase.from("venues").delete().eq("id", id);
       if (error) throw error;
       setVenues((prev) => prev.filter((v) => v.id !== id));
@@ -355,12 +365,12 @@ function MekanlarContent() {
     }
   }
 
-  if (!isAdmin) {
+  if (!isAdmin && !isOrganizer) {
     return (
       <div className="p-8">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
           <h2 className="text-lg font-semibold text-red-800 mb-2">Erişim Reddedildi</h2>
-          <p className="text-red-600">Bu sayfaya sadece yöneticiler erişebilir.</p>
+          <p className="text-red-600">Bu sayfaya sadece yönetici veya organizatör erişebilir.</p>
         </div>
       </div>
     );
@@ -377,15 +387,20 @@ function MekanlarContent() {
   return (
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Mekan Yönetimi</h1>
-          <button
-            onClick={startAdd}
-            className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
-          >
-            <Plus className="h-4 w-4" />
-            Yeni Mekan
-          </button>
+        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">Mekan Yönetimi</h1>
+            <p className="mt-1 text-sm text-slate-500">Salon oturum planı (bölüm/sıra/koltuk) için her mekanın yanındaki <strong>Oturum planı</strong> butonuna tıklayın.</p>
+          </div>
+          {isAdmin && (
+            <button
+              onClick={startAdd}
+              className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              <Plus className="h-4 w-4" />
+              Yeni Mekan
+            </button>
+          )}
         </div>
 
         {showForm && (
@@ -850,21 +865,33 @@ function MekanlarContent() {
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => startEdit(venue)}
-                          className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
-                          title="Düzenle"
+                      <div className="flex gap-2 flex-wrap">
+                        <Link
+                          href={`/yonetim/mekanlar/${venue.id}/oturum-plani`}
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-primary-200 bg-primary-50/50 text-primary-700 hover:bg-primary-100 text-sm font-medium"
+                          title="Bölüm, sıra ve koltuk tanımla"
                         >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(venue.id)}
-                          className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
-                          title="Sil"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                          <LayoutGrid className="h-4 w-4" />
+                          Oturum planı
+                        </Link>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => startEdit(venue)}
+                              className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
+                              title="Düzenle"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(venue.id)}
+                              className="p-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                              title="Sil"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

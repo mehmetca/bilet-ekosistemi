@@ -91,7 +91,7 @@ export default function MuhasebePage() {
               <div>
                 <p className="text-sm font-medium text-slate-600">Toplam Gelir</p>
                 <p className="text-2xl font-bold text-slate-900">
-                  €{stats.totalRevenue.toLocaleString("de-DE")}
+                  €{stats.totalRevenue.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
               <CreditCard className="h-8 w-8 text-blue-600" />
@@ -115,7 +115,7 @@ export default function MuhasebePage() {
               <div>
                 <p className="text-sm font-medium text-slate-600">Bu Ay Gelir</p>
                 <p className="text-2xl font-bold text-slate-900">
-                  €{stats.monthlyRevenue.toLocaleString("de-DE")}
+                  €{stats.monthlyRevenue.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </p>
               </div>
               <TrendingUp className="h-8 w-8 text-purple-600" />
@@ -159,7 +159,7 @@ export default function MuhasebePage() {
                     <td className="p-4 text-sm text-slate-900">{order.buyer_name || '-'}</td>
                     <td className="p-4 text-sm text-slate-900">{order.quantity}</td>
                     <td className="p-4 text-sm font-medium text-slate-900">
-                      €{Number(order.total_price).toLocaleString("de-DE")}
+                      €{Number(order.total_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-sm">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${

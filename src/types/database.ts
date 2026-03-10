@@ -5,6 +5,10 @@ export interface Event {
   date: string;
   time: string;
   location: string;
+  /** Şehir (filtreleme ve kısa gösterim) */
+  city?: string | null;
+  /** Tam adres (detay sayfası) */
+  address?: string | null;
   venue: string;
   venue_id?: string | null;
   price_from: number;
@@ -31,6 +35,10 @@ export interface Event {
   venue_tr?: string | null;
   venue_de?: string | null;
   venue_en?: string | null;
+  /** Oturum planı kullanılıyorsa "Yer seçerek bilet al" açılır (Faz 2) */
+  seating_plan_id?: string | null;
+  /** Ana sayfada öne çıkan etkinlik sırası (1 = sol, 2 = sağ). null = öne çıkan değil. */
+  homepage_featured_order?: number | null;
 }
 
 export interface Venue {
@@ -70,6 +78,46 @@ export interface Venue {
   rules_tr?: string | null;
   rules_de?: string | null;
   rules_en?: string | null;
+}
+
+/** Faz 2: Oturum planı – mekana bağlı */
+export interface SeatingPlan {
+  id: string;
+  venue_id: string;
+  name: string;
+  is_default: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Oturum planı bölümü (Blok A, Parket vb.) */
+export interface SeatingPlanSection {
+  id: string;
+  seating_plan_id: string;
+  name: string;
+  sort_order: number;
+  created_at: string;
+  /** Etkinlikteki bilet türü adı (Kategori 1, VIP vb.); koltuk seçiminde bu biletin fiyatı kullanılır */
+  ticket_type_label?: string | null;
+}
+
+/** Bölümdeki sıra (row_label: "1", "A" vb.) */
+export interface SeatingPlanRow {
+  id: string;
+  section_id: string;
+  row_label: string;
+  sort_order: number;
+  created_at: string;
+}
+
+/** Koltuk (sıra + koltuk no; x,y görsel için opsiyonel) */
+export interface Seat {
+  id: string;
+  row_id: string;
+  seat_label: string;
+  x?: number | null;
+  y?: number | null;
+  created_at: string;
 }
 
 export interface Artist {

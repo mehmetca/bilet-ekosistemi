@@ -167,7 +167,7 @@ export default function BiletListesiPage() {
                           {ticket.tickets?.name || 'Standart Bilet'}
                         </div>
                         <div className="text-xs text-slate-500">
-                          {ticket.tickets?.price ? `€${Number(ticket.tickets.price).toLocaleString("de-DE")}` : 'Fiyat belirtilmemiş'}
+                          {ticket.tickets?.price ? `€${Number(ticket.tickets.price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Fiyat belirtilmemiş'}
                         </div>
                       </div>
                     </td>
@@ -193,7 +193,7 @@ export default function BiletListesiPage() {
                       </span>
                     </td>
                     <td className="p-4 text-sm font-medium text-slate-900">
-                      €{Number(ticket.total_price).toLocaleString("de-DE")}
+                      €{Number(ticket.total_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-sm">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

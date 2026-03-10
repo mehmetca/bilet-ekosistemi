@@ -96,7 +96,7 @@ export default function AdminKPIDashboard() {
   const cards = [
     {
       label: "Bugünkü Satış",
-      value: `€${kpi.dailyRevenue.toLocaleString("de-DE")}`,
+      value: `€${kpi.dailyRevenue.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       sub: `${kpi.dailyOrders} sipariş`,
       icon: Calendar,
       color: "text-blue-600",
@@ -104,7 +104,7 @@ export default function AdminKPIDashboard() {
     },
     {
       label: "Bu Hafta",
-      value: `€${kpi.weeklyRevenue.toLocaleString("de-DE")}`,
+      value: `€${kpi.weeklyRevenue.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       sub: `${kpi.weeklyOrders} sipariş`,
       icon: TrendingUp,
       color: "text-green-600",
@@ -112,7 +112,7 @@ export default function AdminKPIDashboard() {
     },
     {
       label: "Bu Ay",
-      value: `€${kpi.monthlyRevenue.toLocaleString("de-DE")}`,
+      value: `€${kpi.monthlyRevenue.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       sub: `${kpi.monthlyOrders} sipariş`,
       icon: BarChart3,
       color: "text-purple-600",

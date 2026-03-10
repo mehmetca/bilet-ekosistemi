@@ -356,7 +356,7 @@ export default function BiletTurleriPage() {
                         </span>
                       </td>
                       <td className="p-4 text-sm font-medium text-slate-900">
-                        €{ticket.price.toLocaleString("de-DE")}
+                        €{ticket.price.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </td>
                       <td className="p-4 text-sm text-slate-900">
                         <span className="font-medium text-slate-900">

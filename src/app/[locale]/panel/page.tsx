@@ -57,13 +57,11 @@ export default function PanelPage() {
 
   return (
     <PanelLayout>
-      <div className="max-w-4xl">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">{t("title")}</h1>
-        <p className="text-slate-600 mb-8">
-          {t("welcome")}, {user.email}
-        </p>
-        <BiletlerimSection user={user} />
-      </div>
+      <h1 className="text-2xl font-bold text-slate-900 mb-2">{t("title")}</h1>
+      <p className="text-slate-600 mb-8">
+        {t("welcome")}, {user.email}
+      </p>
+      <BiletlerimSection user={user} />
     </PanelLayout>
   );
 }

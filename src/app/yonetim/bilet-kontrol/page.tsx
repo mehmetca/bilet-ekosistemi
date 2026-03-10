@@ -1,19 +1,22 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileCheck, CheckCircle, XCircle, Calendar, MapPin, User, AlertCircle, Camera, Users } from "lucide-react";
+import { FileCheck, CheckCircle, XCircle, Calendar, MapPin, User, AlertCircle, Camera, Users, LogIn } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { checkTicket, type CheckResult } from "@/app/kontrol/actions";
 import QRScanner from "@/components/QRScanner";
 import MultiTicketScanner from "@/components/MultiTicketScanner";
+import { supabase } from "@/lib/supabase-client";
 
 export default function BiletKontrolPage() {
-  const { isAdmin, isController } = useSimpleAuth();
+  const { isAdmin, isController, isOrganizer } = useSimpleAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [ticketCode, setTicketCode] = useState("");
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [showMultiScanner, setShowMultiScanner] = useState(false);
+  const [checkinLoading, setCheckinLoading] = useState(false);
+  const [checkinDone, setCheckinDone] = useState(false);
 
   // URL'dan kod parametresini al
   useEffect(() => {
@@ -40,14 +43,48 @@ export default function BiletKontrolPage() {
 
   async function handleCheck() {
     if (!ticketCode.trim()) return;
-    
+    setCheckinDone(false);
     const formData = new FormData();
     formData.append('ticket_code', ticketCode);
     await handleSubmit(formData);
   }
 
-  // Sadece admin ve controller erişebilir
-  if (!isAdmin && !isController) {
+  async function handleCheckin() {
+    if (!ticketCode.trim() || !result || !("valid" in result) || !result.valid) return;
+    setCheckinLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        alert("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+        setCheckinLoading(false);
+        return;
+      }
+      const res = await fetch("/api/checkin-ticket", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ticket_code: ticketCode.trim().toUpperCase() }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data?.message || data?.error || "Giriş işaretlenemedi.");
+        setCheckinLoading(false);
+        return;
+      }
+      setCheckinDone(true);
+    } catch (e) {
+      console.error(e);
+      alert("Bir hata oluştu.");
+    } finally {
+      setCheckinLoading(false);
+    }
+  }
+
+  // Admin, kontrolör veya organizatör erişebilir (organizatör sadece kendi etkinliklerinin biletleri)
+  if (!isAdmin && !isController && !isOrganizer) {
     return (
       <div className="p-8">
         <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
@@ -56,7 +93,7 @@ export default function BiletKontrolPage() {
             Erişim Reddedildi
           </h2>
           <p className="text-red-600">
-            Bu sayfaya sadece yöneticiler ve kontrolörler erişebilir.
+            Bu sayfaya sadece yöneticiler, kontrolörler ve organizatörler erişebilir.
           </p>
         </div>
       </div>
@@ -156,6 +193,19 @@ export default function BiletKontrolPage() {
                     </div>
                   </div>
                 </dl>
+                {!checkinDone ? (
+                  <button
+                    type="button"
+                    onClick={handleCheckin}
+                    disabled={checkinLoading}
+                    className="mt-4 flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    {checkinLoading ? "İşleniyor..." : "Giriş işaretle"}
+                  </button>
+                ) : (
+                  <p className="mt-4 font-medium text-green-700">✓ Giriş işaretlendi.</p>
+                )}
               </>
             ) : (
               <>

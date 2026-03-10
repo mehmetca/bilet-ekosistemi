@@ -153,7 +153,7 @@ export default function SiparislerPage() {
                     </td>
                     <td className="p-4 text-sm text-slate-900">{order.quantity}</td>
                     <td className="p-4 text-sm font-medium text-slate-900">
-                      €{Number(order.total_price).toLocaleString("de-DE")}
+                      €{Number(order.total_price).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </td>
                     <td className="p-4 text-sm">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

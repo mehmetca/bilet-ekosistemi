@@ -151,8 +151,8 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
               key={order.id}
               className="rounded-lg border border-slate-100 overflow-hidden hover:bg-slate-50"
             >
-              <div className="flex flex-wrap items-center justify-between gap-4 p-4">
-                <div className="flex-1 min-w-0">
+              <div className="grid grid-cols-1 md:grid-cols-[minmax(280px,1fr)_auto] gap-4 p-4 items-center">
+                <div className="min-w-0">
                   <p className="font-medium text-slate-900">
                     {order.events?.title || "—"}
                   </p>
@@ -163,7 +163,7 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
                     {order.events?.venue && ` • ${order.events.venue}`}
                   </p>
                 </div>
-                <div className="flex items-center gap-4 text-sm">
+                <div className="flex flex-wrap items-center gap-3 text-sm">
                   <span className="text-slate-600">
                     {order.tickets?.name || order.tickets?.type || "Bilet"} × {order.quantity}
                   </span>

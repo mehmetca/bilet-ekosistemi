@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "@/i18n/navigation";
-import { Calendar, MapPin, Music2, Search, ExternalLink, CheckCircle, Shield, Clock, Database, ChevronRight, ChevronLeft } from "lucide-react";
+import { Calendar, MapPin, Music2, Search, CheckCircle, Shield, Clock, Database, ChevronRight, ChevronLeft } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import HeroBackgroundSlider from "@/components/HeroBackgroundSlider";
@@ -10,7 +10,7 @@ import type { Event, News } from "@/types/database";
 import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
 import EventSlider from "@/components/EventSlider";
 import NewsSlider from "@/components/NewsSlider";
-import { parseEventDescription } from "@/lib/eventMeta";
+import FeaturedEvents from "@/components/FeaturedEvents";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { parseDateInput } from "@/lib/date-utils";
@@ -196,12 +196,24 @@ export default function ClientHomePage({
 
   const upcomingEvents = sortedEvents.filter((event) => !isEventPast(event));
   const pastEvents = sortedEvents.filter((event) => isEventPast(event));
-  const cityOptions = Array.from(
-    new Set(upcomingEvents.map((event) => (event.location || "").trim()).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b, "tr"));
+  // Şehir listesi: tekrarsız, virgülden önceki kısım + büyük/küçük harf farkı birleştirilir (örn. 3x Berlin → 1)
+  const cityOptions = (() => {
+    const byKey = new Map<string, string>();
+    upcomingEvents.forEach((event) => {
+      const e = event as Event & { city?: string | null };
+      const raw = (e.city || event.location || "").trim();
+      if (!raw) return;
+      const cityPart = raw.includes(",") ? raw.split(",")[0].trim() : raw;
+      if (!cityPart) return;
+      const key = cityPart.toLowerCase();
+      if (!byKey.has(key)) byKey.set(key, cityPart);
+    });
+    return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b, "tr"));
+  })();
 
   // Tüm çok dilli alanlarda ara (title, title_tr, title_de, title_en, venue, venue_tr, venue_de, venue_en)
   const getSearchableText = (event: Event) => {
+    const e = event as Event & { city?: string | null; address?: string | null };
     const parts = [
       event.title,
       (event as Event & { title_tr?: string }).title_tr,
@@ -210,8 +222,9 @@ export default function ClientHomePage({
       event.venue,
       (event as Event & { venue_tr?: string }).venue_tr,
       (event as Event & { venue_de?: string }).venue_de,
-      (event as Event & { venue_en?: string }).venue_en,
       event.location,
+      e.city,
+      e.address,
     ].filter(Boolean) as string[];
     return parts.join(" ").toLowerCase();
   };
@@ -221,7 +234,9 @@ export default function ClientHomePage({
     const searchableText = getSearchableText(event);
     const matchesSearch = !term || searchableText.includes(term);
 
-    const matchesCity = selectedCity === "all" || event.location === selectedCity;
+    const eventCityRaw = (event as Event & { city?: string | null }).city || event.location || "";
+    const eventCityPart = eventCityRaw.includes(",") ? eventCityRaw.split(",")[0].trim() : eventCityRaw.trim();
+    const matchesCity = selectedCity === "all" || eventCityPart.toLowerCase() === selectedCity.toLowerCase();
     const matchesCategory = selectedCategory === "all" || event.category === selectedCategory;
 
     const eventDate = new Date(event.date);
@@ -483,6 +498,13 @@ export default function ClientHomePage({
         )}
       </section>
 
+      {/* Öne çıkan etkinlikler (pickaseat tarzı - 2 etkinlik yan yana) */}
+      <FeaturedEvents
+        events={events}
+        locale={locale as "tr" | "de" | "en"}
+        title={t("featuredEvents")}
+      />
+
       {/* Events */}
       <section id="events" className="container mx-auto px-4 py-16">
         <h2 className="text-2xl font-bold text-slate-900 mb-8">{t("upcomingEvents")}</h2>
@@ -593,7 +615,6 @@ export default function ClientHomePage({
             {displayEvents.map((event) => {
               const eventStatus = getEventStatus(event);
               const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
-              const parsedMeta = parseEventDescription(localized.description || event.description);
               
               return (
                 <div
@@ -672,7 +693,7 @@ export default function ClientHomePage({
                           <span className={
                             eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
                           }>
-                            {localized.venue || event.venue}, {event.location}
+                            {localized.venue || event.venue}, {(event as Event & { city?: string | null }).city || event.location}
                           </span>
                         </div>
                       </div>
@@ -695,16 +716,12 @@ export default function ClientHomePage({
                       </span>
                       <button
                         onClick={() => {
-                          const externalTicketUrl = parsedMeta.externalTicketUrl;
                           if (eventStatus.isPast) {
                             alert(t("eventEndedAlert"));
                             return;
                           }
-                          if (externalTicketUrl || event.ticket_url) {
-                            window.open(externalTicketUrl || event.ticket_url, "_blank");
-                          } else {
-                            window.location.href = `/${locale}/etkinlik/${event.id}`;
-                          }
+                          const slug = (event as Event & { show_slug?: string }).show_slug || event.id;
+                          window.location.href = `/${locale}/etkinlik/${slug}`;
                         }}
                         className={`text-sm font-medium flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
                           eventStatus.isPast
@@ -713,9 +730,6 @@ export default function ClientHomePage({
                         }`}
                       >
                         {eventStatus.isPast ? t("buyTicketDisabled") : t("buyTicket")}
-                        {(parsedMeta.externalTicketUrl || event.ticket_url) && !eventStatus.isPast && (
-                          <ExternalLink className="h-3 w-3" />
-                        )}
                       </button>
                     </div>
                   </div>
@@ -770,7 +784,7 @@ export default function ClientHomePage({
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 flex-shrink-0" />
-                      <span>{pastLocalized.venue || event.venue}, {event.location}</span>
+                      <span>{pastLocalized.venue || event.venue}, {(event as Event & { city?: string | null }).city || event.location}</span>
                     </div>
                   </div>
                   <p className="mt-3 text-xs font-medium text-red-600">

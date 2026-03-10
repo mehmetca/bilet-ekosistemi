@@ -49,7 +49,9 @@ async function getVenue(venueId: string | null | undefined): Promise<Venue | nul
 }
 
 const TICKET_DISPLAY_ORDER = [
+  "Normal / Standart Bilet",
   "Standart Bilet",
+  "Normal Bilet",
   "VIP Bilet",
   "Kategori 1",
   "Kategori 2",
@@ -76,50 +78,56 @@ async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {
       .select("*")
       .eq("show_slug", showSlug)
       .eq("is_active", true)
+      .eq("is_approved", true)
       .order("date", { ascending: true })
       .order("time", { ascending: true });
-    if (error || !data || data.length < 2) return [];
+    if (error || !data || data.length < 1) return [];
     return data as Event[];
   } catch {
     return [];
   }
 }
 
-async function getEventBySlug(slugOrId: string): Promise<Event | null> {
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+async function getEventBySlug(slugOrId: string): Promise<{ event: Event; isUnapproved?: boolean } | null> {
   try {
     const supabase = createServerSupabase();
 
-    // Önce slug ile dene
+    // Önce onaylı etkinlik: slug veya id ile dene
     const { data, error } = await supabase
       .from("events")
       .select("*")
       .eq("slug", slugOrId)
       .eq("is_active", true)
+      .eq("is_approved", true)
       .single();
 
-    // Eğer slug ile bulunamazsa, ID ile dene (fallback)
-    if (error && !data) {
-      const { data: idData, error: idError } = await supabase
+    if (!error && data) return { event: data as Event };
+
+    // Slug ile yoksa ID ile dene (onaylı)
+    const { data: idData, error: idError } = await supabase
+      .from("events")
+      .select("*")
+      .eq("id", slugOrId)
+      .eq("is_active", true)
+      .eq("is_approved", true)
+      .single();
+
+    if (!idError && idData) return { event: idData as Event };
+
+    // Organizatör "Onaya gönder" sonrası UUID ile yönlendiriliyor; onaylanmamış etkinliği sadece UUID ile göster
+    if (UUID_REGEX.test(slugOrId)) {
+      const { data: unapproved } = await supabase
         .from("events")
         .select("*")
         .eq("id", slugOrId)
         .eq("is_active", true)
         .single();
-
-      if (idError) {
-        console.error("Both slug and ID failed:", { slugError: error, idError });
-        return null;
-      }
-
-      return idData as Event;
+      if (unapproved) return { event: unapproved as Event, isUnapproved: true };
     }
 
-    if (error) {
-      console.error("Event fetch error:", error);
-      return null;
-    }
-
-    return data as Event;
+    return null;
   } catch (error) {
     console.error("Fetch event error:", error);
     return null;
@@ -164,7 +172,8 @@ async function getEventTickets(eventId: string): Promise<Ticket[]> {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const showEvents = await getEventsByShowSlug(id);
-  const event = showEvents[0] || (await getEventBySlug(id));
+  const slugResult = await getEventBySlug(id);
+  const event = showEvents[0] || slugResult?.event;
   if (!event) return { title: "Etkinlik Bulunamadı" };
 
   const title = `${event.title} | Bilet Ekosistemi`;
@@ -231,9 +240,9 @@ function buildEventStructuredData(event: Event, venue: Venue | null) {
 export default async function EventDetailPage({ params }: PageProps) {
   const { locale = "tr", id } = await params;
 
-  // Biletinial tarzı: show_slug ile gruplanmış tur/gösteri sayfası (2+ etkinlik)
+  // Biletinial tarzı: show_slug ile gruplanmış tur/gösteri sayfası (1+ etkinlik; tek etkinlikte de sayfa görünsün)
   const showEvents = await getEventsByShowSlug(id);
-  if (showEvents.length >= 2) {
+  if (showEvents.length >= 1) {
     const firstEvent = showEvents[0] as { created_by_user_id?: string; organizer_display_name?: string | null };
     const lookedUp = await getOrganizerDisplayName(firstEvent.created_by_user_id);
     const organizerDisplayName =
@@ -248,8 +257,9 @@ export default async function EventDetailPage({ params }: PageProps) {
     );
   }
 
-  const event = await getEventBySlug(id);
-  if (!event) notFound();
+  const slugResult = await getEventBySlug(id);
+  if (!slugResult) notFound();
+  const { event, isUnapproved } = slugResult;
 
   const [tickets, venue, lookedUpOrganizer] = await Promise.all([
     getEventTickets(event.id),
@@ -275,6 +285,7 @@ export default async function EventDetailPage({ params }: PageProps) {
         venue={venue}
         organizerDisplayName={organizerDisplayName}
         locale={locale as "tr" | "de" | "en"}
+        isUnapproved={isUnapproved}
       />
     </>
   );

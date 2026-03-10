@@ -17,6 +17,7 @@ out
 
 # misc
 bilet
+tsconfig.tsbuildinfo
 .DS_Store
 *.pem
 npm-debug.log*

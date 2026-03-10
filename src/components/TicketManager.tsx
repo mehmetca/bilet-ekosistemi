@@ -127,7 +127,7 @@ export default function TicketManager({ eventId, eventName }: TicketManagerProps
                     </p>
                     <div className="flex items-center gap-4 text-sm">
                       <span className="font-bold text-primary-600">
-                        €{ticket.price.toLocaleString("de-DE")}
+                        €{ticket.price.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </span>
                       <span className="text-slate-500">
                         {ticket.available}/{ticket.quantity} adet mevcut

@@ -45,14 +45,25 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const activeLoginAttemptRef = useRef(0);
 
-  // Üye ol (bilet alıcı) state
+  // Üye ol (bilet alıcı) state – Biletinial tarzı
   const [regEmail, setRegEmail] = useState("");
+  const [regFirstName, setRegFirstName] = useState("");
+  const [regLastName, setRegLastName] = useState("");
   const [regPassword, setRegPassword] = useState("");
+  const [regPasswordConfirm, setRegPasswordConfirm] = useState("");
   const [regShowPassword, setRegShowPassword] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState("");
   const [regSuccess, setRegSuccess] = useState("");
   const [regGoogleLoading, setRegGoogleLoading] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreePrivacy, setAgreePrivacy] = useState(false);
+  const [agreeMarketing, setAgreeMarketing] = useState(false);
+  // Opsiyonel: panel (Bilgilerim) ile uyumlu alanlar
+  const [regCountry, setRegCountry] = useState("");
+  const [regCity, setRegCity] = useState("");
+  const [regPhone, setRegPhone] = useState("");
+  const [regAnrede, setRegAnrede] = useState("");
 
   useEffect(() => {
     return () => {
@@ -118,16 +129,51 @@ export default function LoginPage() {
     }
   }
 
+  function validateRegisterPassword(pwd: string): string | null {
+    if (pwd.length < 8 || pwd.length > 24) return "Şifre 8–24 karakter uzunluğunda olmalıdır.";
+    if (!/[a-z]/.test(pwd)) return "Şifre en az bir küçük harf (a-z) içermelidir.";
+    if (!/[A-Z]/.test(pwd)) return "Şifre en az bir büyük harf (A-Z) içermelidir.";
+    return null;
+  }
+
   async function handleRegister(e: React.FormEvent) {
     e.preventDefault();
     if (regLoading) return;
-    setRegLoading(true);
     setRegError("");
     setRegSuccess("");
 
+    const firstName = regFirstName.trim();
+    const lastName = regLastName.trim();
+    if (!firstName) {
+      setRegError("Ad zorunludur.");
+      return;
+    }
+    if (!lastName) {
+      setRegError("Soyad zorunludur.");
+      return;
+    }
+    const pwdErr = validateRegisterPassword(regPassword);
+    if (pwdErr) {
+      setRegError(pwdErr);
+      return;
+    }
+    if (regPassword !== regPasswordConfirm) {
+      setRegError("Şifreler eşleşmiyor.");
+      return;
+    }
+    if (!agreeTerms) {
+      setRegError("Üyelik sözleşmesini kabul etmeniz gerekiyor.");
+      return;
+    }
+    if (!agreePrivacy) {
+      setRegError("Gizlilik ve veri koruma aydınlatma metnini kabul etmeniz gerekiyor.");
+      return;
+    }
+
+    setRegLoading(true);
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email: regEmail,
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: regEmail.trim(),
         password: regPassword,
         options: { emailRedirectTo: undefined },
       });
@@ -143,9 +189,45 @@ export default function LoginPage() {
         return;
       }
 
+      if (signUpData?.session && signUpData.user) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.access_token) {
+            await fetch("/api/profile", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session.access_token}`,
+              },
+              body: JSON.stringify({
+                email: regEmail.trim(),
+                first_name: firstName,
+                last_name: lastName,
+                country: regCountry.trim() || undefined,
+                city: regCity.trim() || undefined,
+                telefon: regPhone.trim() || undefined,
+                anrede: regAnrede.trim() || undefined,
+              }),
+            });
+          }
+        } catch (_) {
+          // Profil kaydı başarısız olsa da üyelik tamamlandı
+        }
+      }
+
       setRegSuccess(t("successRegistered"));
       setRegEmail("");
+      setRegFirstName("");
+      setRegLastName("");
       setRegPassword("");
+      setRegPasswordConfirm("");
+      setRegCountry("");
+      setRegCity("");
+      setRegPhone("");
+      setRegAnrede("");
+      setAgreeTerms(false);
+      setAgreePrivacy(false);
+      setAgreeMarketing(false);
     } catch (err) {
       setRegError(err instanceof Error ? err.message : t("errorGeneric"));
     } finally {
@@ -246,7 +328,7 @@ export default function LoginPage() {
           </Link>
 
           {/* Giriş formu */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+          <div id="giris-form" className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
             <div className="text-center mb-8">
               <h1 className="text-2xl font-bold text-slate-900 mb-2">{t("loginTitle")}</h1>
               <p className="text-slate-600">
@@ -367,7 +449,7 @@ export default function LoginPage() {
               <form onSubmit={handleRegister} className="space-y-5">
                 <div>
                   <label htmlFor="reg-email" className="block text-sm font-medium text-slate-700 mb-2">
-                    {t("email")}
+                    {t("email")} *
                   </label>
                   <input
                     id="reg-email"
@@ -380,9 +462,100 @@ export default function LoginPage() {
                   />
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="reg-firstname" className="block text-sm font-medium text-slate-700 mb-2">
+                      Ad *
+                    </label>
+                    <input
+                      id="reg-firstname"
+                      type="text"
+                      value={regFirstName}
+                      onChange={(e) => setRegFirstName(e.target.value)}
+                      required
+                      placeholder="Adınız"
+                      className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="reg-lastname" className="block text-sm font-medium text-slate-700 mb-2">
+                      Soyad *
+                    </label>
+                    <input
+                      id="reg-lastname"
+                      type="text"
+                      value={regLastName}
+                      onChange={(e) => setRegLastName(e.target.value)}
+                      required
+                      placeholder="Soyadınız"
+                      className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label htmlFor="reg-anrede" className="block text-sm font-medium text-slate-700 mb-2">
+                    Cinsiyet (isteğe bağlı)
+                  </label>
+                  <select
+                    id="reg-anrede"
+                    value={regAnrede}
+                    onChange={(e) => setRegAnrede(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  >
+                    <option value="">Belirtmek istemiyorum</option>
+                    <option value="Herr">Erkek</option>
+                    <option value="Frau">Kadın</option>
+                    <option value="divers">Divers</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="reg-phone" className="block text-sm font-medium text-slate-700 mb-2">
+                    Telefon (isteğe bağlı)
+                  </label>
+                  <input
+                    id="reg-phone"
+                    type="tel"
+                    value={regPhone}
+                    onChange={(e) => setRegPhone(e.target.value)}
+                    placeholder="Örn. +49 123 456789"
+                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="reg-country" className="block text-sm font-medium text-slate-700 mb-2">
+                      Ülke (isteğe bağlı)
+                    </label>
+                    <input
+                      id="reg-country"
+                      type="text"
+                      value={regCountry}
+                      onChange={(e) => setRegCountry(e.target.value)}
+                      placeholder="Örn. Almanya, Türkiye"
+                      className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="reg-city" className="block text-sm font-medium text-slate-700 mb-2">
+                      Şehir (isteğe bağlı)
+                    </label>
+                    <input
+                      id="reg-city"
+                      type="text"
+                      value={regCity}
+                      onChange={(e) => setRegCity(e.target.value)}
+                      placeholder="Şehir"
+                      className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label htmlFor="reg-password" className="block text-sm font-medium text-slate-700 mb-2">
-                    {t("password")}
+                    {t("password")} *
                   </label>
                   <div className="relative">
                     <input
@@ -391,7 +564,8 @@ export default function LoginPage() {
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       required
-                      minLength={6}
+                      minLength={8}
+                      maxLength={24}
                       placeholder={t("regPasswordPlaceholder")}
                       className="w-full rounded-lg border border-slate-300 px-4 py-3 pr-12 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
@@ -403,6 +577,67 @@ export default function LoginPage() {
                       {regShowPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
+                  <p className="mt-2 text-xs text-slate-600">
+                    Şu koşulları sağlayan bir şifre oluşturun:
+                  </p>
+                  <ul className="mt-1 text-xs text-slate-500 list-disc list-inside space-y-0.5">
+                    <li>Parolanızda kişisel bilgilerinizi (adınız, doğum tarihiniz, adresiniz) kullanmayın.</li>
+                    <li>Küçük harf (a-z) ve büyük harf (A-Z) içermelidir.</li>
+                    <li>8–24 karakter uzunluğunda olmalıdır.</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <label htmlFor="reg-password-confirm" className="block text-sm font-medium text-slate-700 mb-2">
+                    Şifre Tekrar *
+                  </label>
+                  <input
+                    id="reg-password-confirm"
+                    type={regShowPassword ? "text" : "password"}
+                    value={regPasswordConfirm}
+                    onChange={(e) => setRegPasswordConfirm(e.target.value)}
+                    required
+                    minLength={8}
+                    maxLength={24}
+                    placeholder="Şifrenizi tekrar girin"
+                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
+
+                <div className="space-y-3 pt-2">
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreeTerms}
+                      onChange={(e) => setAgreeTerms(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">
+                      <Link href="/bilgilendirme/kullanim-kosullari" className="text-primary-600 hover:underline">Üyelik sözleşmesini</Link> okudum ve kabul ediyorum. *
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreePrivacy}
+                      onChange={(e) => setAgreePrivacy(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">
+                      Üyelik işlemlerine yönelik <Link href="/bilgilendirme/cerez-politikasi" className="text-primary-600 hover:underline">aydınlatma metnini</Link> (veri koruma / DSGVO) okudum ve anladım. *
+                    </span>
+                  </label>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={agreeMarketing}
+                      onChange={(e) => setAgreeMarketing(e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="text-sm text-slate-700">
+                      Ticari elektronik ileti gönderimine ilişkin aydınlatma metnini okudum; tarafıma reklam amaçlı e-posta gönderilmesini kabul ediyorum. (İsteğe bağlı)
+                    </span>
+                  </label>
                 </div>
 
                 {regError && (
@@ -416,6 +651,17 @@ export default function LoginPage() {
                     {regSuccess}
                   </div>
                 )}
+
+                <p className="text-sm text-slate-600 text-center">
+                  Üyeliğiniz var mı?{" "}
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById("giris-form")?.scrollIntoView({ behavior: "smooth" })}
+                    className="text-primary-600 hover:text-primary-700 font-medium"
+                  >
+                    Giriş Yap
+                  </button>
+                </p>
 
                 <button
                   type="submit"

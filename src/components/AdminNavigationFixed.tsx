@@ -245,11 +245,9 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       {/* User Menu - sabit altta */}
       <div className="flex-shrink-0 p-3 border-t border-slate-200 bg-white">
         <button
-          onClick={() => {
-            if (typeof signOut === "function") {
-              signOut();
-            }
-            window.location.href = "/";
+          onClick={async () => {
+            if (typeof signOut === "function") await signOut();
+            window.location.href = "/giris";
           }}
           className="flex items-center gap-2 px-3 py-2 w-full text-left text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
         >

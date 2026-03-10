@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell, Building2 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
@@ -20,13 +20,281 @@ interface EventDetailClientProps {
   venue?: Venue | null;
   organizerDisplayName?: string | null;
   locale?: "tr" | "de" | "en";
+  /** Etkinlik henüz onaylanmadı (organizatör önizlemesi); bilet satışı kapalı */
+  isUnapproved?: boolean;
 }
 
 const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
 /** Sipariş başına en fazla kaç bilet seçilebilir */
 const MAX_TICKETS_PER_ORDER = 10;
 
-export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr" }: EventDetailClientProps) {
+/** Oturum planı: bölüm > sıra > koltuk (koltuk seçimi UI için); bölümde ticket_type_label etkinlikteki bilet adıyla eşlenir */
+type SeatPlanSeat = { id: string; seat_label: string };
+type SeatPlanRow = { id: string; row_label: string; seats: SeatPlanSeat[] };
+type SeatPlanSection = { id: string; name: string; ticket_type_label?: string | null; rows: SeatPlanRow[] };
+
+/** Eventim tarzı şematik salon planı: bölümleri yan yana, sahne altta, koltuklar tıklanabilir. */
+function SeatMapSvg({
+  sections,
+  selectedSeatIds,
+  onSeatToggle,
+  sectionColors,
+}: {
+  sections: SeatPlanSection[];
+  selectedSeatIds: Set<string>;
+  onSeatToggle: (seatId: string) => void;
+  sectionColors: Map<string, string>;
+}) {
+  const pad = 12;
+  const stageH = 44;
+  const mapH = 420;
+  const mapW = 720;
+  const sectionGap = 10;
+  const nSections = sections.length;
+  if (nSections === 0) return null;
+  const sectionW = (mapW - (nSections - 1) * sectionGap) / nSections;
+  const sectionMaxRows = Math.max(...sections.map((s) => s.rows.length), 1);
+  const sectionMaxSeats = Math.max(
+    ...sections.flatMap((s) => s.rows.map((r) => r.seats.length)),
+    1
+  );
+  const seatSize = Math.min(
+    (sectionW - 20) / sectionMaxSeats,
+    (mapH - 28) / sectionMaxRows,
+    20
+  );
+  const rowH = (mapH - 28) / sectionMaxRows;
+  const seatW = Math.min((sectionW - 20) / sectionMaxSeats, seatSize * 1.2);
+
+  return (
+    <svg
+      viewBox={`0 0 ${mapW + pad * 2} ${mapH + stageH + pad * 2}`}
+      className="w-full rounded-lg border border-slate-200 bg-slate-50 block"
+      style={{ minWidth: 720, minHeight: 468 }}
+    >
+      {/* Sahne */}
+      <rect x={pad} y={mapH + pad} width={mapW} height={stageH} rx={4} fill="#1e293b" />
+      <text
+        x={pad + mapW / 2}
+        y={mapH + pad + stageH / 2 + 5}
+        textAnchor="middle"
+        fill="#94a3b8"
+        fontSize={14}
+        fontWeight={600}
+      >
+        Sahne
+      </text>
+      {/* Bölümler */}
+      {sections.map((section, si) => {
+        const sx = pad + si * (sectionW + sectionGap);
+        const color = sectionColors.get(section.id) || "#cbd5e1";
+        return (
+          <g key={section.id}>
+            <rect
+              x={sx}
+              y={pad}
+              width={sectionW}
+              height={mapH}
+              rx={6}
+              fill={color}
+              fillOpacity={0.35}
+              stroke="#94a3b8"
+              strokeWidth={1}
+            />
+            <text
+              x={sx + sectionW / 2}
+              y={pad + 16}
+              textAnchor="middle"
+              fill="#334155"
+              fontSize={11}
+              fontWeight={600}
+            >
+              {section.name}
+            </text>
+            {section.rows.map((row, ri) =>
+              row.seats.map((seat, ci) => {
+                const cx = sx + 10 + ci * seatW + seatW / 2;
+                const cy = pad + 24 + ri * rowH + rowH / 2;
+                const isSelected = selectedSeatIds.has(seat.id);
+                return (
+                  <g
+                    key={seat.id}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => onSeatToggle(seat.id)}
+                    onKeyDown={(e) => e.key === "Enter" && onSeatToggle(seat.id)}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Koltuk ${seat.seat_label}`}
+                  >
+                    <circle
+                      cx={cx}
+                      cy={cy}
+                      r={seatSize / 2}
+                      fill={isSelected ? "#2563eb" : "#64748b"}
+                      stroke={isSelected ? "#1d4ed8" : "#475569"}
+                      strokeWidth={1.5}
+                    />
+                  </g>
+                );
+              })
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+const MIN_ZOOM = 0.5;
+const MAX_ZOOM = 3;
+const ZOOM_STEP = 0.25;
+
+/** Eventim tarzı: salon planını büyük alan içinde zoom/pan ile kullanılabilir yapar. */
+function SeatMapWithZoom({
+  sections,
+  selectedSeatIds,
+  onSeatToggle,
+  sectionColors,
+}: {
+  sections: SeatPlanSection[];
+  selectedSeatIds: Set<string>;
+  onSeatToggle: (seatId: string) => void;
+  sectionColors: Map<string, string>;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1.2);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const didMove = useRef(false);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+    setScale((s) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, s + delta)));
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    didMove.current = false;
+    dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+    setIsDragging(true);
+  }, [pan]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return;
+    const dx = e.clientX - dragStart.current.x;
+    const dy = e.clientY - dragStart.current.y;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove.current = true;
+    setPan({ x: dragStart.current.panX + dx, y: dragStart.current.panY + dy });
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleSeatClick = useCallback((seatId: string) => {
+    if (didMove.current) return;
+    onSeatToggle(seatId);
+  }, [onSeatToggle]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onUp = () => setIsDragging(false);
+    const onMove = (e: MouseEvent) => {
+      const dx = e.clientX - dragStart.current.x;
+      const dy = e.clientY - dragStart.current.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove.current = true;
+      setPan({ x: dragStart.current.panX + dx, y: dragStart.current.panY + dy });
+    };
+    window.addEventListener("mouseup", onUp);
+    window.addEventListener("mousemove", onMove);
+    return () => {
+      window.removeEventListener("mouseup", onUp);
+      window.removeEventListener("mousemove", onMove);
+    };
+  }, [isDragging]);
+
+  const zoomIn = () => setScale((s) => Math.min(MAX_ZOOM, s + ZOOM_STEP));
+  const zoomOut = () => setScale((s) => Math.max(MIN_ZOOM, s - ZOOM_STEP));
+  const resetView = () => {
+    setScale(1.2);
+    setPan({ x: 0, y: 0 });
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="text-sm text-slate-600">Salon planı:</span>
+        <button
+          type="button"
+          onClick={zoomIn}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          aria-label="Yakınlaştır"
+        >
+          + Büyüt
+        </button>
+        <button
+          type="button"
+          onClick={zoomOut}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          aria-label="Uzaklaştır"
+        >
+          − Küçült
+        </button>
+        <button
+          type="button"
+          onClick={resetView}
+          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Sıfırla
+        </button>
+        <span className="text-xs text-slate-500">
+          Fare tekerleği ile zoom · Sürükleyerek hareket ettirin
+        </span>
+      </div>
+      <div
+        ref={containerRef}
+        className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100 touch-none"
+        style={{ minHeight: 420, maxHeight: "70vh", cursor: isDragging ? "grabbing" : "grab" }}
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseUp}
+        onMouseUp={handleMouseUp}
+        role="application"
+        aria-label="Salon planı; zoom ve sürükleyerek koltuk seçin"
+      >
+        <div
+          style={{
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+            transformOrigin: "0 0",
+            width: "fit-content",
+            minHeight: 468,
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <SeatMapSvg
+            sections={sections}
+            selectedSeatIds={selectedSeatIds}
+            onSeatToggle={handleSeatClick}
+            sectionColors={sectionColors}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Bilet açıklamasındaki "Min. X adet." ifadesinden minimum adedi döndürür (grup indirimli bilet). */
+function getMinQuantityFromDescription(description: string | null | undefined): number {
+  if (!description) return 1;
+  const m = description.match(/Min\.\s*(\d+)\s*adet/i);
+  const n = m ? parseInt(m[1], 10) : 0;
+  return n > 0 ? n : 1;
+}
+
+export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr", isUnapproved = false }: EventDetailClientProps) {
   const t = useTranslations("eventDetail");
   const tCheckout = useTranslations("checkout");
   const tCat = useTranslations("categories");
@@ -36,22 +304,93 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
+  const hasSeatingPlan = !!(event as Event & { seating_plan_id?: string }).seating_plan_id;
   const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
   const parsedDescription = useMemo(() => parseEventDescription(localized.description || event.description), [localized.description, event.description]);
-  const externalTicketUrl = parsedDescription.externalTicketUrl;
+  const externalTicketUrl = parsedDescription.externalTicketUrl || (event as Event & { ticket_url?: string }).ticket_url || "";
   const isExternalOnlyEvent = Boolean(externalTicketUrl) && availableTickets.length === 0;
   const [selectedTicketType, setSelectedTicketType] = useState<string>(
     availableTickets[0]?.id || ""
   );
   const [ticketCount, setTicketCount] = useState<number>(1);
+  /** Faz 1: Fiyat kategorisine göre (mevcut) / Yer seçerek (oturum planı varsa) */
+  const [bookingMode, setBookingMode] = useState<"price" | "seat">("price");
   const [isFavorite, setIsFavorite] = useState(false);
+  /** Koltuk seçimi: yüklü plan yapısı (bölüm > sıra > koltuk) */
+  const [seatingPlanData, setSeatingPlanData] = useState<SeatPlanSection[] | null>(null);
+  const [seatingPlanLoading, setSeatingPlanLoading] = useState(false);
+  const [selectedSeatIds, setSelectedSeatIds] = useState<Set<string>>(new Set());
+  /** Eventim tarzı: "list" = liste görünümü, "map" = salon planı (şematik) */
+  const [seatMapView, setSeatMapView] = useState<"list" | "map">("map");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [venueFaqOpen, setVenueFaqOpen] = useState(false);
   const [reminderEmail, setReminderEmail] = useState("");
   const [reminderPending, setReminderPending] = useState(false);
   const [reminderResult, setReminderResult] = useState<{ success: boolean; message: string } | null>(null);
   const selectedTicket = availableTickets.find((t) => t.id === selectedTicketType);
+  const selectedMinQ = selectedTicket ? getMinQuantityFromDescription(selectedTicket.description) : 1;
+  const selectedMaxQ = selectedTicket
+    ? Math.min(Number(selectedTicket.available || 0), MAX_TICKETS_PER_ORDER)
+    : 1;
   const totalPrice = selectedTicket ? selectedTicket.price * ticketCount : 0;
+
+  // Grup biletinde adet minimumun altındaysa yukarı çek (sayfa ilk yüklendiğinde veya bilet türü değişince)
+  useEffect(() => {
+    const minQ = Math.min(selectedMinQ, selectedMaxQ);
+    if (minQ > 1 && ticketCount < minQ) setTicketCount(minQ);
+  }, [selectedTicketType, selectedMinQ, selectedMaxQ]);
+
+  const seatingPlanId = (event as Event & { seating_plan_id?: string }).seating_plan_id;
+  useEffect(() => {
+    if (!seatingPlanId || bookingMode !== "seat") {
+      setSeatingPlanData(null);
+      return;
+    }
+    setSeatingPlanLoading(true);
+    setSelectedSeatIds(new Set());
+    (async () => {
+      const { data: sections } = await supabase
+        .from("seating_plan_sections")
+        .select("id, name, ticket_type_label")
+        .eq("seating_plan_id", seatingPlanId)
+        .order("sort_order");
+      if (!sections?.length) {
+        setSeatingPlanData([]);
+        setSeatingPlanLoading(false);
+        return;
+      }
+      const { data: rows } = await supabase
+        .from("seating_plan_rows")
+        .select("id, section_id, row_label")
+        .in("section_id", sections.map((s) => s.id))
+        .order("sort_order");
+      if (!rows?.length) {
+        setSeatingPlanData(sections.map((s) => ({ ...s, rows: [] })));
+        setSeatingPlanLoading(false);
+        return;
+      }
+      const { data: seats } = await supabase
+        .from("seats")
+        .select("id, row_id, seat_label")
+        .in("row_id", rows.map((r) => r.id));
+      const rowsBySection = new Map<string, SeatPlanRow[]>();
+      rows.forEach((r) => {
+        const list = rowsBySection.get(r.section_id) || [];
+        const rowSeats = (seats || []).filter((s) => s.row_id === r.id).map((s) => ({ id: s.id, seat_label: s.seat_label }));
+        list.push({ id: r.id, row_label: r.row_label, seats: rowSeats });
+        rowsBySection.set(r.section_id, list);
+      });
+      const result: SeatPlanSection[] = sections.map((s) => ({
+        id: s.id,
+        name: s.name,
+        ticket_type_label: (s as { ticket_type_label?: string }).ticket_type_label ?? null,
+        rows: rowsBySection.get(s.id) || [],
+      }));
+      setSeatingPlanData(result);
+      setSeatingPlanLoading(false);
+    })();
+  }, [seatingPlanId, bookingMode]);
+
   const eventDateTime = new Date(`${event.date} ${event.time || "23:59"}`);
   const isPastEvent = eventDateTime < new Date();
 
@@ -288,6 +627,43 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 {isExternalOnlyEvent ? t("ticketInfo") : t("ticketSelection")}
               </h2>
 
+              {isUnapproved && (
+                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                  <p className="font-medium">Bu etkinlik onay bekliyor</p>
+                  <p className="mt-1 text-sm">Yönetici onayından sonra sitede yayına alınacak ve bilet satışı açılacaktır. Bu sayfa sadece önizleme içindir.</p>
+                </div>
+              )}
+
+              {/* Faz 1: İki bilet alma seçeneği (Eventim tarzı) – sadece harici link değilse */}
+              {!isExternalOnlyEvent && (
+                <div className="mb-6 flex gap-3 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setBookingMode("price")}
+                    className={`rounded-xl border-2 px-5 py-3 text-left transition-colors ${
+                      bookingMode === "price"
+                        ? "border-primary-600 bg-primary-50 text-primary-800"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="block font-semibold">Fiyat kategorisine göre bilet al</span>
+                    <span className="mt-0.5 block text-sm opacity-90">Kategori ve adet seçin, sepete ekleyin</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookingMode("seat")}
+                    className={`rounded-xl border-2 px-5 py-3 text-left transition-colors ${
+                      bookingMode === "seat"
+                        ? "border-primary-600 bg-primary-50 text-primary-800"
+                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="block font-semibold">Yer seçerek bilet al</span>
+                    <span className="mt-0.5 block text-sm opacity-90">Salon planından koltuk seçin</span>
+                  </button>
+                </div>
+              )}
+
               {isExternalOnlyEvent && (
                 <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
                   <p className="text-sm text-blue-900 mb-4">
@@ -301,7 +677,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     {t("externalTicketDisclaimer2")} {t("externalTicketSupport")}
                   </p>
                   <a
-                        href={externalTicketUrl || "#"}
+                    href={externalTicketUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
@@ -312,8 +688,170 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               )}
 
-              {/* Bilet Türleri - Eventim Benzeri Liste */}
-              {!isExternalOnlyEvent && (availableTickets.length === 0 ? (
+              {/* Yer seçerek: oturum planı varsa koltuk listesi, yoksa bilgi mesajı */}
+              {!isExternalOnlyEvent && bookingMode === "seat" && !hasSeatingPlan && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-slate-600">
+                  <p className="font-medium">Bu etkinlik için koltuk seçimi tanımlanmamış.</p>
+                  <p className="mt-2 text-sm">Bilet almak için &quot;Fiyat kategorisine göre bilet al&quot; seçeneğini kullanabilirsiniz.</p>
+                  <p className="mt-3 text-xs text-slate-500">
+                    Koltuk seçimini açmak için: Yönetim → Etkinlikler → bu etkinliği düzenle → Mekan seçin, &quot;Oturum planı&quot; alanından bir plan seçip kaydedin.
+                  </p>
+                </div>
+              )}
+              {!isExternalOnlyEvent && bookingMode === "seat" && hasSeatingPlan && (
+                <div className="rounded-xl border border-slate-200 bg-white p-6">
+                  {seatingPlanLoading ? (
+                    <p className="text-slate-500">Salon planı yükleniyor...</p>
+                  ) : seatingPlanData && seatingPlanData.length > 0 ? (
+                    <>
+                      <p className="text-sm text-slate-600 mb-3">Bölüm ve koltuk seçin. Her bölümün fiyatı, etkinlikte tanımlı bilet türü adıyla eşleşir.</p>
+                      <div className="flex gap-2 mb-4">
+                        <button
+                          type="button"
+                          onClick={() => setSeatMapView("map")}
+                          className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "map" ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                        >
+                          Salon planı
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSeatMapView("list")}
+                          className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "list" ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                        >
+                          Liste
+                        </button>
+                      </div>
+                      {seatMapView === "map" && (
+                        <div className="mb-4">
+                          <SeatMapWithZoom
+                            sections={seatingPlanData}
+                            selectedSeatIds={selectedSeatIds}
+                            onSeatToggle={(seatId) => {
+                              setSelectedSeatIds((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(seatId)) next.delete(seatId);
+                                else next.add(seatId);
+                                return next;
+                              });
+                            }}
+                            sectionColors={new Map(seatingPlanData.map((s, i) => [s.id, ["#bae6fd", "#c7d2fe", "#d9f99d", "#fde68a", "#fecaca"][i % 5]]))}
+                          />
+                        </div>
+                      )}
+                      {seatMapView === "list" && (
+                      <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                        {seatingPlanData.map((section) => {
+                          const sectionTicket = section.ticket_type_label
+                            ? availableTickets.find((t) => (t.name || "").trim() === (section.ticket_type_label || "").trim())
+                            : null;
+                          return (
+                          <div key={section.id} className="border border-slate-200 rounded-lg p-4">
+                            <h4 className="font-semibold text-slate-900 mb-1">{section.name}</h4>
+                            {sectionTicket ? (
+                              <p className="text-sm text-primary-600 mb-2">{formatPrice(sectionTicket.price, event.currency)} / koltuk</p>
+                            ) : section.ticket_type_label ? (
+                              <p className="text-xs text-amber-600 mb-2">Etkinlikte &quot;{section.ticket_type_label}&quot; adlı bilet türü yok; fiyat eşleşmeyecek.</p>
+                            ) : null}
+                            {section.rows.map((row) => (
+                              <div key={row.id} className="flex flex-wrap items-center gap-2 mb-2">
+                                <span className="text-sm font-medium text-slate-600 w-12">Sıra {row.row_label}</span>
+                                <div className="flex flex-wrap gap-1">
+                                  {row.seats.map((seat) => {
+                                    const isSelected = selectedSeatIds.has(seat.id);
+                                    return (
+                                      <button
+                                        key={seat.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedSeatIds((prev) => {
+                                            const next = new Set(prev);
+                                            if (next.has(seat.id)) next.delete(seat.id);
+                                            else next.add(seat.id);
+                                            return next;
+                                          });
+                                        }}
+                                        className={`w-9 h-9 rounded text-sm font-medium transition-colors ${
+                                          isSelected
+                                            ? "bg-primary-600 text-white"
+                                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                        }`}
+                                      >
+                                        {seat.seat_label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          );
+                        })}
+                      </div>
+                      )}
+                      {selectedSeatIds.size > 0 && seatingPlanData && availableTickets.length > 0 && (() => {
+                        const seatToSection = new Map<string, SeatPlanSection>();
+                        seatingPlanData.forEach((sec) => sec.rows.forEach((row) => row.seats.forEach((seat) => seatToSection.set(seat.id, sec))));
+                        const countByTicketId = new Map<string, number>();
+                        let totalCents = 0;
+                        selectedSeatIds.forEach((seatId) => {
+                          const section = seatToSection.get(seatId);
+                          const label = section?.ticket_type_label?.trim();
+                          const ticket = label ? availableTickets.find((t) => (t.name || "").trim() === label) : null;
+                          const t = ticket || availableTickets[0];
+                          countByTicketId.set(t.id, (countByTicketId.get(t.id) || 0) + 1);
+                          totalCents += Number(t.price || 0) * 100;
+                        });
+                        const totalPrice = totalCents / 100;
+                        return (
+                        <div className="mt-4 flex items-center justify-between gap-4 border-t pt-4 flex-wrap">
+                          <span className="text-slate-700">
+                            <strong>{selectedSeatIds.size}</strong> koltuk seçildi · {formatPrice(totalPrice, event.currency)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isPastEvent || isUnapproved) return;
+                              const eventPayload = {
+                                eventId: event.id,
+                                eventTitle: localized.title || event.title,
+                                eventDate: event.date,
+                                eventTime: event.time || "20:00",
+                                venue: localized.venue || event.venue,
+                                location: event.location,
+                                imageUrl: event.image_url,
+                                currency: event.currency,
+                              };
+                              countByTicketId.forEach((qty, ticketId) => {
+                                const t = availableTickets.find((x) => x.id === ticketId)!;
+                                addItem({
+                                  ...eventPayload,
+                                  ticketId: t.id,
+                                  ticketName: t.name || "Bilet",
+                                  price: Number(t.price || 0),
+                                  quantity: qty,
+                                  available: Number(t.available || 0),
+                                });
+                              });
+                              setActionMessage(tCheckout("addedToCart"));
+                              setSelectedSeatIds(new Set());
+                            }}
+                            disabled={isPastEvent || isUnapproved}
+                            className="rounded-lg bg-primary-600 px-6 py-2 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
+                          >
+                            {tCheckout("addToCart")} ({selectedSeatIds.size} koltuk)
+                          </button>
+                        </div>
+                        );
+                      })()}
+                    </>
+                  ) : (
+                    <p className="text-slate-500">Bu plan için henüz bölüm/sıra/koltuk tanımlanmamış.</p>
+                  )}
+                </div>
+              )}
+
+              {/* Bilet Türleri - Fiyat kategorisine göre (mevcut akış) */}
+              {!isExternalOnlyEvent && bookingMode === "price" && (availableTickets.length === 0 ? (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
                   {t("noTicketsAvailable")}
                 </div>
@@ -328,7 +866,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     {availableTickets.map((ticketType) => {
                       const isSelected = selectedTicketType === ticketType.id;
                       const availableAmount = Number(ticketType.available || 0);
+                      const minSelectable = getMinQuantityFromDescription(ticketType.description);
                       const maxSelectable = Math.min(availableAmount, MAX_TICKETS_PER_ORDER);
+                      const effectiveMin = Math.min(minSelectable, maxSelectable);
                       const rowCount = isSelected ? ticketCount : 0;
 
                       return (
@@ -340,15 +880,20 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           onClick={() => {
                             setSelectedTicketType(ticketType.id);
                             setTicketCount((current) => {
-                              if (!isSelected) return 1;
-                              return Math.min(Math.max(1, current), maxSelectable || 1);
+                              if (!isSelected) return effectiveMin;
+                              return Math.min(Math.max(effectiveMin, current), maxSelectable || effectiveMin);
                             });
                           }}
                         >
                           <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_120px_170px]">
                             <div>
                               <p className="text-sm font-semibold text-slate-900">{ticketType.name}</p>
-                              <p className="text-xs text-slate-500">{t("remaining")}: {availableAmount}</p>
+                              <p className="text-xs text-slate-500">
+                                {t("remaining")}: {availableAmount}
+                                {minSelectable > 1 && (
+                                  <span className="ml-1 text-primary-600"> · Min. {minSelectable} adet</span>
+                                )}
+                              </p>
                             </div>
 
                             <p className="text-lg font-bold text-primary-700">{formatPrice(ticketType.price, event.currency)}</p>
@@ -360,11 +905,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   e.stopPropagation();
                                   setSelectedTicketType(ticketType.id);
                                   setTicketCount((current) => {
-                                    if (!isSelected) return 1;
-                                    return Math.max(1, current - 1);
+                                    if (!isSelected) return effectiveMin;
+                                    return Math.max(effectiveMin, current - 1);
                                   });
                                 }}
-                                disabled={availableAmount <= 0 || isPastEvent}
+                                disabled={availableAmount <= 0 || isPastEvent || rowCount <= effectiveMin}
                                 className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                               >
                                 -
@@ -376,8 +921,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   e.stopPropagation();
                                   setSelectedTicketType(ticketType.id);
                                   setTicketCount((current) => {
-                                    if (!isSelected) return 1;
-                                    return Math.min(maxSelectable || 1, current + 1);
+                                    if (!isSelected) return effectiveMin;
+                                    return Math.min(maxSelectable || effectiveMin, current + 1);
                                   });
                                 }}
                                 disabled={availableAmount <= 0 || isPastEvent || rowCount >= maxSelectable}
@@ -394,8 +939,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               ))}
 
-              {/* Toplam Fiyat ve Sepete Ekle */}
-              {!isExternalOnlyEvent && <div className="border-t pt-6">
+              {/* Toplam Fiyat ve Sepete Ekle – sadece fiyat kategorisi modunda */}
+              {!isExternalOnlyEvent && bookingMode === "price" && <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-lg font-semibold text-slate-900">{t("totalPrice")}</span>
                   <span className="text-3xl font-bold text-blue-600">€{totalPrice.toFixed(2)}</span>
@@ -410,7 +955,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 <button
                   type="button"
                   onClick={() => {
-                    if (!selectedTicket || isPastEvent) return;
+                    if (!selectedTicket || isPastEvent || isUnapproved) return;
+                    const minQ = Math.min(selectedMinQ, selectedMaxQ);
+                    if (ticketCount < minQ) return; // Grup biletinde minimum adet şartı
                     addItem({
                       ticketId: selectedTicket.id,
                       eventId: event.id,
@@ -428,7 +975,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     });
                     setActionMessage(tCheckout("addedToCart"));
                   }}
-                  disabled={!selectedTicket || isPastEvent}
+                  disabled={
+                    isUnapproved ||
+                    !selectedTicket ||
+                    isPastEvent ||
+                    ticketCount < Math.min(selectedMinQ, selectedMaxQ)
+                  }
                   className="w-full rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
                 >
                   {tCheckout("addToCart")}
