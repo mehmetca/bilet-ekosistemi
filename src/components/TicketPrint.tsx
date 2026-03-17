@@ -439,100 +439,87 @@ export default function TicketPrint({
               key={idx}
               className="relative mx-auto max-w-[900px] overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm"
             >
-        {/* Header */}
-        <div className="bg-[#003f8c] px-4 py-2.5 text-sm font-bold tracking-wide text-white">
-          BILET EKOSISTEMI E-TICKET
+        {/* Cep: QR en üstte tek başına, barkod yok; yazılar altta */}
+        <div className="block md:hidden">
+          <div className="flex justify-center bg-white px-4 py-6">
+            <img
+              src={qrUrlForSeat}
+              alt="Bilet QR Kodu"
+              className="h-[200px] w-[200px] rounded border border-slate-200 bg-white p-2"
+            />
+          </div>
+          <div className="border-t border-slate-200 bg-slate-50/50 px-4 py-4">
+            <p className="text-[10px] font-bold tracking-wide text-[#003f8c]">BILET EKOSISTEMI E-TICKET</p>
+            <p className="mt-2 text-xs font-bold text-black">Bilet Kodu</p>
+            <p className="mt-0.5 font-mono text-base font-extrabold tracking-wide text-black">{codeForSeat}</p>
+            <p className="mt-2 text-[11px] text-black">Giris Noktasi</p>
+            <p className="mt-0.5 text-[13px] font-bold text-black">EINGANG X</p>
+            <p className="mt-3 text-[10px] font-bold tracking-wide text-black">MUSTERI/ETKINLIK BILETI</p>
+            <p className="mt-1 truncate text-xl font-black text-black">{eventTitle || "Etkinlik"}</p>
+            <p className="mt-2 text-base font-extrabold text-black">{eventDateText}, {timeText}</p>
+            <p className="mt-1 text-[13px] font-bold text-black">{venue}</p>
+            <p className="mt-0.5 text-[13px] text-black">{location}</p>
+            <table className="mt-3 w-full border-collapse text-xs text-black">
+              <tbody>
+                <tr><td className="py-0.5">Bilet Turu</td><td className="py-0.5 text-right font-bold">{ticketType}</td></tr>
+                {seatLine && (
+                  <tr><td className="py-0.5">Platz / Koltuk</td><td className="py-0.5 text-right font-bold">{seatLine}</td></tr>
+                )}
+                <tr><td className="py-0.5">Kisi/Adet</td><td className="py-0.5 text-right font-bold">{buyerName} / {qty}</td></tr>
+                <tr><td className="py-0.5">Toplam</td><td className="py-0.5 text-right font-extrabold">{formatPrice(priceForThis, currency)}</td></tr>
+              </tbody>
+            </table>
+            <p className="mt-3 text-center text-[10px] text-black">QR kodu giriste okutunuz</p>
+          </div>
         </div>
 
-        {/* Ana içerik */}
-        <div className="relative flex">
-          {/* Sol: Barkod + Bilgiler (73%) */}
-          <div className="flex min-w-0 flex-1 gap-4 p-4" style={{ width: "73%" }}>
-            <div className="flex flex-shrink-0 items-start gap-1.5">
-              <div className="flex h-[250px] w-[42px] items-center justify-center overflow-hidden rounded border border-slate-200 bg-white">
-                <img
-                  src={barcodeSrcForSeat}
-                  alt="Bilet Barkod"
-                  className="h-[238px] w-[36px] object-contain"
-                />
-              </div>
-              <div className="flex flex-col text-[9px] font-mono leading-[9px] tracking-wide text-black">
-                {codeForSeat.split("").map((ch, i) => (
-                  <span key={i}>{ch}</span>
-                ))}
-              </div>
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold tracking-wide text-black">
-                MUSTERI/ETKINLIK BILETI
-              </p>
-              <p className="mt-1.5 truncate text-4xl font-black leading-tight text-black md:text-5xl">
-                {eventTitle || "Etkinlik"}
-              </p>
-              <p className="mt-3 text-lg font-extrabold text-black">
-                {eventDateText}, {timeText}
-              </p>
-              <p className="mt-1 text-[13px] font-bold text-black">{venue}</p>
-              <p className="mt-0.5 text-[13px] text-black">{location}</p>
-              <table className="mt-3 w-full border-collapse text-xs text-black">
-                <tbody>
-                  <tr>
-                    <td className="py-0.5">Bilet Turu</td>
-                    <td className="py-0.5 text-right font-bold">{ticketType}</td>
-                  </tr>
-                  {seatLine && (
-                    <tr>
-                      <td className="py-0.5">Platz / Koltuk</td>
-                      <td className="py-0.5 text-right font-bold">{seatLine}</td>
-                    </tr>
-                  )}
-                  <tr>
-                    <td className="py-0.5">Kisi/Adet</td>
-                    <td className="py-0.5 text-right font-bold">
-                      {buyerName} / {qty}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-0.5">Toplam</td>
-                    <td className="py-0.5 text-right font-extrabold">
-                      {formatPrice(priceForThis, currency)}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+        {/* Masaüstü: Header + Barkod sol, bilgiler orta, QR sağ */}
+        <div className="hidden md:block">
+          <div className="bg-[#003f8c] px-4 py-2.5 text-sm font-bold tracking-wide text-white">
+            BILET EKOSISTEMI E-TICKET
           </div>
-
-          {/* Kesik çizgi */}
-          <div
-            className="absolute top-0 bottom-0 left-[73%] border-l-2 border-dashed border-slate-400"
-            style={{ width: 0 }}
-          />
-
-          {/* Sağ: Koparılabilir bölüm (27%) */}
-          <div
-            className="flex w-[27%] flex-shrink-0 flex-col p-4"
-            style={{ minWidth: "180px" }}
-          >
-            <p className="text-[10px] font-bold tracking-wide text-black">
-              KOPARILABILIR BOLUM
-            </p>
-            <p className="mt-2 text-xs font-bold text-black">Bilet Kodu</p>
-            <p className="mt-0.5 font-mono text-lg font-extrabold tracking-wide text-black">
-              {codeForSeat}
-            </p>
-            <p className="mt-2.5 text-[11px] text-black">Giris Noktasi</p>
-            <p className="mt-0.5 text-[13px] font-bold text-black">EINGANG X</p>
-            <div className="mt-2.5 flex justify-center">
-              <img
-                src={qrUrlForSeat}
-                alt="Bilet QR Kodu"
-                className="h-[130px] w-[130px] rounded border border-slate-200 bg-white p-1.5"
-              />
+          <div className="relative flex">
+            <div className="flex min-w-0 flex-1 gap-4 p-4" style={{ width: "73%" }}>
+              <div className="flex flex-shrink-0 items-start gap-1.5">
+                <div className="flex h-[250px] w-[42px] items-center justify-center overflow-hidden rounded border border-slate-200 bg-white">
+                  <img src={barcodeSrcForSeat} alt="Bilet Barkod" className="h-[238px] w-[36px] object-contain" />
+                </div>
+                <div className="flex flex-col text-[9px] font-mono leading-[9px] tracking-wide text-black">
+                  {codeForSeat.split("").map((ch, i) => (
+                    <span key={i}>{ch}</span>
+                  ))}
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold tracking-wide text-black">MUSTERI/ETKINLIK BILETI</p>
+                <p className="mt-1.5 truncate text-4xl font-black leading-tight text-black md:text-5xl">{eventTitle || "Etkinlik"}</p>
+                <p className="mt-3 text-lg font-extrabold text-black">{eventDateText}, {timeText}</p>
+                <p className="mt-1 text-[13px] font-bold text-black">{venue}</p>
+                <p className="mt-0.5 text-[13px] text-black">{location}</p>
+                <table className="mt-3 w-full border-collapse text-xs text-black">
+                  <tbody>
+                    <tr><td className="py-0.5">Bilet Turu</td><td className="py-0.5 text-right font-bold">{ticketType}</td></tr>
+                    {seatLine && (
+                      <tr><td className="py-0.5">Platz / Koltuk</td><td className="py-0.5 text-right font-bold">{seatLine}</td></tr>
+                    )}
+                    <tr><td className="py-0.5">Kisi/Adet</td><td className="py-0.5 text-right font-bold">{buyerName} / {qty}</td></tr>
+                    <tr><td className="py-0.5">Toplam</td><td className="py-0.5 text-right font-extrabold">{formatPrice(priceForThis, currency)}</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <p className="mt-1.5 text-center text-[10px] text-black">
-              QR kodu giriste okutunuz
-            </p>
+            <div className="absolute top-0 bottom-0 left-[73%] border-l-2 border-dashed border-slate-400" style={{ width: 0 }} />
+            <div className="flex w-[27%] flex-shrink-0 flex-col p-4" style={{ minWidth: "180px" }}>
+              <p className="text-[10px] font-bold tracking-wide text-black">KOPARILABILIR BOLUM</p>
+              <p className="mt-2 text-xs font-bold text-black">Bilet Kodu</p>
+              <p className="mt-0.5 font-mono text-lg font-extrabold tracking-wide text-black">{codeForSeat}</p>
+              <p className="mt-2.5 text-[11px] text-black">Giris Noktasi</p>
+              <p className="mt-0.5 text-[13px] font-bold text-black">EINGANG X</p>
+              <div className="mt-2.5 flex justify-center">
+                <img src={qrUrlForSeat} alt="Bilet QR Kodu" className="h-[130px] w-[130px] rounded border border-slate-200 bg-white p-1.5" />
+              </div>
+              <p className="mt-1.5 text-center text-[10px] text-black">QR kodu giriste okutunuz</p>
+            </div>
           </div>
         </div>
       </div>

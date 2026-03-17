@@ -6,8 +6,19 @@ export default function GlobalErrorHandler({ children }: { children: React.React
   const [error, setError] = useState<{ message: string; stack?: string } | null>(null);
 
   useEffect(() => {
+    // Kamera/video kapatılırken tarayıcının verdiği benign hatalar; sayfa hata ekranı göstermeyelim.
+    function isBenignMediaError(msg: string): boolean {
+      const s = msg.toLowerCase();
+      return (
+        s.includes("the play() request was interrupted") ||
+        s.includes("the operation was aborted") ||
+        (s.includes("abort") && (s.includes("media") || s.includes("element") || s.includes("document")))
+      );
+    }
+
     function onError(event: ErrorEvent) {
       const msg = event.message || "Bilinmeyen hata";
+      if (isBenignMediaError(msg)) return;
       console.error("[GlobalErrorHandler] window.onerror:", msg, event.filename, event.lineno, event.colno);
       setError({ message: msg, stack: event.error?.stack });
     }
@@ -15,12 +26,7 @@ export default function GlobalErrorHandler({ children }: { children: React.React
     function onUnhandledRejection(event: PromiseRejectionEvent) {
       const msg = event.reason instanceof Error ? event.reason.message : String(event.reason);
 
-      // Bazı tarayıcılarda video/kamera elementi DOM'dan kaldırılırken bu rejection geliyor.
-      // Fatal değil; konsola yazmadan sessizce yutuyoruz.
-      if (
-        msg.includes("The play() request was interrupted because the media was removed from the document") ||
-        msg.includes("The play() request was interrupted")
-      ) {
+      if (isBenignMediaError(msg)) {
         event.preventDefault();
         return;
       }
