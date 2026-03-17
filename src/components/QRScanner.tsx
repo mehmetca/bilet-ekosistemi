@@ -113,6 +113,16 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
       } catch (err) {
         if (!mounted) return;
         const msg = err instanceof Error ? err.message : String(err);
+
+        // Bazı tarayıcılarda kamera değişimi / modal kapanışı sırasında
+        // "The operation was aborted" veya benzeri AbortError hataları gelebiliyor.
+        // Bunlar fatal değil, kullanıcıya hata göstermeden sessizce yutuyoruz.
+        if (/abort/i.test(msg) || msg.includes("AbortError")) {
+          console.warn("Kamera işlemi iptal edildi (abort):", err);
+          setIsStarting(false);
+          return;
+        }
+
         console.error("Kamera hatası:", err);
         if (msg.includes("Permission") || msg.includes("NotAllowed")) {
           setError("Kamera izni reddedildi. Tarayıcı ayarlarından kamera erişimine izin verin.");
