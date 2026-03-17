@@ -15,6 +15,19 @@ export default function GlobalErrorHandler({ children }: { children: React.React
     function onUnhandledRejection(event: PromiseRejectionEvent) {
       const msg = event.reason instanceof Error ? event.reason.message : String(event.reason);
       console.error("[GlobalErrorHandler] unhandledrejection:", msg, event.reason);
+
+      // Bazı tarayıcılarda video/kamera elementi DOM'dan kaldırılırken
+      // "The play() request was interrupted because the media was removed from the document"
+      // gibi uyarılar Promise rejection olarak gelebiliyor. Bunlar fatal değil;
+      // sayfayı beyaza döndürmemek için sessizce yutuyoruz.
+      if (
+        msg.includes("The play() request was interrupted because the media was removed from the document") ||
+        msg.includes("The play() request was interrupted")
+      ) {
+        event.preventDefault();
+        return;
+      }
+
       setError({
         message: msg,
         stack: event.reason instanceof Error ? event.reason.stack : undefined,
