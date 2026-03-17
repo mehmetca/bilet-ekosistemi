@@ -14,9 +14,19 @@ export async function GET() {
       .eq("is_approved", true)
       .order("created_at", { ascending: false })
       .limit(50);
-    if (error) return NextResponse.json([], { status: 200 });
+    if (error) {
+      console.error("Events API error:", error);
+      return NextResponse.json(
+        { error: "Etkinlikler yüklenirken bir hata oluştu." },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(data ?? []);
-  } catch {
-    return NextResponse.json([], { status: 200 });
+  } catch (e) {
+    console.error("Events API exception:", e);
+    return NextResponse.json(
+      { error: "Etkinlikler yüklenirken bir hata oluştu." },
+      { status: 500 }
+    );
   }
 }

@@ -3,9 +3,10 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { ArrowLeft, Plus, ChevronDown, ChevronRight, Edit2, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, ChevronDown, ChevronRight, Copy, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import OrganizerOrAdminGuard from "@/components/OrganizerOrAdminGuard";
+import { getMusensaalTemplateCopy } from "@/lib/seating-plans/musensaal-to-db";
 import type { SeatingPlan, SeatingPlanSection, SeatingPlanRow, Seat } from "@/types/database";
 
 export default function OturumPlaniPage() {
@@ -34,6 +35,9 @@ function OturumPlaniContent() {
   const [newRowLabel, setNewRowLabel] = useState<Record<string, string>>({});
   const [newSeatRange, setNewSeatRange] = useState<Record<string, string>>({}); // "1-10" gibi
   const [sectionTicketLabel, setSectionTicketLabel] = useState<Record<string, string>>({}); // sectionId -> ticket_type_label (düzenleme)
+  const [copyingTemplate, setCopyingTemplate] = useState(false);
+  const [addingMissingRows, setAddingMissingRows] = useState(false);
+  const [addingMissingSeats, setAddingMissingSeats] = useState(false);
 
   useEffect(() => {
     if (!venueId) return;
@@ -118,6 +122,33 @@ function OturumPlaniContent() {
     setSeatsByRow((prev) => ({ ...prev, [rowId]: data || [] }));
   };
 
+  const handleDeleteSeat = async (seatId: string, rowId: string) => {
+    if (!confirm("Bu koltuk silinsin mi? Satılmış koltuk silinemez.")) return;
+    const { error } = await supabase.from("seats").delete().eq("id", seatId);
+    if (error) {
+      if (error.code === "23503") alert("Bu koltuk daha önce satıldığı için silinemez.");
+      else alert("Koltuk silinemedi: " + error.message);
+      return;
+    }
+    await refreshSeats(rowId);
+  };
+
+  const handleDeleteRow = async (rowId: string, sectionId: string, planId: string) => {
+    if (!confirm("Bu sıra ve içindeki tüm koltuklar silinsin mi? Sırada satılmış koltuk varsa sıra silinemez.")) return;
+    const { error } = await supabase.from("seating_plan_rows").delete().eq("id", rowId);
+    if (error) {
+      if (error.code === "23503") alert("Bu sırada satılmış koltuk var, sıra silinemez.");
+      else alert("Sıra silinemedi: " + error.message);
+      return;
+    }
+    await refreshRows(sectionId);
+    setSeatsByRow((prev) => {
+      const next = { ...prev };
+      delete next[rowId];
+      return next;
+    });
+  };
+
   const handleAddPlan = async () => {
     if (!newPlanName.trim() || !venueId) return;
     setAddingPlan(true);
@@ -195,6 +226,287 @@ function OturumPlaniContent() {
     await refreshSeats(rowId);
   };
 
+  /** Şablondan kopya oluşturur veya mevcut Musensaal planını şablonla yeniler. */
+  const runMusensaalTemplate = async (planId: string, isNewPlan: boolean) => {
+    const template = getMusensaalTemplateCopy();
+    if (!isNewPlan) {
+      const { data: existingSections } = await supabase.from("seating_plan_sections").select("id").eq("seating_plan_id", planId);
+      const sectionIds = (existingSections || []).map((s) => s.id);
+      if (sectionIds.length > 0) {
+        const { data: rowsToDelete } = await supabase.from("seating_plan_rows").select("id").in("section_id", sectionIds);
+        const rowIds = (rowsToDelete || []).map((r) => r.id);
+        if (rowIds.length > 0) await supabase.from("seats").delete().in("row_id", rowIds);
+        await supabase.from("seating_plan_rows").delete().in("section_id", sectionIds);
+        await supabase.from("seating_plan_sections").delete().eq("seating_plan_id", planId);
+      }
+    }
+    for (const section of template.sections) {
+      const { data: sectionData, error: sectionErr } = await supabase
+        .from("seating_plan_sections")
+        .insert({
+          seating_plan_id: planId,
+          name: section.name,
+          sort_order: section.sort_order,
+          ticket_type_label: section.ticket_type_label ?? null,
+        })
+        .select()
+        .single();
+      if (sectionErr || !sectionData) {
+        console.error("Section insert failed:", section.name, sectionErr);
+        continue;
+      }
+      const sectionId = sectionData.id;
+      for (let ri = 0; ri < section.rows.length; ri++) {
+        const row = section.rows[ri];
+        const { data: rowData, error: rowErr } = await supabase
+          .from("seating_plan_rows")
+          .insert({ section_id: sectionId, row_label: row.row_label, sort_order: row.sort_order })
+          .select()
+          .single();
+        if (rowErr || !rowData) {
+          console.error("Row insert failed:", section.name, row.row_label, rowErr);
+          continue;
+        }
+        const toInsert = row.seat_labels.map((seat_label) => ({ row_id: rowData.id, seat_label }));
+        for (let chunk = 0; chunk < toInsert.length; chunk += 50) {
+          const batch = toInsert.slice(chunk, chunk + 50);
+          const { error: seatErr } = await supabase.from("seats").insert(batch);
+          if (seatErr) console.error("Seats insert failed:", section.name, row.row_label, seatErr);
+        }
+      }
+    }
+  };
+
+  const handleCopyFromTemplate = async () => {
+    if (!venueId) return;
+    if (!confirm("Musensaal şablonundan bu mekan için bir kopya oluşturulsun mu? Oluşan planı sonradan düzenleyebilirsiniz.")) return;
+    setCopyingTemplate(true);
+    try {
+      const template = getMusensaalTemplateCopy();
+      const { data: planData, error: planErr } = await supabase
+        .from("seating_plans")
+        .insert({ venue_id: venueId, name: template.planName, is_default: plans.length === 0 })
+        .select()
+        .single();
+      if (planErr || !planData) {
+        alert("Plan oluşturulamadı: " + (planErr?.message || "Bilinmeyen hata"));
+        return;
+      }
+      await runMusensaalTemplate(planData.id, true);
+      await refreshPlans();
+      setExpandedPlan(planData.id);
+    } finally {
+      setCopyingTemplate(false);
+    }
+  };
+
+  /** Şablonda olup DB'de olmayan sıraları (ve koltuklarını) ekler. Mevcut veriler ve satılan koltuklar silinmez. */
+  const handleAddMissingRows = async (planId: string) => {
+    if (!confirm("Bu plan için Musensaal şablonundaki eksik sıralar eklenecek. Mevcut sıra ve koltuklar aynen kalır. Devam?")) return;
+    setAddingMissingRows(true);
+    try {
+      const template = getMusensaalTemplateCopy();
+      const { data: dbSections } = await supabase
+        .from("seating_plan_sections")
+        .select("id, name, sort_order")
+        .eq("seating_plan_id", planId)
+        .order("sort_order");
+      if (!dbSections?.length || dbSections.length !== template.sections.length) {
+        alert("Plan bölüm sayısı şablonla uyuşmuyor. Önce \"Şablonu yeniden uygula\" ile planı sıfırlayın.");
+        return;
+      }
+      let added = 0;
+      for (let si = 0; si < template.sections.length; si++) {
+        const tSection = template.sections[si];
+        const dbSection = dbSections[si];
+        if (!dbSection || dbSection.name !== tSection.name) continue;
+        const { data: existingRows } = await supabase
+          .from("seating_plan_rows")
+          .select("id, row_label")
+          .eq("section_id", dbSection.id);
+        const existingLabels = new Set((existingRows || []).map((r) => String(r.row_label).trim()));
+        for (let ri = 0; ri < tSection.rows.length; ri++) {
+          const tRow = tSection.rows[ri];
+          const rowLabel = String(tRow.row_label).trim();
+          if (existingLabels.has(rowLabel)) continue;
+          const { data: rowData, error: rowErr } = await supabase
+            .from("seating_plan_rows")
+            .insert({ section_id: dbSection.id, row_label: rowLabel, sort_order: tRow.sort_order })
+            .select()
+            .single();
+          if (rowErr || !rowData) {
+            console.error("Row insert failed:", dbSection.name, rowLabel, rowErr);
+            continue;
+          }
+          const toInsert = tRow.seat_labels.map((seat_label) => ({ row_id: rowData.id, seat_label }));
+          for (let chunk = 0; chunk < toInsert.length; chunk += 50) {
+            const batch = toInsert.slice(chunk, chunk + 50);
+            const { error: seatErr } = await supabase.from("seats").insert(batch);
+            if (seatErr) console.error("Seats insert failed:", dbSection.name, rowLabel, seatErr);
+          }
+          existingLabels.add(rowLabel);
+          added++;
+        }
+      }
+      if (added > 0) {
+        await refreshPlans();
+        const sectionIds = (dbSections || []).map((s) => s.id);
+        const { data: rows } = await supabase.from("seating_plan_rows").select("*").in("section_id", sectionIds).order("sort_order");
+        const bySection: Record<string, SeatingPlanRow[]> = {};
+        (rows || []).forEach((r) => {
+          if (!bySection[r.section_id]) bySection[r.section_id] = [];
+          bySection[r.section_id].push(r);
+        });
+        setRowsBySection((prev) => ({ ...prev, ...bySection }));
+        const rowIds = (rows || []).map((r) => r.id);
+        if (rowIds?.length) {
+          const { data: seats } = await supabase.from("seats").select("*").in("row_id", rowIds);
+          const byRow: Record<string, Seat[]> = {};
+          (seats || []).forEach((s) => {
+            if (!byRow[s.row_id]) byRow[s.row_id] = [];
+            byRow[s.row_id].push(s);
+          });
+          setSeatsByRow((prev) => ({ ...prev, ...byRow }));
+        }
+        setExpandedPlan(planId);
+        alert(`${added} eksik sıra eklendi.`);
+      } else {
+        alert("Eksik sıra bulunamadı; plan şablondaki tüm sıralara sahip.");
+      }
+    } finally {
+      setAddingMissingRows(false);
+    }
+  };
+
+  /** Koltukları olmayan (veya şablona göre eksik koltuklu) sıralara şablondan koltuk ekler. */
+  const handleAddMissingSeats = async (planId: string) => {
+    if (!confirm("Koltuk sayısı 0 olan sıralara Musensaal şablonundaki koltuk sayısı kadar koltuk eklenecek. Devam?")) return;
+    setAddingMissingSeats(true);
+    try {
+      const template = getMusensaalTemplateCopy();
+      const { data: dbSections } = await supabase
+        .from("seating_plan_sections")
+        .select("id, name, sort_order")
+        .eq("seating_plan_id", planId)
+        .order("sort_order");
+      if (!dbSections?.length || dbSections.length !== template.sections.length) {
+        alert("Plan bölüm sayısı şablonla uyuşmuyor.");
+        return;
+      }
+      let rowsFilled = 0;
+      let seatsAdded = 0;
+      for (let si = 0; si < template.sections.length; si++) {
+        const tSection = template.sections[si];
+        const dbSection = dbSections[si];
+        if (!dbSection || dbSection.name !== tSection.name) continue;
+        const tRowByLabel = new Map(tSection.rows.map((r) => [String(r.row_label).trim(), r]));
+        const { data: dbRows } = await supabase
+          .from("seating_plan_rows")
+          .select("id, row_label")
+          .eq("section_id", dbSection.id);
+        const { data: existingSeats } = await supabase
+          .from("seats")
+          .select("row_id")
+          .in("row_id", (dbRows || []).map((r) => r.id));
+        const seatCountByRowId = new Map<string, number>();
+        (existingSeats || []).forEach((s) => {
+          seatCountByRowId.set(s.row_id, (seatCountByRowId.get(s.row_id) ?? 0) + 1);
+        });
+        for (const dbRow of dbRows || []) {
+          const count = seatCountByRowId.get(dbRow.id) ?? 0;
+          if (count > 0) continue;
+          const rowLabel = String(dbRow.row_label).trim();
+          const tRow = tRowByLabel.get(rowLabel);
+          if (!tRow || !tRow.seat_labels.length) continue;
+          const toInsert = tRow.seat_labels.map((seat_label) => ({ row_id: dbRow.id, seat_label }));
+          for (let chunk = 0; chunk < toInsert.length; chunk += 50) {
+            const batch = toInsert.slice(chunk, chunk + 50);
+            const { error: seatErr } = await supabase.from("seats").insert(batch);
+            if (seatErr) {
+              console.error("Seats insert failed:", dbSection.name, rowLabel, seatErr);
+              break;
+            }
+            seatsAdded += batch.length;
+          }
+          rowsFilled++;
+        }
+      }
+      if (rowsFilled > 0 || seatsAdded > 0) {
+        const sectionIds = dbSections.map((s) => s.id);
+        const { data: rows } = await supabase.from("seating_plan_rows").select("*").in("section_id", sectionIds).order("sort_order");
+        const bySection: Record<string, SeatingPlanRow[]> = {};
+        (rows || []).forEach((r) => {
+          if (!bySection[r.section_id]) bySection[r.section_id] = [];
+          bySection[r.section_id].push(r);
+        });
+        setRowsBySection((prev) => ({ ...prev, ...bySection }));
+        const rowIds = (rows || []).map((r) => r.id);
+        if (rowIds?.length) {
+          const { data: seats } = await supabase.from("seats").select("*").in("row_id", rowIds);
+          const byRow: Record<string, Seat[]> = {};
+          (seats || []).forEach((s) => {
+            if (!byRow[s.row_id]) byRow[s.row_id] = [];
+            byRow[s.row_id].push(s);
+          });
+          setSeatsByRow((prev) => ({ ...prev, ...byRow }));
+        }
+        setExpandedPlan(planId);
+        alert(`${rowsFilled} sıraya toplam ${seatsAdded} koltuk eklendi.`);
+      } else {
+        alert("Koltukları eksik sıra bulunamadı; tüm sıralarda koltuk var.");
+      }
+    } finally {
+      setAddingMissingSeats(false);
+    }
+  };
+
+  const handleResyncMusensaal = async (planId: string) => {
+    if (!confirm("Bu planın tüm bölüm/sıra/koltuk verileri silinip Musensaal şablonu yeniden uygulanacak. Devam?")) return;
+    setCopyingTemplate(true);
+    try {
+      await runMusensaalTemplate(planId, false);
+      await refreshPlans();
+      const { data: sections } = await supabase
+        .from("seating_plan_sections")
+        .select("*")
+        .eq("seating_plan_id", planId)
+        .order("sort_order");
+      const byPlan: Record<string, SeatingPlanSection[]> = {};
+      (sections || []).forEach((s) => {
+        if (!byPlan[s.seating_plan_id]) byPlan[s.seating_plan_id] = [];
+        byPlan[s.seating_plan_id].push(s);
+      });
+      setSectionsByPlan((prev) => ({ ...prev, ...byPlan }));
+      const sectionIds = (sections || []).map((s) => s.id);
+      if (sectionIds.length) {
+        const { data: rows } = await supabase
+          .from("seating_plan_rows")
+          .select("*")
+          .in("section_id", sectionIds)
+          .order("sort_order");
+        const bySection: Record<string, SeatingPlanRow[]> = {};
+        (rows || []).forEach((r) => {
+          if (!bySection[r.section_id]) bySection[r.section_id] = [];
+          bySection[r.section_id].push(r);
+        });
+        setRowsBySection((prev) => ({ ...prev, ...bySection }));
+        const rowIds = (rows || []).map((r) => r.id);
+        if (rowIds.length) {
+          const { data: seats } = await supabase.from("seats").select("*").in("row_id", rowIds);
+          const byRow: Record<string, Seat[]> = {};
+          (seats || []).forEach((s) => {
+            if (!byRow[s.row_id]) byRow[s.row_id] = [];
+            byRow[s.row_id].push(s);
+          });
+          setSeatsByRow((prev) => ({ ...prev, ...byRow }));
+        }
+      }
+      setExpandedPlan(planId);
+    } finally {
+      setCopyingTemplate(false);
+    }
+  };
+
   const setDefaultPlan = async (planId: string) => {
     await supabase.from("seating_plans").update({ is_default: false }).eq("venue_id", venueId);
     await supabase.from("seating_plans").update({ is_default: true }).eq("id", planId);
@@ -244,7 +556,7 @@ function OturumPlaniContent() {
         <strong>{venueName}</strong> için bölüm, sıra ve koltuk tanımlayın. Etkinlik oluştururken bu planı seçerek &quot;Yer seçerek bilet al&quot; özelliğini açabilirsiniz.
       </p>
 
-      <div className="mt-6 flex gap-2">
+      <div className="mt-6 flex flex-wrap gap-2 items-center">
         <input
           type="text"
           value={newPlanName}
@@ -261,6 +573,22 @@ function OturumPlaniContent() {
           <Plus className="h-4 w-4" />
           Yeni plan
         </button>
+        <button
+          type="button"
+          onClick={handleCopyFromTemplate}
+          disabled={copyingTemplate}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          title="Orijinal şablon değişmez; mekana düzenlenebilir bir kopya eklenir."
+        >
+          <Copy className="h-4 w-4" />
+          {copyingTemplate ? "Kopyalanıyor…" : "Şablondan kopyala: Musensaal"}
+        </button>
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        Şablondan kopyala: Musensaal planının bir kopyası bu mekana eklenir; orijinal şablon aynen kalır, kopyayı istediğiniz gibi düzenleyebilirsiniz.
+      </p>
+      <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+        <strong>Bilet türleri ile eşleştirme:</strong> Her bölümde &quot;Bilet türü (etkinlikte eşlenecek)&quot; alanına yazdığınız isim, <em>etkinlik oluştururken</em> eklediğiniz bilet türü adıyla <strong>birebir aynı</strong> olmalı (örn. Kategori 1, Kategori 2). Musensaal şablonundan kopyaladıysanız bölümler zaten Kategori 1–4 ile işaretlidir; etkinlikte bu isimlerle bilet türü ekleyin.
       </div>
 
       <div className="mt-8 space-y-4">
@@ -277,6 +605,37 @@ function OturumPlaniContent() {
                 {plan.is_default && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">Varsayılan</span>}
               </span>
               <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                {plan.name && plan.name.includes("Musensaal") && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleAddMissingRows(plan.id)}
+                      disabled={copyingTemplate || addingMissingRows || addingMissingSeats}
+                      className="text-sm text-green-700 hover:text-green-800 border border-green-400 px-2 py-1 rounded"
+                      title="Şablonda olup planda olmayan sıraları ekler. Mevcut veriler silinmez."
+                    >
+                      {addingMissingRows ? "Ekleniyor…" : "Eksik sıraları ekle"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddMissingSeats(plan.id)}
+                      disabled={copyingTemplate || addingMissingRows || addingMissingSeats}
+                      className="text-sm text-blue-700 hover:text-blue-800 border border-blue-400 px-2 py-1 rounded"
+                      title="Koltuk sayısı 0 olan sıralara şablondan koltuk ekler."
+                    >
+                      {addingMissingSeats ? "Ekleniyor…" : "Eksik koltukları ekle"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleResyncMusensaal(plan.id)}
+                      disabled={copyingTemplate || addingMissingRows || addingMissingSeats}
+                      className="text-sm text-amber-700 hover:text-amber-800 border border-amber-300 px-2 py-1 rounded"
+                      title="Bölüm/sıra/koltuk verilerini siler ve güncel Musensaal şablonunu yeniden uygular (Parkett 1–29, Empore Hinten 5–12 vb.)."
+                    >
+                      Şablonu yeniden uygula
+                    </button>
+                  </>
+                )}
                 {!plan.is_default && (
                   <button
                     type="button"
@@ -351,7 +710,18 @@ function OturumPlaniContent() {
                         </div>
                         {(rowsBySection[section.id] || []).map((row) => (
                           <div key={row.id} className="rounded border border-slate-200 bg-white p-3">
-                            <p className="text-sm font-medium text-slate-700">Sıra {row.row_label}</p>
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-slate-700">Sıra {row.row_label}</p>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteRow(row.id, section.id, plan.id)}
+                                className="p-1 rounded hover:bg-red-50 text-slate-500 hover:text-red-600"
+                                title="Sırayı ve tüm koltuklarını sil"
+                                aria-label={`Sıra ${row.row_label} sil`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                               <input
                                 type="text"
@@ -373,8 +743,20 @@ function OturumPlaniContent() {
                             </div>
                             <div className="mt-2 flex flex-wrap gap-1">
                               {(seatsByRow[row.id] || []).map((s) => (
-                                <span key={s.id} className="inline-flex items-center rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-700">
+                                <span
+                                  key={s.id}
+                                  className="inline-flex items-center gap-0.5 rounded bg-slate-100 pl-2 pr-1 py-0.5 text-xs text-slate-700"
+                                >
                                   {s.seat_label}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteSeat(s.id, row.id)}
+                                    className="p-0.5 rounded hover:bg-red-100 text-slate-500 hover:text-red-600"
+                                    title="Koltuk sil"
+                                    aria-label={`Koltuk ${s.seat_label} sil`}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </button>
                                 </span>
                               ))}
                             </div>

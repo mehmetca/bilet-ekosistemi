@@ -15,6 +15,8 @@ import {
   Home,
   LogOut,
   MapPin,
+  LayoutGrid,
+  Layers,
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
@@ -24,6 +26,8 @@ const ORGANIZER_MENU = [
   { href: "/yonetim", label: "Dashboard", icon: LayoutDashboard },
   { href: "/yonetim/etkinlikler", label: "Etkinliklerim", icon: Calendar },
   { href: "/yonetim/mekanlar", label: "Mekanlar / Salon ayarları", icon: MapPin },
+  { href: "/yonetim/mekanlar/musensaal-onizleme", label: "Musensaal salon planı", icon: LayoutGrid },
+  { href: "/yonetim/salon-tasarim-vizor", label: "Salon tasarım vizörü", icon: Layers },
   { href: "/yonetim/satis-raporu", label: "Satışlar", icon: BarChart3 },
   { href: "/yonetim/bilet-kontrol", label: "Check-in", icon: UserCheck },
   { href: "/yonetim/bilgilerim", label: "Profil", icon: User },

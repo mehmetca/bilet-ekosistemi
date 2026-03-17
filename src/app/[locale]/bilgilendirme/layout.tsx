@@ -3,7 +3,7 @@
 import Header from "@/components/Header";
 import { Link, usePathname } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, HelpCircle, FileText, Scale, Building2, Users } from "lucide-react";
+import { ArrowLeft, HelpCircle, FileText, Scale, Building2, Users, CreditCard, RotateCcw } from "lucide-react";
 
 const MENU_ITEMS = [
   { href: "/bilgilendirme/sss", labelKey: "footer.faq", icon: HelpCircle },
@@ -11,6 +11,8 @@ const MENU_ITEMS = [
   { href: "/bilgilendirme/impressum", labelKey: "footer.impressum", icon: FileText },
   { href: "/bilgilendirme/cerez-politikasi", labelKey: "footer.cookiePolicy", icon: FileText },
   { href: "/bilgilendirme/mesafeli-satis-sozlesmesi", labelKey: "footer.distanceSales", icon: Scale },
+   { href: "/bilgilendirme/online-odeme-kosullari", labelKey: "footer.onlinePayment", icon: CreditCard },
+   { href: "/bilgilendirme/iade-iptal-politikasi", labelKey: "footer.refundPage", icon: RotateCcw },
   { href: "/bilgilendirme/kullanim-kosullari", labelKey: "footer.terms", icon: Scale },
 ];
 
@@ -44,7 +46,7 @@ export default function BilgilendirmeLayout({
         ) : (
           <div className="flex flex-col md:flex-row gap-8">
             {/* Sol menü - Bilgilendirme & Sözleşmeler */}
-            <aside className="w-full md:w-64 shrink-0">
+            <aside className="w-full md:w-[260px] shrink-0">
               <nav className="sticky top-24 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 px-2">
                   {t("infoMenu.title")}

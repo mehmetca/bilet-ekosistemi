@@ -5,6 +5,10 @@ import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import CookieConsent from "@/components/CookieConsent";
 import Providers from "@/components/Providers";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import AppErrorBoundary from "@/components/AppErrorBoundary";
+import GlobalErrorHandler from "@/components/GlobalErrorHandler";
+import Heartbeat from "@/components/Heartbeat";
+import ConsoleCapture from "@/components/ConsoleCapture";
 import { NextIntlClientProvider } from "next-intl";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
@@ -16,6 +20,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = {
   title: "Bilet Ekosistemi",
   description: "Etkinlik biletleri ve daha fazlası",
+  viewport: { width: "device-width", initialScale: 1 },
 };
 
 export default async function RootLayout({
@@ -23,6 +28,8 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // Locale: middleware x-next-intl-locale veya path'ten (/tr/, /de/, /en/). Locale-prefix'li sayfalarda
+  // mesajları [locale]/layout.tsx yükler; root'ta sadece locale-prefix olmayan (giris, yonetim) için yükleyelim.
   let validLocale = "tr" as (typeof LOCALES)[number];
   let messages: Record<string, unknown> = {};
   try {
@@ -34,14 +41,12 @@ export default async function RootLayout({
       locale = pathLocale;
     }
     validLocale = LOCALES.includes(locale as (typeof LOCALES)[number]) ? (locale as (typeof LOCALES)[number]) : routing.defaultLocale;
-    messages = (await import(`../../messages/${validLocale}.json`)).default;
+    // Locale-prefix'li route'larda mesajları [locale]/layout yükleyeceği için burada yükleme (çift yükleme önlenir)
+    if (!pathLocale) {
+      messages = (await import(`../../messages/${validLocale}.json`)).default;
+    }
   } catch (e) {
     console.error("RootLayout locale/messages load error:", e);
-    try {
-      messages = (await import("../../messages/tr.json")).default;
-    } catch {
-      messages = {};
-    }
   }
   if (Object.keys(messages).length === 0) {
     try {
@@ -54,15 +59,27 @@ export default async function RootLayout({
     <html lang={validLocale}>
       <head />
       <body className={inter.className}>
+        <noscript>
+          <div style={{ padding: "2rem", textAlign: "center", background: "#f1f5f9", minHeight: "100vh", color: "#0f172a" }}>
+            <p><strong>Bilet Ekosistemi</strong></p>
+            <p>Bu site JavaScript gerektirir. Lütfen tarayıcınızda JavaScript&apos;i etkinleştirip sayfayı yenileyin.</p>
+          </div>
+        </noscript>
         <NextIntlClientProvider locale={validLocale} messages={messages}>
-            <SimpleAuthProvider>
-              <Providers>
+          <GlobalErrorHandler>
+            <AppErrorBoundary>
+              <SimpleAuthProvider>
+                <Providers>
                 {children}
                 <CookieConsent />
                 <ServiceWorkerRegister />
-              </Providers>
-            </SimpleAuthProvider>
-          </NextIntlClientProvider>
+                <Heartbeat />
+                <ConsoleCapture />
+                </Providers>
+              </SimpleAuthProvider>
+            </AppErrorBoundary>
+          </GlobalErrorHandler>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

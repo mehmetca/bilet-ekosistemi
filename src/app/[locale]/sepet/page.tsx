@@ -95,7 +95,13 @@ export default function CheckoutPage() {
       ticketCode?: string;
       message: string;
       emailSent?: boolean;
-      orderDetails?: { buyerName: string; quantity: number; ticketType: string; price: number };
+      orderDetails?: {
+        buyerName: string;
+        quantity: number;
+        ticketType: string;
+        price: number;
+        seatDetails?: Array<{ section_name: string; row_label: string; seat_label: string }>;
+      };
     }>
   >([]);
   const [completedItems, setCompletedItems] = useState<typeof items>([]);
@@ -144,6 +150,9 @@ export default function CheckoutPage() {
         if (buyerAddress.trim()) formData.append("buyer_address", buyerAddress.trim());
         if (buyerPlz.trim()) formData.append("buyer_plz", buyerPlz.trim());
         if (buyerCity.trim()) formData.append("buyer_city", buyerCity.trim());
+        if (item.seatIds && item.seatIds.length > 0) {
+          formData.append("seat_ids", JSON.stringify(item.seatIds));
+        }
 
         const res = await fetch("/api/purchase", {
           method: "POST",
@@ -163,6 +172,7 @@ export default function CheckoutPage() {
               quantity: item.quantity,
               ticketType: item.ticketName,
               price: item.price * item.quantity,
+              seatDetails: (data.orderDetails as { seatDetails?: Array<{ section_name: string; row_label: string; seat_label: string }> })?.seatDetails,
             },
           });
         } else {
@@ -294,6 +304,7 @@ export default function CheckoutPage() {
                     eventTime={completedItems[idx]?.eventTime}
                     venue={completedItems[idx]?.venue}
                     location={completedItems[idx]?.location}
+                    seatDetails={r.orderDetails.seatDetails}
                   />
                 </div>
               ) : null
@@ -355,22 +366,28 @@ export default function CheckoutPage() {
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.ticketId, item.quantity - 1)}
-                        className="h-8 w-8 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                      >
-                        −
-                      </button>
-                      <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                      <button
-                        type="button"
-                        onClick={() => updateQuantity(item.ticketId, item.quantity + 1)}
-                        disabled={item.quantity >= item.available}
-                        className="h-8 w-8 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                      >
-                        +
-                      </button>
+                      {item.seatIds && item.seatIds.length > 0 ? (
+                        <span className="text-sm font-semibold text-slate-700">{item.quantity} {item.quantity === 1 ? "koltuk" : "koltuk"}</span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.ticketId, item.quantity - 1)}
+                            className="h-8 w-8 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                          >
+                            −
+                          </button>
+                          <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
+                          <button
+                            type="button"
+                            onClick={() => updateQuantity(item.ticketId, item.quantity + 1)}
+                            disabled={item.quantity >= item.available}
+                            className="h-8 w-8 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            +
+                          </button>
+                        </>
+                      )}
                     </div>
                     <p className="text-lg font-bold text-primary-700">
                       {formatPrice(item.price * item.quantity, item.currency as import("@/types/database").EventCurrency | undefined)}

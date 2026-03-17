@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { IMAGE_STANDARDS, validateImageFile } from "@/lib/image-standards";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { requireRole } from "@/lib/api-auth";
 
 const BUCKET = "uploads";
 
-function getSupabaseAdmin() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase env missing");
-  return createClient(url, key);
-}
-
 export async function POST(request: NextRequest) {
+  const auth = await requireRole(request, ["admin", "organizer"]);
+  if (auth instanceof Response) return auth;
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File;

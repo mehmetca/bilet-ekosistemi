@@ -1,11 +1,20 @@
-import { redirect } from "next/navigation";
+"use client";
 
-export default async function BilgilendirmeIndexPage({
-  params,
-}: {
-  params: Promise<{ locale: string }> | { locale: string };
-}) {
-  const resolved = "then" in params ? await params : params;
-  const locale = resolved?.locale || "tr";
-  redirect(`/${locale}/bilgilendirme/sss`);
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
+
+/**
+ * /bilgilendirme ana sayfa → /bilgilendirme/sss yönlendirmesi.
+ * Config redirect'ler locale'li path'leri zaten yönlendirir; bu fallback (örn. middleware sonrası gelen istekler için).
+ */
+export default function BilgilendirmeIndexPage() {
+  const router = useRouter();
+  const locale = useLocale();
+
+  useEffect(() => {
+    router.replace(`/${locale}/bilgilendirme/sss`);
+  }, [router, locale]);
+
+  return null;
 }

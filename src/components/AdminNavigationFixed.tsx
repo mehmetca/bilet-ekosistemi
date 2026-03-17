@@ -17,6 +17,8 @@ import {
   User,
   Megaphone,
   MapPin,
+  LayoutGrid,
+  Layers,
   Bell,
   Search
 } from "lucide-react";
@@ -55,6 +57,18 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       label: "Mekanlar",
       icon: MapPin,
       description: "Salon ve mekan bilgileri"
+    },
+    {
+      href: "/yonetim/mekanlar/musensaal-onizleme",
+      label: "Musensaal salon planı",
+      icon: LayoutGrid,
+      description: "Koltuk planı önizleme"
+    },
+    {
+      href: "/yonetim/salon-tasarim-vizor",
+      label: "Salon tasarım vizörü",
+      icon: Layers,
+      description: "Bölge tabanlı salon önizleme"
     },
     {
       href: "/yonetim/sehirler",

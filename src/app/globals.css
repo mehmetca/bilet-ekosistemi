@@ -59,6 +59,19 @@
   body {
     @apply bg-background text-foreground;
     min-height: 100vh;
+    /* Beyaz sayfa: arka plan ve metin rengini garanti et */
+    background-color: #ffffff;
+    color: #0f172a;
+  }
+  body.dark {
+    background-color: hsl(222.2 84% 4.9%);
+    color: hsl(210 40% 98%);
+  }
+  /* İlk tıklamada link/butonun tetiklenmesi: mobilde 300ms gecikmeyi kaldırır */
+  a,
+  button,
+  [role="button"] {
+    touch-action: manipulation;
   }
 }
 

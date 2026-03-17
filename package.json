@@ -9,6 +9,7 @@
     "build": "next build",
     "start": "node scripts/chunk-compat.js && next start",
     "lint": "next lint",
+    "i18n-check": "node scripts/check-i18n-keys.js",
     "check": "npm run lint && npm run build"
   },
   "dependencies": {

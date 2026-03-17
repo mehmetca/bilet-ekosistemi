@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Calendar, MapPin, Music2 } from "lucide-react";
 import type { Event } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
@@ -48,11 +48,18 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
     return result;
   })();
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   // Otomatik oynatma
   useEffect(() => {
     if (!isAutoPlay || sliderEvents.length <= 1) return;
 
     const interval = setInterval(() => {
+      if (!mountedRef.current) return;
       setCurrentIndex((prev) => (prev + 1) % sliderEvents.length);
     }, 4000);
 

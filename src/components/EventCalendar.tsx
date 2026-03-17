@@ -36,10 +36,11 @@ export default function EventCalendar({ events }: EventCalendarProps) {
       filtered = filtered.filter(event => event.category === selectedCategory);
     }
 
-    // Tarih filtresi - kullanıcı gg.aa.yyyy girebilir, event.date ISO (yyyy-mm-dd)
+    // Tarih filtresi - selectedDate type="date" ile zaten YYYY-MM-DD veya parse ile
     if (selectedDate) {
-      const parsedUserDate = parseDateInput(selectedDate);
-      const targetISO = parsedUserDate ? toISODateString(parsedUserDate) : null;
+      const targetISO = selectedDate.includes("-") && selectedDate.length >= 10
+        ? selectedDate.slice(0, 10)
+        : (() => { const p = parseDateInput(selectedDate); return p ? toISODateString(p) : null; })();
       if (targetISO) {
         filtered = filtered.filter(event => {
           const d = String(event.date || "");
@@ -87,15 +88,14 @@ export default function EventCalendar({ events }: EventCalendarProps) {
             </select>
           </div>
 
-          {/* Tarih Seçimi (elle girilebilir: gg.aa.yyyy) */}
+          {/* Tarih Seçimi (tarayıcı takvimi; değer her zaman görünür) */}
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-slate-500" />
+            <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
             <input
-              type="text"
+              type="date"
               value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              placeholder={t("calendar.datePlaceholder")}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
+              onChange={(e) => setSelectedDate(e.target.value || "")}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 bg-white focus:border-primary-500 focus:ring-primary-500 min-w-[140px]"
             />
             {selectedDate && (
               <button

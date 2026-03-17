@@ -6,6 +6,8 @@ import { Printer } from "lucide-react";
 import type { EventCurrency } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 
+export type SeatDetail = { section_name: string; row_label: string; seat_label: string };
+
 interface TicketPrintProps {
   ticketCode: string;
   eventTitle: string;
@@ -18,6 +20,8 @@ interface TicketPrintProps {
   ticketType: string;
   price: number;
   currency?: EventCurrency | null;
+  /** Yer seçerek alınan bilet: koltuk bilgisi (Platz / Koltuk) */
+  seatDetails?: SeatDetail[] | null;
 }
 
 export default function TicketPrint({
@@ -32,6 +36,7 @@ export default function TicketPrint({
   ticketType,
   price,
   currency,
+  seatDetails,
 }: TicketPrintProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [loading, setLoading] = useState(true);
@@ -118,6 +123,7 @@ export default function TicketPrint({
                     <p style="margin:2px 0 0;font-size:13px;color:#000;">${esc(location)}</p>
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;border-collapse:collapse;font-size:12px;color:#000;">
                       <tr><td style="padding:2px 0;">Bilet Turu</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(ticketType)}</td></tr>
+                      ${seatDetails && seatDetails.length > 0 ? `<tr><td style="padding:2px 0;">Platz / Koltuk</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(seatDetails.map((s) => `${s.section_name} · Sıra ${s.row_label} · Nr ${s.seat_label}`).join("; "))}</td></tr>` : ""}
                       <tr><td style="padding:2px 0;">Kisi/Adet</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(buyerName)} / ${quantity}</td></tr>
                       <tr><td style="padding:2px 0;">Toplam</td><td style="padding:2px 0;font-weight:800;text-align:right;">${esc(priceText)}</td></tr>
                     </table>
@@ -234,12 +240,20 @@ export default function TicketPrint({
               </p>
               <p className="mt-1 text-[13px] font-bold text-black">{venue}</p>
               <p className="mt-0.5 text-[13px] text-black">{location}</p>
-              <table className="mt-3 w-full border-collapse text-xs text-black">
+                    <table className="mt-3 w-full border-collapse text-xs text-black">
                 <tbody>
                   <tr>
                     <td className="py-0.5">Bilet Turu</td>
                     <td className="py-0.5 text-right font-bold">{ticketType}</td>
                   </tr>
+                  {seatDetails && seatDetails.length > 0 && (
+                    <tr>
+                      <td className="py-0.5">Platz / Koltuk</td>
+                      <td className="py-0.5 text-right font-bold">
+                        {seatDetails.map((s) => `${s.section_name} · Sıra ${s.row_label} · Nr ${s.seat_label}`).join("; ")}
+                      </td>
+                    </tr>
+                  )}
                   <tr>
                     <td className="py-0.5">Kisi/Adet</td>
                     <td className="py-0.5 text-right font-bold">

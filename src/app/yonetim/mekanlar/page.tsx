@@ -390,7 +390,13 @@ function MekanlarContent() {
         <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Mekan Yönetimi</h1>
-            <p className="mt-1 text-sm text-slate-500">Salon oturum planı (bölüm/sıra/koltuk) için her mekanın yanındaki <strong>Oturum planı</strong> butonuna tıklayın.</p>
+            <p className="mt-1 text-sm text-slate-500">
+              Salon oturum planı (bölüm/sıra/koltuk) için her mekanın yanındaki <strong>Oturum planı</strong> butonuna tıklayın.
+              {" "}
+              <Link href="/yonetim/mekanlar/musensaal-onizleme" className="text-primary-600 hover:text-primary-700 font-medium">
+                Musensaal planı önizle
+              </Link>
+            </p>
           </div>
           {isAdmin && (
             <button
@@ -402,6 +408,20 @@ function MekanlarContent() {
             </button>
           )}
         </div>
+
+        <Link
+          href="/yonetim/mekanlar/musensaal-onizleme"
+          className="flex items-center gap-4 rounded-xl border-2 border-primary-200 bg-primary-50/50 p-4 mb-6 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+        >
+          <div className="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
+            <LayoutGrid className="h-6 w-6 text-primary-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-slate-900">Musensaal salon planı</h3>
+            <p className="text-sm text-slate-600">Koltuk planı önizleme — Parkett, Empore, Seitensempore. Tıklanabilir koltuklar.</p>
+          </div>
+          <span className="text-primary-600 font-medium text-sm">Planı görüntüle →</span>
+        </Link>
 
         {showForm && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">

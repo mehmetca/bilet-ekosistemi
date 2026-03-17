@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
+
+type SeatDetail = { section_name: string; row_label: string; seat_label: string };
 
 type OrderRow = {
   id: string;
@@ -15,16 +17,12 @@ type OrderRow = {
   buyer_name?: string;
   events?: { title?: string; date?: string; time?: string; venue?: string; location?: string; currency?: string } | null;
   tickets?: { name?: string; type?: string; price?: number } | null;
+  seatDetails?: SeatDetail[];
 };
 
 export async function GET(request: NextRequest) {
   try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) {
-      return NextResponse.json({ error: "Sunucu yapılandırma hatası" }, { status: 500 });
-    }
-    const supabase = createClient(url, key);
+    const supabase = getSupabaseAdmin();
     const authHeader = request.headers.get("authorization");
     const token = authHeader?.replace("Bearer ", "");
     if (!token) {
@@ -70,6 +68,28 @@ export async function GET(request: NextRequest) {
         const bT = new Date((b as { created_at?: string }).created_at || 0).getTime();
         return bT - aT;
       });
+      // Fallback: koltuk bilgilerini order_seats ile zenginleştir
+      const fallbackIds = merged.map((o) => (o as { id?: string }).id).filter(Boolean) as string[];
+      if (fallbackIds.length > 0) {
+        const { data: seatsRows } = await supabase
+          .from("order_seats")
+          .select("order_id, section_name, row_label, seat_label")
+          .in("order_id", fallbackIds);
+        const seatsByOrder = new Map<string, SeatDetail[]>();
+        for (const row of seatsRows || []) {
+          const list = seatsByOrder.get(row.order_id) || [];
+          list.push({
+            section_name: row.section_name ?? "",
+            row_label: row.row_label ?? "",
+            seat_label: row.seat_label ?? "",
+          });
+          seatsByOrder.set(row.order_id, list);
+        }
+        for (const o of merged) {
+          const id = (o as { id?: string }).id;
+          if (id) (o as Record<string, unknown>).seatDetails = seatsByOrder.get(id) || [];
+        }
+      }
       return NextResponse.json(merged);
     }
 
@@ -98,6 +118,28 @@ export async function GET(request: NextRequest) {
         price: r.ticket_price,
       },
     }));
+
+    // Koltuk bilgilerini order_seats üzerinden ekle
+    const orderIds = orders.map((o) => o.id);
+    if (orderIds.length > 0) {
+      const { data: seatsRows } = await supabase
+        .from("order_seats")
+        .select("order_id, section_name, row_label, seat_label")
+        .in("order_id", orderIds);
+      const seatsByOrder = new Map<string, SeatDetail[]>();
+      for (const row of seatsRows || []) {
+        const list = seatsByOrder.get(row.order_id) || [];
+        list.push({
+          section_name: row.section_name ?? "",
+          row_label: row.row_label ?? "",
+          seat_label: row.seat_label ?? "",
+        });
+        seatsByOrder.set(row.order_id, list);
+      }
+      for (const order of orders) {
+        order.seatDetails = seatsByOrder.get(order.id) || undefined;
+      }
+    }
 
     return NextResponse.json(orders);
   } catch (err) {

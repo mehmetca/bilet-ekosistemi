@@ -73,8 +73,10 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     userRoleRef.current = userRole;
 
     const loadingTimeout = window.setTimeout(() => {
-      if (mounted) {
-        setLoading(false);
+      try {
+        if (mounted) setLoading(false);
+      } catch (_) {
+        /* ignore */
       }
     }, 8000);
 
@@ -140,50 +142,55 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     try {
       const { data: subData } = supabase.auth.onAuthStateChange(
         (event, session) => {
-          if (!mounted) return;
+          try {
+            if (!mounted) return;
 
-          const dedupeKey = `${event}:${session?.user?.id || "none"}:${session?.access_token?.slice(-8) || "na"}`;
-          const now = Date.now();
-          if (
-            lastAuthEventRef.current &&
-            lastAuthEventRef.current.key === dedupeKey &&
-            now - lastAuthEventRef.current.at < 2000
-          ) {
-            return;
-          }
-          lastAuthEventRef.current = { key: dedupeKey, at: now };
+            const dedupeKey = `${event}:${session?.user?.id || "none"}:${session?.access_token?.slice(-8) || "na"}`;
+            const now = Date.now();
+            if (
+              lastAuthEventRef.current &&
+              lastAuthEventRef.current.key === dedupeKey &&
+              now - lastAuthEventRef.current.at < 2000
+            ) {
+              return;
+            }
+            lastAuthEventRef.current = { key: dedupeKey, at: now };
 
-          if (event === "SIGNED_OUT") {
-            setUser(null);
-            setUserRole(null);
-            userRef.current = null;
-            userRoleRef.current = null;
-            setLoading(false);
-          } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
-            if (session?.user) {
-              const userChanged = userRef.current?.id !== session.user.id;
-              setUser(session.user);
-              userRef.current = session.user;
-
-              const needRole = event === "SIGNED_IN" || event === "USER_UPDATED" || userChanged || event === "INITIAL_SESSION";
-              if (needRole) {
-                const userId = session.user.id;
-                const force = userChanged || event !== "TOKEN_REFRESHED";
-                setTimeout(() => {
-                  if (!mounted) return;
-                  fetchUserRole(userId, force).finally(() => {
-                    if (mounted) setLoading(false);
-                  });
-                }, 0);
-                return;
-              }
-            } else {
+            if (event === "SIGNED_OUT") {
               setUser(null);
               setUserRole(null);
               userRef.current = null;
               userRoleRef.current = null;
+              setLoading(false);
+            } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
+              if (session?.user) {
+                const userChanged = userRef.current?.id !== session.user.id;
+                setUser(session.user);
+                userRef.current = session.user;
+
+                const needRole = event === "SIGNED_IN" || event === "USER_UPDATED" || userChanged || event === "INITIAL_SESSION";
+                if (needRole) {
+                  const userId = session.user.id;
+                  const force = userChanged || event !== "TOKEN_REFRESHED";
+                  setTimeout(() => {
+                    if (!mounted) return;
+                    fetchUserRole(userId, force).finally(() => {
+                      if (mounted) setLoading(false);
+                    });
+                  }, 0);
+                  return;
+                }
+              } else {
+                setUser(null);
+                setUserRole(null);
+                userRef.current = null;
+                userRoleRef.current = null;
+              }
+              setLoading(false);
             }
-            setLoading(false);
+          } catch (err) {
+            console.error("Auth state change handler error:", err);
+            if (mounted) setLoading(false);
           }
         }
       );

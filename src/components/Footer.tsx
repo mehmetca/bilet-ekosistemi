@@ -18,8 +18,8 @@ const menuLinks = [
 ];
 
 const policyLinks = [
-  { href: "/#guvenli-odeme", labelKey: "footer.securePayment" },
-  { href: "/#iade-politikasi", labelKey: "footer.refundPolicy" },
+  { href: "/bilgilendirme/online-odeme-kosullari", labelKey: "footer.onlinePayment" },
+  { href: "/bilgilendirme/iade-iptal-politikasi", labelKey: "footer.refundPage" },
   { href: "/#gonderim-politikasi", labelKey: "footer.shippingPolicy" },
   { href: "/#canli-stok", labelKey: "footer.liveStock" },
 ];

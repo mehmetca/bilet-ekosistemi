@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 
 interface HeroBackground {
@@ -48,6 +48,12 @@ export default function HeroBackgroundSlider({ initialBackgrounds = [] }: HeroBa
     return () => { cancelled = true; };
   }, [initialBackgrounds.length]);
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   useEffect(() => {
     if (backgrounds.length <= 1) return;
 
@@ -55,6 +61,7 @@ export default function HeroBackgroundSlider({ initialBackgrounds = [] }: HeroBa
     const duration = currentBg?.transition_duration || 5000;
 
     const interval = setInterval(() => {
+      if (!mountedRef.current) return;
       setCurrentIndex((prev) => (prev + 1) % backgrounds.length);
     }, duration);
 

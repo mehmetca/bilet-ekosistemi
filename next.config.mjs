@@ -12,13 +12,18 @@ const nextConfig = {
     return [
       { source: "/turne", destination: "/", permanent: true },
       { source: "/turne/:path*", destination: "/", permanent: true },
+      // Bilgilendirme ana sayfa → SSS (server redirect Sentry ile çakışmasın diye config'de)
+      { source: "/tr/bilgilendirme", destination: "/tr/bilgilendirme/sss", permanent: false },
+      { source: "/de/bilgilendirme", destination: "/de/bilgilendirme/sss", permanent: false },
+      { source: "/en/bilgilendirme", destination: "/en/bilgilendirme/sss", permanent: false },
     ];
   },
   async headers() {
     if (process.env.NODE_ENV !== "development") return [];
+    // _next ve statik asset'lere dokunma; chunk 500 hatalarını önlemek için sadece sayfa isteklerine header ekle
     return [
       {
-        source: "/:path*",
+        source: "/((?!_next|api|favicon|.*\\.(?:ico|png|jpg|jpeg|gif|svg|woff2?|css|js)$).*)",
         headers: [
           {
             key: "Cache-Control",
@@ -33,6 +38,7 @@ const nextConfig = {
   webpack: (config, { dev }) => {
     // Windows'ta .next-dev/cache pack dosyaları zaman zaman ENOENT verip
     // dev server'da unhandledRejection üretüyor; dev cache'i kapatıyoruz.
+    if (dev) config.cache = false;
     return config;
   },
   images: {

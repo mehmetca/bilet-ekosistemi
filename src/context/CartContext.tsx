@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 
+/** Yer seçerek bilet al: sepette hangi koltukların satın alındığı (bilette ve dolu gösterimi için) */
 export interface CartItem {
   ticketId: string;
   eventId: string;
@@ -16,6 +17,8 @@ export interface CartItem {
   currency?: string;
   quantity: number;
   available: number;
+  /** Yer seçerek eklenen biletlerde: koltuk ID'leri (siparişte order_seats'e yazılır, bilette gösterilir) */
+  seatIds?: string[];
 }
 
 interface CartContextValue {
@@ -85,20 +88,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = useCallback((item: Omit<CartItem, "quantity"> & { quantity?: number }) => {
     const cap = Math.max(1, maxTicketQuantity);
     const qty = Math.max(1, Math.min(cap, item.quantity ?? 1));
+    const seatIds = item.seatIds && item.seatIds.length > 0 ? item.seatIds : undefined;
     setItems((prev) => {
-      // Aynı etkinlik + aynı bilet adı (kategori) tek satırda birleşir; tekrar eklenince adet artar
       const existing = prev.find(
         (i) => i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()
       );
       if (existing) {
-        const newQty = Math.min(existing.available, cap, existing.quantity + qty);
+        const mergedSeatIds = seatIds
+          ? [...(existing.seatIds || []), ...seatIds].slice(0, cap)
+          : existing.seatIds;
+        const newQty = mergedSeatIds ? mergedSeatIds.length : Math.min(existing.available, cap, existing.quantity + qty);
         if (newQty <= 0) return prev.filter((i) => !(i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()));
         return prev.map((i) =>
           i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()
-            ? { ...i, quantity: newQty, available: Math.max(i.available, item.available) } : i
+            ? { ...i, quantity: newQty, seatIds: mergedSeatIds, available: Math.max(i.available, item.available) } : i
         );
       }
-      return [...prev, { ...item, quantity: Math.min(item.available, cap, qty) }];
+      return [...prev, { ...item, quantity: seatIds ? Math.min(seatIds.length, cap) : Math.min(item.available, cap, qty), seatIds }];
     });
   }, [maxTicketQuantity]);
 

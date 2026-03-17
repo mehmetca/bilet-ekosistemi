@@ -2,6 +2,9 @@ import ClientHomePage from "./ClientHomePage";
 import { createServerSupabase } from "@/lib/supabase-server";
 import type { Event, News } from "@/types/database";
 
+type HeroBg = { id: string; title: string; image_url: string; is_active: boolean; sort_order: number; transition_duration: number };
+type City = { id: string; slug: string; name_tr?: string | null; name_de?: string | null; name_en?: string | null; image_url?: string | null };
+
 async function getHomeData() {
   const supabase = createServerSupabase();
   const [eventsRes, newsRes, heroRes, citiesRes] = await Promise.all([
@@ -13,13 +16,25 @@ async function getHomeData() {
   return {
     events: (eventsRes.data || []) as Event[],
     news: (newsRes.data || []) as News[],
-    heroBackgrounds: heroRes.data || [],
-    cities: citiesRes.data || [],
+    heroBackgrounds: (heroRes.data || []) as HeroBg[],
+    cities: (citiesRes.data || []) as City[],
   };
 }
 
 export default async function HomePage() {
-  const { events, news, heroBackgrounds, cities } = await getHomeData();
+  let events: Event[] = [];
+  let news: News[] = [];
+  let heroBackgrounds: HeroBg[] = [];
+  let cities: City[] = [];
+  try {
+    const data = await getHomeData();
+    events = data.events;
+    news = data.news;
+    heroBackgrounds = data.heroBackgrounds;
+    cities = data.cities;
+  } catch (e) {
+    console.error("HomePage getHomeData error:", e);
+  }
   return (
     <ClientHomePage
       initialEvents={events}

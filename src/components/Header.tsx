@@ -11,8 +11,8 @@ import { useLocale } from "next-intl";
 
 const navLinks = [
   { href: "/", labelKey: "nav.events" },
-  { href: "/sehirler", labelKey: "nav.cities" },
   { href: "/takvim", labelKey: "nav.calendar" },
+  { href: "/sehirler", labelKey: "nav.cities" },
   { href: "/mekanlar", labelKey: "nav.venues" },
   { href: "/sanatci", labelKey: "nav.artists" },
 ];
@@ -175,7 +175,9 @@ export default function Header() {
           <div
             className="fixed inset-0 z-40 bg-black/40 md:hidden"
             aria-hidden
-            onClick={() => setMobileMenuOpen(false)}
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setMobileMenuOpen(false);
+            }}
           />
           <nav
             className="absolute left-0 right-0 top-full z-50 flex flex-col gap-1 border-b border-slate-200 bg-white py-3 px-4 shadow-lg md:hidden"

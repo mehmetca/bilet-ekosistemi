@@ -18,8 +18,8 @@ export default function B2BPage() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-      {/* Sol menü - Masaüstü */}
-      <aside className="hidden lg:block lg:w-56 shrink-0 order-2 lg:order-1">
+      {/* Sol menü - Masaüstü (Panel ile aynı genişlik: 260px) */}
+      <aside className="hidden lg:block lg:w-[260px] shrink-0 order-2 lg:order-1">
         <nav className="sticky top-24 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
           <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-2">
             {t("title")}

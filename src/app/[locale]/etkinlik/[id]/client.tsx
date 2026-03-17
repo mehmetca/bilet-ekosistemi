@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell, Building2 } from "lucide-react";
+import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell, Building2, Armchair, LayoutGrid } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
@@ -13,6 +13,9 @@ import { extractMapEmbedUrl } from "@/lib/mapEmbed";
 import Link from "next/link";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/lib/supabase-client";
+import { getPlan } from "@/lib/seating-plans";
+import { musensaal } from "@/lib/seating-plans/musensaal";
+import SalonPlanViewer from "@/components/SalonPlanViewer";
 
 interface EventDetailClientProps {
   event: Event;
@@ -31,15 +34,84 @@ type SeatPlanSeat = { id: string; seat_label: string };
 type SeatPlanRow = { id: string; row_label: string; seats: SeatPlanSeat[] };
 type SeatPlanSection = { id: string; name: string; ticket_type_label?: string | null; rows: SeatPlanRow[] };
 
-/** Eventim tarzı şematik salon planı: bölümleri yan yana, sahne altta, koltuklar tıklanabilir. */
+type TicketLike = { id: string; name?: string | null; price?: number | null; available?: number | null };
+const MUSENSAAL_PREFIXES = ["P", "EML", "EMR", "SEL", "SER", "EH"] as const;
+
+function pad2(n: number) {
+  return String(n).padStart(2, "0");
+}
+
+/** Musensaal önizleme planı ile DB koltuk id'leri arasında eşleme (SalonPlanViewer P-01-01 ↔ DB seat id). */
+function buildMusensaalIdMaps(
+  sections: SeatPlanSection[]
+): { logicalToDbId: Map<string, string>; dbIdToLogical: Map<string, string> } {
+  const logicalToDbId = new Map<string, string>();
+  const dbIdToLogical = new Map<string, string>();
+  if (!sections.length) return { logicalToDbId, dbIdToLogical };
+  for (let i = 0; i < sections.length && i < MUSENSAAL_PREFIXES.length; i++) {
+    const section = sections[i];
+    const prefix = MUSENSAAL_PREFIXES[i];
+    if (i < 5) {
+      for (const row of section.rows) {
+        const r = pad2(Number(row.row_label) || 0);
+        for (const seat of row.seats) {
+          const s = pad2(Number(seat.seat_label) || 0);
+          const logicalId = `${prefix}-${r}-${s}`;
+          logicalToDbId.set(logicalId, seat.id);
+          dbIdToLogical.set(seat.id, logicalId);
+        }
+      }
+    } else {
+      const ehRows = musensaal.emporeHinten.rows;
+      for (const dbRow of section.rows) {
+        const rowNum = Number(dbRow.row_label) || 0;
+        const staticRow = ehRows.find((r) => r.row === rowNum);
+        if (!staticRow) continue;
+        let idx = 0;
+        for (const seat of dbRow.seats) {
+          let logicalId: string;
+          if (idx < staticRow.left) {
+            logicalId = `EH-R${pad2(staticRow.row)}-L${pad2(idx + 1)}`;
+          } else if (idx < staticRow.left + staticRow.middle) {
+            logicalId = `EH-R${pad2(staticRow.row)}-M${pad2(idx - staticRow.left + 1)}`;
+          } else {
+            logicalId = `EH-R${pad2(staticRow.row)}-Rt${pad2(idx - staticRow.left - staticRow.middle + 1)}`;
+          }
+          logicalToDbId.set(logicalId, seat.id);
+          dbIdToLogical.set(seat.id, logicalId);
+          idx++;
+        }
+      }
+    }
+  }
+  return { logicalToDbId, dbIdToLogical };
+}
+
+/** Bölüm için kullanılacak bilet: önce isimle (ticket_type_label), yoksa bölüm sırasıyla eşleştirir. Böylece "Kategori 1" veya "Parkett" ikisi de çalışır. */
+function getTicketForSection(
+  section: SeatPlanSection,
+  sectionIndex: number,
+  availableTickets: TicketLike[]
+): { ticket: TicketLike; matchedBy: "name" | "index" } {
+  if (!availableTickets.length) return { ticket: { id: "", name: "", price: 0, available: 0 }, matchedBy: "index" };
+  const label = (section.ticket_type_label ?? "").trim();
+  const byName = label ? availableTickets.find((t) => (t.name || "").trim().toLowerCase() === label.toLowerCase()) : null;
+  if (byName) return { ticket: byName, matchedBy: "name" };
+  const byIndex = availableTickets[sectionIndex];
+  return { ticket: byIndex ?? availableTickets[0], matchedBy: "index" };
+}
+
+/** Eventim tarzı şematik salon planı: bölümleri yan yana, sahne altta, koltuklar tıklanabilir. Satılmış koltuklar dolu gösterilir, tıklanamaz. */
 function SeatMapSvg({
   sections,
   selectedSeatIds,
+  soldSeatIds,
   onSeatToggle,
   sectionColors,
 }: {
   sections: SeatPlanSection[];
   selectedSeatIds: Set<string>;
+  soldSeatIds: Set<string>;
   onSeatToggle: (seatId: string) => void;
   sectionColors: Map<string, string>;
 }) {
@@ -114,23 +186,25 @@ function SeatMapSvg({
                 const cx = sx + 10 + ci * seatW + seatW / 2;
                 const cy = pad + 24 + ri * rowH + rowH / 2;
                 const isSelected = selectedSeatIds.has(seat.id);
+                const isSold = soldSeatIds.has(seat.id);
                 return (
                   <g
                     key={seat.id}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => onSeatToggle(seat.id)}
-                    onKeyDown={(e) => e.key === "Enter" && onSeatToggle(seat.id)}
+                    style={{ cursor: isSold ? "not-allowed" : "pointer" }}
+                    onClick={() => !isSold && onSeatToggle(seat.id)}
+                    onKeyDown={(e) => !isSold && e.key === "Enter" && onSeatToggle(seat.id)}
                     role="button"
-                    tabIndex={0}
-                    aria-label={`Koltuk ${seat.seat_label}`}
+                    tabIndex={isSold ? -1 : 0}
+                    aria-label={isSold ? `Koltuk ${seat.seat_label} (satıldı)` : `Koltuk ${seat.seat_label}`}
+                    aria-disabled={isSold}
                   >
                     <circle
                       cx={cx}
                       cy={cy}
                       r={seatSize / 2}
-                      fill={isSelected ? "#2563eb" : "#64748b"}
-                      stroke={isSelected ? "#1d4ed8" : "#475569"}
-                      strokeWidth={1.5}
+                      fill={isSold ? "#475569" : isSelected ? "#2563eb" : "#64748b"}
+                      stroke={isSold ? "#1e293b" : isSelected ? "#1d4ed8" : "#475569"}
+                      strokeWidth={isSold ? 2 : 1.5}
                     />
                   </g>
                 );
@@ -147,15 +221,17 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.25;
 
-/** Eventim tarzı: salon planını büyük alan içinde zoom/pan ile kullanılabilir yapar. */
+/** Eventim tarzı: salon planını büyük alan içinde zoom/pan ile kullanılabilir yapar. Satılmış koltuklar dolu gösterilir. */
 function SeatMapWithZoom({
   sections,
   selectedSeatIds,
+  soldSeatIds,
   onSeatToggle,
   sectionColors,
 }: {
   sections: SeatPlanSection[];
   selectedSeatIds: Set<string>;
+  soldSeatIds: Set<string>;
   onSeatToggle: (seatId: string) => void;
   sectionColors: Map<string, string>;
 }) {
@@ -275,6 +351,7 @@ function SeatMapWithZoom({
           <SeatMapSvg
             sections={sections}
             selectedSeatIds={selectedSeatIds}
+            soldSeatIds={soldSeatIds}
             onSeatToggle={handleSeatClick}
             sectionColors={sectionColors}
           />
@@ -292,7 +369,7 @@ function getMinQuantityFromDescription(description: string | null | undefined): 
   return n > 0 ? n : 1;
 }
 
-export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr", isUnapproved = false }: EventDetailClientProps) {
+export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr", isUnapproved = false }: EventDetailClientProps): React.ReactElement {
   const t = useTranslations("eventDetail");
   const tCheckout = useTranslations("checkout");
   const tCat = useTranslations("categories");
@@ -316,8 +393,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [isFavorite, setIsFavorite] = useState(false);
   /** Koltuk seçimi: yüklü plan yapısı (bölüm > sıra > koltuk) */
   const [seatingPlanData, setSeatingPlanData] = useState<SeatPlanSection[] | null>(null);
+  const [isMusensaalPlan, setIsMusensaalPlan] = useState(false);
   const [seatingPlanLoading, setSeatingPlanLoading] = useState(false);
   const [selectedSeatIds, setSelectedSeatIds] = useState<Set<string>>(new Set());
+  /** Satılmış koltuklar (completed siparişlerdeki order_seats) – salon planında dolu gösterilir, seçilemez */
+  const [soldSeatIds, setSoldSeatIds] = useState<Set<string>>(new Set());
   /** Eventim tarzı: "list" = liste görünümü, "map" = salon planı (şematik) */
   const [seatMapView, setSeatMapView] = useState<"list" | "map">("map");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -359,11 +439,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     setSeatingPlanLoading(true);
     setSelectedSeatIds(new Set());
     (async () => {
-      const { data: sections } = await supabase
-        .from("seating_plan_sections")
-        .select("id, name, ticket_type_label")
-        .eq("seating_plan_id", seatingPlanId)
-        .order("sort_order");
+      const [planRes, sectionsRes] = await Promise.all([
+        supabase.from("seating_plans").select("name").eq("id", seatingPlanId).single(),
+        supabase.from("seating_plan_sections").select("id, name, ticket_type_label").eq("seating_plan_id", seatingPlanId).order("sort_order"),
+      ]);
+      const sections = sectionsRes.data;
+      const planName = (planRes.data as { name?: string } | null)?.name ?? "";
+      setIsMusensaalPlan(planName.includes("Musensaal"));
       if (!sections?.length) {
         setSeatingPlanData([]);
         setSeatingPlanLoading(false);
@@ -373,7 +455,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         .from("seating_plan_rows")
         .select("id, section_id, row_label")
         .in("section_id", sections.map((s) => s.id))
-        .order("sort_order");
+        .order("section_id")
+        .order("sort_order")
+        .range(0, 4999);
       if (!rows?.length) {
         setSeatingPlanData(sections.map((s) => ({ ...s, rows: [] })));
         setSeatingPlanLoading(false);
@@ -382,7 +466,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       const { data: seats } = await supabase
         .from("seats")
         .select("id, row_id, seat_label")
-        .in("row_id", rows.map((r) => r.id));
+        .in("row_id", rows.map((r) => r.id))
+        .range(0, 19999);
       const rowsBySection = new Map<string, SeatPlanRow[]>();
       rows.forEach((r) => {
         const list = rowsBySection.get(r.section_id) || [];
@@ -390,16 +475,52 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         list.push({ id: r.id, row_label: r.row_label, seats: rowSeats });
         rowsBySection.set(r.section_id, list);
       });
-      const result: SeatPlanSection[] = sections.map((s) => ({
-        id: s.id,
-        name: s.name,
-        ticket_type_label: (s as { ticket_type_label?: string }).ticket_type_label ?? null,
-        rows: rowsBySection.get(s.id) || [],
-      }));
+      const result: SeatPlanSection[] = sections.map((s) => {
+        const sectionRows = rowsBySection.get(s.id) || [];
+        const sorted = [...sectionRows].sort((a, b) => {
+          const na = Number(a.row_label);
+          const nb = Number(b.row_label);
+          if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+          return String(a.row_label).localeCompare(String(b.row_label));
+        });
+        return {
+          id: s.id,
+          name: s.name,
+          ticket_type_label: (s as { ticket_type_label?: string }).ticket_type_label ?? null,
+          rows: sorted,
+        };
+      });
       setSeatingPlanData(result);
       setSeatingPlanLoading(false);
     })();
   }, [seatingPlanId, bookingMode]);
+
+  const fetchSoldSeats = useCallback(() => {
+    if (!event?.id || !hasSeatingPlan) return;
+    fetch(`/api/sold-seats?event_id=${encodeURIComponent(event.id)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const ids = Array.isArray(data?.seatIds) ? data.seatIds : [];
+        setSoldSeatIds(new Set(ids));
+      })
+      .catch(() => setSoldSeatIds(new Set()));
+  }, [event?.id, hasSeatingPlan]);
+
+  useEffect(() => {
+    fetchSoldSeats();
+  }, [fetchSoldSeats]);
+
+  useEffect(() => {
+    if (!event?.id || !hasSeatingPlan) return;
+    const onFocus = () => fetchSoldSeats();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [event?.id, hasSeatingPlan, fetchSoldSeats]);
+
+  const musensaalIdMaps = useMemo(() => {
+    if (!isMusensaalPlan || !seatingPlanData?.length) return null;
+    return buildMusensaalIdMaps(seatingPlanData);
+  }, [isMusensaalPlan, seatingPlanData]);
 
   const eventDateTime = new Date(`${event.date} ${event.time || "23:59"}`);
   const isPastEvent = eventDateTime < new Date();
@@ -627,12 +748,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         </div>
       </div>
 
-      {/* Content Section */}
+      {/* Content Section - full width, no sidebar */}
       <div className="mx-auto w-full max-w-7xl px-4 py-10">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Sol Taraf - Bilet Seçimi */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-xl border border-slate-200 p-8">
+        <div>
+          {/* Bilet Seçimi - geniş alan */}
+          <div className="bg-white rounded-xl border border-slate-200 p-8">
               <h2 className="text-2xl font-bold text-slate-900 mb-6">
                 {isExternalOnlyEvent ? t("ticketInfo") : t("ticketSelection")}
               </h2>
@@ -644,32 +764,42 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               )}
 
-              {/* Faz 1: İki bilet alma seçeneği (Eventim tarzı) – sadece harici link değilse */}
+              {/* Bestplatzbuchung / Saalplanbuchung – ikonlu seçim */}
               {!isExternalOnlyEvent && (
-                <div className="mb-6 flex gap-3 flex-wrap">
+                <div className="mb-8 grid sm:grid-cols-2 gap-4">
                   <button
                     type="button"
                     onClick={() => setBookingMode("price")}
-                    className={`rounded-xl border-2 px-5 py-3 text-left transition-colors ${
+                    className={`rounded-2xl border-2 p-6 text-left transition-all flex gap-4 items-start ${
                       bookingMode === "price"
-                        ? "border-primary-600 bg-primary-50 text-primary-800"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                        ? "border-primary-500 bg-primary-50/80 text-primary-900 shadow-md shadow-primary-200/50"
+                        : "border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
                     }`}
                   >
-                    <span className="block font-semibold">Fiyat kategorisine göre bilet al</span>
-                    <span className="mt-0.5 block text-sm opacity-90">Kategori ve adet seçin, sepete ekleyin</span>
+                    <span className={`flex-shrink-0 rounded-xl p-3 ${bookingMode === "price" ? "bg-primary-100 text-primary-600" : "bg-slate-200 text-slate-500"}`}>
+                      <Armchair className="h-10 w-10" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="block font-bold text-lg">{t("bestplatzbuchung")}</span>
+                      <span className="mt-1 block text-sm opacity-90">{t("bestplatzbuchungDesc")}</span>
+                    </div>
                   </button>
                   <button
                     type="button"
                     onClick={() => setBookingMode("seat")}
-                    className={`rounded-xl border-2 px-5 py-3 text-left transition-colors ${
+                    className={`rounded-2xl border-2 p-6 text-left transition-all flex gap-4 items-start ${
                       bookingMode === "seat"
-                        ? "border-primary-600 bg-primary-50 text-primary-800"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
+                        ? "border-primary-500 bg-primary-50/80 text-primary-900 shadow-md shadow-primary-200/50"
+                        : "border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
                     }`}
                   >
-                    <span className="block font-semibold">Yer seçerek bilet al</span>
-                    <span className="mt-0.5 block text-sm opacity-90">Salon planından koltuk seçin</span>
+                    <span className={`flex-shrink-0 rounded-xl p-3 ${bookingMode === "seat" ? "bg-primary-100 text-primary-600" : "bg-slate-200 text-slate-500"}`}>
+                      <LayoutGrid className="h-10 w-10" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="block font-bold text-lg">{t("saalplanbuchung")}</span>
+                      <span className="mt-1 block text-sm opacity-90">{t("saalplanbuchungDesc")}</span>
+                    </div>
                   </button>
                 </div>
               )}
@@ -713,147 +843,242 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   {seatingPlanLoading ? (
                     <p className="text-slate-500">Salon planı yükleniyor...</p>
                   ) : seatingPlanData && seatingPlanData.length > 0 ? (
-                    <>
-                      <p className="text-sm text-slate-600 mb-3">Bölüm ve koltuk seçin. Her bölümün fiyatı, etkinlikte tanımlı bilet türü adıyla eşleşir.</p>
-                      <div className="flex gap-2 mb-4">
-                        <button
-                          type="button"
-                          onClick={() => setSeatMapView("map")}
-                          className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "map" ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
-                        >
-                          Salon planı
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSeatMapView("list")}
-                          className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "list" ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
-                        >
-                          Liste
-                        </button>
-                      </div>
-                      {seatMapView === "map" && (
-                        <div className="mb-4">
-                          <SeatMapWithZoom
-                            sections={seatingPlanData}
-                            selectedSeatIds={selectedSeatIds}
-                            onSeatToggle={(seatId) => {
-                              setSelectedSeatIds((prev) => {
-                                const next = new Set(prev);
-                                if (next.has(seatId)) next.delete(seatId);
-                                else next.add(seatId);
-                                return next;
-                              });
-                            }}
-                            sectionColors={new Map(seatingPlanData.map((s, i) => [s.id, ["#bae6fd", "#c7d2fe", "#d9f99d", "#fde68a", "#fecaca"][i % 5]]))}
-                          />
-                        </div>
-                      )}
-                      {seatMapView === "list" && (
-                      <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                        {seatingPlanData.map((section) => {
-                          const sectionTicket = section.ticket_type_label
-                            ? availableTickets.find((t) => (t.name || "").trim() === (section.ticket_type_label || "").trim())
-                            : null;
-                          return (
-                          <div key={section.id} className="border border-slate-200 rounded-lg p-4">
-                            <h4 className="font-semibold text-slate-900 mb-1">{section.name}</h4>
-                            {sectionTicket ? (
-                              <p className="text-sm text-primary-600 mb-2">{formatPrice(sectionTicket.price, event.currency)} / koltuk</p>
-                            ) : section.ticket_type_label ? (
-                              <p className="text-xs text-amber-600 mb-2">Etkinlikte &quot;{section.ticket_type_label}&quot; adlı bilet türü yok; fiyat eşleşmeyecek.</p>
-                            ) : null}
-                            {section.rows.map((row) => (
-                              <div key={row.id} className="flex flex-wrap items-center gap-2 mb-2">
-                                <span className="text-sm font-medium text-slate-600 w-12">Sıra {row.row_label}</span>
-                                <div className="flex flex-wrap gap-1">
-                                  {row.seats.map((seat) => {
-                                    const isSelected = selectedSeatIds.has(seat.id);
-                                    return (
-                                      <button
-                                        key={seat.id}
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedSeatIds((prev) => {
-                                            const next = new Set(prev);
-                                            if (next.has(seat.id)) next.delete(seat.id);
-                                            else next.add(seat.id);
-                                            return next;
-                                          });
-                                        }}
-                                        className={`w-9 h-9 rounded text-sm font-medium transition-colors ${
-                                          isSelected
-                                            ? "bg-primary-600 text-white"
-                                            : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-                                        }`}
-                                      >
-                                        {seat.seat_label}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                          );
-                        })}
-                      </div>
-                      )}
-                      {selectedSeatIds.size > 0 && seatingPlanData && availableTickets.length > 0 && (() => {
-                        const seatToSection = new Map<string, SeatPlanSection>();
-                        seatingPlanData.forEach((sec) => sec.rows.forEach((row) => row.seats.forEach((seat) => seatToSection.set(seat.id, sec))));
-                        const countByTicketId = new Map<string, number>();
-                        let totalCents = 0;
-                        selectedSeatIds.forEach((seatId) => {
-                          const section = seatToSection.get(seatId);
-                          const label = section?.ticket_type_label?.trim();
-                          const ticket = label ? availableTickets.find((t) => (t.name || "").trim() === label) : null;
-                          const t = ticket || availableTickets[0];
-                          countByTicketId.set(t.id, (countByTicketId.get(t.id) || 0) + 1);
-                          totalCents += Number(t.price || 0) * 100;
-                        });
-                        const totalPrice = totalCents / 100;
-                        return (
-                        <div className="mt-4 flex items-center justify-between gap-4 border-t pt-4 flex-wrap">
-                          <span className="text-slate-700">
-                            <strong>{selectedSeatIds.size}</strong> koltuk seçildi · {formatPrice(totalPrice, event.currency)}
-                          </span>
+                    <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+                      {/* Sol: Plan + harita/liste */}
+                      <div className="min-w-0">
+                        <p className="text-sm text-slate-600 mb-3">Bölüm ve koltuk seçin. Her bölümün fiyatı, etkinlikte tanımlı bilet türü adıyla eşleşir.</p>
+                        <div className="flex gap-2 mb-4">
                           <button
                             type="button"
-                            onClick={() => {
-                              if (isPastEvent || isUnapproved) return;
-                              const eventPayload = {
-                                eventId: event.id,
-                                eventTitle: localized.title || event.title,
-                                eventDate: event.date,
-                                eventTime: event.time || "20:00",
-                                venue: localized.venue || event.venue,
-                                location: event.location,
-                                imageUrl: event.image_url,
-                                currency: event.currency,
-                              };
-                              countByTicketId.forEach((qty, ticketId) => {
-                                const t = availableTickets.find((x) => x.id === ticketId)!;
-                                addItem({
-                                  ...eventPayload,
-                                  ticketId: t.id,
-                                  ticketName: t.name || "Bilet",
-                                  price: Number(t.price || 0),
-                                  quantity: qty,
-                                  available: Number(t.available || 0),
-                                });
-                              });
-                              setActionMessage(tCheckout("addedToCart"));
-                              setSelectedSeatIds(new Set());
-                            }}
-                            disabled={isPastEvent || isUnapproved}
-                            className="rounded-lg bg-primary-600 px-6 py-2 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
+                            onClick={() => setSeatMapView("map")}
+                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "map" ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
                           >
-                            {tCheckout("addToCart")} ({selectedSeatIds.size} koltuk)
+                            Salon planı
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSeatMapView("list")}
+                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "list" ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                          >
+                            Liste
                           </button>
                         </div>
-                        );
-                      })()}
-                    </>
+                        {seatMapView === "map" && (
+                          <div className="mb-4">
+                            {isMusensaalPlan && musensaalIdMaps && getPlan("musensaal") ? (
+                              <SalonPlanViewer
+                                plan={getPlan("musensaal")!}
+                                selectedIds={new Set(
+                                  Array.from(selectedSeatIds).map((id) => musensaalIdMaps.dbIdToLogical.get(id)).filter(Boolean) as string[]
+                                )}
+                                soldIds={new Set(
+                                  Array.from(soldSeatIds).map((id) => musensaalIdMaps.dbIdToLogical.get(id)).filter(Boolean) as string[]
+                                )}
+                                selectableIds={new Set(musensaalIdMaps.logicalToDbId.keys())}
+                                onToggle={(logicalId) => {
+                                  const dbId = musensaalIdMaps.logicalToDbId.get(logicalId);
+                                  if (!dbId) return;
+                                  setSelectedSeatIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(dbId)) next.delete(dbId);
+                                    else if (prev.size >= maxTicketsPerOrder) return prev;
+                                    else next.add(dbId);
+                                    return next;
+                                  });
+                                }}
+                              />
+                            ) : (
+                              <SeatMapWithZoom
+                                sections={seatingPlanData}
+                                selectedSeatIds={selectedSeatIds}
+                                soldSeatIds={soldSeatIds}
+                                onSeatToggle={(seatId) => {
+                                  setSelectedSeatIds((prev) => {
+                                    const next = new Set(prev);
+                                    if (next.has(seatId)) next.delete(seatId);
+                                    else if (prev.size >= maxTicketsPerOrder) return prev;
+                                    else next.add(seatId);
+                                    return next;
+                                  });
+                                }}
+                                sectionColors={new Map(seatingPlanData.map((s, i) => [s.id, ["#bae6fd", "#c7d2fe", "#d9f99d", "#fde68a", "#fecaca"][i % 5]]))}
+                              />
+                            )}
+                          </div>
+                        )}
+                        {seatMapView === "list" && (
+                          <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                            {seatingPlanData.map((section, sectionIdx) => {
+                              const { ticket: sectionTicket, matchedBy } = getTicketForSection(section, sectionIdx, availableTickets);
+                              return (
+                                <div key={section.id} className="border border-slate-200 rounded-lg p-4">
+                                  <h4 className="font-semibold text-slate-900 mb-1">{section.name}</h4>
+                                  <p className="text-sm text-primary-600 mb-2">
+                                    {formatPrice(Number(sectionTicket.price || 0), event.currency)} / koltuk
+                                    {matchedBy === "index" && section.ticket_type_label && (
+                                      <span className="ml-2 text-xs text-slate-500">({section.ticket_type_label} → {sectionTicket.name || "—"})</span>
+                                    )}
+                                  </p>
+                                  {section.rows.map((row) => (
+                                    <div key={row.id} className="flex flex-wrap items-center gap-2 mb-2">
+                                      <span className="text-sm font-medium text-slate-600 w-12">Sıra {row.row_label}</span>
+                                      <div className="flex flex-wrap gap-1">
+                                        {row.seats.map((seat) => {
+                                          const isSelected = selectedSeatIds.has(seat.id);
+                                          const isSold = soldSeatIds.has(seat.id);
+                                          return (
+                                            <button
+                                              key={seat.id}
+                                              type="button"
+                                              disabled={isSold}
+                                              onClick={() => {
+                                                if (isSold) return;
+                                                setSelectedSeatIds((prev) => {
+                                                  const next = new Set(prev);
+                                                  if (next.has(seat.id)) next.delete(seat.id);
+                                                  else if (prev.size >= maxTicketsPerOrder) return prev;
+                                                  else next.add(seat.id);
+                                                  return next;
+                                                });
+                                              }}
+                                              className={`w-9 h-9 rounded text-sm font-medium transition-colors ${
+                                                isSold
+                                                  ? "bg-slate-600 text-slate-200 cursor-not-allowed ring-1 ring-slate-700"
+                                                  : isSelected
+                                                    ? "bg-primary-600 text-white"
+                                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                              } ${!isSelected && !isSold && selectedSeatIds.size >= maxTicketsPerOrder ? "opacity-50 cursor-not-allowed" : ""}`}
+                                              title={isSold ? `${seat.seat_label} (satıldı)` : undefined}
+                                            >
+                                              {seat.seat_label}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                      {/* Sağ: Deine Platze sidebar */}
+                      <aside className="lg:sticky lg:top-6 self-start rounded-xl border border-slate-200 bg-slate-50/80 p-4 h-fit">
+                        <h3 className="text-sm font-bold text-slate-800 mb-3">{t("deinePlatze")}</h3>
+                        {selectedSeatIds.size > 0 && seatingPlanData && availableTickets.length > 0 ? (() => {
+                          const seatToSection = new Map<string, SeatPlanSection>();
+                          const seatToRow = new Map<string, SeatPlanRow>();
+                          seatingPlanData.forEach((sec) =>
+                            sec.rows.forEach((row) =>
+                              row.seats.forEach((seat) => {
+                                seatToSection.set(seat.id, sec);
+                                seatToRow.set(seat.id, row);
+                              })
+                            )
+                          );
+                          let totalCents = 0;
+                          selectedSeatIds.forEach((seatId) => {
+                            const sec = seatToSection.get(seatId);
+                            const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
+                            const { ticket: tk } = getTicketForSection(sec ?? { id: "", name: "", rows: [] }, sectionIdx, availableTickets);
+                            totalCents += Number(tk.price || 0) * 100;
+                          });
+                          const totalPrice = totalCents / 100;
+                          const selectedSeatsList = Array.from(selectedSeatIds).map((seatId) => {
+                            const sec = seatToSection.get(seatId);
+                            const row = seatToRow.get(seatId);
+                            const seat = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
+                            const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
+                            const { ticket: tk } = getTicketForSection(sec ?? { id: "", name: "", rows: [] }, sectionIdx, availableTickets);
+                            return {
+                              seatId,
+                              sectionName: sec?.name ?? "—",
+                              rowLabel: row?.row_label ?? "—",
+                              seatLabel: seat?.seat_label ?? "—",
+                              price: Number(tk.price || 0),
+                              ticketName: tk.name || "Bilet",
+                            };
+                          });
+                          const seatIdsByTicketId = new Map<string, string[]>();
+                          selectedSeatIds.forEach((seatId) => {
+                            const sec = seatToSection.get(seatId);
+                            const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
+                            const { ticket: tk } = getTicketForSection(sec ?? { id: "", name: "", rows: [] }, sectionIdx, availableTickets);
+                            const arr = seatIdsByTicketId.get(tk.id) ?? [];
+                            arr.push(seatId);
+                            seatIdsByTicketId.set(tk.id, arr);
+                          });
+                          const atSeatLimit = selectedSeatIds.size >= maxTicketsPerOrder;
+                          return (
+                            <>
+                              <ul className="space-y-2 max-h-56 overflow-y-auto mb-4">
+                                {selectedSeatsList.map((item) => (
+                                  <li key={item.seatId} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-slate-100 px-3 py-2 text-sm shadow-sm">
+                                    <span className="text-slate-700 truncate">
+                                      {item.sectionName} · Sıra {item.rowLabel} · Nr {item.seatLabel}
+                                    </span>
+                                    <span className="font-semibold text-primary-600 flex-shrink-0">{formatPrice(item.price, event.currency)}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedSeatIds((prev) => { const next = new Set(prev); next.delete(item.seatId); return next; })}
+                                      className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
+                                      aria-label="Kaldır"
+                                    >
+                                      ×
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                              {atSeatLimit && (
+                                <p className="text-xs text-amber-600 mb-2">
+                                  {locale === "de" ? `Max. ${maxTicketsPerOrder} Plätze pro Bestellung.` : `Sipariş başına en fazla ${maxTicketsPerOrder} bilet.`}
+                                </p>
+                              )}
+                              <p className="text-sm text-slate-700 mb-3">
+                                <strong>{selectedSeatIds.size}</strong> {locale === "de" ? "Plätze" : "koltuk"} · {formatPrice(totalPrice, event.currency)}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isPastEvent || isUnapproved) return;
+                                  const eventPayload = {
+                                    eventId: event.id,
+                                    eventTitle: localized.title || event.title,
+                                    eventDate: event.date,
+                                    eventTime: event.time || "20:00",
+                                    venue: localized.venue || event.venue,
+                                    location: event.location,
+                                    imageUrl: event.image_url,
+                                    currency: event.currency,
+                                  };
+                                  seatIdsByTicketId.forEach((seatIds, ticketId) => {
+                                    const tk = availableTickets.find((x) => x.id === ticketId)!;
+                                    addItem({
+                                      ...eventPayload,
+                                      ticketId: tk.id,
+                                      ticketName: tk.name || "Bilet",
+                                      price: Number(tk.price || 0),
+                                      quantity: seatIds.length,
+                                      seatIds,
+                                      available: Number(tk.available || 0),
+                                    });
+                                  });
+                                  setActionMessage(tCheckout("addedToCart"));
+                                  setSelectedSeatIds(new Set());
+                                }}
+                                disabled={isPastEvent || isUnapproved || selectedSeatIds.size > maxTicketsPerOrder}
+                                className="w-full rounded-xl bg-primary-600 px-4 py-3 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
+                              >
+                                {tCheckout("addToCart")} ({selectedSeatIds.size})
+                              </button>
+                            </>
+                          );
+                        })() : (
+                          <p className="text-sm text-slate-500 py-4">{locale === "de" ? "Wählen Sie Plätze im Plan." : "Plandan koltuk seçin."}</p>
+                        )}
+                      </aside>
+                    </div>
                   ) : (
                     <p className="text-slate-500">Bu plan için henüz bölüm/sıra/koltuk tanımlanmamış.</p>
                   )}
@@ -1036,6 +1261,64 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               </div>
             </div>
 
+            {/* Bilet hatırlatıcısı + Güvenli alışveriş – mekan bilgisinin hemen üstünde, yan yana */}
+            <div className="grid sm:grid-cols-2 gap-4 mt-8">
+              {!isPastEvent && (
+                <div className="bg-amber-50 rounded-xl border border-amber-200 p-6">
+                  <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-amber-600" />
+                    {t("ticketReminder")}
+                  </h3>
+                  <p className="text-sm text-slate-600 mb-4">{t("reminderDesc")}</p>
+                  <form onSubmit={handleReminderSubmit} className="space-y-3">
+                    <input
+                      type="email"
+                      value={reminderEmail}
+                      onChange={(e) => setReminderEmail(e.target.value)}
+                      placeholder={t("reminderPlaceholder")}
+                      required
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={reminderPending}
+                      className="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                    >
+                      {reminderPending ? t("saving") : t("getReminder")}
+                    </button>
+                  </form>
+                  {reminderResult && (
+                    <p className={`mt-3 text-sm ${reminderResult.success ? "text-green-700" : "text-red-700"}`}>
+                      {reminderResult.message}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
+                <h3 className="text-lg font-semibold text-slate-900 mb-4">{t("secureShopping")}</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                      <Star className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm text-slate-700">{t("originalTicket")}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                      <Star className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm text-slate-700">{t("securePayment")}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                      <Star className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-sm text-slate-700">{t("instantDelivery")}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {/* Mekan Bilgisi - SSS, Ulaşım, Giriş */}
             {venue && (
               <div className="bg-white rounded-xl border border-slate-200 p-8 mt-8">
@@ -1157,125 +1440,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Sağ Taraf - Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="sticky top-6 space-y-6">
-              {/* Hızlı Bilgiler */}
-              <div className="bg-white rounded-xl border border-slate-200 p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">{t("eventInfo")}</h3>
-                <div className="space-y-3">
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-blue-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-slate-900">{t("date")}</p>
-                      <p className="text-sm text-slate-600">
-                        {new Date(event.date).toLocaleDateString(dateLocale, { 
-                          weekday: 'long',
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric' 
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <Clock className="h-5 w-5 text-blue-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-slate-900">{t("time")}</p>
-                      <p className="text-sm text-slate-600">{event.time}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-blue-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-slate-900">{t("venue")}</p>
-                      <p className="text-sm text-slate-600">{localized.venue || event.venue}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <MapPin className="h-5 w-5 text-blue-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-slate-900">{t("location")}</p>
-                      <p className="text-sm text-slate-600">{event.location || localized.venue || event.venue}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start gap-3">
-                    <Users className="h-5 w-5 text-blue-500 mt-0.5" />
-                    <div>
-                      <p className="font-medium text-slate-900">{t("category")}</p>
-                      <p className="text-sm text-slate-600">{tCat((event.category || "diger").toLowerCase())}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Bilet Uyarısı */}
-              {!isPastEvent && (
-                <div className="bg-amber-50 rounded-xl border border-amber-200 p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                    <Bell className="h-5 w-5 text-amber-600" />
-                    {t("ticketReminder")}
-                  </h3>
-                  <p className="text-sm text-slate-600 mb-4">
-                    {t("reminderDesc")}
-                  </p>
-                  <form onSubmit={handleReminderSubmit} className="space-y-3">
-                    <input
-                      type="email"
-                      value={reminderEmail}
-                      onChange={(e) => setReminderEmail(e.target.value)}
-                      placeholder={t("reminderPlaceholder")}
-                      required
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-                    />
-                    <button
-                      type="submit"
-                      disabled={reminderPending}
-                      className="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
-                    >
-                      {reminderPending ? t("saving") : t("getReminder")}
-                    </button>
-                  </form>
-                  {reminderResult && (
-                    <p className={`mt-3 text-sm ${reminderResult.success ? "text-green-700" : "text-red-700"}`}>
-                      {reminderResult.message}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {/* Güvenli Alışveriş */}
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">{t("secureShopping")}</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <Star className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="text-sm text-slate-700">{t("originalTicket")}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <Star className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="text-sm text-slate-700">{t("securePayment")}</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <Star className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="text-sm text-slate-700">{t("instantDelivery")}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

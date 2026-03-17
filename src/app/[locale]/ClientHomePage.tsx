@@ -80,9 +80,9 @@ export default function ClientHomePage({
         supabase.from("cities").select("id, slug, name_tr, name_de, name_en, image_url").eq("is_active", true).order("sort_order", { ascending: true }),
       ]);
       if (isMountedRef.current) {
-        if (!eventsRes.error) setEvents(eventsRes.data || []);
-        if (!newsRes.error) setNews(newsRes.data || []);
-        if (!citiesRes.error) setCities(citiesRes.data || []);
+        if (!eventsRes.error && Array.isArray(eventsRes.data)) setEvents(eventsRes.data);
+        if (!newsRes.error && Array.isArray(newsRes.data)) setNews(newsRes.data);
+        if (!citiesRes.error && Array.isArray(citiesRes.data)) setCities(citiesRes.data);
       }
     } catch {
       /* ignore */

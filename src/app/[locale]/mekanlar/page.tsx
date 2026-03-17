@@ -116,6 +116,9 @@ export default function MekanlarPage() {
                 <div className="space-y-1 rounded-xl border border-slate-200 bg-white overflow-hidden">
                   {cityVenues.map((venue) => {
                     const isOpen = expandedId === venue.id;
+                    const localized = getLocalizedVenue(venue as unknown as Record<string, unknown>, locale);
+                    const addr = localized.address || venue.address;
+                    const cityName = localized.city || venue.city;
                     return (
                       <div key={venue.id} className="border-b border-slate-100 last:border-b-0">
                         <button
@@ -124,17 +127,46 @@ export default function MekanlarPage() {
                             setExpandedId((id) => (id === venue.id ? null : venue.id));
                             setFaqOpenInVenue(null);
                           }}
-                          className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+                          className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
                         >
-                          <span className="font-semibold text-slate-900">{getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).name || venue.name}</span>
-                          {venue.city && (
-                            <span className="text-sm text-slate-500 hidden sm:inline">{venue.city}</span>
-                          )}
-                          {isOpen ? (
-                            <ChevronDown className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                          ) : (
-                            <ChevronRight className="h-5 w-5 text-slate-400 flex-shrink-0" />
-                          )}
+                          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                            {venue.image_url_1 || venue.seating_layout_image_url ? (
+                              <img
+                                src={venue.image_url_1 || venue.seating_layout_image_url || ""}
+                                alt={localized.name || venue.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <MapPin className="h-8 w-8 text-slate-400" />
+                            )}
+                          </div>
+                          <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
+                            <div className="flex-1 min-w-0">
+                              <p className="text-base sm:text-lg font-semibold text-slate-900 truncate">
+                                {localized.name || venue.name}
+                              </p>
+                              {(addr || cityName) && (
+                                <p className="mt-1 text-sm text-slate-600 truncate">
+                                  {[cityName, addr].filter(Boolean).join(" • ")}
+                                </p>
+                              )}
+                            </div>
+                            {venue.capacity != null && (
+                              <div className="flex items-center gap-2 text-sm text-slate-600 sm:justify-center sm:min-w-[160px]">
+                                <Users className="h-4 w-4 flex-shrink-0" />
+                                <span>
+                                  {t("capacity")}: {venue.capacity} {t("persons")}
+                                </span>
+                              </div>
+                            )}
+                            <div className="ml-auto flex-shrink-0">
+                              {isOpen ? (
+                                <ChevronDown className="h-5 w-5 text-slate-400" />
+                              ) : (
+                                <ChevronRight className="h-5 w-5 text-slate-400" />
+                              )}
+                            </div>
+                          </div>
                         </button>
                         {isOpen && (
                           <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-6">

@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase-client";
 import TicketPrint from "@/components/TicketPrint";
 import type { EventCurrency } from "@/types/database";
 import type { User } from "@supabase/supabase-js";
+import type { SeatDetail } from "@/components/TicketPrint";
 
 type OrderRow = {
   id: string;
@@ -21,6 +22,7 @@ type OrderRow = {
   buyer_name?: string;
   events?: { title?: string; date?: string; time?: string; venue?: string; location?: string; currency?: string } | null;
   tickets?: { name?: string; type?: string; price?: number } | null;
+  seatDetails?: SeatDetail[];
 };
 
 interface BiletlerimSectionProps {
@@ -221,6 +223,7 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
                     ticketType={order.tickets?.name || order.tickets?.type || "Bilet"}
                     price={order.total_price}
                     currency={(order.events?.currency as EventCurrency) || "EUR"}
+                    seatDetails={order.seatDetails}
                   />
                 </div>
               )}

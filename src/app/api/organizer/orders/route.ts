@@ -1,50 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { requireRole } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
 /** Organizatörün kendi etkinliklerine ait siparişleri döner (satılan bilet listesi / satış raporu için). */
 export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ["admin", "organizer"]);
+  if (auth instanceof Response) return auth;
   try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) {
-      return NextResponse.json({ message: "Sunucu yapılandırması eksik." }, { status: 500 });
-    }
-    const supabase = createClient(url, key, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
-
-    const authHeader = request.headers.get("authorization");
-    const token = authHeader?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
-    }
-    const { data: { user } } = await supabase.auth.getUser(token);
-    if (!user) {
-      return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
-    }
-
-    const { data: roleRow } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .in("role", ["admin", "organizer"])
-      .maybeSingle();
-
-    const isOrganizer = roleRow?.role === "organizer";
-    const isAdmin = roleRow?.role === "admin";
-
-    if (!isOrganizer && !isAdmin) {
-      return NextResponse.json({ error: "Organizatör yetkisi gerekli" }, { status: 403 });
-    }
+    const supabase = getSupabaseAdmin();
+    const isOrganizer = auth.roles.includes("organizer");
+    const isAdmin = auth.roles.includes("admin");
 
     let eventIds: string[] = [];
     if (isOrganizer) {
       const { data: myEvents } = await supabase
         .from("events")
         .select("id")
-        .eq("created_by_user_id", user.id);
+        .eq("created_by_user_id", auth.user.id);
       eventIds = (myEvents || []).map((e) => e.id);
       if (eventIds.length === 0) {
         return NextResponse.json([]);

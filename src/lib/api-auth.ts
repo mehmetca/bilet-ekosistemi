@@ -1,15 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { User } from "@supabase/supabase-js";
-
-function getSupabaseForAuth(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase env missing");
-  return createClient(url, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 /** Request'ten Bearer token alır. */
 export function getAuthToken(request: NextRequest): string | null {
@@ -27,7 +19,7 @@ export async function getAuthUser(
   if (!token) {
     return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
   }
-  const supabase = getSupabaseForAuth();
+  const supabase = getSupabaseAdmin();
   const { data: { user } } = await supabase.auth.getUser(token);
   if (!user) {
     return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });

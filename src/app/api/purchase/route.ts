@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from "@supabase/supabase-js";
+import { SupabaseClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import QRCode from "qrcode";
 import bwipjs from "bwip-js";
 import { PDFDocument, PDFPage, StandardFonts, degrees, rgb } from "pdf-lib";
@@ -13,6 +14,8 @@ function generateTicketCode(): string {
   return code;
 }
 
+type SeatDetail = { section_name: string; row_label: string; seat_label: string };
+
 type TicketMailPayload = {
   buyerEmail: string;
   buyerName: string;
@@ -25,6 +28,8 @@ type TicketMailPayload = {
   eventTime?: string;
   venue?: string;
   location?: string;
+  /** Yer seçerek alınan biletlerde: koltuk bilgisi (bilet üzerinde gösterilir) */
+  seatDetails?: SeatDetail[];
 };
 
 const PDF_TICKET_HEADER_TEXT = "BILET EKOSISTEMI E-TICKET";
@@ -97,6 +102,9 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
                           <td style="padding:2px 0;font-size:12px;color:#000;">Bilet Turu</td>
                           <td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${payload.ticketType}</td>
                         </tr>
+                        ${(payload.seatDetails && payload.seatDetails.length > 0)
+    ? `<tr><td style="padding:2px 0;font-size:12px;color:#000;">Platz / Koltuk</td><td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${payload.seatDetails.map((s) => `${s.section_name} · Sıra ${s.row_label} · Nr ${s.seat_label}`).join("; ")}</td></tr>`
+    : ""}
                         <tr>
                           <td style="padding:2px 0;font-size:12px;color:#000;">Kisi/Adet</td>
                           <td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${payload.buyerName} / ${payload.quantity}</td>
@@ -397,16 +405,22 @@ async function buildTicketPdfBase64(payload: TicketMailPayload) {
     color: slate900,
   });
 
+  const seatRow: [string, string] | null =
+    payload.seatDetails && payload.seatDetails.length > 0
+      ? ["Platz / Koltuk", payload.seatDetails.map((s) => `${s.section_name} · Sıra ${s.row_label} · Nr ${s.seat_label}`).join("; ")]
+      : null;
   const rows: Array<[string, string]> = [
     ["Bilet Turu", safeTicketType],
+    ...(seatRow ? [seatRow] : []),
     ["Kisi/Adet", `${safeBuyerName} / ${payload.quantity}`],
     ["Toplam", `EUR ${Number(payload.totalPrice).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
     ["Giris", "EINGANG X"],
   ];
   let y = ticketY + 92;
   for (const [label, value] of rows) {
+    const safeValue = toPdfSafeText(value);
     page.drawText(label, { x: leftX, y, size: 11, font: regularFont, color: slate500 });
-    page.drawText(value, { x: leftX + 110, y, size: 12, font: boldFont, color: slate900 });
+    page.drawText(safeValue.length > 50 ? safeValue.slice(0, 47) + "..." : safeValue, { x: leftX + 110, y, size: 10, font: boldFont, color: slate900 });
     y -= 21;
   }
 
@@ -451,6 +465,29 @@ async function buildTicketPdfBase64(payload: TicketMailPayload) {
   return Buffer.from(pdfBytes).toString("base64");
 }
 
+/** Çok koltuklu siparişte her koltuk için ayrı sayfa (1 bilet = 1 sayfa); tek sayfa için buildTicketPdfBase64 kullanır. */
+async function buildTicketPdfMultiPageBase64(payload: TicketMailPayload): Promise<string> {
+  if (!payload.seatDetails || payload.seatDetails.length <= 1) {
+    return buildTicketPdfBase64(payload);
+  }
+  const combinedDoc = await PDFDocument.create();
+  for (const seat of payload.seatDetails) {
+    const singlePayload: TicketMailPayload = {
+      ...payload,
+      quantity: 1,
+      ticketType: seat.section_name,
+      seatDetails: [seat],
+      totalPrice: Number((payload.totalPrice / payload.quantity).toFixed(2)),
+    };
+    const singleBase64 = await buildTicketPdfBase64(singlePayload);
+    const donorDoc = await PDFDocument.load(Buffer.from(singleBase64, "base64"));
+    const [copiedPage] = await combinedDoc.copyPages(donorDoc, [0]);
+    combinedDoc.addPage(copiedPage);
+  }
+  const bytes = await combinedDoc.save();
+  return Buffer.from(bytes).toString("base64");
+}
+
 async function sendTicketEmail(payload: TicketMailPayload) {
   try {
     const resendApiKey = process.env.RESEND_API_KEY;
@@ -469,7 +506,7 @@ async function sendTicketEmail(payload: TicketMailPayload) {
   const qrContentId = `ticket-qr-${payload.ticketCode.toLowerCase()}`;
   const barcodeContentId = `ticket-barcode-${payload.ticketCode.toLowerCase()}`;
   const html = buildTicketEmailHtml(payload, qrContentId, barcodeContentId);
-    const pdfAttachment = await buildTicketPdfBase64(payload);
+    const pdfAttachment = await buildTicketPdfMultiPageBase64(payload);
   const qrAttachment = dataUrlToBase64(qrCodeDataUrl);
   const barcodeAttachment = dataUrlToBase64(barcodeDataUrl);
 
@@ -570,6 +607,22 @@ export async function POST(request: NextRequest) {
     const buyerAddress = (formData.get("buyer_address") as string)?.trim() || null;
     const buyerPlz = (formData.get("buyer_plz") as string)?.trim() || null;
     const buyerCity = (formData.get("buyer_city") as string)?.trim() || null;
+    let seatIds: string[] = [];
+    try {
+      const raw = formData.get("seat_ids") as string | null;
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        seatIds = Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : [];
+      }
+    } catch {
+      /* ignore */
+    }
+    if (seatIds.length > 0 && seatIds.length !== quantity) {
+      return NextResponse.json(
+        { success: false, message: "Koltuk sayısı ile adet uyuşmuyor." },
+        { status: 400 }
+      );
+    }
 
     if (!ticketId || !quantity || !buyerName || !buyerEmail) {
       return NextResponse.json(
@@ -593,20 +646,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceRoleKey) {
+    let supabase: SupabaseClient;
+    try {
+      supabase = getSupabaseAdmin();
+    } catch {
       return NextResponse.json(
         { success: false, message: "Sunucu yapılandırması eksik. Lütfen yöneticiye bildirin." },
         { status: 500 }
       );
     }
-
-    // Purchase API needs elevated DB permissions for orders/ticket stock writes.
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
 
     // Site ayarından maksimum bilet adedini al (varsayılan 10; tablo yoksa 10 kullanılır)
     let maxTicketQuantity = 10;
@@ -685,6 +733,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Yer seçerek bilet: koltukların daha önce satılmamış olduğunu kontrol et (bir bilet bir defa satılır)
+    if (seatIds.length > 0) {
+      const { data: completedOrders } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("event_id", ticket.event_id)
+        .eq("status", "completed");
+      if (completedOrders?.length) {
+        const { data: orderSeats } = await supabase
+          .from("order_seats")
+          .select("seat_id")
+          .in("order_id", completedOrders.map((o) => o.id));
+        const soldSet = new Set((orderSeats || []).map((s) => (s as { seat_id: string }).seat_id));
+        const alreadySold = seatIds.filter((id) => soldSet.has(id));
+        if (alreadySold.length > 0) {
+          return NextResponse.json(
+            { success: false, message: "Seçilen koltuklardan biri veya birkaçı zaten satılmış. Lütfen salon planından müsait koltuk seçin." },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Direct insert
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
@@ -731,19 +802,75 @@ export async function POST(request: NextRequest) {
       console.error("API Stock update error:", updateError);
     }
 
+    let seatDetails: SeatDetail[] = [];
+    if (orderData?.id && seatIds.length > 0) {
+      for (const seatId of seatIds) {
+        const { data: seatRow } = await supabase
+          .from("seats")
+          .select("id, seat_label, row_id")
+          .eq("id", seatId)
+          .single();
+        if (!seatRow?.row_id) continue;
+        const { data: rowRow } = await supabase
+          .from("seating_plan_rows")
+          .select("id, row_label, section_id")
+          .eq("id", seatRow.row_id)
+          .single();
+        if (!rowRow?.section_id) continue;
+        const { data: sectionRow } = await supabase
+          .from("seating_plan_sections")
+          .select("id, name")
+          .eq("id", rowRow.section_id)
+          .single();
+        const section_name = sectionRow?.name ?? "";
+        const row_label = rowRow?.row_label ?? "";
+        const seat_label = seatRow?.seat_label ?? "";
+        seatDetails.push({ section_name, row_label, seat_label });
+        const { error: seatInsertError } = await supabase.from("order_seats").insert({
+          order_id: orderData.id,
+          seat_id: seatId,
+          section_name,
+          row_label,
+          seat_label,
+        });
+        if (seatInsertError) {
+          const isDuplicateSeat = seatInsertError.code === "23505";
+          if (isDuplicateSeat) {
+            await supabase.from("orders").delete().eq("id", orderData.id);
+            const nextAvailable = Math.min(Number(ticket.available || 0) + quantity, Number(ticket.quantity || 0));
+            await supabase.from("tickets").update({ available: nextAvailable }).eq("id", ticketId);
+          }
+          return NextResponse.json(
+            {
+              success: false,
+              message: isDuplicateSeat
+                ? "Seçilen koltuklardan biri veya birkaçı zaten satılmış. Lütfen salon planından müsait koltuk seçin."
+                : seatInsertError.message,
+            },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     const eventSummary = await getEventSummary(supabase, ticket.event_id);
+    const ticketTypeDisplay =
+      seatDetails.length > 0
+        ? [...new Set(seatDetails.map((s) => s.section_name))].join(", ")
+        : (ticket.name || ticket.ticket_type || "Standart");
     const emailResult = await sendTicketEmail({
       buyerEmail,
       buyerName,
       ticketCode,
       quantity,
-      ticketType: ticket.name || ticket.ticket_type || "Standart",
+      ticketType: ticketTypeDisplay,
       totalPrice,
       eventTitle: eventSummary.title,
       eventDate: eventSummary.date,
       eventTime: eventSummary.time,
       venue: eventSummary.venue,
       location: eventSummary.location || ticket.city || ticket.location,
+      seatDetails: seatDetails.length > 0 ? seatDetails : undefined,
     });
 
     if (!emailResult.sent) {
@@ -759,8 +886,9 @@ export async function POST(request: NextRequest) {
       orderDetails: {
         buyerName,
         quantity,
-        ticketType: ticket.name || ticket.ticket_type,
+        ticketType: ticketTypeDisplay,
         price: totalPrice,
+        seatDetails: seatDetails.length > 0 ? seatDetails : undefined,
       },
     });
 

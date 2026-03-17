@@ -1,39 +1,13 @@
 import Header from "@/components/Header";
 import EventCalendar from "@/components/EventCalendar";
-import { createClient } from "@supabase/supabase-js";
-import type { Event } from "@/types/database";
+import { getEventsForCalendar } from "@/lib/events-server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-async function getEvents(): Promise<Event[]> {
-  try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!url || !key) return [];
-    const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
-
-    const { data: events, error: eventsError } = await supabase
-      .from("events")
-      .select("*")
-      .eq("is_active", true)
-      .order("date", { ascending: true });
-
-    if (eventsError) {
-      console.error("Events fetch error:", eventsError);
-      return [];
-    }
-
-    return (events ?? []) as Event[];
-  } catch (error) {
-    console.error("Fetch events error:", error);
-    return [];
-  }
-}
-
 export default async function TakvimPage() {
   try {
-    const events = await getEvents();
+    const events = await getEventsForCalendar();
 
     return (
       <div className="min-h-screen bg-slate-50">

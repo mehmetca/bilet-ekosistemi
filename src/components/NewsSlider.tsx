@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import type { News } from "@/types/database";
 import { Link } from "@/i18n/navigation";
@@ -46,11 +46,18 @@ export default function NewsSlider({ news, title, locale = "tr" }: NewsSliderPro
     fetchNewsSliderAd();
   }, [locale]);
 
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   // Otomatik oynatma
   useEffect(() => {
     if (!isAutoPlay || safeNews.length <= 1) return;
 
     const interval = setInterval(() => {
+      if (!mountedRef.current) return;
       setCurrentIndex((prev) => (prev + 1) % safeNews.length);
     }, 5000);
 

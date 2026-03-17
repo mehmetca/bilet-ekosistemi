@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
 import { createServerSupabase } from "@/lib/supabase-server";
 import CityPageClient from "./CityPageClient";
-import type { Event } from "@/types/database";
 import { getLocalizedCity } from "@/lib/i18n-content";
+import { getEventsForCity } from "@/lib/events-server";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -22,82 +22,6 @@ async function getCity(slug: string) {
     .single();
   if (error || !data) return null;
   return data;
-}
-
-function normalizeForMatch(s: string): string {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/ı/g, "i")
-    .replace(/İ/g, "i")
-    .replace(/ğ/g, "g")
-    .replace(/ü/g, "u")
-    .replace(/ş/g, "s")
-    .replace(/ö/g, "o")
-    .replace(/ç/g, "c");
-}
-
-function getMatchTerms(slug: string, city?: { name_tr?: string | null; name_de?: string | null; name_en?: string | null } | null): string[] {
-  const slugLower = slug.toLowerCase().trim();
-  const parts = slugLower.split(/-+/).filter(Boolean);
-  const arr: string[] = [slugLower];
-  parts.forEach((p) => {
-    if (p && arr.indexOf(p) === -1) arr.push(p);
-  });
-  if (city) {
-    [city.name_tr, city.name_de, city.name_en].filter(Boolean).forEach((n) => {
-      if (n) {
-        const t = n.toLowerCase().trim();
-        if (t && arr.indexOf(t) === -1) arr.push(t);
-      }
-    });
-  }
-  return arr;
-}
-
-function matchesCity(loc: string, vc: string, matchTerms: string[]): boolean {
-  const locNorm = normalizeForMatch(loc);
-  const vcNorm = normalizeForMatch(vc);
-  return matchTerms.some((term) => {
-    if (!term) return false;
-    const termNorm = normalizeForMatch(term);
-    return (
-      loc === term || vc === term ||
-      locNorm === termNorm || vcNorm === termNorm ||
-      locNorm.includes(termNorm) || vcNorm.includes(termNorm)
-    );
-  });
-}
-
-async function getEventsForCity(citySlug: string, city?: { name_tr?: string | null; name_de?: string | null; name_en?: string | null } | null): Promise<Event[]> {
-  const supabase = createServerSupabase();
-  const matchTerms = getMatchTerms(citySlug, city);
-
-  const { data: eventsData, error } = await supabase
-    .from("events")
-    .select("*, venues(city)")
-    .eq("is_active", true)
-    .order("date", { ascending: true })
-    .order("time", { ascending: true });
-
-  if (error || !eventsData) return [];
-
-  const filtered = eventsData.filter((e: Record<string, unknown>) => {
-    const loc = ((e.location as string) || "").toLowerCase().trim();
-    const v = e.venues;
-    let venueCity = "";
-    if (v != null) {
-      if (Array.isArray(v)) venueCity = (v[0] as { city?: string })?.city || "";
-      else venueCity = (v as { city?: string }).city || "";
-    }
-    const vc = venueCity.toLowerCase().trim();
-    return matchesCity(loc, vc, matchTerms);
-  });
-
-  return filtered.map((e: Record<string, unknown>) => {
-    const { venues, ...ev } = e;
-    return ev;
-  }) as unknown as Event[];
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
