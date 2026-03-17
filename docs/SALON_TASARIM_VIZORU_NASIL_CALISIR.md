@@ -68,23 +68,29 @@ Vizörde bu yapıyı kurduğunuzda önizlemede "Tek blok", "2 blok (1 koridor)",
 
 ---
 
+## Planı mekana aktarma (tek tıkla)
+
+Vizörde tasarımı bitirip **Kaydet** dedikten sonra:
+
+1. **"Bu planı mekana aktar"** butonuna tıklayın.
+2. Açılan pencerede **Mekan** (dropdown) ve **Plan adı** girin → **Mekana aktar**.
+3. Plan, seçtiğiniz mekanın oturum planlarına eklenir (bölümler, sıralar ve koltuklar otomatik oluşur).
+
+Sonrasında **etkinlik oluştururken** bu mekanı seçin, listeden bu planı (verdiğiniz plan adıyla) **Oturum planı** olarak seçin. Bilet türlerini segment kategorileriyle aynı isimde ekleyin (VIP, Kategori 1, Kategori 2, …); sistem bölüm kapasitelerini bu etiketlere göre eşleştirir.
+
+---
+
 ## Akış (vizör → gerçek plan)
 
-1. **Vizörde** istediğiniz bölgeleri ekleyin; özeti kontrol edin.
-2. **Mekanlar** → ilgili mekan → **Oturum planı** sayfasına gidin.
-3. Orada her bölge için **bir bölüm (section)** oluşturun:
-   - Bölüm adı = vizördeki bölge adı (veya sizin tercih ettiğiniz isim).
-   - **Bilet türü etiketi** = vizörde seçtiğiniz kategori adı (VIP, Kategori 1, …) — **bire bir aynı** olmalı.
-   - İlgili sıra ve koltukları (sıra 1–2, 3–4, … ve her sıradaki koltuk sayısı) oturum planı arayüzünde tanımlayın.
-4. **Etkinlik oluştururken** bu mekan ve oturum planını seçin; bilet türlerini **aynı etiket adlarıyla** (VIP, Kategori 1, …) ekleyip fiyat verin.
+**Yol 1 – Tek tıkla (önerilen):** Vizörde tasarımı yapın → Kaydet → **Bu planı mekana aktar** ile mekan ve plan adı seçip aktarın. Etkinlik oluştururken bu mekanı ve planı seçin; bilet türlerini kategori adlarıyla (VIP, Kategori 2, …) ekleyin.
 
-Böylece vizörde gördüğünüz yapı, veritabanındaki oturum planı ve etkinlik biletleriyle uyumlu hale gelir.
+**Yol 2 – Manuel:** Vizörde bölgeleri ekleyin; **Mekanlar** → ilgili mekan → **Oturum planı** sayfasında her bölge için bölüm/sıra/koltuk tanımlayın. Etkinlik oluştururken bu mekan ve planı seçin; bilet türü etiketleri vizördeki kategori adlarıyla aynı olmalı.
 
 ---
 
 ## Teknik not
 
-- Vizör **sadece önizleme** içindir: state React tarafında tutulur, sayfa yenilenince sıfırlanır.
-- Veritabanına **ek tablo veya alan eklenmez**; mevcut `seating_plans` → `seating_plan_sections` → `seating_plan_rows` → `seats` yapısı ve `ticket_type_label` kullanımı aynen geçerlidir.
+- Vizörde **Kaydet** ile plan hem tarayıcıda hem (admin iseniz) sunucuda (`site_settings`) saklanır; **Bu planı mekana aktar** ile aynı tasarım `seating_plans` tablosuna mekana bağlı olarak yazılır.
+- Veritabanı yapısı: `seating_plans` → `seating_plan_sections` → `seating_plan_rows` → `seats`; bölümlerdeki `ticket_type_label` etkinlikteki bilet türü adıyla eşleşir.
 
 Sayfa yolu: **Yönetim → Salon tasarım vizörü** (organizatör ve admin menüsünde).

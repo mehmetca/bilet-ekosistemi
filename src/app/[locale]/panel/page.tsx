@@ -7,10 +7,11 @@ import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabase-client";
 import BiletlerimSection from "@/components/BiletlerimSection";
+import { LogOut } from "lucide-react";
 
 export default function PanelPage() {
   const t = useTranslations("panel");
-  const { user, loading: authLoading } = useSimpleAuth();
+  const { user, loading: authLoading, signOut } = useSimpleAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -57,10 +58,25 @@ export default function PanelPage() {
 
   return (
     <PanelLayout>
-      <h1 className="text-2xl font-bold text-slate-900 mb-2">{t("title")}</h1>
-      <p className="text-slate-600 mb-8">
-        {t("welcome")}, {user.email}
-      </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 mb-1">{t("title")}</h1>
+          <p className="text-slate-600">
+            {t("welcome")}, {user.email}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={async () => {
+            await signOut();
+            router.replace("/");
+          }}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-red-50 hover:text-red-600 transition-colors self-start sm:self-auto"
+        >
+          <LogOut className="h-4 w-4" />
+          {t("logout")}
+        </button>
+      </div>
       <BiletlerimSection user={user} />
     </PanelLayout>
   );

@@ -306,7 +306,7 @@
     "stepContinue": "Continue",
     "stepBack": "Back",
     "emailNotSent": "E-mail could not be sent.",
-    "emailNotSentHint": "Your ticket is displayed below. You can print it later from the admin panel.",
+    "emailNotSentHint": "You can print your ticket(s) now on this page, or later from the admin panel if you prefer.",
     "paymentDetails": "Payment Details",
     "securePayment": "Processed via secure payment infrastructure.",
     "cardNumber": "Card Number",

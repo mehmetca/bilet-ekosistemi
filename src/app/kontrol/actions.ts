@@ -50,7 +50,63 @@ export async function checkTicket(input: string | FormData): Promise<CheckResult
       return { valid: false, reason: "invalid", message: "Bilet kodu zorunludur." };
     }
 
-    // Ticket kodunu kontrol et
+    // Önce koltuk bazlı bilet kodu (order_seats) – her koltuk ayrı kod
+    const { data: orderSeat, error: seatError } = await supabase
+      .from("order_seats")
+      .select("id, order_id, checked_at")
+      .ilike("ticket_code", ticketCode)
+      .maybeSingle();
+
+    if (!seatError && orderSeat) {
+      if (orderSeat.checked_at) {
+        const { data: orderRow } = await supabase
+          .from("orders")
+          .select("buyer_name, buyer_email, events(title, date, time, location)")
+          .eq("id", orderSeat.order_id)
+          .single();
+        const o = orderRow as { buyer_name?: string; buyer_email?: string; events?: { title?: string; date?: string; time?: string; location?: string } } | null;
+        return {
+          valid: false,
+          reason: "used",
+          message: "Bu bilet daha önce kullanılmıştır.",
+          eventTitle: o?.events?.title,
+          eventDate: o?.events?.date,
+          eventTime: o?.events?.time,
+          venue: o?.events?.location,
+          buyerName: o?.buyer_name || "Bilinmiyor",
+          buyerEmail: o?.buyer_email || "Bilinmiyor",
+          quantity: 1,
+        };
+      }
+      const { data: orderWithEvent } = await supabase
+        .from("orders")
+        .select("status, buyer_name, buyer_email, events(*)")
+        .eq("id", orderSeat.order_id)
+        .single();
+      const ord = orderWithEvent as Record<string, unknown> | null;
+      if (!ord) return { valid: false, reason: "not_found" };
+      const status = ord.status as string;
+      if (status !== "confirmed" && status !== "completed") {
+        return { valid: false, reason: "invalid", message: "Bilet onaylanmamış" };
+      }
+      const ev = ord.events as { date?: string; time?: string; title?: string; location?: string } | null;
+      const eventDate = new Date(`${ev?.date ?? ""} ${ev?.time || "23:59"}`);
+      if (eventDate.getTime() && eventDate < new Date()) {
+        return { valid: false, reason: "invalid", message: "Etkinlik tarihi geçmiş" };
+      }
+      return {
+        valid: true,
+        eventTitle: ev?.title,
+        eventDate: ev?.date,
+        eventTime: ev?.time,
+        venue: ev?.location,
+        buyerName: (ord.buyer_name as string) || "Bilinmiyor",
+        buyerEmail: (ord.buyer_email as string) || "Bilinmiyor",
+        quantity: 1,
+      };
+    }
+
+    // Sipariş bazlı bilet kodu (orders) – eski tek bilet
     const { data: ticket, error } = await supabase
       .from("orders")
       .select(`

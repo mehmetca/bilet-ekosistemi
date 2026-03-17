@@ -391,7 +391,7 @@ function MekanlarContent() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Mekan Yönetimi</h1>
             <p className="mt-1 text-sm text-slate-500">
-              Salon oturum planı (bölüm/sıra/koltuk) için her mekanın yanındaki <strong>Oturum planı</strong> butonuna tıklayın.
+              Salon tasarımı (bölüm/sıra/koltuk, Musensaal görseli) için her mekanın yanındaki <strong>Salonlar</strong> butonuna tıklayın.
               {" "}
               <Link href="/yonetim/mekanlar/musensaal-onizleme" className="text-primary-600 hover:text-primary-700 font-medium">
                 Musensaal planı önizle
@@ -889,10 +889,10 @@ function MekanlarContent() {
                         <Link
                           href={`/yonetim/mekanlar/${venue.id}/oturum-plani`}
                           className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-primary-200 bg-primary-50/50 text-primary-700 hover:bg-primary-100 text-sm font-medium"
-                          title="Bölüm, sıra ve koltuk tanımla"
+                          title="Salonları ve oturum planlarını yönetin (bir mekanda birden fazla salon tanımlanabilir)"
                         >
                           <LayoutGrid className="h-4 w-4" />
-                          Oturum planı
+                          Salonlar
                         </Link>
                         {isAdmin && (
                           <>

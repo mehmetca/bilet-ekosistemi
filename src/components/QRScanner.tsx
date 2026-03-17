@@ -18,6 +18,18 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
 
+  async function stopAndClearScanner() {
+    const scanner = scannerRef.current;
+    if (!scanner) return;
+    try {
+      // stop() hem senkron hata fırlatabiliyor hem de Promise döndürebiliyor; hepsini yut.
+      await Promise.resolve(scanner.stop()).catch(() => {});
+    } catch {
+      /* ignore */
+    }
+    scannerRef.current = null;
+  }
+
   useEffect(() => {
     let mounted = true;
     setError(null);
@@ -45,7 +57,11 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
         const scanner = new Html5Qrcode(elementId);
         scannerRef.current = scanner;
 
-        const cameraId = cameras[0].id;
+        // Mümkünse arka (environment) kamerayı kullan; yoksa ilk kamerayı seç.
+        const backCamera = cameras.find((c) =>
+          /back|rear|environment|hinten|r\u00fcck/i.test(c.label || "")
+        );
+        const cameraId = (backCamera ?? cameras[0]).id;
 
         await scanner.start(
           cameraId,
@@ -63,9 +79,10 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
             }
             onScanRef.current(code.toUpperCase());
             if (!continuous) {
-              scanner.stop().catch(() => {});
-              scannerRef.current = null;
-              onClose();
+              // Tarama biter bitmez scanner'ı güvenli şekilde durdur.
+              stopAndClearScanner().finally(() => {
+                onClose();
+              });
             }
           },
           () => {
@@ -95,11 +112,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
 
     return () => {
       mounted = false;
-      if (scannerRef.current) {
-        scannerRef.current.stop().catch(() => {});
-        scannerRef.current.clear();
-        scannerRef.current = null;
-      }
+      void stopAndClearScanner();
     };
   }, [continuous, onClose]);
 
@@ -111,12 +124,9 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
           <button
             type="button"
             onClick={() => {
-              if (scannerRef.current) {
-                scannerRef.current.stop().catch(() => {});
-                scannerRef.current.clear();
-                scannerRef.current = null;
-              }
-              onClose();
+              void stopAndClearScanner().finally(() => {
+                onClose();
+              });
             }}
             className="p-2 hover:bg-slate-100 rounded-lg"
           >
@@ -172,12 +182,9 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
             <button
               type="button"
               onClick={() => {
-                if (scannerRef.current) {
-                  scannerRef.current.stop().catch(() => {});
-                  scannerRef.current.clear();
-                  scannerRef.current = null;
-                }
-                onClose();
+                void stopAndClearScanner().finally(() => {
+                  onClose();
+                });
               }}
               className="flex-1 px-4 py-2 border border-slate-300 rounded-lg hover:bg-slate-50"
             >

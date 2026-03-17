@@ -306,7 +306,7 @@
     "stepContinue": "Weiter",
     "stepBack": "Zurück",
     "emailNotSent": "E-Mail konnte nicht gesendet werden.",
-    "emailNotSentHint": "Ihr Ticket wird unten angezeigt. Sie können es später im Verwaltungspanel drucken.",
+    "emailNotSentHint": "Sie können Ihr(e) Ticket(s) jetzt auf dieser Seite ausdrucken oder später im Verwaltungspanel drucken.",
     "paymentDetails": "Zahlungsdetails",
     "securePayment": "Wird über sichere Zahlungsinfrastruktur verarbeitet.",
     "cardNumber": "Kartennummer",

@@ -16,6 +16,8 @@ import { supabase } from "@/lib/supabase-client";
 import { getPlan } from "@/lib/seating-plans";
 import { musensaal } from "@/lib/seating-plans/musensaal";
 import SalonPlanViewer from "@/components/SalonPlanViewer";
+import ImageSeatPlanViewer from "@/components/ImageSeatPlanViewer";
+import { theaterduisburgImagePlan, getTheaterDuisburgCoord } from "@/lib/seating-plans/theaterduisburg";
 
 interface EventDetailClientProps {
   event: Event;
@@ -393,7 +395,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [isFavorite, setIsFavorite] = useState(false);
   /** Koltuk seçimi: yüklü plan yapısı (bölüm > sıra > koltuk) */
   const [seatingPlanData, setSeatingPlanData] = useState<SeatPlanSection[] | null>(null);
+  const [seatingPlanName, setSeatingPlanName] = useState("");
   const [isMusensaalPlan, setIsMusensaalPlan] = useState(false);
+  const [isImagePlan, setIsImagePlan] = useState(false);
   const [seatingPlanLoading, setSeatingPlanLoading] = useState(false);
   const [selectedSeatIds, setSelectedSeatIds] = useState<Set<string>>(new Set());
   /** Satılmış koltuklar (completed siparişlerdeki order_seats) – salon planında dolu gösterilir, seçilemez */
@@ -401,6 +405,10 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   /** Eventim tarzı: "list" = liste görünümü, "map" = salon planı (şematik) */
   const [seatMapView, setSeatMapView] = useState<"list" | "map">("map");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  /** Yer seçerek bilet al akışında, seçilen koltuklar sepete eklendi mi? (sidebar mesajını değiştirmek için) */
+  const [hasSeatSelectionAddedToCart, setHasSeatSelectionAddedToCart] = useState(false);
+  /** Koltuk geçici rezervasyonları için anonim oturum kimliği */
+  const [seatHoldSessionId, setSeatHoldSessionId] = useState<string | null>(null);
   const [venueFaqOpen, setVenueFaqOpen] = useState(false);
   const [reminderEmail, setReminderEmail] = useState("");
   const [reminderPending, setReminderPending] = useState(false);
@@ -416,6 +424,18 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         }
       })
       .catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const key = "seatHoldSessionId";
+    const existing = window.localStorage.getItem(key);
+    if (existing) {
+      setSeatHoldSessionId(existing);
+      return;
+    }
+    const id = window.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    window.localStorage.setItem(key, id);
+    setSeatHoldSessionId(id);
   }, []);
   const selectedTicket = availableTickets.find((t) => t.id === selectedTicketType);
   const selectedMinQ = selectedTicket ? getMinQuantityFromDescription(selectedTicket.description) : 1;
@@ -445,7 +465,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       ]);
       const sections = sectionsRes.data;
       const planName = (planRes.data as { name?: string } | null)?.name ?? "";
+      setSeatingPlanName(planName);
       setIsMusensaalPlan(planName.includes("Musensaal"));
+      setIsImagePlan(/theater\s*duisburg/i.test(planName));
       if (!sections?.length) {
         setSeatingPlanData([]);
         setSeatingPlanLoading(false);
@@ -521,6 +543,24 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     if (!isMusensaalPlan || !seatingPlanData?.length) return null;
     return buildMusensaalIdMaps(seatingPlanData);
   }, [isMusensaalPlan, seatingPlanData]);
+
+  const imagePlanSeats = useMemo(() => {
+    if (!seatingPlanData?.length) return [];
+    const list: { id: string; section_name: string; row_label: string; seat_label: string }[] = [];
+    for (const sec of seatingPlanData) {
+      for (const row of sec.rows) {
+        for (const seat of row.seats) {
+          list.push({
+            id: seat.id,
+            section_name: sec.name,
+            row_label: row.row_label,
+            seat_label: seat.seat_label,
+          });
+        }
+      }
+    }
+    return list;
+  }, [seatingPlanData]);
 
   const eventDateTime = new Date(`${event.date} ${event.time || "23:59"}`);
   const isPastEvent = eventDateTime < new Date();
@@ -887,19 +927,129 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   });
                                 }}
                               />
+                            ) : isImagePlan ? (
+                              <ImageSeatPlanViewer
+                                imageUrl={theaterduisburgImagePlan.imageUrl}
+                                seats={imagePlanSeats}
+                                getCoord={getTheaterDuisburgCoord}
+                                selectedSeatIds={selectedSeatIds}
+                                soldSeatIds={soldSeatIds}
+                                onSeatToggle={async (seatId) => {
+                                  if (!seatHoldSessionId) return;
+                                  const isSelected = selectedSeatIds.has(seatId);
+                                  if (isSelected) {
+                                    setSelectedSeatIds((prev) => {
+                                      const next = new Set(prev);
+                                      next.delete(seatId);
+                                      return next;
+                                    });
+                                    try {
+                                      await fetch("/api/seat-holds", {
+                                        method: "DELETE",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ seatId, sessionId: seatHoldSessionId }),
+                                      });
+                                    } catch {
+                                      /* ignore */
+                                    }
+                                    return;
+                                  }
+                                  if (selectedSeatIds.size >= maxTicketsPerOrder) return;
+                                  try {
+                                    const res = await fetch("/api/seat-holds", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ seatId, eventId: event.id, sessionId: seatHoldSessionId }),
+                                    });
+                                    if (!res.ok) {
+                                      const data = (await res.json().catch(() => ({}))) as { error?: string };
+                                      setActionMessage(
+                                        data.error ||
+                                          (locale === "de"
+                                            ? "Dieser Platz ist derzeit von einem anderen Benutzer reserviert."
+                                            : locale === "en"
+                                            ? "This seat is currently reserved by another user."
+                                            : "Bu koltuk şu anda başka bir kullanıcı tarafından tutuluyor.")
+                                      );
+                                      return;
+                                    }
+                                    setSelectedSeatIds((prev) => {
+                                      const next = new Set(prev);
+                                      next.add(seatId);
+                                      return next;
+                                    });
+                                  } catch (e) {
+                                    console.error("seat-hold toggle error:", e);
+                                    setActionMessage(
+                                      locale === "de"
+                                        ? "Platz konnte nicht reserviert werden."
+                                        : locale === "en"
+                                        ? "Could not reserve the seat."
+                                        : "Koltuk rezerve edilemedi."
+                                    );
+                                  }
+                                }}
+                              />
                             ) : (
                               <SeatMapWithZoom
                                 sections={seatingPlanData}
                                 selectedSeatIds={selectedSeatIds}
                                 soldSeatIds={soldSeatIds}
-                                onSeatToggle={(seatId) => {
-                                  setSelectedSeatIds((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(seatId)) next.delete(seatId);
-                                    else if (prev.size >= maxTicketsPerOrder) return prev;
-                                    else next.add(seatId);
-                                    return next;
-                                  });
+                                onSeatToggle={async (seatId) => {
+                                  if (!seatHoldSessionId) return;
+                                  const isSelected = selectedSeatIds.has(seatId);
+                                  if (isSelected) {
+                                    // Koltuğu bırak: hold kaydını da sil
+                                    setSelectedSeatIds((prev) => {
+                                      const next = new Set(prev);
+                                      next.delete(seatId);
+                                      return next;
+                                    });
+                                    try {
+                                      await fetch("/api/seat-holds", {
+                                        method: "DELETE",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ seatId, sessionId: seatHoldSessionId }),
+                                      });
+                                    } catch {
+                                      /* sessizce yut */
+                                    }
+                                    return;
+                                  }
+                                  if (selectedSeatIds.size >= maxTicketsPerOrder) return;
+                                  try {
+                                    const res = await fetch("/api/seat-holds", {
+                                      method: "POST",
+                                      headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ seatId, eventId: event.id, sessionId: seatHoldSessionId }),
+                                    });
+                                    if (!res.ok) {
+                                      const data = (await res.json().catch(() => ({}))) as { error?: string };
+                                      setActionMessage(
+                                        data.error ||
+                                          (locale === "de"
+                                            ? "Dieser Platz ist derzeit von einem anderen Benutzer reserviert."
+                                            : locale === "en"
+                                            ? "This seat is currently reserved by another user."
+                                            : "Bu koltuk şu anda başka bir kullanıcı tarafından tutuluyor.")
+                                      );
+                                      return;
+                                    }
+                                    setSelectedSeatIds((prev) => {
+                                      const next = new Set(prev);
+                                      next.add(seatId);
+                                      return next;
+                                    });
+                                  } catch (e) {
+                                    console.error("seat-hold toggle error:", e);
+                                    setActionMessage(
+                                      locale === "de"
+                                        ? "Platz konnte nicht reserviert werden."
+                                        : locale === "en"
+                                        ? "Could not reserve the seat."
+                                        : "Koltuk rezerve edilemedi."
+                                    );
+                                  }
                                 }}
                                 sectionColors={new Map(seatingPlanData.map((s, i) => [s.id, ["#bae6fd", "#c7d2fe", "#d9f99d", "#fde68a", "#fecaca"][i % 5]]))}
                               />
@@ -926,21 +1076,66 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                         {row.seats.map((seat) => {
                                           const isSelected = selectedSeatIds.has(seat.id);
                                           const isSold = soldSeatIds.has(seat.id);
+                                          const handleClick = async () => {
+                                            if (!seatHoldSessionId || isSold) return;
+                                            if (isSelected) {
+                                              setSelectedSeatIds((prev) => {
+                                                const next = new Set(prev);
+                                                next.delete(seat.id);
+                                                return next;
+                                              });
+                                              try {
+                                                await fetch("/api/seat-holds", {
+                                                  method: "DELETE",
+                                                  headers: { "Content-Type": "application/json" },
+                                                  body: JSON.stringify({ seatId: seat.id, sessionId: seatHoldSessionId }),
+                                                });
+                                              } catch {
+                                                /* sessizce yut */
+                                              }
+                                              return;
+                                            }
+                                            if (selectedSeatIds.size >= maxTicketsPerOrder) return;
+                                            try {
+                                              const res = await fetch("/api/seat-holds", {
+                                                method: "POST",
+                                                headers: { "Content-Type": "application/json" },
+                                                body: JSON.stringify({ seatId: seat.id, eventId: event.id, sessionId: seatHoldSessionId }),
+                                              });
+                                              if (!res.ok) {
+                                                const data = (await res.json().catch(() => ({}))) as { error?: string };
+                                                setActionMessage(
+                                                  data.error ||
+                                                    (locale === "de"
+                                                      ? "Dieser Platz ist derzeit von einem anderen Benutzer reserviert."
+                                                      : locale === "en"
+                                                      ? "This seat is currently reserved by another user."
+                                                      : "Bu koltuk şu anda başka bir kullanıcı tarafından tutuluyor.")
+                                                );
+                                                return;
+                                              }
+                                              setSelectedSeatIds((prev) => {
+                                                const next = new Set(prev);
+                                                next.add(seat.id);
+                                                return next;
+                                              });
+                                            } catch (e) {
+                                              console.error("seat-hold toggle error (list view):", e);
+                                              setActionMessage(
+                                                locale === "de"
+                                                  ? "Platz konnte nicht reserviert werden."
+                                                  : locale === "en"
+                                                  ? "Could not reserve the seat."
+                                                  : "Koltuk rezerve edilemedi."
+                                              );
+                                            }
+                                          };
                                           return (
                                             <button
                                               key={seat.id}
                                               type="button"
                                               disabled={isSold}
-                                              onClick={() => {
-                                                if (isSold) return;
-                                                setSelectedSeatIds((prev) => {
-                                                  const next = new Set(prev);
-                                                  if (next.has(seat.id)) next.delete(seat.id);
-                                                  else if (prev.size >= maxTicketsPerOrder) return prev;
-                                                  else next.add(seat.id);
-                                                  return next;
-                                                });
-                                              }}
+                                              onClick={handleClick}
                                               className={`w-9 h-9 rounded text-sm font-medium transition-colors ${
                                                 isSold
                                                   ? "bg-slate-600 text-slate-200 cursor-not-allowed ring-1 ring-slate-700"
@@ -1066,6 +1261,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   });
                                   setActionMessage(tCheckout("addedToCart"));
                                   setSelectedSeatIds(new Set());
+                                  setHasSeatSelectionAddedToCart(true);
                                 }}
                                 disabled={isPastEvent || isUnapproved || selectedSeatIds.size > maxTicketsPerOrder}
                                 className="w-full rounded-xl bg-primary-600 px-4 py-3 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
@@ -1075,7 +1271,44 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             </>
                           );
                         })() : (
-                          <p className="text-sm text-slate-500 py-4">{locale === "de" ? "Wählen Sie Plätze im Plan." : "Plandan koltuk seçin."}</p>
+                          hasSeatSelectionAddedToCart ? (
+                            <div className="space-y-3 py-4">
+                              <p className="text-sm text-slate-700">
+                                {locale === "de"
+                                  ? "Ihre ausgewählten Plätze wurden in den Warenkorb gelegt."
+                                  : locale === "en"
+                                  ? "Your selected seats have been added to the shopping cart."
+                                  : "Seçtiğiniz koltuklar alışveriş sepetinize eklendi."}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {locale === "de"
+                                  ? "Bitte gehen Sie zum Warenkorb, um Ihre Buchung abzuschließen."
+                                  : locale === "en"
+                                  ? "Please go to your shopping cart to complete the payment."
+                                  : "Lütfen alışveriş sepetine gidip ödemenizi tamamlayın."}
+                              </p>
+                              <div className="flex flex-col gap-2">
+                                <Link
+                                  href={`/${locale}/sepet`}
+                                  className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+                                >
+                                  {locale === "de"
+                                    ? "Zum Warenkorb"
+                                    : locale === "en"
+                                    ? "Go to cart"
+                                    : "Alışveriş Sepetine Git"}
+                                </Link>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-500 py-4">
+                              {locale === "de"
+                                ? "Wählen Sie Plätze im Plan."
+                                : locale === "en"
+                                ? "Select seats from the seating plan."
+                                : "Plandan koltuk seçin."}
+                            </p>
+                          )
                         )}
                       </aside>
                     </div>

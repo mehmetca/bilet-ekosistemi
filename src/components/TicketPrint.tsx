@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import QRCode from "qrcode";
-import { Printer } from "lucide-react";
+import { Printer, Download } from "lucide-react";
 import type { EventCurrency } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 
-export type SeatDetail = { section_name: string; row_label: string; seat_label: string };
+export type SeatDetail = { section_name: string; row_label: string; seat_label: string; ticket_code?: string };
 
 interface TicketPrintProps {
   ticketCode: string;
@@ -39,35 +39,70 @@ export default function TicketPrint({
   seatDetails,
 }: TicketPrintProps) {
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+  /** Her koltuk için ayrı bilet kodu olduğunda code -> QR data URL */
+  const [qrCodesMap, setQrCodesMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+
+  const getCodeForSeat = (seat: SeatDetail | null) =>
+    seat?.ticket_code ?? ticketCode;
 
   const eventDateText = eventDate
     ? new Date(eventDate).toLocaleDateString("tr-TR")
     : "-";
   const timeText = eventTime || "--:--";
-  const priceText = formatPrice(Number(price), currency);
+  const totalPriceNumber = Number(price);
+  const priceText = formatPrice(totalPriceNumber, currency);
+  const multiSeat = !!seatDetails && seatDetails.length > 1;
+  const perSeatPrice =
+    multiSeat && quantity > 0 ? Number((totalPriceNumber / quantity).toFixed(2)) : totalPriceNumber;
   const barcodeSrc = `/api/barcode?code=${encodeURIComponent(ticketCode)}`;
 
   useEffect(() => {
     const generateQR = async () => {
       try {
-        const qrData = JSON.stringify({
-          code: ticketCode,
-          event: eventTitle,
-          date: eventDate,
-          time: eventTime,
-          venue,
-          buyer: buyerName,
-          quantity,
-        });
+        const codesToGenerate =
+          seatDetails?.length && seatDetails.some((s) => s.ticket_code)
+            ? seatDetails.map((s) => s.ticket_code ?? ticketCode)
+            : [ticketCode];
 
-        const url = await QRCode.toDataURL(qrData, {
-          width: 130,
-          margin: 1,
-          color: { dark: "#1e293b", light: "#ffffff" },
-        });
-
-        setQrCodeUrl(url);
+        if (codesToGenerate.length === 1) {
+          const qrData = JSON.stringify({
+            code: ticketCode,
+            event: eventTitle,
+            date: eventDate,
+            time: eventTime,
+            venue,
+            buyer: buyerName,
+            quantity,
+          });
+          const url = await QRCode.toDataURL(qrData, {
+            width: 130,
+            margin: 1,
+            color: { dark: "#1e293b", light: "#ffffff" },
+          });
+          setQrCodeUrl(url);
+          setQrCodesMap({});
+        } else {
+          const map: Record<string, string> = {};
+          for (const code of codesToGenerate) {
+            const qrData = JSON.stringify({
+              code,
+              event: eventTitle,
+              date: eventDate,
+              time: eventTime,
+              venue,
+              buyer: buyerName,
+              quantity: 1,
+            });
+            map[code] = await QRCode.toDataURL(qrData, {
+              width: 130,
+              margin: 1,
+              color: { dark: "#1e293b", light: "#ffffff" },
+            });
+          }
+          setQrCodesMap(map);
+          setQrCodeUrl("");
+        }
       } catch (error) {
         console.error("QR kod oluşturma hatası:", error);
       } finally {
@@ -76,15 +111,13 @@ export default function TicketPrint({
     };
 
     generateQR();
-  }, [ticketCode, eventTitle, eventDate, eventTime, venue, buyerName, quantity]);
+  }, [ticketCode, eventTitle, eventDate, eventTime, venue, buyerName, quantity, seatDetails]);
 
   const handlePrint = () => {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
     const origin = typeof window !== "undefined" ? window.location.origin : "";
-    const barcodeFullUrl = `${origin}/api/barcode?code=${encodeURIComponent(ticketCode)}`;
-
     const esc = (s: string) =>
       String(s || "")
         .replace(/&/g, "&amp;")
@@ -92,12 +125,30 @@ export default function TicketPrint({
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
 
-    const verticalCodeHtml = ticketCode
-      .split("")
-      .map((ch) => `<span style="display:block;line-height:9px;font-size:9px;font-family:monospace;">${esc(ch)}</span>`)
-      .join("");
+    const hasMultipleSeats = !!seatDetails && seatDetails.length > 1;
+    const seatsArray = hasMultipleSeats && seatDetails ? seatDetails : [null];
 
-    const ticketHtml = `
+    const makeTicketHtmlForSeat = (seat: SeatDetail | null) => {
+      const codeForSeat = getCodeForSeat(seat);
+      const barcodeFullUrlForSeat = `${origin}/api/barcode?code=${encodeURIComponent(codeForSeat)}`;
+      const verticalCodeHtmlForSeat = codeForSeat
+        .split("")
+        .map((ch) => `<span style="display:block;line-height:9px;font-size:9px;font-family:monospace;">${esc(ch)}</span>`)
+        .join("");
+      const qrUrlForSeat = qrCodesMap[codeForSeat] ?? qrCodeUrl;
+
+      const seatLine =
+        seat != null
+          ? `${seat.section_name} · Sıra ${seat.row_label} · Nr ${seat.seat_label}`
+          : seatDetails && seatDetails.length === 1
+            ? `${seatDetails[0].section_name} · Sıra ${seatDetails[0].row_label} · Nr ${seatDetails[0].seat_label}`
+            : "";
+      const qty = seat ? 1 : quantity;
+      const priceForThis =
+        seat && quantity > 0 ? Number((totalPriceNumber / quantity).toFixed(2)) : totalPriceNumber;
+      const priceTextForThis = formatPrice(priceForThis, currency);
+
+      return `
       <div style="max-width:900px;margin:0 auto;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#fff;">
         <div style="background:#003f8c;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;letter-spacing:.4px;">
           BILET EKOSISTEMI E-TICKET
@@ -110,9 +161,9 @@ export default function TicketPrint({
                   <td style="width:74px;vertical-align:top;padding-right:12px;">
                     <div style="display:flex;gap:6px;align-items:flex-start;">
                       <div style="width:42px;height:250px;border:1px solid #e2e8f0;background:#fff;overflow:hidden;">
-                        <img src="${barcodeFullUrl}" alt="Barkod" width="36" height="238" style="display:block;" />
+                        <img src="${barcodeFullUrlForSeat}" alt="Barkod" width="36" height="238" style="display:block;" />
                       </div>
-                      <div style="font-size:9px;letter-spacing:.7px;font-family:monospace;color:#000;">${verticalCodeHtml}</div>
+                      <div style="font-size:9px;letter-spacing:.7px;font-family:monospace;color:#000;">${verticalCodeHtmlForSeat}</div>
                     </div>
                   </td>
                   <td style="vertical-align:top;">
@@ -123,9 +174,19 @@ export default function TicketPrint({
                     <p style="margin:2px 0 0;font-size:13px;color:#000;">${esc(location)}</p>
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;border-collapse:collapse;font-size:12px;color:#000;">
                       <tr><td style="padding:2px 0;">Bilet Turu</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(ticketType)}</td></tr>
-                      ${seatDetails && seatDetails.length > 0 ? `<tr><td style="padding:2px 0;">Platz / Koltuk</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(seatDetails.map((s) => `${s.section_name} · Sıra ${s.row_label} · Nr ${s.seat_label}`).join("; "))}</td></tr>` : ""}
-                      <tr><td style="padding:2px 0;">Kisi/Adet</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(buyerName)} / ${quantity}</td></tr>
-                      <tr><td style="padding:2px 0;">Toplam</td><td style="padding:2px 0;font-weight:800;text-align:right;">${esc(priceText)}</td></tr>
+                      ${
+                        seatLine
+                          ? `<tr><td style="padding:2px 0;">Platz / Koltuk</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(
+                              seatLine
+                            )}</td></tr>`
+                          : ""
+                      }
+                      <tr><td style="padding:2px 0;">Kisi/Adet</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(
+                        buyerName
+                      )} / ${qty}</td></tr>
+                      <tr><td style="padding:2px 0;">Toplam</td><td style="padding:2px 0;font-weight:800;text-align:right;">${esc(
+                        priceTextForThis
+                      )}</td></tr>
                     </table>
                   </td>
                 </tr>
@@ -134,11 +195,11 @@ export default function TicketPrint({
             <td style="width:27%;padding:14px 16px;vertical-align:top;border-left:2px dashed #94a3b8;">
               <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:.6px;color:#000;">KOPARILABILIR BOLUM</p>
               <p style="margin:8px 0 0;font-size:12px;font-weight:700;color:#000;">Bilet Kodu</p>
-              <p style="margin:2px 0 0;font-size:18px;font-weight:800;letter-spacing:1px;font-family:monospace;color:#000;">${esc(ticketCode)}</p>
+              <p style="margin:2px 0 0;font-size:18px;font-weight:800;letter-spacing:1px;font-family:monospace;color:#000;">${esc(codeForSeat)}</p>
               <p style="margin:10px 0 0;font-size:11px;color:#000;">Giris Noktasi</p>
               <p style="margin:2px 0 0;font-size:13px;font-weight:700;color:#000;">EINGANG X</p>
               <div style="margin-top:10px;text-align:center;">
-                <img src="${qrCodeUrl}" alt="QR" width="130" height="130" style="border:1px solid #e2e8f0;padding:6px;background:#fff;" />
+                <img src="${qrUrlForSeat}" alt="QR" width="130" height="130" style="border:1px solid #e2e8f0;padding:6px;background:#fff;" />
               </div>
               <p style="margin:6px 0 0;font-size:10px;color:#000;text-align:center;">QR kodu giriste okutunuz</p>
             </td>
@@ -146,6 +207,11 @@ export default function TicketPrint({
         </table>
       </div>
     `;
+    };
+
+    const ticketHtml = seatsArray
+      .map((seat) => `<div class="print-ticket">${makeTicketHtmlForSeat(seat)}</div>`)
+      .join("");
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -154,8 +220,12 @@ export default function TicketPrint({
           <title>Bilet - ${ticketCode}</title>
           <style>
             * { box-sizing: border-box; }
-            body { margin: 0; padding: 20px; font-family: Arial, sans-serif; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-            @media print { body { padding: 10px; } }
+            body { margin: 0; padding: 12px; font-family: Arial, sans-serif; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            .print-page { display: block; page-break-after: always; }
+            .print-page:last-child { page-break-after: auto; }
+            .print-ticket { width: 100%; max-width: 900px; margin: 0 auto 12px auto; }
+            .print-ticket > div { max-width: 100% !important; }
+            @media print { body { padding: 8px; } .print-ticket { margin-bottom: 8px; } }
           </style>
         </head>
         <body>${ticketHtml}</body>
@@ -190,6 +260,150 @@ export default function TicketPrint({
     setTimeout(printWhenReady, 300);
   };
 
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    setDownloading(true);
+    const hasMultipleSeats = !!seatDetails && seatDetails.length > 1;
+    const seatsArray = hasMultipleSeats && seatDetails ? seatDetails : [null];
+    const distinctCodes = [...new Set(seatsArray.map((s) => getCodeForSeat(s)))];
+
+    const fallbackBarcode = "data:image/svg+xml," + encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="238" viewBox="0 0 36 238"><rect width="36" height="238" fill="#f1f5f9"/><text x="18" y="120" text-anchor="middle" font-size="10" fill="#64748b">Barkod</text></svg>`
+    );
+    const barcodeDataUrls: Record<string, string> = {};
+    for (const code of distinctCodes) {
+      try {
+        const barcodeRes = await fetch(`${origin}/api/barcode?code=${encodeURIComponent(code)}`);
+        if (barcodeRes.ok) {
+          const blob = await barcodeRes.blob();
+          barcodeDataUrls[code] = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+      } catch (e) {
+        console.warn("Barkod yüklenemedi:", e);
+      }
+      if (!barcodeDataUrls[code]) barcodeDataUrls[code] = fallbackBarcode;
+    }
+
+    const esc = (s: string) =>
+      String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+
+    const makeTicketHtmlForSeat = (seat: SeatDetail | null) => {
+      const codeForSeat = getCodeForSeat(seat);
+      const barcodeDataUrl = barcodeDataUrls[codeForSeat] ?? fallbackBarcode;
+      const verticalCodeHtmlForSeat = codeForSeat
+        .split("")
+        .map((ch) => `<span style="display:block;line-height:9px;font-size:9px;font-family:monospace;">${esc(ch)}</span>`)
+        .join("");
+      const qrUrlForSeat = qrCodesMap[codeForSeat] ?? qrCodeUrl;
+
+      const seatLine =
+        seat != null
+          ? `${seat.section_name} · Sıra ${seat.row_label} · Nr ${seat.seat_label}`
+          : seatDetails && seatDetails.length === 1
+            ? `${seatDetails[0].section_name} · Sıra ${seatDetails[0].row_label} · Nr ${seatDetails[0].seat_label}`
+            : "";
+      const qty = seat ? 1 : quantity;
+      const priceForThis =
+        seat && quantity > 0 ? Number((totalPriceNumber / quantity).toFixed(2)) : totalPriceNumber;
+      const priceTextForThis = formatPrice(priceForThis, currency);
+
+      return `
+      <div style="max-width:900px;margin:0 auto;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#fff;">
+        <div style="background:#003f8c;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;letter-spacing:.4px;">
+          BILET EKOSISTEMI E-TICKET
+        </div>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+          <tr>
+            <td style="width:73%;padding:14px 16px;vertical-align:top;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
+                <tr>
+                  <td style="width:74px;vertical-align:top;padding-right:12px;">
+                    <div style="display:flex;gap:6px;align-items:flex-start;">
+                      <div style="width:42px;height:250px;border:1px solid #e2e8f0;background:#fff;overflow:hidden;">
+                        <img src="${esc(barcodeDataUrl)}" alt="Barkod" width="36" height="238" style="display:block;" />
+                      </div>
+                      <div style="font-size:9px;letter-spacing:.7px;font-family:monospace;color:#000;">${verticalCodeHtmlForSeat}</div>
+                    </div>
+                  </td>
+                  <td style="vertical-align:top;">
+                    <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:.4px;color:#000;">MUSTERI/ETKINLIK BILETI</p>
+                    <p style="margin:6px 0 0;font-size:36px;line-height:42px;font-weight:900;color:#000;">${esc(eventTitle || "Etkinlik")}</p>
+                    <p style="margin:12px 0 0;font-size:18px;line-height:22px;font-weight:800;color:#000;">${eventDateText}, ${timeText}</p>
+                    <p style="margin:4px 0 0;font-size:13px;line-height:16px;color:#000;font-weight:700;">${esc(venue)}</p>
+                    <p style="margin:2px 0 0;font-size:13px;color:#000;">${esc(location)}</p>
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;border-collapse:collapse;font-size:12px;color:#000;">
+                      <tr><td style="padding:2px 0;">Bilet Turu</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(ticketType)}</td></tr>
+                      ${seatLine ? `<tr><td style="padding:2px 0;">Platz / Koltuk</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(seatLine)}</td></tr>` : ""}
+                      <tr><td style="padding:2px 0;">Kisi/Adet</td><td style="padding:2px 0;font-weight:700;text-align:right;">${esc(buyerName)} / ${qty}</td></tr>
+                      <tr><td style="padding:2px 0;">Toplam</td><td style="padding:2px 0;font-weight:800;text-align:right;">${esc(priceTextForThis)}</td></tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+            <td style="width:27%;padding:14px 16px;vertical-align:top;border-left:2px dashed #94a3b8;">
+              <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:.6px;color:#000;">KOPARILABILIR BOLUM</p>
+              <p style="margin:8px 0 0;font-size:12px;font-weight:700;color:#000;">Bilet Kodu</p>
+              <p style="margin:2px 0 0;font-size:18px;font-weight:800;letter-spacing:1px;font-family:monospace;color:#000;">${esc(codeForSeat)}</p>
+              <p style="margin:10px 0 0;font-size:11px;color:#000;">Giris Noktasi</p>
+              <p style="margin:2px 0 0;font-size:13px;font-weight:700;color:#000;">EINGANG X</p>
+              <div style="margin-top:10px;text-align:center;">
+                <img src="${qrUrlForSeat ? esc(qrUrlForSeat) : ""}" alt="QR" width="130" height="130" style="border:1px solid #e2e8f0;padding:6px;background:#fff;" />
+              </div>
+              <p style="margin:6px 0 0;font-size:10px;color:#000;text-align:center;">QR kodu giriste okutunuz</p>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `;
+    };
+
+    const fullHtml = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Bilet - ${esc(ticketCode)}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 12px; font-family: Arial, sans-serif; }
+            .print-page { display: block; page-break-after: always; }
+            .print-page:last-child { page-break-after: auto; }
+            .print-ticket { width: 100%; max-width: 900px; margin: 0 auto 12px auto; }
+            .print-ticket > div { max-width: 100% !important; }
+          </style>
+        </head>
+        <body>
+          <div class="print-page">
+            ${seatsArray
+              .map((seat) => `<div class="print-ticket">${makeTicketHtmlForSeat(seat)}</div>`)
+              .join("")}
+          </div>
+        </body>
+      </html>
+    `;
+
+    const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `bilet-${ticketCode}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    setDownloading(false);
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-8">
@@ -198,13 +412,33 @@ export default function TicketPrint({
     );
   }
 
+  const seatsForRender: (SeatDetail | null)[] =
+    multiSeat && seatDetails ? seatDetails : [null];
+
   return (
     <div className="space-y-6">
-      {/* Bilet Kartı - Tasarımlı (email/PDF ile aynı) */}
-      <div
-        id="ticket-card"
-        className="relative mx-auto max-w-[900px] overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm"
-      >
+      {/* Bilet Kartı - Tasarımlı (her koltuk için ayrı) */}
+      <div className="space-y-6">
+        {seatsForRender.map((seat, idx) => {
+          const codeForSeat = getCodeForSeat(seat);
+          const barcodeSrcForSeat = `/api/barcode?code=${encodeURIComponent(codeForSeat)}`;
+          const qrUrlForSeat = qrCodesMap[codeForSeat] ?? qrCodeUrl;
+          const seatLine =
+            seat != null
+              ? `${seat.section_name} · Sıra ${seat.row_label} · Nr ${seat.seat_label}`
+              : seatDetails && seatDetails.length === 1
+                ? `${seatDetails[0].section_name} · Sıra ${seatDetails[0].row_label} · Nr ${seatDetails[0].seat_label}`
+                : "";
+          const qty = seat ? 1 : quantity;
+          const priceForThis =
+            seat && quantity > 0 ? Number((totalPriceNumber / quantity).toFixed(2)) : totalPriceNumber;
+          const priceTextForThis = formatPrice(priceForThis, currency);
+
+          return (
+            <div
+              key={idx}
+              className="relative mx-auto max-w-[900px] overflow-hidden rounded-xl border border-slate-300 bg-white shadow-sm"
+            >
         {/* Header */}
         <div className="bg-[#003f8c] px-4 py-2.5 text-sm font-bold tracking-wide text-white">
           BILET EKOSISTEMI E-TICKET
@@ -217,13 +451,13 @@ export default function TicketPrint({
             <div className="flex flex-shrink-0 items-start gap-1.5">
               <div className="flex h-[250px] w-[42px] items-center justify-center overflow-hidden rounded border border-slate-200 bg-white">
                 <img
-                  src={barcodeSrc}
+                  src={barcodeSrcForSeat}
                   alt="Bilet Barkod"
                   className="h-[238px] w-[36px] object-contain"
                 />
               </div>
               <div className="flex flex-col text-[9px] font-mono leading-[9px] tracking-wide text-black">
-                {ticketCode.split("").map((ch, i) => (
+                {codeForSeat.split("").map((ch, i) => (
                   <span key={i}>{ch}</span>
                 ))}
               </div>
@@ -240,29 +474,29 @@ export default function TicketPrint({
               </p>
               <p className="mt-1 text-[13px] font-bold text-black">{venue}</p>
               <p className="mt-0.5 text-[13px] text-black">{location}</p>
-                    <table className="mt-3 w-full border-collapse text-xs text-black">
+              <table className="mt-3 w-full border-collapse text-xs text-black">
                 <tbody>
                   <tr>
                     <td className="py-0.5">Bilet Turu</td>
                     <td className="py-0.5 text-right font-bold">{ticketType}</td>
                   </tr>
-                  {seatDetails && seatDetails.length > 0 && (
+                  {seatLine && (
                     <tr>
                       <td className="py-0.5">Platz / Koltuk</td>
-                      <td className="py-0.5 text-right font-bold">
-                        {seatDetails.map((s) => `${s.section_name} · Sıra ${s.row_label} · Nr ${s.seat_label}`).join("; ")}
-                      </td>
+                      <td className="py-0.5 text-right font-bold">{seatLine}</td>
                     </tr>
                   )}
                   <tr>
                     <td className="py-0.5">Kisi/Adet</td>
                     <td className="py-0.5 text-right font-bold">
-                      {buyerName} / {quantity}
+                      {buyerName} / {qty}
                     </td>
                   </tr>
                   <tr>
                     <td className="py-0.5">Toplam</td>
-                    <td className="py-0.5 text-right font-extrabold">{priceText}</td>
+                    <td className="py-0.5 text-right font-extrabold">
+                      {formatPrice(priceForThis, currency)}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -285,13 +519,13 @@ export default function TicketPrint({
             </p>
             <p className="mt-2 text-xs font-bold text-black">Bilet Kodu</p>
             <p className="mt-0.5 font-mono text-lg font-extrabold tracking-wide text-black">
-              {ticketCode}
+              {codeForSeat}
             </p>
             <p className="mt-2.5 text-[11px] text-black">Giris Noktasi</p>
             <p className="mt-0.5 text-[13px] font-bold text-black">EINGANG X</p>
             <div className="mt-2.5 flex justify-center">
               <img
-                src={qrCodeUrl}
+                src={qrUrlForSeat}
                 alt="Bilet QR Kodu"
                 className="h-[130px] w-[130px] rounded border border-slate-200 bg-white p-1.5"
               />
@@ -302,9 +536,12 @@ export default function TicketPrint({
           </div>
         </div>
       </div>
+        );
+        })}
+      </div>
 
-      {/* Yazdır butonu */}
-      <div className="flex justify-center print:hidden">
+      {/* Yazdır ve İndir butonları */}
+      <div className="flex flex-wrap justify-center gap-3 print:hidden">
         <button
           onClick={handlePrint}
           className="flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-primary-700"
@@ -312,7 +549,18 @@ export default function TicketPrint({
           <Printer className="h-5 w-5" />
           Yazdır
         </button>
+        <button
+          onClick={handleDownload}
+          disabled={downloading}
+          className="flex items-center gap-2 rounded-lg border-2 border-primary-600 bg-white px-6 py-3 font-semibold text-primary-600 transition-colors hover:bg-primary-50 disabled:opacity-60"
+        >
+          <Download className="h-5 w-5" />
+          {downloading ? "İndiriliyor…" : "İndir"}
+        </button>
       </div>
+      <p className="text-center text-xs text-slate-500 print:hidden">
+        Yazdır: Her sayfada 2 bilet. İndir: Barkod ve QR kodu dosyaya gömülür; internet olmadan da salon girişinde gösterebilirsiniz.
+      </p>
     </div>
   );
 }

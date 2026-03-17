@@ -306,7 +306,7 @@
     "stepContinue": "Devam",
     "stepBack": "Geri",
     "emailNotSent": "E-posta gönderilemedi.",
-    "emailNotSentHint": "Biletiniz aşağıda görüntüleniyor. Daha sonra yönetim panelinden biletinizi yazdırabilirsiniz.",
+    "emailNotSentHint": "Bilet veya biletlerinizi şimdi bu sayfadan yazdırabilirsiniz; isterseniz daha sonra da yönetim panelinden yazdırabilirsiniz.",
     "paymentDetails": "Ödeme Bilgileri",
     "securePayment": "Güvenli ödeme altyapısı ile işlenir.",
     "cardNumber": "Kart Numarası",

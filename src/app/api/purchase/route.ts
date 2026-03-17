@@ -14,7 +14,7 @@ function generateTicketCode(): string {
   return code;
 }
 
-type SeatDetail = { section_name: string; row_label: string; seat_label: string };
+type SeatDetail = { section_name: string; row_label: string; seat_label: string; ticket_code?: string };
 
 type TicketMailPayload = {
   buyerEmail: string;
@@ -465,18 +465,20 @@ async function buildTicketPdfBase64(payload: TicketMailPayload) {
   return Buffer.from(pdfBytes).toString("base64");
 }
 
-/** Çok koltuklu siparişte her koltuk için ayrı sayfa (1 bilet = 1 sayfa); tek sayfa için buildTicketPdfBase64 kullanır. */
+/** Çok koltuklu siparişte her koltuk için ayrı sayfa (1 bilet = 1 sayfa); her sayfada o koltuğun benzersiz bilet kodu. */
 async function buildTicketPdfMultiPageBase64(payload: TicketMailPayload): Promise<string> {
   if (!payload.seatDetails || payload.seatDetails.length <= 1) {
     return buildTicketPdfBase64(payload);
   }
   const combinedDoc = await PDFDocument.create();
   for (const seat of payload.seatDetails) {
+    const seatCode = seat.ticket_code || payload.ticketCode;
     const singlePayload: TicketMailPayload = {
       ...payload,
+      ticketCode: seatCode,
       quantity: 1,
       ticketType: seat.section_name,
-      seatDetails: [seat],
+      seatDetails: [{ ...seat, ticket_code: seatCode }],
       totalPrice: Number((payload.totalPrice / payload.quantity).toFixed(2)),
     };
     const singleBase64 = await buildTicketPdfBase64(singlePayload);
@@ -724,7 +726,7 @@ export async function POST(request: NextRequest) {
     }
 
     const totalPrice = Number(ticket.price) * quantity;
-    const ticketCode = generateTicketCode();
+    const ticketCode = generateTicketCode(); // sipariş ana kodu (yer seçilmediyse veya tek bilet)
 
     if (Number(ticket.available || 0) < quantity) {
       return NextResponse.json(
@@ -825,13 +827,15 @@ export async function POST(request: NextRequest) {
         const section_name = sectionRow?.name ?? "";
         const row_label = rowRow?.row_label ?? "";
         const seat_label = seatRow?.seat_label ?? "";
-        seatDetails.push({ section_name, row_label, seat_label });
+        const seatTicketCode = generateTicketCode();
+        seatDetails.push({ section_name, row_label, seat_label, ticket_code: seatTicketCode });
         const { error: seatInsertError } = await supabase.from("order_seats").insert({
           order_id: orderData.id,
           seat_id: seatId,
           section_name,
           row_label,
           seat_label,
+          ticket_code: seatTicketCode,
         });
         if (seatInsertError) {
           const isDuplicateSeat = seatInsertError.code === "23505";

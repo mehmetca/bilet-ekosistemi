@@ -7,7 +7,23 @@ import { ArrowLeft, Plus, ChevronDown, ChevronRight, Copy, Trash2 } from "lucide
 import { supabase } from "@/lib/supabase-client";
 import OrganizerOrAdminGuard from "@/components/OrganizerOrAdminGuard";
 import { getMusensaalTemplateCopy } from "@/lib/seating-plans/musensaal-to-db";
+import { getPlan } from "@/lib/seating-plans";
+import SalonPlanViewer from "@/components/SalonPlanViewer";
 import type { SeatingPlan, SeatingPlanSection, SeatingPlanRow, Seat } from "@/types/database";
+
+const MUSENSAAL_SECTION_NAMES = [
+  "Parkett",
+  "Empore Mitte Sol",
+  "Empore Mitte Sağ",
+  "Seitensempore Links",
+  "Seitensempore Rechts",
+  "Empore Hinten",
+];
+
+function planHasMusensaalStructure(sections: SeatingPlanSection[]): boolean {
+  if (sections.length !== MUSENSAAL_SECTION_NAMES.length) return false;
+  return sections.every((s, i) => s.name === MUSENSAAL_SECTION_NAMES[i]);
+}
 
 export default function OturumPlaniPage() {
   return (
@@ -31,11 +47,14 @@ function OturumPlaniContent() {
   const [expandedSection, setExpandedSection] = useState<string | null>(null);
   const [newPlanName, setNewPlanName] = useState("");
   const [addingPlan, setAddingPlan] = useState(false);
+  const [addingMultipleSalons, setAddingMultipleSalons] = useState(false);
+  const [musensaalCopyPlanName, setMusensaalCopyPlanName] = useState("Salon 1");
   const [newSectionName, setNewSectionName] = useState<Record<string, string>>({});
   const [newRowLabel, setNewRowLabel] = useState<Record<string, string>>({});
   const [newSeatRange, setNewSeatRange] = useState<Record<string, string>>({}); // "1-10" gibi
   const [sectionTicketLabel, setSectionTicketLabel] = useState<Record<string, string>>({}); // sectionId -> ticket_type_label (düzenleme)
   const [copyingTemplate, setCopyingTemplate] = useState(false);
+  const [creatingTheaterDuisburg, setCreatingTheaterDuisburg] = useState(false);
   const [addingMissingRows, setAddingMissingRows] = useState(false);
   const [addingMissingSeats, setAddingMissingSeats] = useState(false);
 
@@ -159,12 +178,40 @@ function OturumPlaniContent() {
       .single();
     setAddingPlan(false);
     if (error) {
-      alert("Plan eklenemedi: " + error.message);
+      alert("Salon eklenemedi: " + error.message);
       return;
     }
     setNewPlanName("");
     await refreshPlans();
     if (data) setExpandedPlan(data.id);
+  };
+
+  /** Bir seferde 2, 3 veya 4 salon ekler. Mevcut "Salon N" isimlerine bakıp numarayı devam ettirir (örn. 2 salon varsa Salon 3, Salon 4). */
+  const handleAddMultipleSalons = async (count: number) => {
+    if (!venueId || count < 2 || count > 4) return;
+    const matchSalonN = plans.map((p) => p.name.match(/^Salon\s*(\d+)$/)).filter(Boolean) as RegExpMatchArray[];
+    const maxN = matchSalonN.length ? Math.max(0, ...matchSalonN.map((m) => parseInt(m[1], 10))) : 0;
+    const start = maxN + 1;
+    setAddingMultipleSalons(true);
+    try {
+      for (let i = 0; i < count; i++) {
+        const name = `Salon ${start + i}`;
+        const isFirst = plans.length === 0 && i === 0;
+        const { data, error } = await supabase
+          .from("seating_plans")
+          .insert({ venue_id: venueId, name, is_default: isFirst })
+          .select()
+          .single();
+        if (error) {
+          alert(`"${name}" eklenirken hata: ${error.message}`);
+          break;
+        }
+        if (data && i === 0) setExpandedPlan(data.id);
+      }
+      await refreshPlans();
+    } finally {
+      setAddingMultipleSalons(false);
+    }
   };
 
   const handleAddSection = async (planId: string) => {
@@ -279,13 +326,14 @@ function OturumPlaniContent() {
 
   const handleCopyFromTemplate = async () => {
     if (!venueId) return;
-    if (!confirm("Musensaal şablonundan bu mekan için bir kopya oluşturulsun mu? Oluşan planı sonradan düzenleyebilirsiniz.")) return;
+    const planName = (musensaalCopyPlanName || "Salon 1").trim() || "Salon 1";
+    if (!confirm(`Musensaal (Rosengarten Mannheim) şablonu bu mekana "${planName}" adıyla eklenecek. Onaylıyor musunuz?`)) return;
     setCopyingTemplate(true);
     try {
       const template = getMusensaalTemplateCopy();
       const { data: planData, error: planErr } = await supabase
         .from("seating_plans")
-        .insert({ venue_id: venueId, name: template.planName, is_default: plans.length === 0 })
+        .insert({ venue_id: venueId, name: planName, is_default: plans.length === 0 })
         .select()
         .single();
       if (planErr || !planData) {
@@ -297,6 +345,35 @@ function OturumPlaniContent() {
       setExpandedPlan(planData.id);
     } finally {
       setCopyingTemplate(false);
+    }
+  };
+
+  /** Theater Duisburg görsel planı için veritabanında bölüm/sıra/koltuk oluşturur (API ile). */
+  const handleCreateTheaterDuisburg = async () => {
+    if (!venueId) return;
+    if (!confirm('Bu mekan için "Theater Duisburg" oturum planı oluşturulacak (bölümler, sıralar, koltuklar). Etkinlikte bu planı seçip görsel plan ile koltuk seçimi yapabilirsiniz. Devam?')) return;
+    setCreatingTheaterDuisburg(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        alert('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
+        return;
+      }
+      const res = await fetch('/api/yonetim/theater-duisburg-plan', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ venueId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(data?.error || 'Plan oluşturulamadı.');
+        return;
+      }
+      await refreshPlans();
+      if (data.planId) setExpandedPlan(data.planId);
+    } finally {
+      setCreatingTheaterDuisburg(false);
     }
   };
 
@@ -514,7 +591,7 @@ function OturumPlaniContent() {
   };
 
   const deletePlan = async (planId: string) => {
-    if (!confirm("Bu planı ve tüm bölüm/sıra/koltuk verilerini silmek istediğinize emin misiniz?")) return;
+    if (!confirm("Bu salonu ve tüm bölüm/sıra/koltuk verilerini silmek istediğinize emin misiniz?")) return;
     const { error } = await supabase.from("seating_plans").delete().eq("id", planId);
     if (error) alert("Silinemedi: " + error.message);
     else await refreshPlans();
@@ -551,9 +628,12 @@ function OturumPlaniContent() {
           Mekanlar
         </Link>
       </div>
-      <h1 className="text-2xl font-bold text-slate-900">Oturum planı</h1>
+      <h1 className="text-2xl font-bold text-slate-900">Salon tasarımı</h1>
       <p className="mt-1 text-slate-600">
-        <strong>{venueName}</strong> için bölüm, sıra ve koltuk tanımlayın. Etkinlik oluştururken bu planı seçerek &quot;Yer seçerek bilet al&quot; özelliğini açabilirsiniz.
+        <strong>{venueName}</strong> için salonları burada tanımlayın. Musensaal (Rosengarten Mannheim) koltuk planını kullanmak için şablondan kopyalayın; açtığınız salonda görsel koltuk planı önizlemesi gösterilir. Etkinlik oluştururken mekan + salon seçilir.
+      </p>
+      <p className="mt-1 text-xs text-slate-500">
+        Blok taslağı ile tasarlamak isterseniz: <Link href="/yonetim/salon-tasarim-vizor" className="text-primary-600 hover:underline">Salon Tasarım Vizörü</Link> ile tasarlayıp &quot;Bu planı mekana aktar&quot; ile bu mekana ekleyebilirsiniz.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2 items-center">
@@ -561,7 +641,7 @@ function OturumPlaniContent() {
           type="text"
           value={newPlanName}
           onChange={(e) => setNewPlanName(e.target.value)}
-          placeholder="Yeni plan adı (örn. Ana salon)"
+          placeholder="Salon adı (örn. Salon 1, Ana salon)"
           className="rounded-lg border border-slate-300 px-3 py-2 flex-1 max-w-xs"
         />
         <button
@@ -571,21 +651,55 @@ function OturumPlaniContent() {
           className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-white hover:bg-primary-700 disabled:opacity-50"
         >
           <Plus className="h-4 w-4" />
-          Yeni plan
+          Yeni salon
         </button>
+        <span className="text-slate-400 text-sm">veya</span>
+        <div className="inline-flex gap-1">
+          {[2, 3, 4].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => handleAddMultipleSalons(n)}
+              disabled={addingMultipleSalons}
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-slate-700 hover:bg-slate-50 disabled:opacity-50 text-sm"
+              title={`${n} salon ekle (Salon 1 … Salon ${n})`}
+            >
+              {addingMultipleSalons ? "Ekleniyor…" : `${n} salon ekle`}
+            </button>
+          ))}
+        </div>
+        <span className="text-slate-500 text-sm">Musensaal şablonu:</span>
+        <input
+          type="text"
+          value={musensaalCopyPlanName}
+          onChange={(e) => setMusensaalCopyPlanName(e.target.value)}
+          placeholder="Salon 1 veya Musensaal"
+          className="rounded-lg border border-slate-300 px-3 py-2 w-40"
+          title="Şablon kopyalandığında bu isimle salon oluşturulur"
+        />
         <button
           type="button"
           onClick={handleCopyFromTemplate}
           disabled={copyingTemplate}
           className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          title="Orijinal şablon değişmez; mekana düzenlenebilir bir kopya eklenir."
+          title="Musensaal (Rosengarten Mannheim) koltuk planı bu mekana verilen isimle eklenir."
         >
           <Copy className="h-4 w-4" />
           {copyingTemplate ? "Kopyalanıyor…" : "Şablondan kopyala: Musensaal"}
         </button>
+        <button
+          type="button"
+          onClick={handleCreateTheaterDuisburg}
+          disabled={creatingTheaterDuisburg}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          title="Theater Duisburg (görsel plan) bölüm/sıra/koltuk verilerini veritabanında oluşturur. Etkinlikte bu planı seçince salon görseli üzerinde tıklanabilir koltuklar gösterilir."
+        >
+          <Copy className="h-4 w-4" />
+          {creatingTheaterDuisburg ? "Oluşturuluyor…" : "Theater Duisburg planını oluştur"}
+        </button>
       </div>
       <p className="mt-1 text-xs text-slate-500">
-        Şablondan kopyala: Musensaal planının bir kopyası bu mekana eklenir; orijinal şablon aynen kalır, kopyayı istediğiniz gibi düzenleyebilirsiniz.
+        <strong>Musensaal:</strong> &quot;Salon 1&quot; veya &quot;Musensaal&quot; yazıp &quot;Şablondan kopyala&quot; ile Rosengarten Mannheim koltuk planı bu mekana eklenir. <strong>Theater Duisburg:</strong> &quot;Theater Duisburg planını oluştur&quot; ile görsel plan (fotoğraf/PDF) ile eşleşen bölüm/sıra/koltuk veritabanına eklenir; <code>public/seatplans/theaterduisburg.png</code> görselini koyduğunuzda etkinlik sayfasında tıklanabilir koltuklar gösterilir.
       </p>
       <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
         <strong>Bilet türleri ile eşleştirme:</strong> Her bölümde &quot;Bilet türü (etkinlikte eşlenecek)&quot; alanına yazdığınız isim, <em>etkinlik oluştururken</em> eklediğiniz bilet türü adıyla <strong>birebir aynı</strong> olmalı (örn. Kategori 1, Kategori 2). Musensaal şablonundan kopyaladıysanız bölümler zaten Kategori 1–4 ile işaretlidir; etkinlikte bu isimlerle bilet türü ekleyin.
@@ -594,10 +708,17 @@ function OturumPlaniContent() {
       <div className="mt-8 space-y-4">
         {plans.map((plan) => (
           <div key={plan.id} className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-            <button
-              type="button"
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => setExpandedPlan((id) => (id === plan.id ? null : plan.id))}
-              className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setExpandedPlan((id) => (id === plan.id ? null : plan.id));
+                }
+              }}
+              className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 cursor-pointer"
             >
               <span className="flex items-center gap-2 font-semibold text-slate-900">
                 {expandedPlan === plan.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -649,9 +770,21 @@ function OturumPlaniContent() {
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-            </button>
+            </div>
             {expandedPlan === plan.id && (
               <div className="border-t border-slate-200 px-5 pb-5 pt-2">
+                {planHasMusensaalStructure(sectionsByPlan[plan.id] || []) && (() => {
+                  const musensaalPlan = getPlan("musensaal");
+                  return musensaalPlan ? (
+                    <div className="mb-6 rounded-xl border border-primary-200 bg-white p-4">
+                      <h3 className="text-sm font-semibold text-slate-800 mb-2">Koltuk planı önizleme (Musensaal düzeni)</h3>
+                      <p className="text-xs text-slate-500 mb-3">Bu salon Musensaal (Rosengarten Mannheim) düzenindedir. Koltuklara tıklayarak seçim yapabilirsiniz.</p>
+                      <div className="overflow-x-auto">
+                        <SalonPlanViewer plan={musensaalPlan} />
+                      </div>
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex gap-2 mt-2 mb-4">
                   <input
                     type="text"
@@ -774,7 +907,7 @@ function OturumPlaniContent() {
 
       {plans.length === 0 && (
         <p className="mt-6 text-slate-500">
-          Henüz oturum planı yok. Yukarıdan &quot;Yeni plan&quot; ile ekleyin; sonra bölüm, sıra ve koltuk tanımlayın.
+          Henüz salon yok. Yukarıdan &quot;Yeni salon&quot; veya &quot;2 salon ekle&quot; / &quot;3 salon ekle&quot; ile ekleyin; her salona bölüm, sıra ve koltuk tanımlayın veya Salon Tasarım Vizöründen plan aktarın.
         </p>
       )}
     </div>

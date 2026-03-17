@@ -29,7 +29,9 @@ export default function MusensaalOnizlemeClient() {
         </div>
         <h1 className="text-2xl font-bold text-slate-900">{plan.name} – Koltuk Planı (Önizleme)</h1>
         <p className="mt-1 text-slate-600">
-          Koltuklara tıklayarak seçim yapabilirsiniz. Bu planı bir mekana atamak için mekanın oturum planı sayfasından şablonu kullanabilirsiniz.
+          Koltuklara tıklayarak seçim yapabilirsiniz. Bu planı bir mekana <strong>Salon 1</strong> veya <strong>Musensaal</strong> adıyla eklemek için:{" "}
+          <Link href="/yonetim/mekanlar" className="text-primary-600 hover:underline">Mekanlar</Link>
+          {" "}→ ilgili mekanın <strong>Salonlar</strong> linki → &quot;Musensaal şablonu&quot; alanına &quot;Salon 1&quot; veya &quot;Musensaal&quot; yazıp <strong>Şablondan kopyala: Musensaal</strong> butonuna tıklayın.
         </p>
         <div className="mt-6 overflow-x-auto">
           <SalonPlanViewer plan={plan} />

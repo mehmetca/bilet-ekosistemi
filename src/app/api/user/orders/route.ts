@@ -3,7 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 
-type SeatDetail = { section_name: string; row_label: string; seat_label: string };
+type SeatDetail = { section_name: string; row_label: string; seat_label: string; ticket_code?: string };
 
 type OrderRow = {
   id: string;
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
       if (fallbackIds.length > 0) {
         const { data: seatsRows } = await supabase
           .from("order_seats")
-          .select("order_id, section_name, row_label, seat_label")
+          .select("order_id, section_name, row_label, seat_label, ticket_code")
           .in("order_id", fallbackIds);
         const seatsByOrder = new Map<string, SeatDetail[]>();
         for (const row of seatsRows || []) {
@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
             section_name: row.section_name ?? "",
             row_label: row.row_label ?? "",
             seat_label: row.seat_label ?? "",
+            ticket_code: row.ticket_code ?? undefined,
           });
           seatsByOrder.set(row.order_id, list);
         }
@@ -124,7 +125,7 @@ export async function GET(request: NextRequest) {
     if (orderIds.length > 0) {
       const { data: seatsRows } = await supabase
         .from("order_seats")
-        .select("order_id, section_name, row_label, seat_label")
+        .select("order_id, section_name, row_label, seat_label, ticket_code")
         .in("order_id", orderIds);
       const seatsByOrder = new Map<string, SeatDetail[]>();
       for (const row of seatsRows || []) {
@@ -133,6 +134,7 @@ export async function GET(request: NextRequest) {
           section_name: row.section_name ?? "",
           row_label: row.row_label ?? "",
           seat_label: row.seat_label ?? "",
+          ticket_code: row.ticket_code ?? undefined,
         });
         seatsByOrder.set(row.order_id, list);
       }

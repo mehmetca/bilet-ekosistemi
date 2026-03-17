@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, LayoutGrid } from "lucide-react";
+import { ArrowLeft, LayoutGrid, Building2 } from "lucide-react";
 import OrganizerOrAdminGuard from "@/components/OrganizerOrAdminGuard";
 import Plan2BlockDesigner from "./Plan2BlockDesigner";
 import type { Block } from "./Plan2BlockDesigner";
@@ -50,6 +50,12 @@ export default function SalonTasarimVizorClient() {
   const [plan2Blocks, setPlan2Blocks] = useState<Block[]>(getDefaultPlan2Blocks);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [saveToServerStatus, setSaveToServerStatus] = useState<"idle" | "saving" | "ok" | "error">("idle");
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [venues, setVenues] = useState<{ id: string; name: string; city: string | null }[]>([]);
+  const [exportVenueId, setExportVenueId] = useState("");
+  const [exportPlanName, setExportPlanName] = useState("Salon planı");
+  const [exportStatus, setExportStatus] = useState<"idle" | "loading" | "ok" | "error">("idle");
+  const [exportMessage, setExportMessage] = useState("");
 
   // Önce sunucudan planı yükle (canlıda aynı plan görünsün); yoksa tarayıcıdan
   useEffect(() => {
@@ -113,6 +119,52 @@ export default function SalonTasarimVizorClient() {
     setPlan2Blocks(getDefaultPlan2Blocks());
     setLastSavedAt(null);
   }
+
+  useEffect(() => {
+    if (!showExportModal) return;
+    (async () => {
+      const { data } = await supabase.from("venues").select("id, name, city").order("name");
+      setVenues((data as { id: string; name: string; city: string | null }[]) || []);
+      if (!exportVenueId && data?.length) setExportVenueId(data[0].id);
+    })();
+  }, [showExportModal]);
+
+  async function exportToVenue() {
+    if (!exportVenueId || !exportPlanName.trim()) return;
+    const blocksToSend = plan2Blocks.filter((b) => b.blockType !== "corridor");
+    if (!blocksToSend.length) {
+      setExportMessage("En az bir blok (koridor hariç) ekleyin.");
+      return;
+    }
+    setExportStatus("loading");
+    setExportMessage("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch("/api/salon-vizor-to-venue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          venueId: exportVenueId,
+          planName: exportPlanName.trim(),
+          plan2Blocks: blocksToSend,
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setExportStatus("ok");
+        setExportMessage(json.message || "Plan mekana eklendi.");
+      } else {
+        setExportStatus("error");
+        setExportMessage(json.error || "Plan mekana eklenemedi.");
+      }
+    } catch {
+      setExportStatus("error");
+      setExportMessage("İstek gönderilemedi.");
+    }
+  }
+
+  const hasExportableBlocks = plan2Blocks.some((b) => b.blockType && b.blockType !== "corridor");
 
   return (
     <OrganizerOrAdminGuard>
@@ -314,8 +366,77 @@ export default function SalonTasarimVizorClient() {
             >
               Yeni plan
             </button>
+            {hasExportableBlocks && (
+              <button
+                type="button"
+                onClick={() => { setShowExportModal(true); setExportStatus("idle"); setExportMessage(""); }}
+                className="px-4 py-3 rounded-lg border border-emerald-600 bg-emerald-50 text-emerald-800 font-medium hover:bg-emerald-100 flex items-center gap-2"
+              >
+                <Building2 className="h-4 w-4" />
+                Bu planı mekana aktar
+              </button>
+            )}
           </div>
         </div>
+
+        {showExportModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => { if (exportStatus !== "loading") setShowExportModal(false); }}>
+            <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Planı mekana aktar</h3>
+              <p className="text-sm text-slate-600 mb-4">
+                Bu tasarım seçtiğiniz mekanın oturum planı olarak eklenecek. Etkinlik oluştururken bu mekanı ve planı seçebilirsiniz.
+              </p>
+              <div className="space-y-3 mb-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Mekan</label>
+                  <select
+                    value={exportVenueId}
+                    onChange={(e) => setExportVenueId(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  >
+                    <option value="">— Mekan seçin —</option>
+                    {venues.map((v) => (
+                      <option key={v.id} value={v.id}>{v.name}{v.city ? ` (${v.city})` : ""}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Plan adı</label>
+                  <input
+                    type="text"
+                    value={exportPlanName}
+                    onChange={(e) => setExportPlanName(e.target.value)}
+                    placeholder="Örn: Ana salon"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+              </div>
+              {exportMessage && (
+                <p className={`text-sm mb-4 ${exportStatus === "ok" ? "text-green-600" : "text-amber-600"}`}>
+                  {exportMessage}
+                </p>
+              )}
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowExportModal(false)}
+                  disabled={exportStatus === "loading"}
+                  className="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Kapat
+                </button>
+                <button
+                  type="button"
+                  onClick={exportToVenue}
+                  disabled={exportStatus === "loading" || !exportVenueId || !exportPlanName.trim()}
+                  className="px-4 py-2 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {exportStatus === "loading" ? "Ekleniyor…" : "Mekana aktar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </OrganizerOrAdminGuard>
   );

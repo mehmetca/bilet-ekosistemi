@@ -59,12 +59,6 @@ export default async function RootLayout({
     <html lang={validLocale}>
       <head />
       <body className={inter.className}>
-        <noscript>
-          <div style={{ padding: "2rem", textAlign: "center", background: "#f1f5f9", minHeight: "100vh", color: "#0f172a" }}>
-            <p><strong>Bilet Ekosistemi</strong></p>
-            <p>Bu site JavaScript gerektirir. Lütfen tarayıcınızda JavaScript&apos;i etkinleştirip sayfayı yenileyin.</p>
-          </div>
-        </noscript>
         <NextIntlClientProvider locale={validLocale} messages={messages}>
           <GlobalErrorHandler>
             <AppErrorBoundary>

@@ -629,7 +629,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Mekan *</label>
-                <p className="text-xs text-slate-500 mb-1">Koltuk seçimi için <strong>aşağıdaki listeden</strong> mekan seçin; manuel yazarsanız oturum planı kullanılamaz.</p>
+                <p className="text-xs text-slate-500 mb-1">Koltuk seçimi için <strong>aşağıdaki listeden</strong> mekan seçin; ardından o mekandaki <strong>salonu</strong> (oturum planı) seçin. Manuel mekan yazarsanız salon/oturum planı kullanılamaz.</p>
                 <select
                   value={selectedVenueId}
                   onChange={(e) => {
@@ -680,7 +680,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
               )}
               {selectedVenueId && seatingPlans.length > 0 && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Oturum planı (koltuk seçimi)</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Salon (oturum planı)</label>
                   <select value={selectedSeatingPlanId} onChange={(e) => setSelectedSeatingPlanId(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500">
                     <option value="">— Koltuk seçimi kullanılmasın —</option>
                     {seatingPlans.map((p) => (

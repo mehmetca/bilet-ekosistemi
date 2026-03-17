@@ -43,6 +43,38 @@ export async function POST(request: NextRequest) {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    // Önce koltuk bazlı bilet kodunu kontrol et (order_seats) – her koltuk ayrı kod
+    const { data: orderSeat, error: seatFetchError } = await supabase
+      .from("order_seats")
+      .select("id, order_id, checked_at")
+      .ilike("ticket_code", ticketCode)
+      .maybeSingle();
+
+    if (!seatFetchError && orderSeat) {
+      if (orderSeat.checked_at) {
+        return NextResponse.json(
+          { success: false, message: "Bu bilet daha önce giriş yapılmış." },
+          { status: 400 }
+        );
+      }
+      const { error: seatUpdateError } = await supabase
+        .from("order_seats")
+        .update({ checked_at: new Date().toISOString() })
+        .eq("id", orderSeat.id);
+      if (seatUpdateError) {
+        console.error("checkin-ticket order_seats update error:", seatUpdateError);
+        return NextResponse.json(
+          { success: false, message: "Giriş işaretlenemedi." },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({
+        success: true,
+        message: "Giriş işaretlendi.",
+      });
+    }
+
+    // Koltuk kodu yoksa sipariş bazlı kodu dene (eski tek bilet / yer seçilmeyen)
     const { data: order, error: fetchError } = await supabase
       .from("orders")
       .select("id, event_id, checked_at, status, events(created_by_user_id)")
@@ -88,7 +120,6 @@ export async function POST(request: NextRequest) {
     if (isAdmin) {
       // Admin: tüm etkinliklerde check-in
     } else if (isController) {
-      // Kontrolör: organizatöre atanmışsa sadece o organizatörün etkinliklerinde
       const { data: assignment } = await supabase
         .from("organizer_controllers")
         .select("organizer_user_id")
