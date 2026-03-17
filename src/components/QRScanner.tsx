@@ -11,12 +11,19 @@ interface QRScannerProps {
   continuous?: boolean;
 }
 
+type CameraDevice = {
+  id: string;
+  label: string;
+};
+
 export default function QRScanner({ onScan, onClose, continuous = false }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(true);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
+  const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
+  const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
 
   async function stopAndClearScanner() {
     const scanner = scannerRef.current;
@@ -54,14 +61,26 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
 
         if (!mounted) return;
 
+        setAvailableCameras(cameras as CameraDevice[]);
+
         const scanner = new Html5Qrcode(elementId);
         scannerRef.current = scanner;
 
-        // Mümkünse arka (environment) kamerayı kullan; yoksa ilk kamerayı seç.
-        const backCamera = cameras.find((c) =>
-          /back|rear|environment|hinten|r\u00fcck/i.test(c.label || "")
-        );
-        const cameraId = (backCamera ?? cameras[0]).id;
+        // Varsayılan: arka (environment) kamera; yoksa ilk kamera.
+        let cameraId = selectedCameraId;
+        if (!cameraId) {
+          const backCamera = cameras.find((c) =>
+            /back|rear|environment|hinten|r\u00fcck/i.test(c.label || "")
+          );
+          cameraId = (backCamera ?? cameras[0]).id;
+          if (mounted) setSelectedCameraId(cameraId);
+        }
+
+        if (!cameraId) {
+          setError("Kamera bulunamadı.");
+          setIsStarting(false);
+          return;
+        }
 
         await scanner.start(
           cameraId,
@@ -114,7 +133,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
       mounted = false;
       void stopAndClearScanner();
     };
-  }, [continuous, onClose]);
+  }, [continuous, onClose, selectedCameraId]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
@@ -156,6 +175,30 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
               </div>
             )}
           </div>
+
+          {availableCameras.length > 1 && (
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">
+                Kamera seç
+              </label>
+              <select
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={selectedCameraId ?? ""}
+                onChange={(e) => {
+                  const id = e.target.value || null;
+                  void stopAndClearScanner().finally(() => {
+                    setSelectedCameraId(id);
+                  });
+                }}
+              >
+                {availableCameras.map((cam) => (
+                  <option key={cam.id} value={cam.id}>
+                    {cam.label || cam.id}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
