@@ -57,6 +57,135 @@ async function getEventSummary(
   };
 }
 
+/** Fiyat kategorisine göre bilet alımında: bu kategorideki en iyi müsait yan yana N koltuğu döndürür. */
+async function assignBestAvailableSeats(
+  supabase: SupabaseClient,
+  eventId: string,
+  seatingPlanId: string,
+  ticketTypeName: string,
+  quantity: number
+): Promise<string[]> {
+  let sections: { id: string; name?: string; sort_order?: number }[] | null = null;
+  const hasTicketType = (ticketTypeName || "").trim().length > 0;
+
+  if (hasTicketType) {
+    const { data: sectionsExact } = await supabase
+      .from("seating_plan_sections")
+      .select("id, name, sort_order")
+      .eq("seating_plan_id", seatingPlanId)
+      .ilike("ticket_type_label", ticketTypeName);
+    if (sectionsExact?.length) {
+      sections = sectionsExact;
+    } else {
+      const { data: sectionsContains } = await supabase
+        .from("seating_plan_sections")
+        .select("id, name, sort_order, ticket_type_label")
+        .eq("seating_plan_id", seatingPlanId)
+        .ilike("ticket_type_label", `%${ticketTypeName}%`);
+      if (sectionsContains?.length) {
+        const exact = sectionsContains.filter(
+          (s: { ticket_type_label?: string }) =>
+            (s.ticket_type_label || "").trim().toLowerCase() === ticketTypeName.toLowerCase()
+        );
+        sections = exact.length ? exact : sectionsContains;
+      }
+    }
+  }
+
+  if (!sections?.length) {
+    // Bilet türü eşleşmedi veya boş: planın tüm bölümlerinden müsait koltuk ata
+    const { data: allSections } = await supabase
+      .from("seating_plan_sections")
+      .select("id, name, sort_order")
+      .eq("seating_plan_id", seatingPlanId)
+      .order("sort_order", { ascending: true });
+    sections = allSections?.length ? allSections : null;
+  }
+  if (!sections?.length) return [];
+
+  const sectionIds = sections.map((s: { id: string }) => s.id);
+  const sectionOrder = new Map(sections.map((s: { id: string; sort_order?: number }) => [s.id, s.sort_order ?? 0]));
+
+  const { data: rows } = await supabase
+    .from("seating_plan_rows")
+    .select("id, section_id, row_label, sort_order")
+    .in("section_id", sectionIds)
+    .order("sort_order", { ascending: true });
+
+  if (!rows?.length) return [];
+
+  const rowIds = rows.map((r: { id: string }) => r.id);
+  const { data: seats } = await supabase
+    .from("seats")
+    .select("id, row_id, seat_label")
+    .in("row_id", rowIds);
+
+  if (!seats?.length) return [];
+
+  const rowById = new Map(rows.map((r: { id: string; section_id: string; row_label: string; sort_order?: number }) => [r.id, r]));
+  const soldSet = new Set<string>();
+  const { data: completedOrders } = await supabase
+    .from("orders")
+    .select("id")
+    .eq("event_id", eventId)
+    .eq("status", "completed");
+  if (completedOrders?.length) {
+    const { data: orderSeats } = await supabase
+      .from("order_seats")
+      .select("seat_id")
+      .in("order_id", completedOrders.map((o: { id: string }) => o.id));
+    (orderSeats || []).forEach((s: { seat_id: string }) => soldSet.add(s.seat_id));
+  }
+
+  type SeatInfo = { id: string; row_id: string; seat_label: string; section_sort: number; row_sort: number };
+  const available: SeatInfo[] = [];
+  for (const s of seats as { id: string; row_id: string; seat_label: string }[]) {
+    if (soldSet.has(s.id)) continue;
+    const row = rowById.get(s.row_id);
+    if (!row) continue;
+    available.push({
+      id: s.id,
+      row_id: s.row_id,
+      seat_label: s.seat_label,
+      section_sort: sectionOrder.get(row.section_id) ?? 0,
+      row_sort: (row as { sort_order?: number }).sort_order ?? 0,
+    });
+  }
+
+  available.sort((a, b) => {
+    if (a.section_sort !== b.section_sort) return a.section_sort - b.section_sort;
+    if (a.row_sort !== b.row_sort) return a.row_sort - b.row_sort;
+    const na = parseInt(a.seat_label, 10);
+    const nb = parseInt(b.seat_label, 10);
+    if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
+    return String(a.seat_label).localeCompare(String(b.seat_label));
+  });
+
+  const byRow = new Map<string, SeatInfo[]>();
+  for (const s of available) {
+    const list = byRow.get(s.row_id) || [];
+    list.push(s);
+    byRow.set(s.row_id, list);
+  }
+
+  for (const list of byRow.values()) {
+    if (list.length < quantity) continue;
+    for (let i = 0; i <= list.length - quantity; i++) {
+      const slice = list.slice(i, i + quantity);
+      const consecutive = slice.every((s, j) => {
+        if (j === 0) return true;
+        const prev = parseInt(slice[j - 1].seat_label, 10);
+        const curr = parseInt(s.seat_label, 10);
+        if (!Number.isNaN(prev) && !Number.isNaN(curr)) return curr === prev + 1;
+        return true;
+      });
+      if (consecutive) return slice.map((s) => s.id);
+    }
+  }
+
+  return available.slice(0, quantity).map((s) => s.id);
+}
+
 function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, barcodeContentId: string) {
   const eventDateText = payload.eventDate
     ? new Date(payload.eventDate).toLocaleDateString("tr-TR")
@@ -65,6 +194,33 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
   const priceText = Number(payload.totalPrice).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const locationText = payload.location || "-";
   const venueText = payload.venue || "-";
+  const multiSeat = payload.seatDetails && payload.seatDetails.length > 1;
+
+  if (multiSeat) {
+    const rows = payload.seatDetails!.map(
+      (s, i) =>
+        `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;">${i + 1}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;">${s.ticket_code || payload.ticketCode}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${s.section_name} · Sıra ${s.row_label} · Nr ${s.seat_label}</td></tr>`
+    ).join("");
+    return `
+    <div style="font-family:Arial,sans-serif;background:#eef2f7;padding:24px;">
+      <div style="max-width:900px;margin:0 auto;">
+        <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${payload.buyerName},</h2>
+        <p style="margin:0 0 8px;color:#334155;">Siparişiniz tamamlandı. <strong>${payload.seatDetails!.length} adet bilet</strong> siparişiniz oluşturuldu.</p>
+        <p style="margin:0 0 14px;color:#334155;">Ekteki PDF dosyasında her bilet <strong>ayrı sayfada</strong> yer alır; her sayfada o bilete özel bilet kodu ve koltuk bilgisi vardır.</p>
+        <p style="margin:0 0 6px;color:#0f172a;font-weight:700;">${payload.eventTitle || "Etkinlik"}</p>
+        <p style="margin:0 0 14px;color:#64748b;font-size:14px;">${eventDateText}, ${timeText} · ${venueText}</p>
+        <table style="border-collapse:collapse;width:100%;max-width:600px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;">
+          <thead><tr style="background:#f1f5f9;"><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">No</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">Bilet Kodu</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">Koltuk</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <p style="margin:14px 0 0;font-size:12px;color:#64748b;">Toplam: EUR ${priceText}</p>
+        <p style="margin:16px 0 0;font-size:14px;color:#0f172a;font-weight:600;">Ekteki PDF sayfasında biletleriniz gönderilmiştir. Yazdırabilirsiniz. İyi seyirler dileriz.</p>
+        <div style="font-size:11px;color:#64748b;margin-top:16px;">Bu e-posta otomatik olusturulmustur.</div>
+      </div>
+    </div>
+  `;
+  }
+
   const leftVerticalTicketCodeHtml = payload.ticketCode
     .split("")
     .map((ch) => `<span style="display:block;line-height:9px;">${ch}</span>`)
@@ -132,7 +288,8 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
             </tr>
           </table>
         </div>
-        <div style="font-size:11px;color:#64748b;margin-top:8px;">
+        <p style="margin:16px 0 0;font-size:14px;color:#0f172a;font-weight:600;">Ekteki PDF sayfasında biletiniz gönderilmiştir. Yazdırabilirsiniz. İyi seyirler dileriz.</p>
+        <div style="font-size:11px;color:#64748b;margin-top:16px;">
           Bu e-posta otomatik olusturulmustur.
         </div>
       </div>
@@ -701,10 +858,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sadece onaylanmış etkinliklerde bilet satışı
+    // Sadece onaylanmış etkinliklerde bilet satışı; otomatik koltuk ataması için seating_plan_id gerekir
     const { data: eventRow } = await supabase
       .from("events")
-      .select("id, is_approved")
+      .select("id, is_approved, seating_plan_id")
       .eq("id", ticket.event_id)
       .single();
     if (!eventRow || eventRow.is_approved !== true) {
@@ -712,6 +869,33 @@ export async function POST(request: NextRequest) {
         { success: false, message: "Bu etkinlik henüz onaylanmadığı için bilet satın alınamaz." },
         { status: 403 }
       );
+    }
+
+    const seatingPlanId = (eventRow as { seating_plan_id?: string }).seating_plan_id;
+    const ticketTypeName = (ticket.name || ticket.ticket_type || "").toString().trim();
+
+    // Fiyat kategorisine göre bilet (seat_ids yok): oturum planı varsa en iyi müsait N koltuğu ata
+    if (seatIds.length === 0 && quantity >= 1 && seatingPlanId) {
+      const assigned = await assignBestAvailableSeats(
+        supabase,
+        ticket.event_id,
+        seatingPlanId,
+        ticketTypeName,
+        quantity
+      );
+      if (assigned.length >= quantity) {
+        seatIds = assigned.slice(0, quantity);
+      } else {
+        return NextResponse.json(
+          {
+            success: false,
+            message: assigned.length > 0
+              ? `Bu kategoride yan yana ${quantity} koltuk bulunamadı. En fazla ${assigned.length} müsait koltuk var. Lütfen "Yer seçerek bilet al" ile koltuk seçin.`
+              : "Bu etkinlikte oturum planı var; koltuk ataması yapılamadı (yeterli müsait koltuk yok veya plan tanımlı değil). Lütfen \"Yer seçerek bilet al\" kullanın.",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Grup indirimli bilet: minimum adet (açıklamadaki "Min. X adet." ile uyumlu)

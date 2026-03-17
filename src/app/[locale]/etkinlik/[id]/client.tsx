@@ -1476,7 +1476,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 {totalItems > 0 && (
                   <Link
                     href={`/${locale}/sepet`}
-                    className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-slate-100 px-4 py-3 text-sm font-medium text-slate-700 hover:bg-slate-200"
+                    className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"
                   >
                     {tCheckout("goToCheckout")} ({totalItems})
                   </Link>

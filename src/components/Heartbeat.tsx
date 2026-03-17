@@ -10,9 +10,10 @@ export default function Heartbeat() {
   useEffect(() => {
     setMounted(true);
     const tick = () => {
-      const now = new Date().toISOString();
-      setLast(now.slice(11, 19));
-      console.log("[Heartbeat]", now);
+      const now = new Date();
+      const local = now.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+      setLast(local);
+      console.log("[Heartbeat]", now.toISOString());
     };
     tick();
     const id = setInterval(tick, 15000); // her 15 saniye
