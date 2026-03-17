@@ -49,6 +49,16 @@ export default function BiletKontrolPage() {
     await handleSubmit(formData);
   }
 
+  async function handleCheckWithCode(code: string) {
+    const c = code.trim().toUpperCase();
+    if (!c) return;
+    setTicketCode(c);
+    setCheckinDone(false);
+    const formData = new FormData();
+    formData.append('ticket_code', c);
+    await handleSubmit(formData);
+  }
+
   async function handleCheckin() {
     if (!ticketCode.trim() || !result || !("valid" in result) || !result.valid) return;
     setCheckinLoading(true);
@@ -256,9 +266,8 @@ export default function BiletKontrolPage() {
         {showQRScanner && (
           <QRScanner
             onScan={(code) => {
-              setTicketCode(code);
-              handleCheck();
               setShowQRScanner(false);
+              handleCheckWithCode(code);
             }}
             onClose={() => setShowQRScanner(false)}
           />

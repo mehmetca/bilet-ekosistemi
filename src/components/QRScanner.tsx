@@ -44,9 +44,13 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
     feedbackService.playScanStart();
 
     const elementId = "qr-reader";
+    // Cep: geniş ve kısa kutu barkod okumayı kolaylaştırır; masaüstü kare QR için uygun
+    const isNarrow = typeof window !== "undefined" && window.innerWidth < 500;
     const config = {
       fps: 10,
-      qrbox: { width: 250, height: 250 },
+      qrbox: isNarrow
+        ? { width: 260, height: 100 }
+        : { width: 250, height: 250 },
       aspectRatio: 1.0,
     };
 
@@ -88,13 +92,24 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
           (decodedText) => {
             feedbackService.playSuccess();
             let code = decodedText.trim();
-            try {
-              const parsed = JSON.parse(code);
-              if (parsed && typeof parsed.code === "string") {
-                code = parsed.code;
+            // Sitemiz QR’ı: /kontrol?code=BLT-XXX – URL’den code çıkar
+            if (code.startsWith("http") && code.includes("code=")) {
+              try {
+                const u = new URL(code);
+                const fromUrl = u.searchParams.get("code");
+                if (fromUrl) code = fromUrl;
+              } catch {
+                /* keep code as-is */
               }
-            } catch {
-              /* plain text ticket code */
+            } else {
+              try {
+                const parsed = JSON.parse(code);
+                if (parsed && typeof parsed.code === "string") {
+                  code = parsed.code;
+                }
+              } catch {
+                /* plain text or barcode ticket code */
+              }
             }
             onScanRef.current(code.toUpperCase());
             if (!continuous) {
