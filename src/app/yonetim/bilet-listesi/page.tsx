@@ -5,6 +5,7 @@ import { Search, Ticket, QrCode, Eye } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import type { Order } from "@/types/database";
 import QRScanner from "@/components/QRScanner";
+import { supabase } from "@/lib/supabase-client";
 
 export default function BiletListesiPage() {
   // Auth kontrolünü basitleştir - sadece admin mi diye kontrol et
@@ -31,8 +32,32 @@ export default function BiletListesiPage() {
   async function fetchTickets() {
     try {
       setLoading(true);
-      
-      const response = await fetch("/api/orders", { cache: "no-store" });
+
+      // Supabase oturumundan access token al ve admin API'ye Bearer olarak ilet.
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error("Supabase session error:", error);
+        setTickets([]);
+        return;
+      }
+
+      const token = session?.access_token;
+      if (!token) {
+        console.warn("Admin sipariş listesi için oturum bulunamadı.");
+        setTickets([]);
+        return;
+      }
+
+      const response = await fetch("/api/orders", {
+        cache: "no-store",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       if (!response.ok) {
         console.error("Siparişler çekilemedi:", await response.text());
         setTickets([]);
