@@ -13,9 +13,10 @@
   "auth": {
     "passwordRequirements": "Şifre en az bir küçük harf, bir büyük harf ve bir rakam içermelidir.",
     "loginTitle": "Giriş Yap",
-    "loginSubtitle": "Bilet alıcılar, organizatörler, yöneticiler ve kontrolörler buradan giriş yapabilir",
+    "loginSubtitle": "Sitemize üyeyseniz buradan giriş yapabilirsiniz. Üyeliğiniz yoksa aşağıdaki formu doldurarak üye olabilirsiniz.",
     "email": "E-posta",
     "password": "Şifre",
+    "forgotPassword": "Şifremi unuttum",
     "emailPlaceholder": "admin@bilet-ekosistemi.com",
     "passwordPlaceholder": "•••••••••",
     "loggingIn": "Giriş Yapılıyor...",

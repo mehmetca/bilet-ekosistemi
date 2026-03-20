@@ -13,9 +13,10 @@
   "auth": {
     "passwordRequirements": "Password must contain at least one lowercase letter, one uppercase letter and one digit.",
     "loginTitle": "Log In",
-    "loginSubtitle": "Ticket buyers, organisers, administrators and controllers can log in here",
+    "loginSubtitle": "If you already have an account, sign in here. If not, fill in the form below to register.",
     "email": "Email",
     "password": "Password",
+    "forgotPassword": "Forgot password?",
     "emailPlaceholder": "admin@bilet-ekosistemi.com",
     "passwordPlaceholder": "•••••••••",
     "loggingIn": "Logging in...",

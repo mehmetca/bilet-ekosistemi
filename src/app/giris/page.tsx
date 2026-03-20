@@ -378,6 +378,14 @@ export default function LoginPage() {
                     )}
                   </button>
                 </div>
+                <div className="mt-2 flex justify-end">
+                  <NextLink
+                    href="/sifre-yenile"
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
+                  >
+                    {t("forgotPassword")}
+                  </NextLink>
+                </div>
               </div>
 
               {error && (

@@ -13,9 +13,10 @@
   "auth": {
     "passwordRequirements": "Das Passwort muss mindestens einen Kleinbuchstaben, einen Großbuchstaben und eine Ziffer enthalten.",
     "loginTitle": "Anmelden",
-    "loginSubtitle": "Ticketkäufer, Veranstalter, Administratoren und Kontrolleure können sich hier anmelden",
+    "loginSubtitle": "Mit Konto melden Sie sich hier an. Ohne Konto füllen Sie das Formular unten aus und registrieren Sie sich.",
     "email": "E-Mail",
     "password": "Passwort",
+    "forgotPassword": "Passwort vergessen?",
     "emailPlaceholder": "admin@bilet-ekosistemi.com",
     "passwordPlaceholder": "•••••••••",
     "loggingIn": "Anmeldung läuft...",
