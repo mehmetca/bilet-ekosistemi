@@ -1,97 +1,57 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import {
   BarChart3,
   TrendingUp,
-  CreditCard,
   ShoppingCart,
   RotateCcw,
   Percent,
   Calendar,
 } from "lucide-react";
 
-interface OrderRow {
-  id: string;
-  total_price: number;
-  status?: string;
+/** KPI hesabı için siparişte gerekli alanlar (tek /api/orders yanıtından beslenir). */
+export type KpiOrderRow = {
+  total_price?: number | null;
   created_at: string;
+  status?: string | null;
+};
+
+function computeKpi(orders: KpiOrderRow[]) {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const weekStart = new Date(todayStart);
+  weekStart.setDate(weekStart.getDate() - 7);
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const daily = orders.filter((o) => new Date(o.created_at) >= todayStart);
+  const weekly = orders.filter((o) => new Date(o.created_at) >= weekStart);
+  const monthly = orders.filter((o) => new Date(o.created_at) >= monthStart);
+
+  const completed = orders.filter((o) => o.status === "completed" || !o.status);
+  const cancelled = orders.filter((o) => o.status === "cancelled");
+
+  const totalRev = orders.reduce((s, o) => s + Number(o.total_price || 0), 0);
+
+  return {
+    dailyRevenue: daily.reduce((s, o) => s + Number(o.total_price || 0), 0),
+    dailyOrders: daily.length,
+    weeklyRevenue: weekly.reduce((s, o) => s + Number(o.total_price || 0), 0),
+    weeklyOrders: weekly.length,
+    monthlyRevenue: monthly.reduce((s, o) => s + Number(o.total_price || 0), 0),
+    monthlyOrders: monthly.length,
+    totalRevenue: totalRev,
+    totalOrders: orders.length,
+    completedOrders: completed.length,
+    cancelledOrders: cancelled.length,
+    conversionRate: orders.length > 0 ? (completed.length / orders.length) * 100 : 0,
+    returnRate: orders.length > 0 ? (cancelled.length / orders.length) * 100 : 0,
+    avgOrderValue: completed.length > 0 ? totalRev / completed.length : 0,
+  };
 }
 
-export default function AdminKPIDashboard() {
-  const [loading, setLoading] = useState(true);
-  const [kpi, setKpi] = useState({
-    dailyRevenue: 0,
-    dailyOrders: 0,
-    weeklyRevenue: 0,
-    weeklyOrders: 0,
-    monthlyRevenue: 0,
-    monthlyOrders: 0,
-    totalRevenue: 0,
-    totalOrders: 0,
-    completedOrders: 0,
-    cancelledOrders: 0,
-    conversionRate: 0,
-    returnRate: 0,
-    avgOrderValue: 0,
-  });
-
-  useEffect(() => {
-    fetchKPI();
-  }, []);
-
-  async function fetchKPI() {
-    try {
-      const res = await fetch("/api/orders", { cache: "no-store" });
-      if (!res.ok) return;
-      const orders = (await res.json()) as OrderRow[];
-
-      const now = new Date();
-      const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekStart = new Date(todayStart);
-      weekStart.setDate(weekStart.getDate() - 7);
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      const daily = orders.filter((o) => new Date(o.created_at) >= todayStart);
-      const weekly = orders.filter((o) => new Date(o.created_at) >= weekStart);
-      const monthly = orders.filter((o) => new Date(o.created_at) >= monthStart);
-
-      const completed = orders.filter((o) => o.status === "completed" || !o.status);
-      const cancelled = orders.filter((o) => o.status === "cancelled");
-
-      const totalRev = orders.reduce((s, o) => s + Number(o.total_price || 0), 0);
-
-      setKpi({
-        dailyRevenue: daily.reduce((s, o) => s + Number(o.total_price || 0), 0),
-        dailyOrders: daily.length,
-        weeklyRevenue: weekly.reduce((s, o) => s + Number(o.total_price || 0), 0),
-        weeklyOrders: weekly.length,
-        monthlyRevenue: monthly.reduce((s, o) => s + Number(o.total_price || 0), 0),
-        monthlyOrders: monthly.length,
-        totalRevenue: totalRev,
-        totalOrders: orders.length,
-        completedOrders: completed.length,
-        cancelledOrders: cancelled.length,
-        conversionRate: orders.length > 0 ? (completed.length / orders.length) * 100 : 0,
-        returnRate: orders.length > 0 ? (cancelled.length / orders.length) * 100 : 0,
-        avgOrderValue: completed.length > 0 ? totalRev / completed.length : 0,
-      });
-    } catch (err) {
-      console.error("KPI fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="rounded-xl border border-slate-200 bg-white p-8">
-        <div className="flex justify-center py-8">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
-        </div>
-      </div>
-    );
-  }
+export default function AdminKPIDashboard({ orders }: { orders: KpiOrderRow[] }) {
+  const kpi = useMemo(() => computeKpi(orders), [orders]);
 
   const cards = [
     {

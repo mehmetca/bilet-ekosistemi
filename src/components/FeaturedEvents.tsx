@@ -72,9 +72,9 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 {/* Alt satır: sol tarafta başlık + mekan, sağ tarafta tarih (etkinlik başlığı hizasında, şeffaf) */}
-                <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 p-5 md:p-6">
-                  <div className="min-w-0 flex-1">
-                    <h3 className="text-lg md:text-xl font-bold text-white line-clamp-2 mb-1 drop-shadow-lg">
+                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between p-4 sm:p-5 md:p-6">
+                  <div className="min-w-0 flex-1 order-2 sm:order-1">
+                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-white line-clamp-2 mb-1 drop-shadow-lg">
                       {localized.title}
                     </h3>
                     <p className="text-sm text-white/90 line-clamp-1">
@@ -87,7 +87,7 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
                     </p>
                   </div>
                   {/* Tarih: şeffaf kare içinde, zemin etkinlik fotoğrafı */}
-                  <div className="flex flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-white/90 bg-transparent px-3 py-3 md:px-4 md:py-4 min-w-[4.5rem] text-white drop-shadow-md">
+                  <div className="flex flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-white/90 bg-transparent px-3 py-2.5 md:px-4 md:py-4 min-w-[4.25rem] sm:min-w-[4.5rem] text-white drop-shadow-md order-1 sm:order-2 self-start sm:self-auto">
                     <span className="text-2xl md:text-3xl font-bold leading-none">{day}</span>
                     <span className="text-xs md:text-sm font-semibold uppercase tracking-wide mt-0.5 opacity-95">{monthLong}</span>
                     <span className="text-sm font-medium opacity-90">{year}</span>

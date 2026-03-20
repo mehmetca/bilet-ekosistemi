@@ -326,29 +326,29 @@ export default function ClientHomePage({
         
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4 text-center">
-          <h1 className="text-4xl font-bold md:text-6xl mb-6 text-white">
+          <h1 className="text-3xl font-bold sm:text-4xl md:text-6xl mb-6 text-white px-1 break-words hyphens-auto">
             {locale === "tr" && heroVariant?.hero_title ? heroVariant.hero_title : t("heroTitle")}
           </h1>
-          <p className="text-lg md:text-xl text-white mb-12 max-w-3xl mx-auto">
+          <p className="text-base sm:text-lg md:text-xl text-white mb-8 sm:mb-12 max-w-3xl mx-auto px-1">
             {locale === "tr" && heroVariant?.hero_subtitle ? heroVariant.hero_subtitle : t("heroSubtitle")}
           </p>
           
           {/* Orijinal Büyüklükte Arama Kutusu */}
-          <div className="max-w-2xl mx-auto mb-16">
-            <div className="flex gap-3 bg-white rounded-2xl p-2 shadow-2xl">
-              <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+          <div className="max-w-2xl mx-auto mb-12 sm:mb-16 px-0">
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 bg-white rounded-2xl p-2 shadow-2xl">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 sm:left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   type="search"
                   placeholder={t("searchPlaceholder")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full rounded-xl border-0 py-4 pl-12 pr-4 text-slate-900 text-lg focus:outline-none"
+                  className="w-full rounded-xl border-0 py-3.5 sm:py-4 pl-11 sm:pl-12 pr-3 sm:pr-4 text-slate-900 text-base sm:text-lg focus:outline-none"
                 />
               </div>
               <Link 
                 href="#events"
-                className="rounded-xl bg-primary-600 px-8 py-4 font-semibold text-white hover:bg-primary-700 transition-colors"
+                className="rounded-xl bg-primary-600 px-6 sm:px-8 py-3.5 sm:py-4 font-semibold text-white hover:bg-primary-700 transition-colors text-center shrink-0"
               >
                 {locale === "tr" && heroVariant?.cta_text ? heroVariant.cta_text : t("search")}
               </Link>
@@ -472,7 +472,7 @@ export default function ClientHomePage({
                     <Link
                       key={city.id}
                       href={`/city/${city.slug}`}
-                      className="group flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 snap-center min-w-[100vw] max-w-[100vw] sm:min-w-[200px] sm:max-w-[200px] md:min-w-[220px] md:max-w-[220px] xl:min-w-[240px] xl:max-w-[240px]"
+                      className="group flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 snap-center w-[min(88vw,20rem)] max-w-[min(88vw,20rem)] sm:min-w-[200px] sm:max-w-[200px] sm:w-[200px] md:min-w-[220px] md:max-w-[220px] md:w-[220px] xl:min-w-[240px] xl:max-w-[240px] xl:w-[240px]"
                     >
                       <div className="aspect-[16/9] overflow-hidden bg-slate-100">
                         {city.image_url ? (
@@ -707,7 +707,7 @@ export default function ClientHomePage({
                   </div>
                   
                   <div className="px-5 pb-5 border-t border-slate-100">
-                    <div className="flex justify-between items-center pt-3">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center pt-3">
                       <span className={`font-bold text-lg ${
                         eventStatus.isPast ? 'text-slate-500' : 'text-primary-600'
                       }`}>
@@ -724,7 +724,7 @@ export default function ClientHomePage({
                           const slug = (event as Event & { show_slug?: string }).show_slug || event.id;
                           window.location.href = `/${locale}/etkinlik/${slug}`;
                         }}
-                        className={`text-sm font-medium flex items-center gap-1 px-3 py-2 rounded-lg transition-colors ${
+                        className={`text-sm font-medium flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg transition-colors w-full sm:w-auto ${
                           eventStatus.isPast
                             ? 'text-slate-500 bg-slate-100 cursor-not-allowed'
                             : 'text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100'

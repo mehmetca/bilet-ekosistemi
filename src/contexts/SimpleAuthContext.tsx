@@ -6,6 +6,8 @@ import type { User } from "@supabase/supabase-js";
 
 interface SimpleAuthType {
   user: User | null;
+  /** API çağrılarında Authorization: Bearer için; getSession() yarışına güvenme. */
+  accessToken: string | null;
   loading: boolean;
   isAdmin: boolean;
   isController: boolean;
@@ -19,6 +21,7 @@ const SimpleAuthContext = createContext<SimpleAuthType | undefined>(undefined);
 
 export function SimpleAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<"admin" | "controller" | "organizer" | null>(null);
   const userRef = useRef<User | null>(null);
@@ -88,7 +91,22 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
           const result = await supabase.auth.getSession();
           data = result.data;
           error = result.error;
-        } catch (supabaseErr) {
+        } catch (supabaseErr: unknown) {
+          const msg = (supabaseErr as { message?: string })?.message ?? "";
+          const isRefreshTokenError = /refresh.?token|Invalid Refresh Token/i.test(msg);
+          if (isRefreshTokenError) {
+            try {
+              await supabase.auth.signOut({ scope: "local" });
+            } catch (_) {
+              /* clear local session only */
+            }
+            if (mounted) {
+              setUser(null);
+              setUserRole(null);
+              setLoading(false);
+            }
+            return;
+          }
           console.error("Supabase auth init error:", supabaseErr);
           if (mounted) {
             setUser(null);
@@ -98,6 +116,21 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
           return;
         }
         if (error) {
+          const msg = error?.message ?? "";
+          const isRefreshTokenError = /refresh.?token|Invalid Refresh Token/i.test(msg);
+          if (isRefreshTokenError) {
+            try {
+              await supabase.auth.signOut({ scope: "local" });
+            } catch (_) {
+              /* clear local session only */
+            }
+            if (mounted) {
+              setUser(null);
+              setUserRole(null);
+              setLoading(false);
+            }
+            return;
+          }
           console.error("Auth getSession error:", error);
           if (mounted) setLoading(false);
           return;
@@ -122,6 +155,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             }
           } else {
             setUser(null);
+            setAccessToken(null);
             setUserRole(null);
             userRef.current = null;
             userRoleRef.current = null;
@@ -158,6 +192,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
             if (event === "SIGNED_OUT") {
               setUser(null);
+              setAccessToken(null);
               setUserRole(null);
               userRef.current = null;
               userRoleRef.current = null;
@@ -166,6 +201,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
               if (session?.user) {
                 const userChanged = userRef.current?.id !== session.user.id;
                 setUser(session.user);
+                setAccessToken(session.access_token ?? null);
                 userRef.current = session.user;
 
                 const needRole = event === "SIGNED_IN" || event === "USER_UPDATED" || userChanged || event === "INITIAL_SESSION";
@@ -182,6 +218,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
                 }
               } else {
                 setUser(null);
+                setAccessToken(null);
                 setUserRole(null);
                 userRef.current = null;
                 userRoleRef.current = null;
@@ -219,6 +256,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
   const value: SimpleAuthType = {
     user,
+    accessToken,
     loading,
     isAdmin,
     isController,

@@ -55,6 +55,7 @@
   }
   html {
     min-height: 100%;
+    overflow-x: hidden;
   }
   body {
     @apply bg-background text-foreground;

@@ -89,12 +89,12 @@ export default function HeroBackgroundSlider({ initialBackgrounds = [] }: HeroBa
           <Image
             src={bg.image_url}
             alt={bg.title}
-            width={1920}
-            height={1080}
-            className="w-full h-full object-cover"
-            priority={index === 0}
-            loading={index === 0 ? "eager" : "lazy"}
+            fill
+            className="object-cover"
             sizes="100vw"
+            priority={backgrounds.length <= 1 ? true : index < 2}
+            fetchPriority={backgrounds.length <= 1 || index < 2 ? "high" : "low"}
+            loading={backgrounds.length <= 1 || index < 2 ? "eager" : "lazy"}
           />
         </div>
       ))}

@@ -792,8 +792,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       <div className="mx-auto w-full max-w-7xl px-4 py-10">
         <div>
           {/* Bilet Seçimi - geniş alan */}
-          <div className="bg-white rounded-xl border border-slate-200 p-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-6">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 lg:p-8">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-4 sm:mb-6">
                 {isExternalOnlyEvent ? t("ticketInfo") : t("ticketSelection")}
               </h2>
 

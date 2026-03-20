@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase-client";
+import { isBenignSupabaseRefreshTokenMessage } from "@/lib/supabase-auth-errors";
 
 export default function GlobalErrorHandler({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<{ message: string; stack?: string } | null>(null);
@@ -18,7 +20,7 @@ export default function GlobalErrorHandler({ children }: { children: React.React
 
     function onError(event: ErrorEvent) {
       const msg = event.message || "Bilinmeyen hata";
-      if (isBenignMediaError(msg)) return;
+      if (isBenignMediaError(msg) || isBenignSupabaseRefreshTokenMessage(msg)) return;
       console.error("[GlobalErrorHandler] window.onerror:", msg, event.filename, event.lineno, event.colno);
       setError({ message: msg, stack: event.error?.stack });
     }
@@ -28,6 +30,12 @@ export default function GlobalErrorHandler({ children }: { children: React.React
 
       if (isBenignMediaError(msg)) {
         event.preventDefault();
+        return;
+      }
+
+      if (isBenignSupabaseRefreshTokenMessage(msg)) {
+        event.preventDefault();
+        void supabase.auth.signOut({ scope: "local" }).catch(() => {});
         return;
       }
 

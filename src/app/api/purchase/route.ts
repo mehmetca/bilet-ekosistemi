@@ -1,15 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomBytes } from "crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import QRCode from "qrcode";
 import bwipjs from "bwip-js";
 import { PDFDocument, PDFPage, StandardFonts, degrees, rgb } from "pdf-lib";
 
+/** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "BLT-";
+  const bytes = randomBytes(8);
   for (let i = 0; i < 8; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(bytes[i]! % chars.length);
   }
   return code;
 }

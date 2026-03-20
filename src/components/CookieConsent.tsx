@@ -34,11 +34,11 @@ export default function CookieConsent() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]"
+      className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-[max(1rem,env(safe-area-inset-bottom,0px))]"
       role="dialog"
       aria-label="Çerez onayı"
     >
-      <div className="container mx-auto px-4 py-4 max-w-4xl">
+      <div className="container mx-auto px-4 pt-4 max-w-4xl">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-slate-700 flex-1">
             {t("message")}{" "}

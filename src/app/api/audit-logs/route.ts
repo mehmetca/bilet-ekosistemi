@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { requireAdmin } from "@/lib/api-auth";
+import { requireRole } from "@/lib/api-auth";
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAdmin(request);
+  const auth = await requireRole(request, ["admin", "controller"]);
   if (auth instanceof Response) return auth;
   try {
     const supabase = getSupabaseAdmin();

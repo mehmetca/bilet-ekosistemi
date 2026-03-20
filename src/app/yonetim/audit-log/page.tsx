@@ -25,7 +25,7 @@ export default function AuditLogPage() {
 }
 
 function AuditLogContent() {
-  const { isAdmin, isController } = useSimpleAuth();
+  const { isAdmin, isController, accessToken, loading: authLoading } = useSimpleAuth();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,10 +33,19 @@ function AuditLogContent() {
 
   const fetchLogs = useCallback(async () => {
     if (!isAdmin && !isController) return;
+    if (!accessToken) {
+      setError("Oturum gerekli");
+      setLogs([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/audit-logs");
+      const res = await fetch("/api/audit-logs", {
+        cache: "no-store",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "Veriler yüklenemedi");
       setLogs(Array.isArray(data) ? data : []);
@@ -47,11 +56,12 @@ function AuditLogContent() {
     } finally {
       setLoading(false);
     }
-  }, [isAdmin, isController]);
+  }, [isAdmin, isController, accessToken]);
 
   useEffect(() => {
-    fetchLogs();
-  }, [fetchLogs]);
+    if (authLoading) return;
+    void fetchLogs();
+  }, [authLoading, fetchLogs]);
 
   const actionLabels: Record<string, string> = {
     create: "Oluşturma",

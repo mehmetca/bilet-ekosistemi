@@ -1,8 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Plus, Trash2, UserCheck, CheckCircle, XCircle, Calendar, Eye, X } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
+import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+
+function authHeaders(accessToken: string, json = false): Record<string, string> {
+  const h: Record<string, string> = { Authorization: `Bearer ${accessToken}` };
+  if (json) h["Content-Type"] = "application/json";
+  return h;
+}
 
 type OrganizerRequest = {
   id: string;
@@ -28,7 +35,8 @@ type DisplayUser = {
   roles: string[];
 };
 
-export default function KullanicilarPage() {
+function KullanicilarContent() {
+  const { accessToken, loading: authLoading } = useSimpleAuth();
   const [users, setUsers] = useState<DisplayUser[]>([]);
   const [organizerRequests, setOrganizerRequests] = useState<OrganizerRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -37,13 +45,13 @@ export default function KullanicilarPage() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<"admin" | "controller">("controller");
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
+    if (!accessToken) return;
     try {
-      const res = await fetch("/api/admin/users");
+      const res = await fetch("/api/admin/users", {
+        headers: authHeaders(accessToken),
+        cache: "no-store",
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as { error?: string }).error || "Veriler yüklenemedi");
@@ -57,7 +65,17 @@ export default function KullanicilarPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [accessToken]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    void fetchData();
+  }, [authLoading, accessToken, fetchData]);
 
 
   async function handleAddUser() {
@@ -66,9 +84,13 @@ export default function KullanicilarPage() {
       return;
     }
     try {
+      if (!accessToken) {
+        alert("Oturum gerekli. Lütfen tekrar giriş yapın.");
+        return;
+      }
       const res = await fetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(accessToken, true),
         body: JSON.stringify({ action: "add", email: newUserEmail, role: newUserRole }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -90,9 +112,13 @@ export default function KullanicilarPage() {
   async function handleApproveOrganizer(req: OrganizerRequest) {
     if (!confirm(`${req.email} adresli kullanıcıyı organizatör olarak onaylamak istediğinize emin misiniz?`)) return;
     try {
+      if (!accessToken) {
+        alert("Oturum gerekli. Lütfen tekrar giriş yapın.");
+        return;
+      }
       const res = await fetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(accessToken, true),
         body: JSON.stringify({ action: "approve", requestId: req.id }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -110,9 +136,13 @@ export default function KullanicilarPage() {
   async function handleRejectOrganizer(req: OrganizerRequest) {
     if (!confirm(`${req.email} adresli başvuruyu reddetmek istediğinize emin misiniz?`)) return;
     try {
+      if (!accessToken) {
+        alert("Oturum gerekli. Lütfen tekrar giriş yapın.");
+        return;
+      }
       const res = await fetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(accessToken, true),
         body: JSON.stringify({ action: "reject", requestId: req.id }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -136,9 +166,13 @@ export default function KullanicilarPage() {
     )
       return;
     try {
+      if (!accessToken) {
+        alert("Oturum gerekli. Lütfen tekrar giriş yapın.");
+        return;
+      }
       const res = await fetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(accessToken, true),
         body: JSON.stringify({ action: "delete", userId: user.user_id }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -162,9 +196,13 @@ export default function KullanicilarPage() {
     const roleLabel = role === "admin" ? "yönetici" : role === "organizer" ? "organizatör" : "kontrolör";
     if (!confirm(`Bu kullanıcının ${roleLabel} rolünü kaldırmak istediğinize emin misiniz?`)) return;
     try {
+      if (!accessToken) {
+        alert("Oturum gerekli. Lütfen tekrar giriş yapın.");
+        return;
+      }
       const res = await fetch("/api/admin/users", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: authHeaders(accessToken, true),
         body: JSON.stringify({ action: "removeRole", userId, role }),
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -206,7 +244,6 @@ export default function KullanicilarPage() {
   }
 
   return (
-    <AdminOnlyGuard>
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-6">
@@ -508,6 +545,13 @@ export default function KullanicilarPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function KullanicilarPage() {
+  return (
+    <AdminOnlyGuard>
+      <KullanicilarContent />
     </AdminOnlyGuard>
   );
 }

@@ -1,8 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isBenignSupabaseRefreshTokenMessage } from "@/lib/supabase-auth-errors";
 
 const MAX_LOGS = 20;
+
+function stringifyConsoleArgs(args: unknown[]): string {
+  return args
+    .map((a) =>
+      typeof a === "object" && a !== null
+        ? a instanceof Error
+          ? a.message + (a.stack ? "\n" + a.stack : "")
+          : JSON.stringify(a)
+        : String(a)
+    )
+    .join(" ");
+}
+
+function shouldSkipConsoleCapture(type: "error" | "warn", args: unknown[]): boolean {
+  const s = stringifyConsoleArgs(args).toLowerCase();
+  if (isBenignSupabaseRefreshTokenMessage(s)) return true;
+  if (type === "warn" && s.includes("largest contentful paint") && s.includes("priority")) return true;
+  return false;
+}
 
 export default function ConsoleCapture() {
   const [logs, setLogs] = useState<{ type: string; args: string; time: string }[]>([]);
@@ -12,11 +32,10 @@ export default function ConsoleCapture() {
     const originalError = console.error;
     const originalWarn = console.warn;
 
-    function capture(type: string, ...args: unknown[]) {
+    function capture(type: "error" | "warn", ...args: unknown[]) {
+      if (shouldSkipConsoleCapture(type, args)) return;
       const time = new Date().toLocaleTimeString("tr-TR");
-      const argsStr = args.map((a) =>
-        typeof a === "object" && a !== null ? (a instanceof Error ? a.message + (a.stack ? "\n" + a.stack : "") : JSON.stringify(a)) : String(a)
-      ).join(" ");
+      const argsStr = stringifyConsoleArgs(args);
       setLogs((prev) => [...prev.slice(-(MAX_LOGS - 1)), { type, args: argsStr, time }]);
     }
 

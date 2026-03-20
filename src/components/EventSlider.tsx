@@ -118,7 +118,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
       {/* Slider */}
       <div className="relative">
         {/* Ana Etkinlik Kartı */}
-        <div className="relative h-96 bg-gradient-to-br from-primary-100 to-primary-50">
+        <div className="relative min-h-[22rem] h-[min(24rem,70vw)] sm:h-96 bg-gradient-to-br from-primary-100 to-primary-50">
           {currentEvent.image_url ? (
             <img
               src={currentEvent.image_url}
@@ -140,8 +140,8 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
           
           {/* İçerik */}
-          <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-            <div className="flex items-center gap-2 mb-3">
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-white">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="text-xs font-medium bg-primary-600 px-2 py-1 rounded">
                 {CATEGORY_LABELS[currentEvent.category as keyof typeof CATEGORY_LABELS] ?? currentEvent.category ?? "Etkinlik"}
               </span>
@@ -150,22 +150,24 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
               </span>
             </div>
             
-            <h3 className="text-2xl font-bold mb-2 line-clamp-2">
+            <h3 className="text-lg sm:text-2xl font-bold mb-2 line-clamp-2">
               {localized.title}
             </h3>
             
-            <div className="flex items-center gap-4 text-sm opacity-90 mb-4">
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                {currentEvent.date ? new Date(currentEvent.date).toLocaleDateString(dateLocale) : ""} • {currentEvent.time ?? ""}
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4 text-xs sm:text-sm opacity-90 mb-4 min-w-0">
+              <div className="flex items-center gap-1 min-w-0">
+                <Calendar className="h-4 w-4 shrink-0" />
+                <span className="truncate">
+                  {currentEvent.date ? new Date(currentEvent.date).toLocaleDateString(dateLocale) : ""} • {currentEvent.time ?? ""}
+                </span>
               </div>
-              <div className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                {(localized.venue || currentEvent.venue) ?? ""}
+              <div className="flex items-center gap-1 min-w-0">
+                <MapPin className="h-4 w-4 shrink-0" />
+                <span className="truncate">{(localized.venue || currentEvent.venue) ?? ""}</span>
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="text-xl font-bold">
                 {Number(currentEvent.price_from) > 0
                   ? formatPrice(Number(currentEvent.price_from), currentEvent.currency)
@@ -175,7 +177,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
               
               <Link
                 href={`/etkinlik/${(currentEvent as Event & { show_slug?: string }).show_slug || currentEvent.id}`}
-                className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+                className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors text-center w-full sm:w-auto"
               >
                 {buyTicketText}
               </Link>
