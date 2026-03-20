@@ -59,6 +59,7 @@ function MuhasebeContent() {
 
         const monthlyRevenue = monthlyOrders.reduce((sum: number, order: Order) => sum + Number(order.total_price), 0);
 
+        setOrdersForPage(ordersList);
         setStats({
           totalRevenue,
           totalOrders,
@@ -67,6 +68,8 @@ function MuhasebeContent() {
           checkedCount,
           recentOrders: ordersList.slice(0, 10),
         });
+      } else {
+        setOrdersForPage([]);
       }
     } catch (error) {
       console.error("Muhasebe sayfası hatası:", error);
