@@ -8,6 +8,7 @@ import MDEditor from '@uiw/react-md-editor';
 
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
+import { getAccessTokenForApi } from "@/lib/supabase-auth-token";
 
 export default function HaberlerPage() {
   const { isAdmin, loading: authLoading } = useSimpleAuth();
@@ -60,13 +61,19 @@ export default function HaberlerPage() {
   setUploading(true);
   
   try {
-    // FormData oluştur
+    const token = await getAccessTokenForApi();
+    if (!token) {
+      alert("Oturum bulunamadı veya süresi doldu. Lütfen sayfayı yenileyip tekrar giriş yapın.");
+      return;
+    }
+
     const uploadFormData = new FormData();
-    uploadFormData.append('file', file);
-    
-    // Upload API'sine gönder
-    const response = await fetch('/api/upload', {
-      method: 'POST',
+    uploadFormData.append("file", file);
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { Authorization: `Bearer ${token}` },
       body: uploadFormData,
     });
     

@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { getAccessTokenForApi } from "@/lib/supabase-auth-token";
 
 interface AdminImageUploadProps {
   value: string;
@@ -27,12 +28,20 @@ export default function AdminImageUploadFixed({
     onUploadingChange?.(true);
     
     try {
+      const token = await getAccessTokenForApi();
+      if (!token) {
+        alert("Oturum bulunamadı veya süresi doldu. Lütfen sayfayı yenileyip tekrar giriş yapın.");
+        return;
+      }
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("folder", folder);
 
       const response = await fetch("/api/upload", {
         method: "POST",
+        credentials: "same-origin",
+        headers: { Authorization: `Bearer ${token}` },
         body: formData,
       });
 
