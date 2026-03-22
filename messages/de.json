@@ -31,9 +31,6 @@
     "errorRegisterFailed": "Registrierung konnte nicht erstellt werden.",
     "successRegistered": "Ihr Konto wurde erstellt! Sie können sich anmelden und Tickets kaufen.",
     "errorGeneric": "Ein unerwarteter Fehler ist aufgetreten.",
-    "organizerTitle": "Organisations-Bewerbung",
-    "organizerFormLink": "Organisations-Bewerbungsformular",
-    "organizerSubtitle": "Wenn Sie Veranstaltungen hinzufügen und verwalten möchten, füllen Sie das Formular aus. Nach Genehmigung durch den Administrator können Sie Veranstaltungen anlegen.",
     "submitting": "Bewerbung wird gesendet...",
     "organizerApply": "Als Veranstalter bewerben",
     "errorEmailExistsOrganizer": "Diese E-Mail-Adresse ist bereits registriert. Melden Sie sich mit dem Anmeldeformular oben an.",
@@ -105,17 +102,14 @@
     "news": "Nachrichten",
     "sortBy": {
       "upcoming": "Demnächst",
-      "cheapest": "Günstigste",
       "popular": "Beliebt"
     },
     "filters": {
       "allCities": "Alle Städte",
       "allCategories": "Alle Kategorien",
       "clear": "Filter zurücksetzen",
-      "startDate": "Startdatum (tt.mm.jjjj)",
-      "endDate": "Enddatum (tt.mm.jjjj)",
-      "minPrice": "Min €",
-      "maxPrice": "Max €"
+      "eventDate": "Veranstaltungsdatum",
+      "sort": "Sortieren"
     },
     "noEvents": "Noch keine Veranstaltungen",
     "noEventsForFilter": "Keine Veranstaltungen entsprechen Ihren Suchkriterien.",

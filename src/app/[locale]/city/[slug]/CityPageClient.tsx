@@ -24,7 +24,7 @@ export default function CityPageClient({ city, initialEvents }: CityPageClientPr
   const locale = useLocale() as "tr" | "de" | "en";
   const dateLocale = dateLocaleMap[locale] || "tr-TR";
 
-  const [sortBy, setSortBy] = useState<"upcoming" | "cheapest" | "popular">("upcoming");
+  const [sortBy, setSortBy] = useState<"upcoming" | "popular">("upcoming");
   const localized = getLocalizedCity(city, locale);
   const cityName = localized.name || (city.slug as string) || "";
   const cityDesc = localized.description || "";
@@ -45,8 +45,6 @@ export default function CityPageClient({ city, initialEvents }: CityPageClientPr
         const bDate = new Date(`${b.date} ${b.time || "00:00"}`).getTime();
         return aDate - bDate;
       });
-    } else if (sortBy === "cheapest") {
-      list.sort((a, b) => Number(a.price_from || 0) - Number(b.price_from || 0));
     } else {
       list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
@@ -93,11 +91,10 @@ export default function CityPageClient({ city, initialEvents }: CityPageClientPr
           <span className="text-sm font-medium text-slate-600">{t("sortBy")}:</span>
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as "upcoming" | "cheapest" | "popular")}
+            onChange={(e) => setSortBy(e.target.value as "upcoming" | "popular")}
             className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
           >
             <option value="upcoming">{tHome("sortBy.upcoming")}</option>
-            <option value="cheapest">{tHome("sortBy.cheapest")}</option>
             <option value="popular">{tHome("sortBy.popular")}</option>
           </select>
         </div>

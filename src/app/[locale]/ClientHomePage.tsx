@@ -13,7 +13,12 @@ import NewsSlider from "@/components/NewsSlider";
 import FeaturedEvents from "@/components/FeaturedEvents";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
-import { parseDateInput } from "@/lib/date-utils";
+
+function eventDateISO(event: Event): string {
+  const d = String(event.date ?? "");
+  if (!d) return "";
+  return d.includes("T") ? d.split("T")[0]! : d.slice(0, 10);
+}
 
 interface HeroBg {
   id: string;
@@ -51,11 +56,9 @@ export default function ClientHomePage({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCity, setSelectedCity] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [sortBy, setSortBy] = useState<"yaklasan" | "en-ucuz" | "populer">("yaklasan");
+  /** YYYY-MM-DD; boş = tarih filtresi yok (o güne ait etkinlikler) */
+  const [eventDate, setEventDate] = useState("");
+  const [sortBy, setSortBy] = useState<"yaklasan" | "populer">("yaklasan");
   const [events, setEvents] = useState<Event[]>(initialEvents);
   const [news, setNews] = useState<News[]>(initialNews);
   const [cities, setCities] = useState<City[]>(initialCities);
@@ -240,27 +243,9 @@ export default function ClientHomePage({
     const matchesCity = selectedCity === "all" || eventCityPart.toLowerCase() === selectedCity.toLowerCase();
     const matchesCategory = selectedCategory === "all" || event.category === selectedCategory;
 
-    const eventDate = new Date(event.date);
-    const start = startDate ? parseDateInput(startDate) : null;
-    const end = endDate ? parseDateInput(endDate) : null;
-    const matchesStart = !start || eventDate >= start;
-    const matchesEnd = !end || eventDate <= end;
+    const matchesEventDate = !eventDate || eventDateISO(event) === eventDate;
 
-    const price = Number(event.price_from || 0);
-    const min = minPrice ? Number(minPrice) : null;
-    const max = maxPrice ? Number(maxPrice) : null;
-    const matchesMin = min === null || Number.isNaN(min) || price >= min;
-    const matchesMax = max === null || Number.isNaN(max) || price <= max;
-
-    return (
-      matchesSearch &&
-      matchesCity &&
-      matchesCategory &&
-      matchesStart &&
-      matchesEnd &&
-      matchesMin &&
-      matchesMax
-    );
+    return matchesSearch && matchesCity && matchesCategory && matchesEventDate;
   });
 
   const filteredEvents = [...filteredEventsRaw].sort((a, b) => {
@@ -268,11 +253,6 @@ export default function ClientHomePage({
       const aDate = new Date(`${a.date} ${a.time || "00:00"}`).getTime();
       const bDate = new Date(`${b.date} ${b.time || "00:00"}`).getTime();
       return aDate - bDate;
-    }
-    if (sortBy === "en-ucuz") {
-      const aPrice = Number(a.price_from || 0);
-      const bPrice = Number(b.price_from || 0);
-      return aPrice - bPrice;
     }
     if (sortBy === "populer") {
       const aCreated = new Date(a.created_at).getTime();
@@ -508,86 +488,75 @@ export default function ClientHomePage({
 
       {/* Events */}
       <section id="events" className="container mx-auto px-4 py-16">
-        <h2 className="text-2xl font-bold text-slate-900 mb-8">{t("upcomingEvents")}</h2>
-        <div className="mb-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-2 lg:grid-cols-4">
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as "yaklasan" | "en-ucuz" | "populer")}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="yaklasan">{t("sortBy.upcoming")}</option>
-            <option value="en-ucuz">{t("sortBy.cheapest")}</option>
-            <option value="populer">{t("sortBy.popular")}</option>
-          </select>
-          <select
-            value={selectedCity}
-            onChange={(e) => setSelectedCity(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="all">{t("filters.allCities")}</option>
-            {cityOptions.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="all">{t("filters.allCategories")}</option>
-            {DISPLAY_CATEGORIES.map((key) => (
-              <option key={key} value={key}>
-                {CATEGORY_LABELS[key]}
-              </option>
-            ))}
-          </select>
-          <input
-            type="text"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder={t("filters.startDate")}
-          />
-          <input
-            type="text"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder={t("filters.endDate")}
-          />
-          <input
-            type="number"
-            min="0"
-            value={minPrice}
-            onChange={(e) => setMinPrice(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder={t("filters.minPrice")}
-          />
-          <input
-            type="number"
-            min="0"
-            value={maxPrice}
-            onChange={(e) => setMaxPrice(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            placeholder={t("filters.maxPrice")}
-          />
-          <button
-            type="button"
-            onClick={() => {
-              setSortBy("yaklasan");
-              setSelectedCity("all");
-              setSelectedCategory("all");
-              setStartDate("");
-              setEndDate("");
-              setMinPrice("");
-              setMaxPrice("");
-            }}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
-          >
-            {t("filters.clear")}
-          </button>
+        <h2 className="text-2xl font-bold text-slate-900 mb-4">{t("upcomingEvents")}</h2>
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={t("searchPlaceholder")}
+                aria-label={t("searchPlaceholder")}
+                className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-2 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+              />
+            </div>
+            <select
+              value={selectedCity}
+              onChange={(e) => setSelectedCity(e.target.value)}
+              aria-label={t("filters.allCities")}
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900"
+            >
+              <option value="all">{t("filters.allCities")}</option>
+              {cityOptions.map((city) => (
+                <option key={city} value={city}>
+                  {city}
+                </option>
+              ))}
+            </select>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              aria-label={t("filters.allCategories")}
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900"
+            >
+              <option value="all">{t("filters.allCategories")}</option>
+              {DISPLAY_CATEGORIES.map((key) => (
+                <option key={key} value={key}>
+                  {CATEGORY_LABELS[key]}
+                </option>
+              ))}
+            </select>
+            <input
+              type="date"
+              value={eventDate}
+              onChange={(e) => setEventDate(e.target.value)}
+              aria-label={t("filters.eventDate")}
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "yaklasan" | "populer")}
+              aria-label={t("filters.sort")}
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900"
+            >
+              <option value="yaklasan">{t("sortBy.upcoming")}</option>
+              <option value="populer">{t("sortBy.popular")}</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => {
+                setSortBy("yaklasan");
+                setSelectedCity("all");
+                setSelectedCategory("all");
+                setEventDate("");
+              }}
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm leading-tight"
+            >
+              {t("filters.clear")}
+            </button>
+          </div>
         </div>
         
         {displayEvents.length === 0 ? (

@@ -31,9 +31,6 @@
     "errorRegisterFailed": "Registration could not be created.",
     "successRegistered": "Your account has been created! You can log in and purchase tickets.",
     "errorGeneric": "An unexpected error occurred.",
-    "organizerTitle": "Organization Application",
-    "organizerFormLink": "Organization Application Form",
-    "organizerSubtitle": "If you want to add and manage events, fill out the form below. After administrator approval you will be able to add events.",
     "submitting": "Submitting application...",
     "organizerApply": "Apply as Organiser",
     "errorEmailExistsOrganizer": "This email address is already registered. Please use the login form above to log in.",
@@ -105,17 +102,14 @@
     "news": "News",
     "sortBy": {
       "upcoming": "Upcoming",
-      "cheapest": "Cheapest",
       "popular": "Popular"
     },
     "filters": {
       "allCities": "All Cities",
       "allCategories": "All Categories",
       "clear": "Clear Filters",
-      "startDate": "Start date (dd.mm.yyyy)",
-      "endDate": "End date (dd.mm.yyyy)",
-      "minPrice": "Min €",
-      "maxPrice": "Max €"
+      "eventDate": "Event date",
+      "sort": "Sort"
     },
     "noEvents": "No events yet",
     "noEventsForFilter": "No events match your search criteria.",

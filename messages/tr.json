@@ -31,9 +31,6 @@
     "errorRegisterFailed": "Kayıt oluşturulamadı.",
     "successRegistered": "Hesabınız oluşturuldu! Giriş yaparak bilet satın alabilirsiniz.",
     "errorGeneric": "Beklenmeyen bir hata oluştu.",
-    "organizerTitle": "Organizasyon Başvurusu",
-    "organizerFormLink": "Organizasyon Başvuru Formu",
-    "organizerSubtitle": "Etkinlik ekleyip yönetmek istiyorsanız aşağıdaki formu doldurarak başvurunuzu yapın. Yönetici onayından sonra etkinlik ekleyebileceksiniz.",
     "submitting": "Başvuru Gönderiliyor...",
     "organizerApply": "Organizatör Olarak Başvur",
     "errorEmailExistsOrganizer": "Bu e-posta adresi zaten kayıtlı. Üstteki giriş formunu kullanarak giriş yapabilirsiniz.",
@@ -97,7 +94,7 @@
     "heroTitle": "Hayalinizdeki Etkinliğe Bilet Bulun",
     "heroSubtitle": "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.",
     "search": "Ara",
-    "searchPlaceholder": "Etkinlik, sanatçı veya venue ara...",
+    "searchPlaceholder": "Etkinlik veya sanatçı ara...",
     "upcomingEvents": "Yaklaşan Etkinlikler",
     "featuredEvents": "Etkinlikler",
     "inYourCity": "Şehrinize göre etkinlikleri keşfedin.",
@@ -105,17 +102,14 @@
     "news": "Haberler",
     "sortBy": {
       "upcoming": "Yaklaşan",
-      "cheapest": "En Ucuz",
       "popular": "Popüler"
     },
     "filters": {
       "allCities": "Tüm Şehirler",
       "allCategories": "Tüm Kategoriler",
       "clear": "Filtreleri Temizle",
-      "startDate": "Başlangıç tarihi (gg.aa.yyyy)",
-      "endDate": "Bitiş tarihi (gg.aa.yyyy)",
-      "minPrice": "Min €",
-      "maxPrice": "Max €"
+      "eventDate": "Etkinlik tarihi",
+      "sort": "Sırala"
     },
     "noEvents": "Henüz etkinlik yok",
     "noEventsForFilter": "Arama kriterlerinize uygun etkinlik bulunamadı.",

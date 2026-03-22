@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import NextLink from "next/link";
 import { Link } from "@/i18n/navigation";
-import { Eye, EyeOff, LogIn, ArrowLeft, Calendar, UserPlus } from "lucide-react";
+import { Eye, EyeOff, LogIn, ArrowLeft, UserPlus } from "lucide-react";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -704,20 +704,6 @@ export default function LoginPage() {
                 </button>
               </form>
             </div>
-          </div>
-
-          {/* Organizasyon Başvurusu linki */}
-          <div className="mt-12 pt-12 border-t border-slate-200 text-center">
-            <p className="text-slate-600 text-sm mb-3">
-              Etkinlik ekleyip bilet satmak mı istiyorsunuz?
-            </p>
-            <NextLink
-              href="/organizator-basvuru"
-              className="inline-flex items-center gap-2 text-primary-600 hover:text-primary-700 font-semibold"
-            >
-              <Calendar className="h-5 w-5" />
-              {t("organizerFormLink")}
-            </NextLink>
           </div>
         </div>
       </div>
