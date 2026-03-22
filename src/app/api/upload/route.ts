@@ -1,15 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { IMAGE_STANDARDS, validateImageFile } from "@/lib/image-standards";
+import { validateImageFile } from "@/lib/image-standards";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { requireRole } from "@/lib/api-auth";
+import { getAuthToken, requireRoleWithAccessToken } from "@/lib/api-auth";
 
 const BUCKET = "uploads";
 
 export async function POST(request: NextRequest) {
-  const auth = await requireRole(request, ["admin", "organizer"]);
-  if (auth instanceof Response) return auth;
+  let formData: FormData;
   try {
-    const formData = await request.formData();
+    formData = await request.formData();
+  } catch {
+    return NextResponse.json({ error: "Geçersiz istek gövdesi" }, { status: 400 });
+  }
+
+  const headerToken = getAuthToken(request);
+  const formTokenRaw = formData.get("access_token");
+  const formToken = typeof formTokenRaw === "string" ? formTokenRaw.trim() : "";
+  const accessToken = headerToken || formToken || null;
+
+  const auth = await requireRoleWithAccessToken(accessToken, ["admin", "organizer"]);
+  if (auth instanceof Response) return auth;
+
+  try {
     const file = formData.get("file") as File;
     const folder = (formData.get("folder") as string) || "images";
 

@@ -29,6 +29,7 @@ export default function AdminImageUpload({ value, onChange, onUploadingChange }:
 
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("access_token", token);
 
       const response = await fetch("/api/upload", {
         method: "POST",

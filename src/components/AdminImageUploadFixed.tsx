@@ -37,6 +37,7 @@ export default function AdminImageUploadFixed({
       const formData = new FormData();
       formData.append("file", file);
       formData.append("folder", folder);
+      formData.append("access_token", token);
 
       const response = await fetch("/api/upload", {
         method: "POST",

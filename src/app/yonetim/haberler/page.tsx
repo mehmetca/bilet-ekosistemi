@@ -69,6 +69,7 @@ export default function HaberlerPage() {
 
     const uploadFormData = new FormData();
     uploadFormData.append("file", file);
+    uploadFormData.append("access_token", token);
 
     const response = await fetch("/api/upload", {
       method: "POST",
