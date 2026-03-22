@@ -1,4 +1,5 @@
 import createNextIntlPlugin from "next-intl/plugin";
+import { PHASE_PRODUCTION_BUILD } from "next/constants.js";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
@@ -7,6 +8,15 @@ const nextConfig = {
   transpilePackages: ["lucide-react"],
   experimental: {
     instrumentationHook: false,
+    // Sentry / OpenTelemetry webpack vendor-chunks (örn. @opentelemetry.js) Windows dev'de
+    // eksik dosya → MODULE_NOT_FOUND. Sunucuda paketleri bundle dışı bırakır.
+    serverComponentsExternalPackages: [
+      "@sentry/nextjs",
+      "@sentry/node",
+      "@sentry/opentelemetry",
+      "@opentelemetry/api",
+      "@opentelemetry/semantic-conventions",
+    ],
   },
   async redirects() {
     return [
@@ -65,9 +75,14 @@ const nextConfig = {
   },
 };
 
-export default async function config() {
+export default async function config(phase) {
   const configWithIntl = withNextIntl(nextConfig);
-  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+  // NODE_ENV bazen shell'de production kalır; `next dev` yine de Sentry webpack'i tetikleyebiliyordu.
+  // Sadece `next build` fazında withSentryConfig kullan (Vercel üretim derlemesi dahil).
+  const sentryWebpackEnabled =
+    Boolean(process.env.NEXT_PUBLIC_SENTRY_DSN) &&
+    phase === PHASE_PRODUCTION_BUILD;
+  if (sentryWebpackEnabled) {
     const { withSentryConfig } = await import("@sentry/nextjs");
     return withSentryConfig(configWithIntl, {
       org: process.env.SENTRY_ORG || "bilet-ekosistemi",

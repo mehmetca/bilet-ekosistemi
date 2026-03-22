@@ -9,18 +9,15 @@ import { Link } from "@/i18n/navigation";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { useTranslations, useLocale } from "next-intl";
-import { parseDateInput, toISODateString } from "@/lib/date-utils";
+import { parseDateInput, toISODateString, formatEventDateDMY, formatEventDateDMYFromDate } from "@/lib/date-utils";
 
 interface EventCalendarProps {
   events: Event[];
 }
 
-const localeMap: Record<string, string> = { tr: "tr-TR", de: "de-DE", en: "en-US" };
-
 export default function EventCalendar({ events }: EventCalendarProps) {
   const t = useTranslations();
   const locale = useLocale();
-  const dateLocale = localeMap[locale] || "tr-TR";
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [filteredEvents, setFilteredEvents] = useState<Event[]>(events);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -115,7 +112,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
           {(() => {
             const parsed = selectedDate.trim() ? parseDateInput(selectedDate) : null;
             return parsed
-              ? `${parsed.toLocaleDateString(dateLocale)} ${t("calendar.eventsOnDate")}`
+              ? `${formatEventDateDMYFromDate(parsed)} ${t("calendar.eventsOnDate")}`
               : selectedCategory !== "all" 
                 ? `${t(`categories.${selectedCategory}`)} ${t("calendar.eventsOfCategory")}`
                 : t("home.upcomingEvents");
@@ -177,7 +174,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     <div className="mt-3 space-y-2 text-sm text-slate-500">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 flex-shrink-0" />
-                      {event.date ? new Date(event.date).toLocaleDateString(dateLocale) : ""} • {event.time ?? ""}
+                      {event.date ? formatEventDateDMY(event.date) : ""} • {event.time ?? ""}
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 flex-shrink-0" />
@@ -245,7 +242,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     <div className="mt-3 space-y-2 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 flex-shrink-0" />
-                        {event.date ? new Date(event.date).toLocaleDateString(dateLocale) : ""} • {event.time ?? ""}
+                        {event.date ? formatEventDateDMY(event.date) : ""} • {event.time ?? ""}
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 flex-shrink-0" />

@@ -10,8 +10,7 @@ import { formatPrice } from "@/lib/formatPrice";
 import { parseEventDescription } from "@/lib/eventMeta";
 import type { Event } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
-
-const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
+import { formatEventDateDMY } from "@/lib/date-utils";
 
 interface CityPageClientProps {
   city: Record<string, unknown>;
@@ -22,7 +21,6 @@ export default function CityPageClient({ city, initialEvents }: CityPageClientPr
   const t = useTranslations("city");
   const tHome = useTranslations("home");
   const locale = useLocale() as "tr" | "de" | "en";
-  const dateLocale = dateLocaleMap[locale] || "tr-TR";
 
   const [sortBy, setSortBy] = useState<"upcoming" | "popular">("upcoming");
   const localized = getLocalizedCity(city, locale);
@@ -143,7 +141,7 @@ export default function CityPageClient({ city, initialEvents }: CityPageClientPr
                     <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
                       <Calendar className="h-4 w-4 flex-shrink-0" />
                       <span>
-                        {new Date(event.date).toLocaleDateString(dateLocale)} • {event.time}
+                        {formatEventDateDMY(event.date)} • {event.time}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-slate-600">

@@ -13,6 +13,7 @@ import NewsSlider from "@/components/NewsSlider";
 import FeaturedEvents from "@/components/FeaturedEvents";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
+import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
 
 function eventDateISO(event: Event): string {
   const d = String(event.date ?? "");
@@ -183,10 +184,7 @@ export default function ClientHomePage({
     };
   }, [fetchData]);
 
-  const isEventPast = (event: Event) => {
-    const eventDateTime = new Date(`${event.date} ${event.time || "00:00"}`);
-    return eventDateTime < new Date();
-  };
+  const isEventPast = (event: Event) => isEventPastByLocalDateTime(event.date, event.time);
 
   const sortedEvents = [...(events || [])].sort((a, b) => {
     const aCreated = new Date(a.created_at).getTime();
@@ -199,7 +197,6 @@ export default function ClientHomePage({
   });
 
   const upcomingEvents = sortedEvents.filter((event) => !isEventPast(event));
-  const pastEvents = sortedEvents.filter((event) => isEventPast(event));
   // Şehir listesi: tekrarsız, virgülden önceki kısım + büyük/küçük harf farkı birleştirilir (örn. 3x Berlin → 1)
   const cityOptions = (() => {
     const byKey = new Map<string, string>();
@@ -710,62 +707,6 @@ export default function ClientHomePage({
         )}
 
       </section>
-
-      {pastEvents.length > 0 && (
-        <section className="container mx-auto px-4 pb-16">
-          <h2 className="text-2xl font-bold text-slate-900 mb-8">{t("pastEvents")}</h2>
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {pastEvents.map((event) => {
-              const pastLocalized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
-              return (
-              <div
-                key={`past-${event.id}`}
-                className="overflow-hidden rounded-2xl border bg-slate-50 border-slate-300 opacity-80"
-              >
-                <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center overflow-hidden relative">
-                  {event.image_url ? (
-                    <img
-                      src={event.image_url}
-                      alt={pastLocalized.title}
-                      className="h-full w-full object-cover object-top"
-                      onError={(e) => {
-                        if (e.currentTarget.dataset.fallbackApplied === "1") return;
-                        e.currentTarget.dataset.fallbackApplied = "1";
-                        e.currentTarget.src = fallbackImage;
-                      }}
-                    />
-                  ) : (
-                    <Music2 className="h-16 w-16 text-slate-400" />
-                  )}
-                  <div className="absolute left-2 top-2">
-                    <span className="px-2 py-1 text-xs font-bold text-white bg-red-600 rounded">
-                      {t("eventEnded")}
-                    </span>
-                  </div>
-                </div>
-                <div className="p-5">
-                  <h3 className="font-semibold line-clamp-1 mb-2 text-slate-700">{pastLocalized.title}</h3>
-                  <div className="space-y-2 text-sm text-slate-500">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 flex-shrink-0" />
-                      <span>
-                        {new Date(event.date).toLocaleDateString("tr-TR")} • {event.time}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="h-4 w-4 flex-shrink-0" />
-                      <span>{pastLocalized.venue || event.venue}, {(event as Event & { city?: string | null }).city || event.location}</span>
-                    </div>
-                  </div>
-                  <p className="mt-3 text-xs font-medium text-red-600">
-                    {t("eventEndedBanner")}
-                  </p>
-                </div>
-              </div>
-            );})}
-          </div>
-        </section>
-      )}
 
     </div>
   );

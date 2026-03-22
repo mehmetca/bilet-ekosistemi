@@ -7,6 +7,7 @@ import type { News, Event } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
 import { getLocalizedNews, getLocalizedEvent, type Locale } from "@/lib/i18n-content";
 import { formatPrice } from "@/lib/formatPrice";
+import { formatEventDateDMY } from "@/lib/date-utils";
 import Header from "@/components/Header";
 import { useTranslations } from "next-intl";
 
@@ -222,7 +223,7 @@ export default function HaberDetayClient({ haber, events, otherNews, locale = "t
                           <div className="space-y-1 text-sm text-slate-600">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
-                              <span>{new Date(event.date).toLocaleDateString(dateLocale)} • {event.time}</span>
+                              <span>{formatEventDateDMY(event.date)} • {event.time}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <MapPin className="h-3.5 w-3.5 flex-shrink-0" />

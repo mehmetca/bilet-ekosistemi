@@ -7,7 +7,9 @@ import { CATEGORY_LABELS } from "@/types/database";
 import { Link } from "@/i18n/navigation";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatPrice } from "@/lib/formatPrice";
+import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
 import type { Locale } from "@/lib/i18n-content";
+import { useTranslations } from "next-intl";
 
 interface EventSliderProps {
   events: Event[];
@@ -19,6 +21,7 @@ interface EventSliderProps {
 }
 
 export default function EventSlider({ events, title, locale = "tr", noEventsText = "Yaklaşan etkinlik bulunmamaktadır.", buyTicketText = "Bilet Al", freeText = "Ücretsiz" }: EventSliderProps) {
+  const tHome = useTranslations("home");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const fallbackImage =
@@ -106,7 +109,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
   const currentEvent = sliderEvents[currentIndex] ?? sliderEvents[0];
   if (!currentEvent) return null;
   const localized = getLocalizedEvent(currentEvent as unknown as Record<string, unknown>, locale);
-  const dateLocale = locale === "tr" ? "tr-TR" : locale === "de" ? "de-DE" : "en-US";
+  const isPast = isEventPastByLocalDateTime(currentEvent.date, currentEvent.time);
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
@@ -146,7 +149,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
                 {CATEGORY_LABELS[currentEvent.category as keyof typeof CATEGORY_LABELS] ?? currentEvent.category ?? "Etkinlik"}
               </span>
               <span className="text-xs opacity-90">
-                {new Date(currentEvent.date).toLocaleDateString(dateLocale)}
+                {formatEventDateDMY(currentEvent.date)}
               </span>
             </div>
             
@@ -158,7 +161,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
               <div className="flex items-center gap-1 min-w-0">
                 <Calendar className="h-4 w-4 shrink-0" />
                 <span className="truncate">
-                  {currentEvent.date ? new Date(currentEvent.date).toLocaleDateString(dateLocale) : ""} • {currentEvent.time ?? ""}
+                  {currentEvent.date ? formatEventDateDMY(currentEvent.date) : ""} • {currentEvent.time ?? ""}
                 </span>
               </div>
               <div className="flex items-center gap-1 min-w-0">
@@ -168,19 +171,25 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="text-xl font-bold">
+              <div className={`text-xl font-bold ${isPast ? "text-slate-400" : ""}`}>
                 {Number(currentEvent.price_from) > 0
                   ? formatPrice(Number(currentEvent.price_from), currentEvent.currency)
                   : freeText
                 }
               </div>
               
-              <Link
-                href={`/etkinlik/${(currentEvent as Event & { show_slug?: string }).show_slug || currentEvent.id}`}
-                className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors text-center w-full sm:w-auto"
-              >
-                {buyTicketText}
-              </Link>
+              {isPast ? (
+                <span className="bg-slate-200 text-slate-500 px-6 py-2.5 rounded-lg font-semibold text-center w-full sm:w-auto cursor-not-allowed">
+                  {tHome("buyTicketDisabled")}
+                </span>
+              ) : (
+                <Link
+                  href={`/etkinlik/${(currentEvent as Event & { show_slug?: string }).show_slug || currentEvent.id}`}
+                  className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors text-center w-full sm:w-auto"
+                >
+                  {buyTicketText}
+                </Link>
+              )}
             </div>
           </div>
         </div>

@@ -11,6 +11,7 @@ import { CATEGORY_LABELS } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { parseEventDescription } from "@/lib/eventMeta";
+import { formatEventDateDMY } from "@/lib/date-utils";
 
 interface ShowDetailClientProps {
   events: Event[];
@@ -26,7 +27,6 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
   const tShow = useTranslations("showDetail");
   const tCat = useTranslations("categories");
   const locale = (useLocale() as "tr" | "de" | "en") || localeProp;
-  const dateLocale = dateLocaleMap[locale] || "tr-TR";
 
   const firstEvent = events[0];
   const localized = getLocalizedEvent(firstEvent as unknown as Record<string, unknown>, locale);
@@ -171,7 +171,6 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                       events={cityEvents}
                       organizerDisplayName={organizerDisplayName}
                       locale={locale}
-                      dateLocale={dateLocale}
                       t={t}
                       tShow={tShow}
                     />
@@ -183,7 +182,6 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                   events={displayEvents}
                   organizerDisplayName={organizerDisplayName}
                   locale={locale}
-                  dateLocale={dateLocale}
                   t={t}
                   tShow={tShow}
                 />
@@ -210,7 +208,6 @@ function CityEventsSection({
   events,
   organizerDisplayName,
   locale,
-  dateLocale,
   t,
   tShow,
 }: {
@@ -218,7 +215,6 @@ function CityEventsSection({
   events: Event[];
   organizerDisplayName?: string | null;
   locale: string;
-  dateLocale: string;
   t: (key: string) => string;
   tShow: (key: string, values?: Record<string, string>) => string;
 }) {
@@ -242,21 +238,14 @@ function CityEventsSection({
               }`}
             >
               <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-primary-50 flex flex-col items-center justify-center">
-                  <span className="text-xs font-medium text-primary-600 uppercase">
-                    {new Date(event.date).toLocaleDateString(dateLocale, { month: "short" })}
+                <div className="flex-shrink-0 w-[4.5rem] min-h-16 rounded-lg bg-primary-50 flex flex-col items-center justify-center px-1 py-1.5">
+                  <span className="text-[10px] font-bold text-primary-700 text-center leading-tight">
+                    {formatEventDateDMY(event.date)}
                   </span>
-                  <span className="text-xl font-bold text-primary-700">{new Date(event.date).getDate()}</span>
                 </div>
                 <div>
                   <p className="font-semibold text-slate-900">
-                    {new Date(event.date).toLocaleDateString(dateLocale, {
-                      weekday: "long",
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
-                    , {event.time || "20:00"}
+                    {formatEventDateDMY(event.date)}, {event.time || "20:00"}
                   </p>
                   <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
                     <MapPin className="h-4 w-4 flex-shrink-0" />

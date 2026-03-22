@@ -12,6 +12,7 @@ import { formatPrice } from "@/lib/formatPrice";
 import { CATEGORY_LABELS } from "@/types/database";
 import Header from "@/components/Header";
 import { Link } from "@/i18n/navigation";
+import { formatEventDateDMY } from "@/lib/date-utils";
 
 function getYouTubeEmbedUrl(url?: string): string | null {
   if (!url) return null;
@@ -509,7 +510,6 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                 artistEvents.map((event) => {
                   const eventDate = new Date(`${event.date} ${event.time || "00:00"}`);
                   const isPast = eventDate < new Date();
-                  const dateLocale = locale === "tr" ? "tr-TR" : locale === "de" ? "de-DE" : "en-US";
                   const localizedEvent = getLocalizedEvent(event as unknown as Record<string, unknown>, locale);
                   return (
                     <Link key={event.id} href={`/etkinlik/${(event as Event & { show_slug?: string }).show_slug || event.id}`}>
@@ -551,7 +551,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                           <div className="space-y-1 text-sm text-slate-600">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
-                              <span>{new Date(event.date).toLocaleDateString(dateLocale)} • {event.time}</span>
+                              <span>{formatEventDateDMY(event.date)} • {event.time}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <MapPin className="h-3.5 w-3.5 flex-shrink-0" />

@@ -5,6 +5,7 @@ import type { Event } from "@/types/database";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import type { Locale } from "@/lib/i18n-content";
 import { Music2 } from "lucide-react";
+import { formatEventDateDMY } from "@/lib/date-utils";
 
 const fallbackImage =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
@@ -15,12 +16,7 @@ interface FeaturedEventsProps {
   title?: string;
 }
 
-function getDateLocale(locale: Locale): string {
-  return locale === "tr" ? "tr-TR" : locale === "de" ? "de-DE" : "en-US";
-}
-
 export default function FeaturedEvents({ events, locale, title = "Events" }: FeaturedEventsProps) {
-  const dateLocale = getDateLocale(locale);
   const featured = [...events]
     .filter((e) => {
       const ord = (e as Event & { homepage_featured_order?: number | null }).homepage_featured_order;
@@ -42,10 +38,6 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
         {featured.map((event) => {
           const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale);
           const slug = (event as Event & { show_slug?: string }).show_slug || event.id;
-          const d = new Date(event.date);
-          const day = d.getDate();
-          const monthLong = d.toLocaleDateString(dateLocale, { month: "long" });
-          const year = d.getFullYear();
 
           return (
             <Link
@@ -87,10 +79,10 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
                     </p>
                   </div>
                   {/* Tarih: şeffaf kare içinde, zemin etkinlik fotoğrafı */}
-                  <div className="flex flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-white/90 bg-transparent px-3 py-2.5 md:px-4 md:py-4 min-w-[4.25rem] sm:min-w-[4.5rem] text-white drop-shadow-md order-1 sm:order-2 self-start sm:self-auto">
-                    <span className="text-2xl md:text-3xl font-bold leading-none">{day}</span>
-                    <span className="text-xs md:text-sm font-semibold uppercase tracking-wide mt-0.5 opacity-95">{monthLong}</span>
-                    <span className="text-sm font-medium opacity-90">{year}</span>
+                  <div className="flex flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-white/90 bg-transparent px-3 py-2.5 md:px-4 md:py-3 min-w-[4.25rem] sm:min-w-[5.5rem] text-white drop-shadow-md order-1 sm:order-2 self-start sm:self-auto">
+                    <span className="text-sm md:text-base font-bold leading-tight text-center whitespace-nowrap">
+                      {formatEventDateDMY(event.date)}
+                    </span>
                   </div>
                 </div>
               </div>

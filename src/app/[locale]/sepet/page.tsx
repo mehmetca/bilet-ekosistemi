@@ -8,16 +8,14 @@ import { supabase } from "@/lib/supabase-client";
 import Header from "@/components/Header";
 import { Link, useRouter } from "@/i18n/navigation";
 import { formatPrice } from "@/lib/formatPrice";
+import { formatEventDateDMY } from "@/lib/date-utils";
 import { ShoppingCart, Trash2, Calendar, MapPin, Ticket, ChevronRight, CreditCard, Lock } from "lucide-react";
 import TicketPrint from "@/components/TicketPrint";
-
-const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
 
 export default function CheckoutPage() {
   const t = useTranslations("checkout");
   const tEvent = useTranslations("eventDetail");
   const locale = useLocale() as "tr" | "de" | "en";
-  const dateLocale = dateLocaleMap[locale] || "tr-TR";
   const router = useRouter();
   const { user, loading: authLoading } = useSimpleAuth();
 
@@ -352,7 +350,7 @@ export default function CheckoutPage() {
                     <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {new Date(item.eventDate).toLocaleDateString(dateLocale)} • {item.eventTime}
+                        {formatEventDateDMY(item.eventDate)} • {item.eventTime}
                       </span>
                       <span className="flex items-center gap-1">
                         <MapPin className="h-3 w-3" />

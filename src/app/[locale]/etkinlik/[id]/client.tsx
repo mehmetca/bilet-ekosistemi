@@ -18,6 +18,7 @@ import { musensaal } from "@/lib/seating-plans/musensaal";
 import SalonPlanViewer from "@/components/SalonPlanViewer";
 import ImageSeatPlanViewer from "@/components/ImageSeatPlanViewer";
 import { theaterduisburgImagePlan, getTheaterDuisburgCoord } from "@/lib/seating-plans/theaterduisburg";
+import { formatEventDateDMY } from "@/lib/date-utils";
 
 interface EventDetailClientProps {
   event: Event;
@@ -28,8 +29,6 @@ interface EventDetailClientProps {
   /** Etkinlik henüz onaylanmadı (organizatör önizlemesi); bilet satışı kapalı */
   isUnapproved?: boolean;
 }
-
-const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
 
 /** Oturum planı: bölüm > sıra > koltuk (koltuk seçimi UI için); bölümde ticket_type_label etkinlikteki bilet adıyla eşlenir */
 type SeatPlanSeat = { id: string; seat_label: string };
@@ -377,7 +376,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const tCat = useTranslations("categories");
   const locale = (useLocale() as "tr" | "de" | "en") || localeProp;
   const { addItem, totalItems } = useCart();
-  const dateLocale = dateLocaleMap[locale] || "tr-TR";
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
@@ -712,11 +710,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-700">
                 <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
                   <Calendar className="h-4 w-4" />
-                  {new Date(event.date).toLocaleDateString(dateLocale, {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  {formatEventDateDMY(event.date)}
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
                   <Clock className="h-4 w-4" />

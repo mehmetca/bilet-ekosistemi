@@ -5,6 +5,7 @@ import QRCode from "qrcode";
 import { Printer, Download } from "lucide-react";
 import type { EventCurrency } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
+import { formatEventDateDMY } from "@/lib/date-utils";
 
 export type SeatDetail = { section_name: string; row_label: string; seat_label: string; ticket_code?: string };
 
@@ -46,9 +47,7 @@ export default function TicketPrint({
   const getCodeForSeat = (seat: SeatDetail | null) =>
     seat?.ticket_code ?? ticketCode;
 
-  const eventDateText = eventDate
-    ? new Date(eventDate).toLocaleDateString("tr-TR")
-    : "-";
+  const eventDateText = eventDate ? formatEventDateDMY(eventDate) : "-";
   const timeText = eventTime || "--:--";
   const totalPriceNumber = Number(price);
   const priceText = formatPrice(totalPriceNumber, currency);
