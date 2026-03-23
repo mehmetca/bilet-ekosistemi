@@ -27,6 +27,27 @@ function buildEventAddressLine(event: Event, venueDisplay: string): string {
   return [...new Set(ordered)].join(" · ");
 }
 
+function getEventCityLabel(event: Event): string {
+  const city = (event.city ?? "").trim();
+  if (city) return city;
+  const loc = (event.location ?? "").trim();
+  if (!loc) return "";
+  return loc.split(",")[0]?.trim() || loc;
+}
+
+function formatCityTicketsTitle(showTitle: string, city: string, locale: "tr" | "de" | "en"): string {
+  const cleanTitle = (showTitle || "").split(",")[0]?.trim() || showTitle;
+  if (locale !== "tr") return `${cleanTitle} ${city}`.trim();
+
+  // Turkish: "Miraz Konseri" + "Stuttgart" => "Miraz Stuttgart Konseri"
+  if (/konseri/i.test(cleanTitle)) {
+    const cityEscaped = city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const withoutCity = cleanTitle.replace(new RegExp(`\\b${cityEscaped}\\b`, "i"), "").replace(/\s+/g, " ").trim();
+    return withoutCity.replace(/konseri/i, `${city} Konseri`).replace(/\s+/g, " ").trim();
+  }
+  return `${cleanTitle} ${city}`.trim();
+}
+
 export default function ShowDetailClient({ events, showSlug, organizerDisplayName = null, locale: localeProp = "tr" }: ShowDetailClientProps) {
   const t = useTranslations("eventDetail");
   const tShow = useTranslations("showDetail");
@@ -49,11 +70,11 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
   const [selectedCity, setSelectedCity] = useState<string>("all");
 
   const cities = useMemo(() => {
-    const citySet = new Set(events.map((e) => (e.location || "").trim()).filter(Boolean));
+    const citySet = new Set(events.map((e) => getEventCityLabel(e)).filter(Boolean));
     const list = Array.from(citySet);
     const earliestMs = (city: string) => {
       const times = events
-        .filter((e) => (e.location || "").trim() === city)
+        .filter((e) => getEventCityLabel(e) === city)
         .map((e) => new Date(`${e.date} ${e.time || "00:00"}`).getTime())
         .filter((ms) => Number.isFinite(ms));
       return times.length > 0 ? Math.min(...times) : Number.POSITIVE_INFINITY;
@@ -68,7 +89,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
 
   const filteredEvents = useMemo(() => {
     if (selectedCity === "all") return events;
-    return events.filter((e) => (e.location || "").trim() === selectedCity);
+    return events.filter((e) => getEventCityLabel(e) === selectedCity);
   }, [events, selectedCity]);
 
   // En yakın tarih/saat en üstte (kronolojik artan)
@@ -180,7 +201,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
           <div className="space-y-6">
             {selectedCity === "all"
               ? cities.map((city) => {
-                  const cityEvents = displayEvents.filter((e) => (e.location || "").trim() === city);
+                  const cityEvents = displayEvents.filter((e) => getEventCityLabel(e) === city);
                   if (cityEvents.length === 0) return null;
                   return (
                     <CityEventsSection
@@ -240,12 +261,13 @@ function CityEventsSection({
   t: (key: string, values?: Record<string, string | number>) => string;
   tShow: (key: string, values?: Record<string, string>) => string;
 }) {
+  const cityHeadlineTitle = formatCityTicketsTitle(showTitle, city, locale);
   return (
     <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
       <div className="border-b border-slate-200 bg-white px-5 py-4 sm:px-6 sm:py-5">
         <h3 className="text-lg font-bold text-slate-900 sm:text-xl">{city}</h3>
         <p className="mt-1 text-sm font-semibold text-slate-800 sm:text-base">
-          {tShow("cityTicketsHeadline", { title: showTitle, city })}
+          {locale === "tr" ? `${cityHeadlineTitle} Biletleri` : tShow("cityTicketsHeadline", { title: cityHeadlineTitle, city })}
         </p>
       </div>
       <div className="divide-y divide-slate-100">
