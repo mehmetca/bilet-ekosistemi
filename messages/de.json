@@ -262,7 +262,19 @@
     "bestplatzbuchungDesc": "Du wählst den Preis – wir die besten verfügbaren Plätze",
     "saalplanbuchung": "Saalplanbuchung",
     "saalplanbuchungDesc": "Such dir deinen Platz selbst aus",
-    "deinePlatze": "Deine Plätze"
+    "deinePlatze": "Deine Plätze",
+    "ticketsAndPricesTitle": "{title} — Tickets & Preise",
+    "cityFilterAll": "Alle",
+    "venueTicketsSubtitle": "{city} — {title}",
+    "addressLabel": "Adresse",
+    "lastTicketsBadge": "Noch {count} Tickets",
+    "beforeSeatsGone": "Solange Plätze verfügbar",
+    "seatPickAvailable": "Platzwahl möglich",
+    "buyTicketCta": "TICKET KAUFEN",
+    "fromPricesCta": "Ab {price}",
+    "ticketPricesLink": "Ticketpreise",
+    "soldOutCta": "AUSVERKAUFT",
+    "organizerLine": "Veranstalter: {name}"
   },
   "checkout": {
     "title": "Warenkorb",
@@ -322,6 +334,7 @@
   "showDetail": {
     "selectCity": "Wählen Sie eine Stadt, um die Termine zu sehen",
     "allCities": "Alle Städte",
+    "cityTicketsHeadline": "{title} – Tickets {city}",
     "ticketsAndPrices": "Tickets und Preise",
     "ticketsIn": "Tickets in",
     "tickets": "Tickets",

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import dynamic from "next/dynamic";
+import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, Plus, ChevronDown, ChevronRight, Copy, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import OrganizerOrAdminGuard from "@/components/OrganizerOrAdminGuard";
@@ -10,32 +11,39 @@ import { getMusensaalTemplateCopy } from "@/lib/seating-plans/musensaal-to-db";
 import { getPlan } from "@/lib/seating-plans";
 import SalonPlanViewer from "@/components/SalonPlanViewer";
 import type { SeatingPlan, SeatingPlanSection, SeatingPlanRow, Seat } from "@/types/database";
+import { planSectionsMatchMusensaalTemplate } from "@/lib/seating-plans/musensaal-structure-match";
 
-const MUSENSAAL_SECTION_NAMES = [
-  "Parkett",
-  "Empore Mitte Sol",
-  "Empore Mitte Sağ",
-  "Seitensempore Links",
-  "Seitensempore Rechts",
-  "Empore Hinten",
-];
+const SeatingKonvaRowEditor = dynamic(
+  () => import("@/components/SeatingKonvaRowEditor"),
+  { ssr: false, loading: () => <p className="text-xs text-slate-500 py-2">Görsel düzen yükleniyor…</p> }
+);
 
 function planHasMusensaalStructure(sections: SeatingPlanSection[]): boolean {
-  if (sections.length !== MUSENSAAL_SECTION_NAMES.length) return false;
-  return sections.every((s, i) => s.name === MUSENSAAL_SECTION_NAMES[i]);
+  return planSectionsMatchMusensaalTemplate(sections);
 }
 
 export default function OturumPlaniPage() {
   return (
     <OrganizerOrAdminGuard>
-      <OturumPlaniContent />
+      <Suspense fallback={<div className="p-8 text-slate-500">Yükleniyor...</div>}>
+        <OturumPlaniContent />
+      </Suspense>
     </OrganizerOrAdminGuard>
   );
 }
 
 function OturumPlaniContent() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const venueId = params?.venueId as string;
+  const rawReturn = searchParams.get("return");
+  const safeReturn =
+    rawReturn &&
+    rawReturn.startsWith("/yonetim") &&
+    !rawReturn.includes("//") &&
+    rawReturn.startsWith("/")
+      ? rawReturn
+      : null;
 
   const [venueName, setVenueName] = useState<string>("");
   const [plans, setPlans] = useState<SeatingPlan[]>([]);
@@ -629,8 +637,19 @@ function OturumPlaniContent() {
         </Link>
       </div>
       <h1 className="text-2xl font-bold text-slate-900">Salon tasarımı</h1>
+      {safeReturn && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-primary-200 bg-primary-50 px-4 py-3 text-sm text-slate-800">
+          <span>Etkinlik sihirbazından geldiniz. Planı kaydettikten sonra geri dönüp salonu seçebilirsiniz.</span>
+          <Link
+            href={safeReturn}
+            className="shrink-0 rounded-md bg-primary-600 px-3 py-1.5 text-white text-sm font-medium hover:bg-primary-700"
+          >
+            Etkinlik sihirbazına dön
+          </Link>
+        </div>
+      )}
       <p className="mt-1 text-slate-600">
-        <strong>{venueName}</strong> için salonları burada tanımlayın. Musensaal (Rosengarten Mannheim) koltuk planını kullanmak için şablondan kopyalayın; açtığınız salonda görsel koltuk planı önizlemesi gösterilir. Etkinlik oluştururken mekan + salon seçilir.
+        <strong>{venueName}</strong> için salonları burada tanımlayın. Musensaal (Rosengarten Mannheim) koltuk planını kullanmak için şablondan kopyalayın; açtığınız salonda görsel koltuk planı önizlemesi gösterilir. Etkinlik oluştururken mekan + salon seçilir. Her sıra altında <strong>sürükle-bırak</strong> ile koltuk konumlarını kaydedebilirsiniz.
       </p>
       <p className="mt-1 text-xs text-slate-500">
         Blok taslağı ile tasarlamak isterseniz: <Link href="/yonetim/salon-tasarim-vizor" className="text-primary-600 hover:underline">Salon Tasarım Vizörü</Link> ile tasarlayıp &quot;Bu planı mekana aktar&quot; ile bu mekana ekleyebilirsiniz.
@@ -699,7 +718,7 @@ function OturumPlaniContent() {
         </button>
       </div>
       <p className="mt-1 text-xs text-slate-500">
-        <strong>Musensaal:</strong> &quot;Salon 1&quot; veya &quot;Musensaal&quot; yazıp &quot;Şablondan kopyala&quot; ile Rosengarten Mannheim koltuk planı bu mekana eklenir. <strong>Theater Duisburg:</strong> &quot;Theater Duisburg planını oluştur&quot; ile görsel plan (fotoğraf/PDF) ile eşleşen bölüm/sıra/koltuk veritabanına eklenir; <code>public/seatplans/theaterduisburg.png</code> görselini koyduğunuzda etkinlik sayfasında tıklanabilir koltuklar gösterilir.
+        <strong>Musensaal:</strong> &quot;Salon 1&quot; veya &quot;Musensaal&quot; yazıp &quot;Şablondan kopyala&quot; ile Rosengarten Mannheim koltuk planı bu mekana eklenir. <strong>Theater Duisburg:</strong> &quot;Theater Duisburg planını oluştur&quot; ile görsel plan (fotoğraf/PDF) ile eşleşen bölüm/sıra/koltuk veritabanına eklenir; <code>public/seatplans/theaterduisburg.svg</code> dosyası varken etkinlik sayfasında görsel plan gösterilir; koltuk id’leri için <code>npm run seatplan:tag-duisburg</code> ile <code>theaterduisburg.tagged.svg</code> üretilebilir.
       </p>
       <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
         <strong>Bilet türleri ile eşleştirme:</strong> Her bölümde &quot;Bilet türü (etkinlikte eşlenecek)&quot; alanına yazdığınız isim, <em>etkinlik oluştururken</em> eklediğiniz bilet türü adıyla <strong>birebir aynı</strong> olmalı (örn. Kategori 1, Kategori 2). Musensaal şablonundan kopyaladıysanız bölümler zaten Kategori 1–4 ile işaretlidir; etkinlikte bu isimlerle bilet türü ekleyin.
@@ -893,6 +912,14 @@ function OturumPlaniContent() {
                                 </span>
                               ))}
                             </div>
+                            <SeatingKonvaRowEditor
+                              rowId={row.id}
+                              rowLabel={row.row_label}
+                              seats={seatsByRow[row.id] || []}
+                              onSaved={() => {
+                                void refreshSeats(row.id);
+                              }}
+                            />
                           </div>
                         ))}
                       </div>

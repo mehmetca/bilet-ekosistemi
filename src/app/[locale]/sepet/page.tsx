@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { useCart } from "@/context/CartContext";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
@@ -105,6 +105,19 @@ export default function CheckoutPage() {
   const [completedItems, setCompletedItems] = useState<typeof items>([]);
   const [error, setError] = useState<string | null>(null);
 
+  const processingFeesTotal = useMemo(() => {
+    const byEvent = new Map<string, number>();
+    for (const i of items) {
+      const f = i.eventCheckoutFee;
+      if (f != null && f > 0 && !byEvent.has(i.eventId)) byEvent.set(i.eventId, f);
+    }
+    let sum = 0;
+    for (const v of byEvent.values()) sum += v;
+    return sum;
+  }, [items]);
+
+  const grandTotal = totalPrice + processingFeesTotal;
+
   async function handleCompleteOrder(e: React.FormEvent) {
     e.preventDefault();
     if (items.length === 0) return;
@@ -139,6 +152,7 @@ export default function CheckoutPage() {
       const headers: Record<string, string> = {};
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
 
+      const feeChargedForEventId = new Set<string>();
       for (const item of items) {
         const formData = new FormData();
         formData.append("ticket_id", item.ticketId);
@@ -151,6 +165,12 @@ export default function CheckoutPage() {
         if (item.seatIds && item.seatIds.length > 0) {
           formData.append("seat_ids", JSON.stringify(item.seatIds));
         }
+        const fee = item.eventCheckoutFee;
+        const shouldApplyProcessingFee =
+          fee != null && fee > 0 && !feeChargedForEventId.has(item.eventId);
+        if (shouldApplyProcessingFee) {
+          formData.append("include_checkout_processing_fee", "true");
+        }
 
         const res = await fetch("/api/purchase", {
           method: "POST",
@@ -160,6 +180,10 @@ export default function CheckoutPage() {
         const data = await res.json();
 
         if (data.success) {
+          if (shouldApplyProcessingFee) feeChargedForEventId.add(item.eventId);
+          const od = data.orderDetails as
+            | { price?: number; seatDetails?: Array<{ section_name: string; row_label: string; seat_label: string }> }
+            | undefined;
           orderResults.push({
             success: true,
             ticketCode: data.ticketCode,
@@ -169,8 +193,8 @@ export default function CheckoutPage() {
               buyerName: finalName,
               quantity: item.quantity,
               ticketType: item.ticketName,
-              price: item.price * item.quantity,
-              seatDetails: (data.orderDetails as { seatDetails?: Array<{ section_name: string; row_label: string; seat_label: string }> })?.seatDetails,
+              price: typeof od?.price === "number" ? od.price : item.price * item.quantity,
+              seatDetails: od?.seatDetails,
             },
           });
         } else {
@@ -361,6 +385,15 @@ export default function CheckoutPage() {
                       <Ticket className="h-4 w-4 text-primary-600" />
                       <span className="text-sm font-medium text-slate-700">{item.ticketName}</span>
                     </div>
+                    {item.seatCaptions && item.seatCaptions.length > 0 ? (
+                      <ul className="mt-2 list-none space-y-0.5 pl-0 text-xs text-slate-600">
+                        {item.seatCaptions.map((line, idx) => (
+                          <li key={`${item.ticketId}-seat-${idx}`} className="truncate" title={line}>
+                            {line}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-2">
@@ -623,14 +656,20 @@ export default function CheckoutPage() {
                     <span>{t("subtotal")}</span>
                     <span>{formatPrice(totalPrice, items[0]?.currency as import("@/types/database").EventCurrency | undefined)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-600">
-                    <span>{t("fees")}</span>
-                    <span>0,00 €</span>
-                  </div>
+                  {processingFeesTotal > 0 && (
+                    <div className="flex justify-between text-slate-600">
+                      <span>{t("fees")}</span>
+                      <span>
+                        {formatPrice(processingFeesTotal, items[0]?.currency as import("@/types/database").EventCurrency | undefined)}
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div className="mt-4 flex justify-between text-lg font-bold text-slate-900">
                   <span>{t("total")}</span>
-                  <span className="text-primary-700">{formatPrice(totalPrice, items[0]?.currency as import("@/types/database").EventCurrency | undefined)}</span>
+                  <span className="text-primary-700">
+                    {formatPrice(grandTotal, items[0]?.currency as import("@/types/database").EventCurrency | undefined)}
+                  </span>
                 </div>
 
                 {error && (

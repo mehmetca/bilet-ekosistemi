@@ -75,3 +75,93 @@ export function isEventPastByLocalDateTime(
   if (Number.isNaN(eventDateTime.getTime())) return false;
   return eventDateTime < now;
 }
+
+const TR_MONTHS_SHORT = [
+  "Oca",
+  "Şub",
+  "Mar",
+  "Nis",
+  "May",
+  "Haz",
+  "Tem",
+  "Ağu",
+  "Eyl",
+  "Eki",
+  "Kas",
+  "Ara",
+] as const;
+const TR_MONTHS_LONG = [
+  "Ocak",
+  "Şubat",
+  "Mart",
+  "Nisan",
+  "Mayıs",
+  "Haziran",
+  "Temmuz",
+  "Ağustos",
+  "Eylül",
+  "Ekim",
+  "Kasım",
+  "Aralık",
+] as const;
+const TR_DOW = [
+  "Pazar",
+  "Pazartesi",
+  "Salı",
+  "Çarşamba",
+  "Perşembe",
+  "Cuma",
+  "Cumartesi",
+] as const;
+
+/** YYYY-MM-DD parçala (UTC kayması yok). */
+export function parseEventYmd(raw: string | null | undefined): { y: number; m: number; d: number } | null {
+  if (raw == null || raw === "") return null;
+  const s = String(raw).trim();
+  const datePart = s.includes("T") ? s.split("T")[0]! : s.slice(0, 10);
+  const m = datePart.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!m) return null;
+  return { y: parseInt(m[1], 10), m: parseInt(m[2], 10), d: parseInt(m[3], 10) };
+}
+
+/**
+ * Etkinlik kartı (Biletinial tarzı): kısa ay, gün, uzun satır (gün ay yıl günadı, saat).
+ */
+export function formatEventLongDateTime(
+  dateStr: string | null | undefined,
+  timeStr: string | null | undefined,
+  locale: "tr" | "de" | "en"
+): { monthShort: string; dayNum: string; lineLong: string } {
+  const ymd = parseEventYmd(dateStr);
+  const time = String(timeStr ?? "").trim() || "20:00";
+  if (!ymd) {
+    return { monthShort: "", dayNum: "—", lineLong: time };
+  }
+  const { y, m, d } = ymd;
+  const localDate = new Date(y, m - 1, d);
+  if (locale === "tr") {
+    const mi = Math.max(1, Math.min(12, m)) - 1;
+    const longM = TR_MONTHS_LONG[mi] ?? "";
+    const shortM = TR_MONTHS_SHORT[mi] ?? "";
+    const dow = TR_DOW[localDate.getDay()] ?? "";
+    const dd = String(d).padStart(2, "0");
+    return {
+      monthShort: shortM,
+      dayNum: String(d),
+      lineLong: `${dd} ${longM} ${y} ${dow}, ${time}`,
+    };
+  }
+  const loc = locale === "de" ? "de-DE" : "en-GB";
+  const longFmt = new Intl.DateTimeFormat(loc, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  const shortFmt = new Intl.DateTimeFormat(loc, { month: "short" });
+  return {
+    monthShort: shortFmt.format(localDate),
+    dayNum: String(d),
+    lineLong: `${longFmt.format(localDate)}, ${time}`,
+  };
+}

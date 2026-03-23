@@ -2,16 +2,15 @@
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, ChevronRight, Music2, Building2 } from "lucide-react";
+import { Calendar, ChevronRight, Music2, Building2 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import { Link } from "@/i18n/navigation";
 import type { Event } from "@/types/database";
-import { CATEGORY_LABELS } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { parseEventDescription } from "@/lib/eventMeta";
-import { formatEventDateDMY } from "@/lib/date-utils";
+import { formatEventLongDateTime } from "@/lib/date-utils";
 
 interface ShowDetailClientProps {
   events: Event[];
@@ -20,7 +19,13 @@ interface ShowDetailClientProps {
   locale?: "tr" | "de" | "en";
 }
 
-const dateLocaleMap = { tr: "tr-TR", de: "de-DE", en: "en-US" } as const;
+function buildEventAddressLine(event: Event, venueDisplay: string): string {
+  const venue = venueDisplay.trim();
+  const addr = (event.address ?? "").trim();
+  const loc = (event.location ?? "").trim();
+  const ordered = [venue, addr, loc].filter(Boolean);
+  return [...new Set(ordered)].join(" · ");
+}
 
 export default function ShowDetailClient({ events, showSlug, organizerDisplayName = null, locale: localeProp = "tr" }: ShowDetailClientProps) {
   const t = useTranslations("eventDetail");
@@ -45,7 +50,20 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
 
   const cities = useMemo(() => {
     const citySet = new Set(events.map((e) => (e.location || "").trim()).filter(Boolean));
-    return Array.from(citySet).sort((a, b) => a.localeCompare(b, "tr"));
+    const list = Array.from(citySet);
+    const earliestMs = (city: string) => {
+      const times = events
+        .filter((e) => (e.location || "").trim() === city)
+        .map((e) => new Date(`${e.date} ${e.time || "00:00"}`).getTime())
+        .filter((ms) => Number.isFinite(ms));
+      return times.length > 0 ? Math.min(...times) : Number.POSITIVE_INFINITY;
+    };
+    return list.sort((a, b) => {
+      const da = earliestMs(a);
+      const db = earliestMs(b);
+      if (da !== db) return da - db;
+      return a.localeCompare(b, "tr");
+    });
   }, [events]);
 
   const filteredEvents = useMemo(() => {
@@ -53,10 +71,10 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
     return events.filter((e) => (e.location || "").trim() === selectedCity);
   }, [events, selectedCity]);
 
-  // Tüm etkinlikler (biten + yaklaşan), en yeni tarih en başta
+  // En yakın tarih/saat en üstte (kronolojik artan)
   const displayEvents = useMemo(() => {
     return [...filteredEvents].sort(
-      (a, b) => new Date(`${b.date} ${b.time || "00:00"}`).getTime() - new Date(`${a.date} ${a.time || "00:00"}`).getTime()
+      (a, b) => new Date(`${a.date} ${a.time || "00:00"}`).getTime() - new Date(`${b.date} ${b.time || "00:00"}`).getTime()
     );
   }, [filteredEvents]);
 
@@ -148,7 +166,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
         </div>
 
         <h2 className="text-2xl font-bold text-slate-900 mb-6">
-          {selectedCity === "all" ? tShow("ticketsAndPrices") : `${tShow("ticketsIn")} ${selectedCity}`}
+          {t("ticketsAndPricesTitle", { title: localized.title || firstEvent.title })}
         </h2>
 
         {displayEvents.length === 0 ? (
@@ -168,9 +186,10 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                     <CityEventsSection
                       key={city}
                       city={city}
+                      showTitle={localized.title || firstEvent.title}
                       events={cityEvents}
                       organizerDisplayName={organizerDisplayName}
-                      locale={locale}
+                      locale={locale as "tr" | "de" | "en"}
                       t={t}
                       tShow={tShow}
                     />
@@ -179,9 +198,10 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
               : (
                 <CityEventsSection
                   city={selectedCity}
+                  showTitle={localized.title || firstEvent.title}
                   events={displayEvents}
                   organizerDisplayName={organizerDisplayName}
-                  locale={locale}
+                  locale={locale as "tr" | "de" | "en"}
                   t={t}
                   tShow={tShow}
                 />
@@ -205,6 +225,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
 
 function CityEventsSection({
   city,
+  showTitle,
   events,
   organizerDisplayName,
   locale,
@@ -212,72 +233,79 @@ function CityEventsSection({
   tShow,
 }: {
   city: string;
+  showTitle: string;
   events: Event[];
   organizerDisplayName?: string | null;
-  locale: string;
-  t: (key: string) => string;
+  locale: "tr" | "de" | "en";
+  t: (key: string, values?: Record<string, string | number>) => string;
   tShow: (key: string, values?: Record<string, string>) => string;
 }) {
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-      <h3 className="px-6 py-4 bg-slate-50 border-b border-slate-200 font-semibold text-slate-900">
-        {city} {tShow("tickets")}
-      </h3>
+    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+      <div className="border-b border-slate-200 bg-white px-5 py-4 sm:px-6 sm:py-5">
+        <h3 className="text-lg font-bold text-slate-900 sm:text-xl">{city}</h3>
+        <p className="mt-1 text-sm font-semibold text-slate-800 sm:text-base">
+          {tShow("cityTicketsHeadline", { title: showTitle, city })}
+        </p>
+      </div>
       <div className="divide-y divide-slate-100">
         {events.map((event) => {
-          const eventLocalized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
+          const eventLocalized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale);
           const eventDate = new Date(`${event.date} ${event.time || "00:00"}`);
           const isPast = eventDate < new Date();
           const price = Number(event.price_from || 0);
+          const dateParts = formatEventLongDateTime(event.date, event.time, locale);
+          const venueName = (eventLocalized.venue || event.venue || "").trim();
+          const addressLine = buildEventAddressLine(event, venueName);
 
           return (
             <div
               key={event.id}
-              className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-6 py-4 transition-colors ${
-                isPast ? "opacity-60" : "hover:bg-slate-50/50"
+              className={`flex flex-col gap-4 px-4 py-5 transition-colors sm:flex-row sm:items-stretch sm:gap-6 sm:px-6 sm:py-6 ${
+                isPast ? "opacity-60" : "hover:bg-slate-50/60"
               }`}
             >
-              <div className="flex items-center gap-4">
-                <div className="flex-shrink-0 w-[4.5rem] min-h-16 rounded-lg bg-primary-50 flex flex-col items-center justify-center px-1 py-1.5">
-                  <span className="text-[10px] font-bold text-primary-700 text-center leading-tight">
-                    {formatEventDateDMY(event.date)}
-                  </span>
-                </div>
-                <div>
-                  <p className="font-semibold text-slate-900">
-                    {formatEventDateDMY(event.date)}, {event.time || "20:00"}
-                  </p>
-                  <p className="text-sm text-slate-600 flex items-center gap-1 mt-1">
-                    <MapPin className="h-4 w-4 flex-shrink-0" />
-                    {eventLocalized.venue || event.venue}
-                  </p>
-                  {organizerDisplayName && (
-                    <p className="text-xs text-primary-600 flex items-center gap-1 mt-1">
-                      <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
-                      {t("organizer")}: {organizerDisplayName}
+              <div className="flex min-w-0 flex-1 gap-4 sm:gap-6">
+                <div className="flex shrink-0 flex-row items-center gap-3 sm:flex-col sm:justify-center sm:gap-1 sm:border-r sm:border-slate-100 sm:pr-6">
+                  <div className="min-w-[4.25rem] text-center sm:min-w-[3.5rem]">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{dateParts.monthShort}</p>
+                    <p className="text-[2.1rem] font-extrabold leading-none text-slate-900 sm:text-[2.5rem]">
+                      {dateParts.dayNum}
                     </p>
-                  )}
-                  {isPast && (
-                    <span className="inline-block mt-2 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded">
+                  </div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-base font-semibold text-slate-900 sm:text-lg">{dateParts.lineLong}</p>
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                    <span className="font-semibold text-slate-800">{t("addressLabel")}</span>
+                    {addressLine ? ` ${addressLine}` : " —"}
+                  </p>
+                  {organizerDisplayName ? (
+                    <p className="mt-2 text-sm text-slate-600">
+                      <span className="font-semibold text-slate-800">{t("organizer")}</span> {organizerDisplayName}
+                    </p>
+                  ) : null}
+                  {isPast ? (
+                    <span className="mt-3 inline-block text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded">
                       {t("eventEnded")}
                     </span>
-                  )}
+                  ) : null}
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
+              <div className="flex shrink-0 flex-col justify-center gap-3 border-t border-slate-100 pt-4 sm:min-w-[200px] sm:border-t-0 sm:pt-0 sm:pl-2">
+                <div className="text-left sm:text-right">
                   <p className="text-lg font-bold text-primary-700">
                     {price > 0 ? `${t("from")} ${formatPrice(price, event.currency)}` : t("comingSoon")}
                   </p>
                 </div>
                 {isPast ? (
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-slate-200 px-6 py-3 font-semibold text-slate-500 cursor-not-allowed">
+                  <span className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-200 px-6 py-3 font-semibold text-slate-500 cursor-not-allowed sm:ml-auto">
                     {t("eventEnded")}
                   </span>
                 ) : (
                   <Link
                     href={`/etkinlik/${event.id}`}
-                    className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white hover:bg-primary-700 transition-colors"
+                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-[#c62828] px-5 text-sm font-bold uppercase tracking-wide text-white shadow hover:bg-[#b71c1c] sm:ml-auto"
                   >
                     {t("buyTicket")}
                     <ChevronRight className="h-4 w-4" />

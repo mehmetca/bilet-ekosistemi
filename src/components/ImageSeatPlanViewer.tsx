@@ -1,13 +1,22 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
-import type { GetSeatCoordFn } from "@/lib/seating-plans/image-plan-types";
+import { useRef, useState, useCallback, useEffect, useLayoutEffect } from "react";
+import type { GetSeatCoordFn, ImagePlanSectionGrid } from "@/lib/seating-plans/image-plan-types";
 
 export type ImageSeatItem = {
   id: string;
   section_name: string;
   row_label: string;
   seat_label: string;
+  /** theaterduisburg: önceden hesaplanmış konum (etiket uyumsuzluğunda da dolu) */
+  x?: number;
+  y?: number;
+  /** Salonda plaka numarası (daire içinde gösterilir) */
+  venue_plate?: number;
+  /** tooltip / erişilebilirlik */
+  venue_caption?: string;
+  /** 1. PARKETT: SVG’deki rakam metni */
+  seat_display_label?: string;
 };
 
 const MIN_ZOOM = 0.4;
@@ -21,6 +30,18 @@ interface ImageSeatPlanViewerProps {
   selectedSeatIds: Set<string>;
   soldSeatIds: Set<string>;
   onSeatToggle: (seatId: string) => void;
+  /** `?seatDebug=1` (etkinlik sayfası URL’si): grid bölgelerini kırmızı çerçeveyle gösterir */
+  planSections?: ImagePlanSectionGrid[];
+  showSeatGridDebug?: boolean;
+  /**
+   * Kaynak görselin en/boy oranı (örn. SVG viewBox genişlik/yükseklik).
+   * Verilirse kutu viewBox ile aynı oranda tutulur; % koordinatlar kaymaz.
+   */
+  imageAspectRatio?: number;
+  /** Görsel viewBox genişliği (SVG ile aynı — koltuk dairesi px hesabı) */
+  viewBoxWidth?: number;
+  /** viewBox biriminde koltuk çapı (~8–9); gerçek taş boyutuna yakın */
+  seatDiameterViewUnits?: number;
 }
 
 export default function ImageSeatPlanViewer({
@@ -30,18 +51,64 @@ export default function ImageSeatPlanViewer({
   selectedSeatIds,
   soldSeatIds,
   onSeatToggle,
+  planSections,
+  showSeatGridDebug = false,
+  imageAspectRatio,
+  viewBoxWidth = 1207.56,
+  seatDiameterViewUnits = 8.5,
 }: ImageSeatPlanViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const aspectBoxRef = useRef<HTMLDivElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  /** object-contain ile görsel kutudan küçükse: gerçek çizim alanı (viewBox ile hizalı %). */
+  const [fitBox, setFitBox] = useState({ ox: 0, oy: 0, sx: 1, sy: 1 });
+  /** object-contain ile çizilen görsel genişliği (px) — koltuk dairesi ölçeği */
+  const [drawnImgWPx, setDrawnImgWPx] = useState(0);
   const [scale, setScale] = useState(0.9);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const didMove = useRef(false);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-    setScale((s) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, s + delta)));
+  const recalcImageFit = useCallback(() => {
+    const box = aspectBoxRef.current;
+    const img = imgRef.current;
+    if (!box || !img?.naturalWidth) return;
+    const W = box.clientWidth;
+    const H = box.clientHeight;
+    const nw = img.naturalWidth;
+    const nh = img.naturalHeight;
+    if (W <= 0 || H <= 0 || nw <= 0 || nh <= 0) return;
+    const scaleFit = Math.min(W / nw, H / nh);
+    const dw = nw * scaleFit;
+    const dh = nh * scaleFit;
+    setFitBox({
+      ox: (W - dw) / 2 / W,
+      oy: (H - dh) / 2 / H,
+      sx: dw / W,
+      sy: dh / H,
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (imageAspectRatio == null) return;
+    const el = aspectBoxRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => recalcImageFit());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [imageAspectRatio, recalcImageFit, imageUrl]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+      setScale((s) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, s + delta)));
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -72,15 +139,104 @@ export default function ImageSeatPlanViewer({
 
   const seatsWithCoord = seats
     .map((seat) => {
+      if (typeof seat.x === "number" && typeof seat.y === "number") {
+        return { ...seat, x: seat.x, y: seat.y };
+      }
       const coord = getCoord(seat.section_name, seat.row_label, seat.seat_label);
       return coord ? { ...seat, x: coord.x, y: coord.y } : null;
     })
     .filter((s): s is ImageSeatItem & { x: number; y: number } => s !== null);
 
+  const mapNormToOverlayPct = useCallback(
+    (nx: number, ny: number) => ({
+      leftPct: (fitBox.ox + nx * fitBox.sx) * 100,
+      topPct: (fitBox.oy + ny * fitBox.sy) * 100,
+    }),
+    [fitBox]
+  );
+
+  const overlayInner = (
+    <>
+      {showSeatGridDebug &&
+        planSections?.map((sec, i) => {
+          const tl = mapNormToOverlayPct(sec.x, sec.y);
+          const br = mapNormToOverlayPct(sec.x + sec.width, sec.y + sec.height);
+          return (
+          <div
+            key={`dbg-${sec.name}-${i}`}
+            className="absolute z-[5] border-2 border-dashed border-red-500/90 bg-red-500/[0.08]"
+            style={{
+              left: `${tl.leftPct}%`,
+              top: `${tl.topPct}%`,
+              width: `${br.leftPct - tl.leftPct}%`,
+              height: `${br.topPct - tl.topPct}%`,
+            }}
+            title={sec.name}
+          >
+            <span className="inline-block max-w-full truncate bg-white/90 px-0.5 text-[9px] font-bold leading-tight text-red-800">
+              {sec.name}
+            </span>
+          </div>
+          );
+        })}
+      {seatsWithCoord.map((seat) => {
+        const selected = selectedSeatIds.has(seat.id);
+        const sold = soldSeatIds.has(seat.id);
+        const { leftPct, topPct } = mapNormToOverlayPct(seat.x, seat.y);
+        const svgLbl = seat.seat_display_label;
+        const plate =
+          svgLbl != null && svgLbl !== ""
+            ? svgLbl
+            : typeof seat.venue_plate === "number" && seat.venue_plate > 0
+              ? String(seat.venue_plate)
+              : seat.seat_label;
+        const tip =
+          seat.venue_caption ??
+          `${seat.section_name} Sıra ${seat.row_label} Nr ${seat.seat_label}`;
+        const dPx =
+          drawnImgWPx > 0 && viewBoxWidth > 0
+            ? Math.max(7, (seatDiameterViewUnits / viewBoxWidth) * drawnImgWPx)
+            : 12;
+        const fontPx = Math.max(5, Math.min(10, Math.round(dPx * 0.45)));
+        return (
+          <button
+            key={seat.id}
+            type="button"
+            className={
+              "absolute z-10 flex items-center justify-center rounded-full pointer-events-auto touch-manipulation transition-all duration-150 -translate-x-1/2 -translate-y-1/2 p-0 leading-none overflow-hidden " +
+              (sold
+                ? "cursor-not-allowed bg-slate-900/55 text-white/90 ring-1 ring-slate-700"
+                : selected
+                  ? "cursor-pointer bg-emerald-400/35 text-emerald-950 ring-2 ring-emerald-600"
+                  : "cursor-pointer bg-white/85 text-slate-800 ring-1 ring-slate-500/70 shadow-sm hover:bg-white hover:ring-primary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600")
+            }
+            style={{
+              left: `${leftPct}%`,
+              top: `${topPct}%`,
+              width: dPx,
+              height: dPx,
+              fontSize: fontPx,
+            }}
+            disabled={sold}
+            onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => handleSeatClick(seat.id)}
+            title={sold ? `${tip} (satıldı)` : tip}
+            aria-pressed={selected}
+            aria-disabled={sold}
+            aria-label={tip}
+          >
+            <span className="font-bold tabular-nums">{plate}</span>
+          </button>
+        );
+      })}
+    </>
+  );
+
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-slate-600">Salon planı (görsel):</span>
+        <span className="text-sm text-slate-600">Salon planı</span>
         <button
           type="button"
           onClick={zoomIn}
@@ -105,14 +261,13 @@ export default function ImageSeatPlanViewer({
           Sıfırla
         </button>
         <span className="text-xs text-slate-500">
-          Fare tekerleği ile zoom · Sürükleyerek hareket ettirin · Koltuklara tıklayın
+          Zoom: tekerlek · Gezdirme: boş alandan sürükleyin · Koltuk: açık renkli noktalara tıklayın (satılmış: koyu)
         </span>
       </div>
       <div
         ref={containerRef}
         className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100 touch-none relative"
         style={{ minHeight: 420, maxHeight: "70vh", cursor: isDragging ? "grabbing" : "grab" }}
-        onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseUp}
@@ -124,51 +279,46 @@ export default function ImageSeatPlanViewer({
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             transformOrigin: "0 0",
-            width: "fit-content",
+            width: imageAspectRatio != null ? "100%" : "fit-content",
             position: "relative",
-            display: "inline-block",
+            display: imageAspectRatio != null ? "block" : "inline-block",
+            lineHeight: 0,
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          <img
-            src={imageUrl}
-            alt="Salon planı"
-            className="block max-w-none h-auto pointer-events-none select-none"
-            style={{ minWidth: 600, width: "min(100vw, 900px)" }}
-            draggable={false}
-          />
-          <div
-            className="absolute inset-0 pointer-events-none"
-            aria-hidden
-          >
-            {seatsWithCoord.map((seat) => {
-              const selected = selectedSeatIds.has(seat.id);
-              const sold = soldSeatIds.has(seat.id);
-              const leftPct = seat.x * 100;
-              const topPct = seat.y * 100;
-              return (
-                <button
-                  key={seat.id}
-                  type="button"
-                  className="absolute w-4 h-4 -ml-2 -mt-2 rounded-full border-2 border-white shadow pointer-events-auto cursor-pointer transition-colors"
-                  style={{
-                    left: `${leftPct}%`,
-                    top: `${topPct}%`,
-                    backgroundColor: sold
-                      ? "#475569"
-                      : selected
-                        ? "#22c55e"
-                        : "#94a3b8",
-                  }}
-                  disabled={sold}
-                  onClick={() => handleSeatClick(seat.id)}
-                  title={sold ? `${seat.section_name} ${seat.row_label}/${seat.seat_label} (satıldı)` : `${seat.section_name} Sıra ${seat.row_label} Nr ${seat.seat_label}`}
-                  aria-pressed={selected}
-                  aria-disabled={sold}
-                />
-              );
-            })}
-          </div>
+          {imageAspectRatio != null ? (
+            <div
+              ref={aspectBoxRef}
+              className="relative w-full max-w-[920px] overflow-hidden rounded-md shadow-sm ring-1 ring-slate-200/90"
+              style={{ aspectRatio: imageAspectRatio }}
+            >
+              <img
+                ref={imgRef}
+                src={imageUrl}
+                alt="Salon planı"
+                className="absolute inset-0 block h-full w-full object-contain bg-white pointer-events-none select-none"
+                draggable={false}
+                decoding="async"
+                onLoad={recalcImageFit}
+              />
+              <div className="absolute inset-0 pointer-events-none" aria-hidden>
+                {overlayInner}
+              </div>
+            </div>
+          ) : (
+            <div className="relative inline-block max-w-full overflow-hidden rounded-md shadow-sm ring-1 ring-slate-200/90">
+              <img
+                src={imageUrl}
+                alt="Salon planı"
+                className="block h-auto max-h-[min(70vh,900px)] w-auto max-w-[min(100vw,920px)] min-w-[min(100%,560px)] pointer-events-none select-none"
+                draggable={false}
+                decoding="async"
+              />
+              <div className="absolute inset-0 pointer-events-none" aria-hidden>
+                {overlayInner}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

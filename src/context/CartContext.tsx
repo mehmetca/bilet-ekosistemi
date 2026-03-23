@@ -19,6 +19,10 @@ export interface CartItem {
   available: number;
   /** Yer seçerek eklenen biletlerde: koltuk ID'leri (siparişte order_seats'e yazılır, bilette gösterilir) */
   seatIds?: string[];
+  /** seatIds ile aynı sırada: insan okunur koltuk satırı (örn. Duisburg plaka) */
+  seatCaptions?: string[];
+  /** Etkinlikte tanımlıysa: bu etkinlik için sepet özetinde bir kez gösterilir / ödemede ilk satırda uygulanır */
+  eventCheckoutFee?: number | null;
 }
 
 interface CartContextValue {
@@ -89,6 +93,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const cap = Math.max(1, maxTicketQuantity);
     const qty = Math.max(1, Math.min(cap, item.quantity ?? 1));
     const seatIds = item.seatIds && item.seatIds.length > 0 ? item.seatIds : undefined;
+    const seatCaptions =
+      item.seatCaptions && item.seatCaptions.length > 0 ? item.seatCaptions : undefined;
     setItems((prev) => {
       const existing = prev.find(
         (i) => i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()
@@ -97,14 +103,40 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const mergedSeatIds = seatIds
           ? [...(existing.seatIds || []), ...seatIds].slice(0, cap)
           : existing.seatIds;
+        const appendedCaps =
+          seatIds && seatCaptions && seatCaptions.length === seatIds.length
+            ? [...(existing.seatCaptions || []), ...seatCaptions].slice(0, cap)
+            : existing.seatCaptions;
+        const captionsOk =
+          !mergedSeatIds?.length ||
+          (appendedCaps && appendedCaps.length === mergedSeatIds.length);
+        const mergedCaptions = captionsOk ? appendedCaps : undefined;
         const newQty = mergedSeatIds ? mergedSeatIds.length : Math.min(existing.available, cap, existing.quantity + qty);
         if (newQty <= 0) return prev.filter((i) => !(i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()));
         return prev.map((i) =>
           i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()
-            ? { ...i, quantity: newQty, seatIds: mergedSeatIds, available: Math.max(i.available, item.available) } : i
+            ? {
+                ...i,
+                quantity: newQty,
+                seatIds: mergedSeatIds,
+                seatCaptions: captionsOk ? mergedCaptions : undefined,
+                available: Math.max(i.available, item.available),
+                eventCheckoutFee: item.eventCheckoutFee ?? i.eventCheckoutFee,
+              }
+            : i
         );
       }
-      return [...prev, { ...item, quantity: seatIds ? Math.min(seatIds.length, cap) : Math.min(item.available, cap, qty), seatIds }];
+      const captionsNew =
+        seatIds && seatCaptions && seatCaptions.length === seatIds.length ? seatCaptions : undefined;
+      return [
+        ...prev,
+        {
+          ...item,
+          quantity: seatIds ? Math.min(seatIds.length, cap) : Math.min(item.available, cap, qty),
+          seatIds,
+          seatCaptions: captionsNew,
+        },
+      ];
     });
   }, [maxTicketQuantity]);
 

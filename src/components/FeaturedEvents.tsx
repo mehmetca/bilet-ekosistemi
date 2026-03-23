@@ -5,7 +5,6 @@ import type { Event } from "@/types/database";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import type { Locale } from "@/lib/i18n-content";
 import { Music2 } from "lucide-react";
-import { formatEventDateDMY } from "@/lib/date-utils";
 
 const fallbackImage =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
@@ -17,6 +16,18 @@ interface FeaturedEventsProps {
 }
 
 export default function FeaturedEvents({ events, locale, title = "Events" }: FeaturedEventsProps) {
+  const getStackedDateParts = (rawDate: string) => {
+    const datePart = String(rawDate || "").includes("T") ? String(rawDate).split("T")[0] : String(rawDate || "").slice(0, 10);
+    const m = datePart.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (!m) return { day: "—", month: "", year: "" };
+    const year = m[1];
+    const monthIndex = Math.max(0, Math.min(11, Number(m[2]) - 1));
+    const day = String(Number(m[3]));
+    const localeCode = locale === "tr" ? "tr-TR" : locale === "de" ? "de-DE" : "en-US";
+    const month = new Intl.DateTimeFormat(localeCode, { month: "long" }).format(new Date(Number(year), monthIndex, 1));
+    return { day, month, year };
+  };
+
   const featured = [...events]
     .filter((e) => {
       const ord = (e as Event & { homepage_featured_order?: number | null }).homepage_featured_order;
@@ -38,6 +49,7 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
         {featured.map((event) => {
           const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale);
           const slug = (event as Event & { show_slug?: string }).show_slug || event.id;
+          const dateParts = getStackedDateParts(event.date);
 
           return (
             <Link
@@ -78,11 +90,11 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
                         .join(" / ")}
                     </p>
                   </div>
-                  {/* Tarih: şeffaf kare içinde, zemin etkinlik fotoğrafı */}
+                  {/* Tarih: eski stil, alt alta (gün daha büyük) */}
                   <div className="flex flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-white/90 bg-transparent px-3 py-2.5 md:px-4 md:py-3 min-w-[4.25rem] sm:min-w-[5.5rem] text-white drop-shadow-md order-1 sm:order-2 self-start sm:self-auto">
-                    <span className="text-sm md:text-base font-bold leading-tight text-center whitespace-nowrap">
-                      {formatEventDateDMY(event.date)}
-                    </span>
+                    <span className="text-3xl md:text-4xl font-extrabold leading-none">{dateParts.day}</span>
+                    <span className="mt-1 text-xs md:text-sm font-semibold uppercase tracking-wide leading-tight">{dateParts.month}</span>
+                    <span className="text-xs md:text-sm font-medium leading-tight">{dateParts.year}</span>
                   </div>
                 </div>
               </div>

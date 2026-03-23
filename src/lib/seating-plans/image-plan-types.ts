@@ -21,7 +21,7 @@ export interface ImagePlanSectionGrid {
 export interface ImageSeatPlanConfig {
   id: string;
   name: string;
-  /** public/ altındaki görsel yolu (örn. /seatplans/theaterduisburg.png) */
+  /** public/ altındaki grafik yolu — PNG/JPEG veya SVG (örn. /seatplans/2425_saalplan_theaterduisburg.svg) */
   imageUrl: string;
   sections: ImagePlanSectionGrid[];
 }

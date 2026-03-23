@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
@@ -46,8 +47,24 @@ const BILET_TURU_SECENEKLERI = [
   { value: "custom", label: "Özel (mevcut ad)", type: "normal" as const },
 ];
 
+const SALON_PLAN_VALUE_PREFIX = "salon_plan|";
+
+function salonPlanSelectValue(label: string) {
+  return `${SALON_PLAN_VALUE_PREFIX}${encodeURIComponent(label)}`;
+}
+
+function parseSalonPlanSelectValue(val: string): string | null {
+  if (!val.startsWith(SALON_PLAN_VALUE_PREFIX)) return null;
+  try {
+    return decodeURIComponent(val.slice(SALON_PLAN_VALUE_PREFIX.length));
+  } catch {
+    return null;
+  }
+}
+
 type WizardTicket = {
   id: string;
+  /** Hazır şablon value, "custom" veya "salon_plan" (isim `name` alanında) */
   presetKey: string;
   name: string;
   type: "normal" | "vip";
@@ -82,7 +99,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const [organizerDisplayName, setOrganizerDisplayName] = useState("");
   const [currency, setCurrency] = useState<EventCurrency>("EUR");
   const [priceFromInput, setPriceFromInput] = useState<number | "">("");
+  /** Sipariş özeti: etkinlik başına bir kez; boş veya 0 = gösterilmez */
+  const [checkoutProcessingFeeInput, setCheckoutProcessingFeeInput] = useState<number | "">("");
   const [ticketUrl, setTicketUrl] = useState("");
+  /** Tur/gösteri gruplaması için show_slug (Biletinial tarzı tek sayfa) */
+  const [showSlugId, setShowSlugId] = useState("");
 
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
@@ -98,6 +119,8 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const [seatingPlans, setSeatingPlans] = useState<SeatingPlanOption[]>([]);
   const [selectedSeatingPlanId, setSelectedSeatingPlanId] = useState("");
   const [sectionCapacitiesByTicketLabel, setSectionCapacitiesByTicketLabel] = useState<Record<string, number>>({});
+  /** Seçili oturum planı: bilet adı = bölümde ticket_type_label (doluysa) yoksa bölüm adı */
+  const [planDerivedTicketLabels, setPlanDerivedTicketLabels] = useState<string[]>([]);
 
   const [tickets, setTickets] = useState<WizardTicket[]>([
     { id: crypto.randomUUID(), presetKey: "normal_standart", name: "Normal / Standart Bilet", type: "normal", price: 0, quantity: 100, description: "", discountRules: "", groupMinQuantity: undefined },
@@ -159,8 +182,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setCategory((ev.category as EventCategory) || "konser");
       setImageUrl((ev.image_url as string) || "");
       setOrganizerDisplayName((ev.organizer_display_name as string) || "");
+      setShowSlugId((ev.show_slug as string) || "");
       setCurrency((ev.currency as EventCurrency) || "EUR");
       setPriceFromInput(typeof ev.price_from === "number" ? ev.price_from : "");
+      const cpf = Number(ev.checkout_processing_fee);
+      setCheckoutProcessingFeeInput(Number.isFinite(cpf) && cpf > 0 ? cpf : "");
       setTicketUrl(parsedTr.externalTicketUrl || "");
       setDate((ev.date as string) || "");
       setTime(String(ev.time || "").slice(0, 5));
@@ -180,9 +206,10 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       if (rows.length > 0) {
         const mapped: WizardTicket[] = rows.map((r) => {
           const preset = BILET_TURU_SECENEKLERI.find((p) => p.label === r.name);
+          const presetKey = preset ? preset.value : "salon_plan";
           return {
             id: crypto.randomUUID(),
-            presetKey: preset ? preset.value : "custom",
+            presetKey,
             name: r.name,
             type: (r.type === "vip" ? "vip" : "normal") as "normal" | "vip",
             price: Number(r.price) || 0,
@@ -222,17 +249,36 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   useEffect(() => {
     if (!selectedSeatingPlanId) {
       setSectionCapacitiesByTicketLabel({});
+      setPlanDerivedTicketLabels([]);
       return;
     }
     (async () => {
       const { data: sections } = await supabase
         .from("seating_plan_sections")
-        .select("id, ticket_type_label")
-        .eq("seating_plan_id", selectedSeatingPlanId);
+        .select("id, name, ticket_type_label, sort_order")
+        .eq("seating_plan_id", selectedSeatingPlanId)
+        .order("sort_order");
       if (!sections?.length) {
         setSectionCapacitiesByTicketLabel({});
+        setPlanDerivedTicketLabels([]);
         return;
       }
+      const ordered = [...sections].sort(
+        (a, b) => ((a as { sort_order?: number }).sort_order ?? 0) - ((b as { sort_order?: number }).sort_order ?? 0)
+      );
+      const labels: string[] = [];
+      const seen = new Set<string>();
+      for (const sec of ordered) {
+        const s = sec as { name?: string; ticket_type_label?: string | null };
+        const eff = (s.ticket_type_label?.trim() || s.name?.trim() || "");
+        if (!eff) continue;
+        const k = eff.toLowerCase();
+        if (seen.has(k)) continue;
+        seen.add(k);
+        labels.push(eff);
+      }
+      setPlanDerivedTicketLabels(labels);
+
       const sectionIds = sections.map((s) => s.id);
       const { data: rows } = await supabase
         .from("seating_plan_rows")
@@ -253,11 +299,12 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         countBySectionId[r.section_id] = (countBySectionId[r.section_id] || 0) + (countByRowId[r.id] || 0);
       });
       const byLabel: Record<string, number> = {};
-      sections.forEach((sec) => {
-        const label = (sec as { ticket_type_label?: string }).ticket_type_label?.trim();
-        const count = countBySectionId[sec.id] || 0;
-        if (label) {
-          byLabel[label] = (byLabel[label] || 0) + count;
+      ordered.forEach((sec) => {
+        const s = sec as { id: string; name?: string; ticket_type_label?: string | null };
+        const eff = (s.ticket_type_label?.trim() || s.name?.trim() || "");
+        const count = countBySectionId[s.id] || 0;
+        if (eff) {
+          byLabel[eff] = (byLabel[eff] || 0) + count;
         }
       });
       setSectionCapacitiesByTicketLabel(byLabel);
@@ -265,6 +312,13 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   }, [selectedSeatingPlanId]);
 
   const selectedVenue = venues.find((v) => v.id === selectedVenueId);
+  const wizardReturnPath =
+    editId != null && editId !== ""
+      ? `/yonetim/etkinlikler/yeni?id=${encodeURIComponent(editId)}`
+      : "/yonetim/etkinlikler/yeni";
+  const salonPlanEditorHref = selectedVenueId
+    ? `/yonetim/mekanlar/${selectedVenueId}/oturum-plani?return=${encodeURIComponent(wizardReturnPath)}`
+    : "";
   const venueDisplayName = selectedVenueId ? selectedVenue?.name ?? "" : venueManualName;
   const displayCity = selectedVenueId ? (selectedVenue?.city ?? eventCity) : eventCity;
   const displayAddress = selectedVenueId ? (selectedVenue?.address ?? eventAddress) : eventAddress;
@@ -301,9 +355,26 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   }
 
   function getTicketDisplayName(t: WizardTicket): string {
-    if (t.presetKey === "custom") return t.name || "Bilet";
+    if (t.presetKey === "salon_plan") return (t.name || "").trim() || "Bilet";
+    if (t.presetKey === "custom") return (t.name || "").trim() || "Bilet";
     const p = BILET_TURU_SECENEKLERI.find((x) => x.value === t.presetKey);
-    return p ? p.label : t.name || "Bilet";
+    return p ? p.label : (t.name || "").trim() || "Bilet";
+  }
+
+  /** Select value: şablon key, salon_plan|encode(label), veya custom */
+  function getTicketTypeSelectValue(t: WizardTicket): string {
+    if (t.presetKey === "custom") return "custom";
+    if (t.presetKey === "salon_plan") {
+      const n = (t.name || "").trim();
+      if (n) return salonPlanSelectValue(n);
+      return "custom";
+    }
+    const preset = BILET_TURU_SECENEKLERI.find((p) => p.value === t.presetKey);
+    if (preset && preset.label === t.name) return t.presetKey;
+    const byLabel = BILET_TURU_SECENEKLERI.find((p) => p.label === t.name);
+    if (byLabel) return byLabel.value;
+    if ((t.name || "").trim()) return salonPlanSelectValue(t.name.trim());
+    return t.presetKey;
   }
 
   function removeTicket(id: string) {
@@ -374,6 +445,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       const organizerName =
         organizerDisplayName.trim() || currentUserOrganizerName || null;
 
+      const checkoutFee =
+        typeof checkoutProcessingFeeInput === "number" && checkoutProcessingFeeInput > 0
+          ? checkoutProcessingFeeInput
+          : null;
+
       const eventData: Record<string, unknown> = {
         title: titleTrVal,
         description: descTr,
@@ -385,10 +461,12 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         address: addressVal || null,
         category,
         price_from: priceFrom,
+        checkout_processing_fee: checkoutFee,
         currency,
         image_url: imageUrl || null,
         venue_id: selectedVenueId || null,
         seating_plan_id: selectedSeatingPlanId || null,
+        show_slug: showSlugId.trim() || null,
         title_tr: titleTrVal || null,
         title_de: titleDe.trim() || null,
         title_en: titleEn.trim() || null,
@@ -593,6 +671,19 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 <input type="text" value={organizerDisplayName} onChange={(e) => setOrganizerDisplayName(e.target.value)} placeholder={currentUserOrganizerName ? currentUserOrganizerName : "Etkinlik kartında görünecek isim"} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                 <p className="mt-1 text-xs text-slate-500">Bu isim etkinlik kartında ve sayfada görünür.</p>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Slug ID (show_slug)</label>
+                <input
+                  type="text"
+                  value={showSlugId}
+                  onChange={(e) => setShowSlugId(e.target.value)}
+                  placeholder="Örn: farqin-azad-konseri"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Aynı <span className="font-medium">show_slug</span> değerine sahip etkinlikler tek sayfada listelenir.
+                </p>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Para birimi</label>
@@ -607,6 +698,24 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   <input type="number" min={0} step={0.01} value={priceFromInput === "" ? "" : priceFromInput} onChange={(e) => { const v = e.target.value; setPriceFromInput(v === "" ? "" : Math.max(0, Number(v) || 0)); }} placeholder="Boş bırakırsanız ücretsiz veya bilet fiyatlarından türetilir" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                   <p className="mt-1 text-xs text-slate-500">Tüm dillerde aynı rakam gösterilir. Boş = Ücretsiz.</p>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">İşlem ücreti (sipariş başına, opsiyonel)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={checkoutProcessingFeeInput === "" ? "" : checkoutProcessingFeeInput}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    setCheckoutProcessingFeeInput(v === "" ? "" : Math.max(0, Number(v) || 0));
+                  }}
+                  placeholder="Boş = sepette işlem ücreti satırı gösterilmez"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Aynı etkinlikten birden fazla kalem olsa bile ödeme özeti ve tahsilatta bu tutar yalnızca bir kez eklenir.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Kapak görseli</label>
@@ -688,6 +797,24 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-slate-500">Seçerseniz bilet alan kullanıcılar &quot;Yer seçerek bilet al&quot; ile koltuk seçebilir.</p>
+                  <p className="mt-2">
+                    <Link href={salonPlanEditorHref} className="text-sm font-medium text-primary-600 hover:underline">
+                      Salon planını düzenle (bölüm, koltuk, sürükle-bırak) →
+                    </Link>
+                  </p>
+                </div>
+              )}
+              {selectedVenueId && seatingPlans.length === 0 && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                  <p className="mb-2">
+                    Bu mekanda henüz salon (oturum) planı yok. Yer seçerek bilet için önce bu mekana en az bir salon ve koltuk düzeni ekleyin.
+                  </p>
+                  <Link
+                    href={salonPlanEditorHref}
+                    className="inline-flex font-semibold text-amber-900 underline decoration-amber-700 hover:no-underline"
+                  >
+                    Salon planı oluştur →
+                  </Link>
                 </div>
               )}
               {selectedVenueId && (
@@ -713,15 +840,41 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 <p className="mt-2 text-sm text-slate-600">Bu linki girerseniz biletler sitemiz üzerinden satılmayacak; &quot;Bilet Al&quot; bu linke gider. Bilet türü eklemeniz gerekmez.</p>
               </div>
               <p className="text-slate-600 mb-4">Biletler sitemizden satılacaksa aşağıdan bilet türü ekleyin: bilet türü veya ismi, fiyat ve kapasite zorunludur.</p>
+              {selectedSeatingPlanId && planDerivedTicketLabels.length > 0 && (
+                <div className="rounded-lg border border-primary-200 bg-primary-50/80 px-4 py-3 text-sm text-slate-800 mb-4">
+                  <strong>Oturum planı eşlemesi:</strong> Aşağıdaki listede bu salondaki bölüm adları / bilet etiketleri görünür. Bilet adı, planda &quot;Bilet türü (etkinlikte eşlenecek)&quot; doluysa o metinle; boşsa <strong>bölüm adı</strong> ile aynı olmalıdır — böylece koltuk fiyatı doğru biletle eşleşir.
+                </div>
+              )}
               {tickets.map((t) => (
                 <div key={t.id} className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-4">
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
                       <label className="block text-sm font-medium text-slate-700 mb-2">Bilet türü veya ismi</label>
                       <select
-                        value={t.presetKey}
+                        value={getTicketTypeSelectValue(t)}
                         onChange={(e) => {
                           const val = e.target.value;
+                          const fromPlan = parseSalonPlanSelectValue(val);
+                          if (fromPlan != null) {
+                            updateTicket(t.id, {
+                              presetKey: "salon_plan",
+                              name: fromPlan,
+                              type: "normal",
+                              groupMinQuantity: undefined,
+                            });
+                            return;
+                          }
+                          if (val === "custom") {
+                            const keep =
+                              t.presetKey === "salon_plan" || t.presetKey === "custom" ? t.name : "";
+                            updateTicket(t.id, {
+                              presetKey: "custom",
+                              name: keep,
+                              type: "normal",
+                              groupMinQuantity: undefined,
+                            });
+                            return;
+                          }
                           const preset = BILET_TURU_SECENEKLERI.find((x) => x.value === val);
                           if (preset) {
                             updateTicket(t.id, {
@@ -734,10 +887,35 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                         }}
                         className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-slate-900 focus:ring-primary-500 focus:border-primary-500"
                       >
-                        {BILET_TURU_SECENEKLERI.map((opt) => (
-                          <option key={opt.value} value={opt.value}>{opt.label}</option>
-                        ))}
+                        {selectedSeatingPlanId && planDerivedTicketLabels.length > 0 && (
+                          <optgroup label="Bu oturum planından (önerilen)">
+                            {planDerivedTicketLabels.map((label) => (
+                              <option key={label} value={salonPlanSelectValue(label)}>
+                                {label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        <optgroup label="Genel şablonlar">
+                          {BILET_TURU_SECENEKLERI.map((opt) => (
+                            <option key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </optgroup>
                       </select>
+                      {(t.presetKey === "custom" || t.presetKey === "salon_plan") && (
+                        <div className="mt-2">
+                          <label className="block text-xs font-medium text-slate-600 mb-1">Görünen bilet adı (satışta ve eşleşmede kullanılır)</label>
+                          <input
+                            type="text"
+                            value={t.name}
+                            onChange={(e) => updateTicket(t.id, { name: e.target.value })}
+                            placeholder="Örn: 1. Parkett"
+                            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:ring-primary-500 focus:border-primary-500"
+                          />
+                        </div>
+                      )}
                       {t.presetKey === "grup" && (
                         <div className="mt-3 space-y-3">
                           <div>

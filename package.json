@@ -4,13 +4,20 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:fresh": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true})}catch(e){}\" && next dev",
     "dev:turbo": "next dev --turbo",
     "dev:clean": "node scripts/clean-dev.js",
     "build": "next build",
     "start": "node scripts/chunk-compat.js && next start",
     "lint": "next lint",
     "i18n-check": "node scripts/check-i18n-keys.js",
-    "check": "npm run lint && npm run build"
+    "check": "npm run lint && npm run build",
+    "seatplan:tag-duisburg": "node scripts/tag-duisburg-svg-seats.js",
+    "seatplan:build-duisburg-coords": "node scripts/build-duisburg-svg-seat-coords.js",
+    "seatplan:analyze-duisburg": "node scripts/analyze-duisburg-svg.js",
+    "seatplan:duisburg-section-labels": "node scripts/build-duisburg-svg-section-labels.mjs",
+    "seatplan:dump-duisburg-labels": "node scripts/dump-duisburg-labels-json.mjs",
+    "seatplan:refresh-duisburg-visual": "npm run seatplan:build-duisburg-coords && npm run seatplan:duisburg-section-labels"
   },
   "dependencies": {
     "@sentry/nextjs": "^10.42.0",
@@ -20,6 +27,7 @@
     "@uiw/react-md-editor": "^4.0.11",
     "bwip-js": "^4.8.0",
     "html5-qrcode": "^2.3.8",
+    "konva": "^9.3.22",
     "lucide-react": "^0.460.0",
     "next": "14.2.34",
     "next-intl": "^4.8.3",
@@ -27,6 +35,7 @@
     "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-konva": "^18.2.14",
     "react-quill": "^2.0.0",
     "swr": "^2.2.5"
   },

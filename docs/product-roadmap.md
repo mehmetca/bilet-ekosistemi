@@ -24,6 +24,15 @@
 - Kritik admin islemleri icin denetim kaydi (audit log) tut.
 - Hata izleme ve alarmlama ekle (ornek: Sentry).
 
+## Backlog - Kapı kontrolü ve internet kesintisi (ileride)
+
+Mevcut `/kontrol` akışı Supabase üzerinden **çevrimiçi** çalışıyor; salon ve çevrede internet kesilirse anlık QR doğrulama yapılamaz. Şimdilik operasyonel yedek (mobil veri, ikinci cihaz, manuel liste) ile idare; ürün tarafında ileride değerlendirilecekler:
+
+- [ ] **Operasyon kılavuzu:** Kapı günü yedek bağlantı (4G/5G, taşınabilir modem), çoklu cihaz/operatör ve manuel yedek liste prosedürünü `docs/` altında kısa bir rehbere yaz.
+- [ ] **Offline / yarı-offline MVP:** Etkinlik bazlı bilet kodu listesinin kapı cihazına indirilmesi, okutmada cihaz içi doğrulama ve ağ gelince **senkron** (çift kullanım, `is_validated` tutarlılığı).
+- [ ] **İmzalı QR (opsiyonel):** QR payload’ında etkinlik + süre + imza; offline’da “bu biletin bu gösteriye ait olduğu” doğrulanır; kullanılmışlık için yine senkron veya önbellek stratejisi gerekir.
+- [ ] PWA / Service Worker ile offline kapı deneyimi (bugün SW bilinçli kapalı; tasarım ve güvenlik ayrı iş kalemi).
+
 ## Teknik Temizlik Backlog'u
 
 - [x] Gorsel optimizasyon politikasini standartlastir (format, boyut limitleri).

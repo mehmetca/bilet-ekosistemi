@@ -139,7 +139,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
             {upcomingEvents.map((event) => (
               <Link
                 key={event.id}
-                href={`/etkinlik/${event.id}`}
+                href={`/etkinlik/${(event as Event & { show_slug?: string | null }).show_slug || event.slug || event.id}`}
                 className="block overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-shadow"
               >
                 <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">

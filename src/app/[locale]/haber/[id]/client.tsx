@@ -178,7 +178,7 @@ export default function HaberDetayClient({ haber, events, otherNews, locale = "t
                   const eventStatus = getEventStatus(event);
                   const localizedEvent = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
                   return (
-                    <Link key={event.id} href={`/etkinlik/${event.id}`}>
+                    <Link key={event.id} href={`/etkinlik/${(event as Event & { show_slug?: string | null }).show_slug || event.slug || event.id}`}>
                       <div
                         className={`overflow-hidden rounded-xl border shadow-sm hover:shadow-md transition-shadow ${
                           eventStatus.isPast

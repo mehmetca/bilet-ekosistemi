@@ -143,10 +143,26 @@ npm run start
 | Uzak depodan güncelle | `git pull origin main` |
 | Build al | `npm run build` |
 | Lint + build kontrol | `npm run check` |
+| Duisburg SVG coords + plaka etiketleri | `npm run seatplan:refresh-duisburg-visual` |
 
 ---
 
-## 6. Supabase performans (DB + Storage)
+## 6. Theater Duisburg salon planı (SVG)
+
+`public/seatplans/theaterduisburg.svg` güncellendiğinde veya koltuk hizası/etiketleri değiştiğinde:
+
+| Amaç | Komut |
+|------|--------|
+| SVG’den koordinat üret | `npm run seatplan:build-duisburg-coords` |
+| `theaterduisburg-seat-display-labels.json` → TS etiket dosyası | `npm run seatplan:duisburg-section-labels` |
+| İkisini ardışık | `npm run seatplan:refresh-duisburg-visual` |
+| Etiketleri transcript’ten JSON’a dök (isteğe bağlı) | `npm run seatplan:dump-duisburg-labels` |
+
+Detay: `public/seatplans/README.md`.
+
+---
+
+## 7. Supabase performans (DB + Storage)
 
 ### Indexler
 En çok sorgulanan kolonlara index eklendi (migration `056_tickets_and_events_list_indexes.sql` ve `039_performance_indexes.sql`):

@@ -195,8 +195,10 @@ class FeedbackService {
     
     // Remove after animation
     setTimeout(() => {
-      if (overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
+      // Idempotent remove: prevents NotFoundError when node is already detached
+      // by route transitions or browser extensions mutating DOM.
+      if (overlay.isConnected) {
+        overlay.remove();
       }
     }, 300);
   }

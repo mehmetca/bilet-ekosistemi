@@ -18,9 +18,26 @@ export default function GlobalErrorHandler({ children }: { children: React.React
       );
     }
 
+    // React/DOM reconciliation sırasında nadiren görülen benign hata.
+    // (örn. route geçişinde node zaten kaldırılmışsa)
+    function isBenignDomDetachError(msg: string): boolean {
+      const s = msg.toLowerCase();
+      return (
+        s.includes("failed to execute 'removechild' on 'node'") ||
+        (s.includes("removechild") && s.includes("not a child of this node"))
+      );
+    }
+
     function onError(event: ErrorEvent) {
       const msg = event.message || "Bilinmeyen hata";
-      if (isBenignMediaError(msg) || isBenignSupabaseRefreshTokenMessage(msg)) return;
+      if (
+        isBenignMediaError(msg) ||
+        isBenignDomDetachError(msg) ||
+        isBenignSupabaseRefreshTokenMessage(msg)
+      ) {
+        event.preventDefault();
+        return;
+      }
       console.error("[GlobalErrorHandler] window.onerror:", msg, event.filename, event.lineno, event.colno);
       setError({ message: msg, stack: event.error?.stack });
     }
@@ -28,7 +45,7 @@ export default function GlobalErrorHandler({ children }: { children: React.React
     function onUnhandledRejection(event: PromiseRejectionEvent) {
       const msg = event.reason instanceof Error ? event.reason.message : String(event.reason);
 
-      if (isBenignMediaError(msg)) {
+      if (isBenignMediaError(msg) || isBenignDomDetachError(msg)) {
         event.preventDefault();
         return;
       }

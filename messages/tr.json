@@ -262,7 +262,19 @@
     "bestplatzbuchungDesc": "Fiyatı sen seç, en iyi müsait koltukları biz atayalım",
     "saalplanbuchung": "Yer seçerek bilet al",
     "saalplanbuchungDesc": "Koltuklarını salon planından kendin seç",
-    "deinePlatze": "Seçilen koltuklar"
+    "deinePlatze": "Seçilen koltuklar",
+    "ticketsAndPricesTitle": "{title} Biletleri ve Fiyatları",
+    "cityFilterAll": "Tümü",
+    "venueTicketsSubtitle": "{city} — {title}",
+    "addressLabel": "Adres",
+    "lastTicketsBadge": "Son {count} Bilet",
+    "beforeSeatsGone": "Koltuklar tükenmeden",
+    "seatPickAvailable": "Koltuk seçimi açık",
+    "buyTicketCta": "BİLETİNİ AL",
+    "fromPricesCta": "{price} 'den başlayan fiyatlarla",
+    "ticketPricesLink": "Bilet fiyatları",
+    "soldOutCta": "TÜKENDİ",
+    "organizerLine": "Organizasyon: {name}"
   },
   "checkout": {
     "title": "Alışveriş Sepeti",
@@ -322,6 +334,7 @@
   "showDetail": {
     "selectCity": "Seansları görmek için şehir seçiniz",
     "allCities": "Tüm Şehirler",
+    "cityTicketsHeadline": "{title} {city} Biletleri",
     "ticketsAndPrices": "Biletler ve Fiyatlar",
     "ticketsIn": "Biletleri",
     "tickets": "Biletleri",

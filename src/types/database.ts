@@ -12,6 +12,8 @@ export interface Event {
   venue: string;
   venue_id?: string | null;
   price_from: number;
+  /** Sepette / ödemede etkinlik başına en fazla bir kez uygulanan isteğe bağlı işlem ücreti (para birimi = currency). */
+  checkout_processing_fee?: number | null;
   currency?: EventCurrency | null;
   image_url?: string;
   category: EventCategory;

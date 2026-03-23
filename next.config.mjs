@@ -16,6 +16,9 @@ const nextConfig = {
       "@sentry/opentelemetry",
       "@opentelemetry/api",
       "@opentelemetry/semantic-conventions",
+      // Windows dev: eksik ./vendor-chunks/@supabase.js hatasını önlemek için sunucu bundle'dan çıkar
+      "@supabase/supabase-js",
+      "@supabase/ssr",
     ],
   },
   async redirects() {
@@ -41,14 +44,31 @@ const nextConfig = {
           },
         ],
       },
+      // public/seatplans — tarayıcı eski SVG’yi tutmasın (Duisburg plan güncellemeleri)
+      {
+        source: "/seatplans/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate, max-age=0",
+          },
+        ],
+      },
     ];
   },
   // Vercel build'in lint uyarılarından düşmemesi için (lint yerelde npm run lint ile çalıştırılabilir)
   eslint: { ignoreDuringBuilds: true },
-  webpack: (config, { dev }) => {
-    // Windows'ta .next-dev/cache pack dosyaları zaman zaman ENOENT verip
-    // dev server'da unhandledRejection üretüyor; dev cache'i kapatıyoruz.
-    if (dev) config.cache = false;
+  webpack: (config, { isServer }) => {
+    // Webpack dev cache stays on (avoids HMR ./9085.js missing on Windows). Use npm run dev:fresh if stuck.
+    // react-konva / Konva: optional Node `canvas` modülü — Next derlemesinde yok say.
+    config.resolve = config.resolve || {};
+    config.resolve.fallback = {
+      ...config.resolve.fallback,
+      canvas: false,
+    };
+    if (isServer) {
+      config.externals = [...(config.externals || []), { canvas: "commonjs canvas" }];
+    }
     return config;
   },
   images: {

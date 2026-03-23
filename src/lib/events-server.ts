@@ -32,10 +32,13 @@ export function getTicketSortRank(name?: string): number {
 export async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {
   try {
     const supabase = createServerSupabase();
+    const showSlugTrimmed = (showSlug || "").trim();
+    if (!showSlugTrimmed) return [];
     const { data, error } = await supabase
       .from("events")
       .select("*")
-      .eq("show_slug", showSlug)
+      // URL'den gelen slug büyük/küçük harf farkından dolayı boş gelebilmesin
+      .ilike("show_slug", showSlugTrimmed)
       .eq("is_active", true)
       .eq("is_approved", true)
       .order("date", { ascending: true })
@@ -52,21 +55,33 @@ export async function getEventBySlug(
 ): Promise<{ event: Event; isUnapproved?: boolean } | null> {
   try {
     const supabase = createServerSupabase();
+    const slugOrIdTrimmed = (slugOrId || "").trim();
 
     const { data, error } = await supabase
       .from("events")
       .select("*")
-      .eq("slug", slugOrId)
+      .eq("slug", slugOrIdTrimmed)
       .eq("is_active", true)
       .eq("is_approved", true)
       .single();
 
     if (!error && data) return { event: data as Event };
 
+    // case-insensitive fallback (URL slug formatı tutmazsa)
+    const { data: ciData, error: ciError } = await supabase
+      .from("events")
+      .select("*")
+      .ilike("slug", slugOrIdTrimmed)
+      .eq("is_active", true)
+      .eq("is_approved", true)
+      .maybeSingle();
+
+    if (!ciError && ciData) return { event: ciData as Event };
+
     const { data: idData, error: idError } = await supabase
       .from("events")
       .select("*")
-      .eq("id", slugOrId)
+      .eq("id", slugOrIdTrimmed)
       .eq("is_active", true)
       .eq("is_approved", true)
       .single();

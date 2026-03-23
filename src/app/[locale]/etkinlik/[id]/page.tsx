@@ -62,12 +62,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 function buildEventStructuredData(event: Event, venue: Venue | null) {
   const eventDate = new Date(`${event.date} ${event.time || "20:00"}`);
+  const startDate = Number.isFinite(eventDate.getTime())
+    ? eventDate.toISOString()
+    : `${String(event.date || "1970-01-01").trim()}T12:00:00.000Z`;
   return {
     "@context": "https://schema.org",
     "@type": "Event",
     name: event.title,
     description: event.description?.replace(/<[^>]*>/g, "").slice(0, 500) || event.title,
-    startDate: eventDate.toISOString(),
+    startDate,
     eventStatus: "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     location: {

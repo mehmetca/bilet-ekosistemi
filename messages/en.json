@@ -262,7 +262,19 @@
     "bestplatzbuchungDesc": "You choose the price – we assign the best available seats",
     "saalplanbuchung": "Hall plan booking",
     "saalplanbuchungDesc": "Choose your seat from the hall plan",
-    "deinePlatze": "Your seats"
+    "deinePlatze": "Your seats",
+    "ticketsAndPricesTitle": "{title} — Tickets & prices",
+    "cityFilterAll": "All",
+    "venueTicketsSubtitle": "{city} — {title}",
+    "addressLabel": "Address",
+    "lastTicketsBadge": "Last {count} tickets",
+    "beforeSeatsGone": "Before seats sell out",
+    "seatPickAvailable": "Seat selection available",
+    "buyTicketCta": "BUY TICKETS",
+    "fromPricesCta": "From {price}",
+    "ticketPricesLink": "Ticket prices",
+    "soldOutCta": "SOLD OUT",
+    "organizerLine": "Organizer: {name}"
   },
   "checkout": {
     "title": "Shopping Cart",
@@ -322,6 +334,7 @@
   "showDetail": {
     "selectCity": "Select a city to see performances",
     "allCities": "All Cities",
+    "cityTicketsHeadline": "{title} — {city} tickets",
     "ticketsAndPrices": "Tickets and Prices",
     "ticketsIn": "Tickets in",
     "tickets": "Tickets",

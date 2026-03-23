@@ -1,11 +1,13 @@
 "use client";
 
+import { Fragment } from "react";
 import { usePathname } from "next/navigation";
 
 /**
- * Wraps app children with a key derived from pathname so that on route change
- * React remounts the subtree. This avoids "removeChild: node to be removed is not a child"
- * errors that can occur with next-intl + App Router during navigation.
+ * Remounts locale subtree when the pathname changes. Mitigates
+ * "removeChild: The node to be removed is not a child of this node" from
+ * next-intl Link/navigation + App Router reconciling against a stale tree.
+ * Fragment + key avoids an extra DOM node (safer than display:contents wrapper).
  */
 export default function RouteKeyWrapper({
   children,
@@ -13,5 +15,5 @@ export default function RouteKeyWrapper({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  return <div key={pathname || "root"} className="contents">{children}</div>;
+  return <Fragment key={pathname || "root"}>{children}</Fragment>;
 }

@@ -864,7 +864,7 @@ export async function POST(request: NextRequest) {
     // Sadece onaylanmış etkinliklerde bilet satışı; otomatik koltuk ataması için seating_plan_id gerekir
     const { data: eventRow } = await supabase
       .from("events")
-      .select("id, is_approved, seating_plan_id")
+      .select("id, is_approved, seating_plan_id, checkout_processing_fee")
       .eq("id", ticket.event_id)
       .single();
     if (!eventRow || eventRow.is_approved !== true) {
@@ -912,7 +912,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const totalPrice = Number(ticket.price) * quantity;
+    const ticketSubtotal = Number(ticket.price) * quantity;
+    const includeProcessingFee = formData.get("include_checkout_processing_fee") === "true";
+    const serverProcessingFee = Math.max(
+      0,
+      Number((eventRow as { checkout_processing_fee?: number | string | null }).checkout_processing_fee) || 0
+    );
+    const lineProcessingFee =
+      includeProcessingFee && serverProcessingFee > 0 ? serverProcessingFee : 0;
+    const totalPrice = ticketSubtotal + lineProcessingFee;
     const ticketCode = generateTicketCode(); // sipariş ana kodu (yer seçilmediyse veya tek bilet)
 
     if (Number(ticket.available || 0) < quantity) {
