@@ -48,6 +48,11 @@ function formatCityTicketsTitle(showTitle: string, city: string, locale: "tr" | 
   return `${cleanTitle} ${city}`.trim();
 }
 
+function isPastEventDate(event: Event): boolean {
+  const dt = new Date(`${event.date} ${event.time || "00:00"}`);
+  return dt < new Date();
+}
+
 export default function ShowDetailClient({ events, showSlug, organizerDisplayName = null, locale: localeProp = "tr" }: ShowDetailClientProps) {
   const t = useTranslations("eventDetail");
   const tShow = useTranslations("showDetail");
@@ -68,12 +73,13 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
   }, [events, locale]);
 
   const [selectedCity, setSelectedCity] = useState<string>("all");
+  const upcomingEvents = useMemo(() => events.filter((e) => !isPastEventDate(e)), [events]);
 
   const cities = useMemo(() => {
-    const citySet = new Set(events.map((e) => getEventCityLabel(e)).filter(Boolean));
+    const citySet = new Set(upcomingEvents.map((e) => getEventCityLabel(e)).filter(Boolean));
     const list = Array.from(citySet);
     const earliestMs = (city: string) => {
-      const times = events
+      const times = upcomingEvents
         .filter((e) => getEventCityLabel(e) === city)
         .map((e) => new Date(`${e.date} ${e.time || "00:00"}`).getTime())
         .filter((ms) => Number.isFinite(ms));
@@ -85,12 +91,12 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
       if (da !== db) return da - db;
       return a.localeCompare(b, "tr");
     });
-  }, [events]);
+  }, [upcomingEvents]);
 
   const filteredEvents = useMemo(() => {
-    if (selectedCity === "all") return events;
-    return events.filter((e) => getEventCityLabel(e) === selectedCity);
-  }, [events, selectedCity]);
+    if (selectedCity === "all") return upcomingEvents;
+    return upcomingEvents.filter((e) => getEventCityLabel(e) === selectedCity);
+  }, [upcomingEvents, selectedCity]);
 
   // En yakın tarih/saat en üstte (kronolojik artan)
   const displayEvents = useMemo(() => {

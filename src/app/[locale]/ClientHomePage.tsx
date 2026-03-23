@@ -259,8 +259,8 @@ export default function ClientHomePage({
     return 0;
   });
 
-  // Aynı gösteri/turden en fazla 2 etkinlik (show_slug, image_url veya başlık ile grupla)
-  const MAX_PER_SHOW = 2;
+  // Aynı gösteri/turden en fazla 1 etkinlik (show_slug, image_url veya başlık ile grupla)
+  const MAX_PER_SHOW = 1;
   const getShowKey = (event: Event) => {
     const e = event as Event & { show_slug?: string };
     if (e.show_slug) return e.show_slug;
