@@ -489,33 +489,105 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
           .update(eventData)
           .eq("id", eventId);
         if (updateError) throw updateError;
-        await supabase.from("tickets").delete().eq("event_id", eventId);
-        if (!hasExternalLink) {
-          const ticketRows = tickets
-            .filter((t) => t.quantity > 0)
-            .map((t) => {
-              const displayName = getTicketDisplayName(t);
-              let desc = t.description.trim();
-              if (t.presetKey === "grup") {
-                const minQ = t.groupMinQuantity != null && t.groupMinQuantity > 0 ? t.groupMinQuantity : 10;
-                desc = `Min. ${minQ} adet. ` + (t.discountRules?.trim() ? "Grup indirimi: " + t.discountRules.trim() : "") + (desc ? " " + desc : "");
-              }
-              if (!desc) desc = `${displayName} - etkinlik bileti`;
-              return {
-                event_id: eventId,
-                name: displayName,
-                type: t.type,
-                price: Number(t.price) || 0,
-                quantity: t.quantity,
-                available: t.quantity,
-                description: desc.trim(),
-              };
+        const { data: existingTicketsData, error: existingTicketsError } = await supabase
+          .from("tickets")
+          .select("id, name, type, price, quantity, available, description")
+          .eq("event_id", eventId);
+        if (existingTicketsError) throw existingTicketsError;
+
+        type ExistingTicketRow = {
+          id: string;
+          name: string;
+          type: "normal" | "vip";
+          price: number;
+          quantity: number;
+          available: number;
+          description?: string | null;
+        };
+
+        const existingTickets = (existingTicketsData || []) as ExistingTicketRow[];
+        const keyOf = (name: string, type: "normal" | "vip") =>
+          `${type}::${(name || "").trim().toLocaleLowerCase("tr-TR")}`;
+
+        const existingByKey = new Map<string, ExistingTicketRow>();
+        for (const ex of existingTickets) {
+          existingByKey.set(keyOf(ex.name, ex.type), ex);
+        }
+
+        const desiredTickets = hasExternalLink
+          ? []
+          : tickets
+              .filter((t) => t.quantity > 0)
+              .map((t) => {
+                const displayName = getTicketDisplayName(t);
+                let desc = t.description.trim();
+                if (t.presetKey === "grup") {
+                  const minQ = t.groupMinQuantity != null && t.groupMinQuantity > 0 ? t.groupMinQuantity : 10;
+                  desc =
+                    `Min. ${minQ} adet. ` +
+                    (t.discountRules?.trim() ? "Grup indirimi: " + t.discountRules.trim() : "") +
+                    (desc ? " " + desc : "");
+                }
+                if (!desc) desc = `${displayName} - etkinlik bileti`;
+                return {
+                  name: displayName,
+                  type: t.type,
+                  price: Number(t.price) || 0,
+                  quantity: t.quantity,
+                  description: desc.trim(),
+                };
+              });
+
+        const matchedExistingIds = new Set<string>();
+
+        for (const desired of desiredTickets) {
+          const ex = existingByKey.get(keyOf(desired.name, desired.type));
+          if (ex) {
+            matchedExistingIds.add(ex.id);
+            const soldCount = Math.max(0, Number(ex.quantity || 0) - Number(ex.available || 0));
+            const safeQuantity = Math.max(desired.quantity, soldCount);
+            const safeAvailable = Math.max(0, safeQuantity - soldCount);
+            const { error: updErr } = await supabase
+              .from("tickets")
+              .update({
+                name: desired.name,
+                type: desired.type,
+                price: desired.price,
+                quantity: safeQuantity,
+                available: safeAvailable,
+                description: desired.description,
+              })
+              .eq("id", ex.id);
+            if (updErr) throw updErr;
+          } else {
+            const { error: insErr } = await supabase.from("tickets").insert({
+              event_id: eventId,
+              name: desired.name,
+              type: desired.type,
+              price: desired.price,
+              quantity: desired.quantity,
+              available: desired.quantity,
+              description: desired.description,
             });
-          if (ticketRows.length > 0) {
-            const { error: ticketsError } = await supabase.from("tickets").insert(ticketRows);
-            if (ticketsError) throw ticketsError;
+            if (insErr) throw insErr;
           }
         }
+
+        for (const ex of existingTickets) {
+          if (matchedExistingIds.has(ex.id)) continue;
+          const soldCount = Math.max(0, Number(ex.quantity || 0) - Number(ex.available || 0));
+          if (soldCount > 0) {
+            const { error: keepErr } = await supabase
+              .from("tickets")
+              .update({ quantity: soldCount, available: 0 })
+              .eq("id", ex.id);
+            if (keepErr) throw keepErr;
+          } else {
+            const { error: delErr } = await supabase.from("tickets").delete().eq("id", ex.id);
+            if (delErr) throw delErr;
+          }
+        }
+
         alert("Etkinlik güncellendi!");
         router.push(`/yonetim/etkinlikler`);
         return;
