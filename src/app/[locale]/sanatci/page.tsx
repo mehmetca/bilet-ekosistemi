@@ -119,7 +119,7 @@ function SanatciIndexContent() {
                   <Link
                     key={artist.id}
                     href={`/sanatci/${artist.slug}`}
-                    className="group overflow-hidden rounded-tl-2xl rounded-br-2xl rounded-tr-none rounded-bl-none border-4 border-slate-300 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-400 hover:shadow-lg"
+                    className="group overflow-hidden rounded-tl-2xl rounded-br-2xl rounded-tr-none rounded-bl-none border-[3px] border-slate-300 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-400 hover:shadow-lg"
                   >
                     <div className="aspect-[4/3] bg-slate-100 overflow-hidden">
                       {artist.image_url ? (
