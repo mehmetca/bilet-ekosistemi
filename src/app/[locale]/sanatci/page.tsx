@@ -10,7 +10,7 @@ import { parseArtistBio } from "@/lib/artistProfile";
 import { getLocalizedArtist } from "@/lib/i18n-content";
 import type { Artist } from "@/types/database";
 
-const PAGE_SIZE = 30;
+const PAGE_SIZE = 28;
 const LETTERS = [
   "A",
   "B",
