@@ -153,6 +153,8 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
 
   const localized = artist ? getLocalizedArtist(artist as unknown as Record<string, unknown>, locale) : { name: "", bio: "" };
   const parsedProfile = parseArtistBio(localized.bio || artist?.bio);
+  // Admin panelde ayrı "turne banner" alanı görünmüyorsa ana fotoğrafı da hero banner olarak kullan.
+  const heroBannerUrl = parsedProfile.turneBannerUrl || artist?.image_url || "";
   const topGallery = parsedProfile.gallery.filter((item) => item.position === "top");
   const bottomGallery = parsedProfile.gallery.filter((item) => item.position === "bottom");
   const leftGallery = parsedProfile.gallery.filter((item) => item.position === "left");
@@ -279,24 +281,34 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
       <Header />
       {/* Hero Section */}
       <div className="relative">
-        <div className="relative min-h-[320px] md:h-80 bg-gradient-to-r from-primary-700 to-primary-600">
+        <div className="relative min-h-[320px] md:h-80 bg-black">
+          {heroBannerUrl && (
+            <img
+              src={heroBannerUrl}
+              alt={`${localized.name || artist.name} banner`}
+              className="absolute left-1/2 top-0 h-auto max-h-full w-auto max-w-full -translate-x-1/2 object-top"
+            />
+          )}
+          {!heroBannerUrl && <div className="absolute inset-0 bg-black/55" />}
           {/* Content */}
           <div className="relative mx-auto w-full max-w-6xl px-4 py-6 md:py-0 md:h-full md:flex md:items-end md:pb-8">
             <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:items-end">
               {/* Artist Image */}
-              <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-52 md:h-52 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg overflow-hidden flex-shrink-0 shadow-2xl self-start">
-                {artist.image_url ? (
-                  <img
-                    src={artist.image_url}
-                    alt={artist.name}
-                    className="w-full h-full object-cover object-top"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Music2 className="h-8 w-8 md:h-12 md:w-12 text-white" />
-                  </div>
-                )}
-              </div>
+              {!heroBannerUrl && (
+                <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-52 md:h-52 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg overflow-hidden flex-shrink-0 shadow-2xl self-start">
+                  {artist.image_url ? (
+                    <img
+                      src={artist.image_url}
+                      alt={artist.name}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <Music2 className="h-8 w-8 md:h-12 md:w-12 text-white" />
+                    </div>
+                  )}
+                </div>
+              )}
               
               {/* Artist Info */}
               <div className="flex-1 text-white min-w-0">
