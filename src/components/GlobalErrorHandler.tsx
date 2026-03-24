@@ -8,6 +8,8 @@ export default function GlobalErrorHandler({ children }: { children: React.React
   const [error, setError] = useState<{ message: string; stack?: string } | null>(null);
 
   useEffect(() => {
+    const CHUNK_RELOAD_GUARD_KEY = "__chunk_reload_once__";
+
     // Kamera/video kapatılırken tarayıcının verdiği benign hatalar; sayfa hata ekranı göstermeyelim.
     function isBenignMediaError(msg: string): boolean {
       const s = msg.toLowerCase();
@@ -28,8 +30,32 @@ export default function GlobalErrorHandler({ children }: { children: React.React
       );
     }
 
+    function isChunkLoadError(msg: string): boolean {
+      const s = msg.toLowerCase();
+      return (
+        s.includes("chunkloaderror") ||
+        s.includes("loading chunk") ||
+        (s.includes("failed to fetch dynamically imported module") && s.includes("/_next/static/chunks"))
+      );
+    }
+
+    function triggerChunkHardReloadOnce() {
+      try {
+        if (sessionStorage.getItem(CHUNK_RELOAD_GUARD_KEY) === "1") return;
+        sessionStorage.setItem(CHUNK_RELOAD_GUARD_KEY, "1");
+      } catch {
+        /* ignore sessionStorage access errors */
+      }
+      window.location.reload();
+    }
+
     function onError(event: ErrorEvent) {
       const msg = event.message || "Bilinmeyen hata";
+      if (isChunkLoadError(msg)) {
+        event.preventDefault();
+        triggerChunkHardReloadOnce();
+        return;
+      }
       if (
         isBenignMediaError(msg) ||
         isBenignDomDetachError(msg) ||
@@ -44,6 +70,12 @@ export default function GlobalErrorHandler({ children }: { children: React.React
 
     function onUnhandledRejection(event: PromiseRejectionEvent) {
       const msg = event.reason instanceof Error ? event.reason.message : String(event.reason);
+
+      if (isChunkLoadError(msg)) {
+        event.preventDefault();
+        triggerChunkHardReloadOnce();
+        return;
+      }
 
       if (isBenignMediaError(msg) || isBenignDomDetachError(msg)) {
         event.preventDefault();

@@ -129,9 +129,6 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                   {t("organizer")}: {organizerDisplayName}
                 </p>
               )}
-              {parsedDescription.content && (
-                <p className="mt-4 text-slate-600 leading-relaxed line-clamp-3">{parsedDescription.content}</p>
-              )}
               <div className="mt-5 flex items-center gap-4">
                 <p className="text-2xl font-bold text-primary-700">
                   {minPrice > 0 ? `${t("from")} ${formatPrice(minPrice, firstEvent.currency)}` : t("comingSoon")}

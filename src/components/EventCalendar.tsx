@@ -51,14 +51,18 @@ export default function EventCalendar({ events }: EventCalendarProps) {
   }, [selectedDate, selectedCategory, events]);
 
   const now = new Date();
+  const getEventDateTime = (event: Event) => new Date(`${event.date}T${event.time || "00:00"}`);
+
   const upcomingEvents = filteredEvents.filter((event) => {
-    const eventDate = new Date(`${event.date} ${event.time || "00:00"}`);
+    const eventDate = getEventDateTime(event);
     return eventDate >= now;
   });
-  const pastEvents = filteredEvents.filter((event) => {
-    const eventDate = new Date(`${event.date} ${event.time || "00:00"}`);
-    return eventDate < now;
-  });
+  const pastEvents = filteredEvents
+    .filter((event) => {
+      const eventDate = getEventDateTime(event);
+      return eventDate < now;
+    })
+    .sort((a, b) => getEventDateTime(b).getTime() - getEventDateTime(a).getTime());
 
   return (
     <div className="space-y-6">

@@ -33,9 +33,30 @@ export default function AyarlarPage() {
     fetch("/api/settings")
       .then((r) => r.json())
       .then((data) => {
-        if (typeof data?.maxTicketQuantity === "number") {
-          setSettings((s) => ({ ...s, maxTicketQuantity: Math.max(1, Math.min(100, data.maxTicketQuantity)) }));
-        }
+        setSettings((s) => ({
+          ...s,
+          siteName: typeof data?.siteName === "string" && data.siteName.trim() ? data.siteName : s.siteName,
+          siteDescription:
+            typeof data?.siteDescription === "string" && data.siteDescription.trim()
+              ? data.siteDescription
+              : s.siteDescription,
+          contactEmail:
+            typeof data?.contactEmail === "string" && data.contactEmail.trim()
+              ? data.contactEmail
+              : s.contactEmail,
+          maxTicketQuantity:
+            typeof data?.maxTicketQuantity === "number"
+              ? Math.max(1, Math.min(100, data.maxTicketQuantity))
+              : s.maxTicketQuantity,
+          enableNotifications:
+            typeof data?.enableNotifications === "boolean"
+              ? data.enableNotifications
+              : s.enableNotifications,
+          maintenanceMode:
+            typeof data?.maintenanceMode === "boolean"
+              ? data.maintenanceMode
+              : s.maintenanceMode,
+        }));
       })
       .catch(() => {});
   }, []);
@@ -52,7 +73,14 @@ export default function AyarlarPage() {
       const res = await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ maxTicketQuantity: settings.maxTicketQuantity }),
+        body: JSON.stringify({
+          siteName: settings.siteName,
+          siteDescription: settings.siteDescription,
+          contactEmail: settings.contactEmail,
+          maxTicketQuantity: settings.maxTicketQuantity,
+          enableNotifications: settings.enableNotifications,
+          maintenanceMode: settings.maintenanceMode,
+        }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {

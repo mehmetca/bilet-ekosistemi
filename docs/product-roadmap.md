@@ -21,6 +21,7 @@
 - Admin KPI paneli olustur (gunluk satis, donusum, iade oranlari).
 - Huni analitigi ekle (goruntuleme -> odeme -> satin alma).
 - Ana CTA ve hero alanlari icin A/B test altyapisi kur.
+- [ ] Microsoft Clarity ekle (yalnizca production, `afterInteractive`, env ile ac/kapat; KVKK/GDPR metinlerini guncelle).
 - Kritik admin islemleri icin denetim kaydi (audit log) tut.
 - Hata izleme ve alarmlama ekle (ornek: Sentry).
 
