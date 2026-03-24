@@ -11,6 +11,33 @@ import { getLocalizedArtist } from "@/lib/i18n-content";
 import type { Artist } from "@/types/database";
 
 const PAGE_SIZE = 30;
+const LETTERS = [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E",
+  "F",
+  "G",
+  "H",
+  "I",
+  "J",
+  "K",
+  "L",
+  "M",
+  "N",
+  "O",
+  "P",
+  "R",
+  "S",
+  "T",
+  "U",
+  "V",
+  "W",
+  "X",
+  "Y",
+  "Z",
+];
 
 function stripMarkdown(value: string): string {
   return value
@@ -46,15 +73,31 @@ function SanatciIndexContent() {
   const searchParams = useSearchParams();
   const [artists, setArtists] = useState<Artist[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("q") || "");
+  const [selectedLetter, setSelectedLetter] = useState((searchParams.get("letter") || "all").toUpperCase());
 
   const page = Math.max(1, Number(searchParams.get("page") || "1"));
-  const totalPages = Math.max(1, Math.ceil(artists.length / PAGE_SIZE));
+
+  const filteredArtists = useMemo(() => {
+    const term = searchTerm.trim().toLocaleLowerCase("tr");
+    return artists.filter((artist) => {
+      const localized = getLocalizedArtist(artist as unknown as Record<string, unknown>, locale);
+      const name = (localized.name || artist.name || "").trim();
+      const normalizedName = name.toLocaleUpperCase("tr");
+      const firstLetter = normalizedName.charAt(0);
+      const matchesLetter = selectedLetter === "ALL" || firstLetter === selectedLetter;
+      const matchesSearch = !term || name.toLocaleLowerCase("tr").includes(term);
+      return matchesLetter && matchesSearch;
+    });
+  }, [artists, locale, searchTerm, selectedLetter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredArtists.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
 
   const pagedArtists = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE;
-    return artists.slice(start, start + PAGE_SIZE);
-  }, [artists, currentPage]);
+    return filteredArtists.slice(start, start + PAGE_SIZE);
+  }, [filteredArtists, currentPage]);
 
   useEffect(() => {
     async function fetchArtists() {
@@ -86,7 +129,19 @@ function SanatciIndexContent() {
 
   function goToPage(nextPage: number) {
     const target = Math.min(Math.max(1, nextPage), totalPages);
-    router.push(`/sanatci?page=${target}`);
+    const params = new URLSearchParams();
+    params.set("page", String(target));
+    if (searchTerm.trim()) params.set("q", searchTerm.trim());
+    if (selectedLetter !== "ALL") params.set("letter", selectedLetter);
+    router.push(`/sanatci?${params.toString()}`);
+  }
+
+  function applyFilters(nextSearchTerm: string, nextLetter: string) {
+    const params = new URLSearchParams();
+    params.set("page", "1");
+    if (nextSearchTerm.trim()) params.set("q", nextSearchTerm.trim());
+    if (nextLetter !== "ALL") params.set("letter", nextLetter);
+    router.push(`/sanatci?${params.toString()}`);
   }
 
   return (
@@ -94,8 +149,57 @@ function SanatciIndexContent() {
       <Header />
       <main className="container mx-auto px-4 py-10">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">{t("title")}</h1>
-          <p className="text-slate-600 mt-2">{t("subtitle")}</p>
+          <h1 className="page-title">{t("title")}</h1>
+          <p className="body-muted mt-2">{t("subtitle")}</p>
+        </div>
+
+        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+          <div className="flex flex-col gap-3">
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSearchTerm(value);
+                applyFilters(value, selectedLetter);
+              }}
+              placeholder={locale === "de" ? "Kunstler suchen..." : locale === "en" ? "Search artists..." : "Sanatci ara..."}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 focus:border-primary-500 focus:ring-primary-500"
+            />
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedLetter("ALL");
+                  applyFilters(searchTerm, "ALL");
+                }}
+                className={`h-8 rounded-md px-2 text-xs font-semibold ${
+                  selectedLetter === "ALL"
+                    ? "bg-primary-600 text-white"
+                    : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Tümü
+              </button>
+              {LETTERS.map((letter) => (
+                <button
+                  key={letter}
+                  type="button"
+                  onClick={() => {
+                    setSelectedLetter(letter);
+                    applyFilters(searchTerm, letter);
+                  }}
+                  className={`h-8 min-w-8 rounded-md px-2 text-xs font-semibold ${
+                    selectedLetter === letter
+                      ? "bg-primary-600 text-white"
+                      : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  {letter}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {loading ? (
@@ -135,7 +239,7 @@ function SanatciIndexContent() {
                       )}
                       </div>
                     <div className="px-5 pt-6 pb-5 text-center">
-                      <h2 className="text-lg font-bold text-slate-900 line-clamp-1 group-hover:text-primary-700">
+                      <h2 className="card-title line-clamp-1 group-hover:text-primary-700">
                         {localized.name || artist.name}
                       </h2>
                       <p className={`mt-3 text-sm text-slate-600 ${lineClampClass}`}>
