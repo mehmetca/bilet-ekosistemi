@@ -41,3 +41,11 @@ Mevcut `/kontrol` akışı Supabase üzerinden **çevrimiçi** çalışıyor; sa
 - [x] Debug console.log temizligi (production).
 - [ ] Route ve tablo sorumluluklarini net tut (yalnizca etkinlik veri modeli).
 - [ ] API'lar icin rate limiting (trafik artinca).
+
+## AI Prompt Backlog'u (ileride toplu uygulama)
+
+- [ ] Site hardening + full audit promptunu calistir (guvenlik, veri tutarliligi, performans, i18n/SEO, observability).
+- [ ] Oturma plani / salon tasarimi uctan uca cozum promptunu calistir (admin olusturma -> plan baglama -> koltuk secimi -> satin alma).
+- [ ] UI/UX genel iyilestirme promptunu calistir (eksik bolumler, görsel tutarlilik, bilgi mimarisi).
+- [ ] Mobil odakli kisa promptu calistir (bilet secimi + checkout tek elle, sticky CTA, 44px touch target).
+- [ ] Prompt ciktilari icin uygulama sirasi olustur: Critical -> High -> Medium ve kucuk commitlerle ilerle.

@@ -5,6 +5,7 @@ import { Plus, Edit2, Trash2, ExternalLink, Image as ImageIcon } from "lucide-re
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import AdminImageUploadFixed from "@/components/AdminImageUploadFixed";
+import { supabase } from "@/lib/supabase-client";
 
 interface Advertisement {
   id: string;
@@ -39,6 +40,18 @@ export default function ReklamlarPage() {
     fetchAdvertisements();
   }, []);
 
+  async function getAuthorizedHeaders() {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error("Oturum gerekli. Lütfen tekrar giriş yapın.");
+    return {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    };
+  }
+
   async function fetchAdvertisements() {
     try {
       const response = await fetch("/api/advertisements");
@@ -54,9 +67,10 @@ export default function ReklamlarPage() {
 
   async function handleAddAd() {
     try {
+      const headers = await getAuthorizedHeaders();
       const response = await fetch("/api/advertisements", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(newAd),
       });
 
@@ -86,9 +100,10 @@ export default function ReklamlarPage() {
     if (!editingAd) return;
 
     try {
+      const headers = await getAuthorizedHeaders();
       const response = await fetch(`/api/advertisements/${editingAd.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(newAd),
       });
 
@@ -121,8 +136,10 @@ export default function ReklamlarPage() {
     }
 
     try {
+      const headers = await getAuthorizedHeaders();
       const response = await fetch(`/api/advertisements/${adId}`, {
         method: "DELETE",
+        headers,
       });
 
       if (!response.ok) {
