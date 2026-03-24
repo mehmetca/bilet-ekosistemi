@@ -289,6 +289,12 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
               className="absolute left-1/2 top-0 h-auto max-h-full w-auto max-w-full -translate-x-1/2 object-top"
             />
           )}
+          {heroBannerUrl && (
+            <>
+              <div className="absolute inset-y-0 left-0 w-2/5 bg-gradient-to-r from-black/90 via-black/55 to-transparent" />
+              <div className="absolute inset-y-0 right-0 w-2/5 bg-gradient-to-l from-black/90 via-black/55 to-transparent" />
+            </>
+          )}
           {!heroBannerUrl && <div className="absolute inset-0 bg-black/55" />}
           {/* Content */}
           <div className="relative mx-auto w-full max-w-6xl px-4 py-6 md:py-0 md:h-full md:flex md:items-end md:pb-8">
@@ -352,7 +358,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
           parsedProfile.socials.instagram ||
           parsedProfile.socials.website) && (
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-4">
+            <h2 className="section-title mb-4">
               {t("aboutArtist", { name: localized.name || artist.name })}
             </h2>
             <div className="bg-white border border-slate-200 rounded-xl p-6">
@@ -511,7 +517,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
 
           {/* Sağ: Yaklaşan Etkinlikler */}
           <aside className="lg:sticky lg:top-24 space-y-4">
-            <h2 className="text-lg font-bold text-slate-900 mb-4">{tHome("upcomingEvents")}</h2>
+            <h2 className="card-title mb-4">{tHome("upcomingEvents")}</h2>
             <div className="space-y-4">
               {artistEvents.length === 0 ? (
                 <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-slate-500">

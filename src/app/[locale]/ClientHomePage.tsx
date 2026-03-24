@@ -449,7 +449,7 @@ export default function ClientHomePage({
                     <Link
                       key={city.id}
                       href={`/city/${city.slug}`}
-                      className="group flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 snap-center w-[min(88vw,20rem)] max-w-[min(88vw,20rem)] sm:min-w-[200px] sm:max-w-[200px] sm:w-[200px] md:min-w-[220px] md:max-w-[220px] md:w-[220px] xl:min-w-[240px] xl:max-w-[240px] xl:w-[240px]"
+                      className="group flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 snap-center w-[min(88vw,22rem)] max-w-[min(88vw,22rem)] sm:min-w-[230px] sm:max-w-[230px] sm:w-[230px] md:min-w-[250px] md:max-w-[250px] md:w-[250px] xl:min-w-[280px] xl:max-w-[280px] xl:w-[280px]"
                     >
                       <div className="aspect-[16/9] overflow-hidden bg-slate-100">
                         {city.image_url ? (

@@ -68,7 +68,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
     <div className="space-y-6">
       {/* Başlık ve Filtreler */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h1 className="text-2xl font-bold text-slate-900 mb-6">{t("calendar.title")}</h1>
+        <h1 className="section-title mb-6">{t("calendar.title")}</h1>
         
         {/* Filtreler */}
         <div className="flex flex-col md:flex-row gap-4">
@@ -112,7 +112,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
 
       {/* Etkinlik Listesi */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4">
+        <h2 className="card-title mb-4">
           {(() => {
             const parsed = selectedDate.trim() ? parseDateInput(selectedDate) : null;
             return parsed
@@ -201,7 +201,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
 
         {pastEvents.length > 0 && (
           <div className="mt-12">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">
+            <h3 className="card-title mb-4">
               {t("home.pastEvents")}
               <span className="ml-2 text-sm font-normal text-slate-500">
                 ({pastEvents.length} {t("calendar.eventsCount")})

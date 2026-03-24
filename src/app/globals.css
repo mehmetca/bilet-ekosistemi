@@ -84,4 +84,18 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Typography system (safe + reversible) */
+  .page-title {
+    @apply text-3xl font-bold text-slate-900 md:text-4xl;
+  }
+  .section-title {
+    @apply text-2xl font-bold text-slate-900;
+  }
+  .card-title {
+    @apply text-lg font-semibold text-slate-900;
+  }
+  .body-muted {
+    @apply text-slate-600;
+  }
 }

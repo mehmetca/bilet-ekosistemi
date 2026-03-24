@@ -30,6 +30,7 @@ const LETTERS = [
   "P",
   "R",
   "S",
+  "Ş",
   "T",
   "U",
   "V",
