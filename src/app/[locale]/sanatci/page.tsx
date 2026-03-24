@@ -108,7 +108,7 @@ function SanatciIndexContent() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {pagedArtists.map((artist) => {
                 const localized = getLocalizedArtist(artist as unknown as Record<string, unknown>, locale);
                 const parsed = parseArtistBio(localized.bio || artist.bio);
@@ -119,24 +119,26 @@ function SanatciIndexContent() {
                   <Link
                     key={artist.id}
                     href={`/sanatci/${artist.slug}`}
-                    className="bg-white border border-slate-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow"
+                    className="group overflow-hidden rounded-tl-2xl rounded-br-2xl rounded-tr-none rounded-bl-none border-4 border-slate-300 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-400 hover:shadow-lg"
                   >
-                    <div className="aspect-[4/3] bg-slate-100">
+                    <div className="aspect-[4/3] bg-slate-100 overflow-hidden">
                       {artist.image_url ? (
                         <img
                           src={artist.image_url}
                           alt={localized.name || artist.name}
-                          className="h-full w-full object-cover object-top"
+                          className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
                         />
                       ) : (
                         <div className="h-full w-full flex items-center justify-center text-slate-400 text-sm">
                           {t("noPhoto")}
                         </div>
                       )}
-                    </div>
-                    <div className="p-4">
-                      <h2 className="font-semibold text-slate-900 line-clamp-1">{localized.name || artist.name}</h2>
-                      <p className={`text-sm text-slate-600 mt-2 ${lineClampClass}`}>
+                      </div>
+                    <div className="px-5 pt-6 pb-5 text-center">
+                      <h2 className="text-lg font-bold text-slate-900 line-clamp-1 group-hover:text-primary-700">
+                        {localized.name || artist.name}
+                      </h2>
+                      <p className={`mt-3 text-sm text-slate-600 ${lineClampClass}`}>
                         {excerpt || t("bioPlaceholder")}
                       </p>
                     </div>
