@@ -149,12 +149,12 @@ export default function AnaHeroSlider({ placement = "main_slider" }: { placement
 
               const inner = (
                 <div className="w-full flex-shrink-0">
-                  <div className="w-full h-[56vw] min-h-[220px] max-h-[360px] sm:h-[min(72vh,820px)] sm:max-h-none bg-black">
+                  <div className="w-full h-[58vw] min-h-[200px] max-h-[320px] sm:h-[min(72vh,820px)] sm:max-h-none bg-black">
                     <picture>
                       <img
                         src={ad.image_url}
                         alt={imgAlt}
-                        className="w-full h-full object-contain sm:object-cover sm:object-top"
+                        className="w-full h-full object-cover object-center sm:object-top"
                         loading={idx === currentIndex ? "eager" : "lazy"}
                       />
                     </picture>
