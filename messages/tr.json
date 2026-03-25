@@ -188,10 +188,16 @@
     "transport": "Ulaşım",
     "entrance": "Giriş",
     "rules": "Kurallar",
+    "salonRules": "Salon Kuralları",
     "map": "Harita",
     "faqShow": "SSS Gizle",
     "faqCount": "SSS",
+    "gallery": "Galeri",
     "photo": "Fotoğraf",
+    "searchPlaceholder": "Mekan veya adres ara...",
+    "filterCity": "Şehir filtresi",
+    "allCities": "Tümü",
+    "noMatchingVenues": "Arama kriterine uygun mekan bulunamadı",
     "seatingPlan": "Oturma planı"
   },
   "eventDetail": {

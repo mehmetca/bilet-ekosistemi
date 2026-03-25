@@ -188,10 +188,16 @@
     "transport": "Transport",
     "entrance": "Entrance",
     "rules": "Rules",
+    "salonRules": "Hall Rules",
     "map": "Map",
     "faqShow": "Hide FAQ",
     "faqCount": "FAQ",
+    "gallery": "Gallery",
     "photo": "Photo",
+    "searchPlaceholder": "Search venues or addresses...",
+    "filterCity": "City filter",
+    "allCities": "All cities",
+    "noMatchingVenues": "No venues match your search criteria",
     "seatingPlan": "Seating plan"
   },
   "eventDetail": {

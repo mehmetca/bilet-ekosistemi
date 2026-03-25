@@ -188,10 +188,16 @@
     "transport": "Anreise",
     "entrance": "Einlass",
     "rules": "Regeln",
+    "salonRules": "Saalregeln",
     "map": "Karte",
     "faqShow": "FAQ ausblenden",
     "faqCount": "FAQ",
+    "gallery": "Galerie",
     "photo": "Foto",
+    "searchPlaceholder": "Spielstätte oder Adresse suchen...",
+    "filterCity": "Stadtfilter",
+    "allCities": "Alle Städte",
+    "noMatchingVenues": "Keine Spielstätten für Ihre Suche gefunden",
     "seatingPlan": "Sitzplan"
   },
   "eventDetail": {

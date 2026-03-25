@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import Header from "@/components/Header";
 import { useTranslations, useLocale } from "next-intl";
 import { getLocalizedVenue } from "@/lib/i18n-content";
-import { MapPin, Users, ChevronRight, ChevronDown, Car, DoorOpen, HelpCircle } from "lucide-react";
+import { MapPin, Search, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
-import { extractMapEmbedUrl } from "@/lib/mapEmbed";
 
 interface VenueFaqItem {
   soru: string;
@@ -24,6 +23,9 @@ interface Venue {
   seating_layout_image_url: string | null;
   image_url_1: string | null;
   image_url_2: string | null;
+  image_url_3: string | null;
+  image_url_4: string | null;
+  image_url_5: string | null;
   entrance_info: string | null;
   transport_info: string | null;
   map_embed_url: string | null;
@@ -36,8 +38,8 @@ export default function MekanlarPage() {
   const locale = useLocale() as "tr" | "de" | "en";
   const [venues, setVenues] = useState<Venue[]>([]);
   const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [faqOpenInVenue, setFaqOpenInVenue] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [selectedCity, setSelectedCity] = useState("__all__");
 
   useEffect(() => {
     fetchVenues();
@@ -64,6 +66,9 @@ export default function MekanlarPage() {
           seating_layout_image_url: row.seating_layout_image_url || null,
           image_url_1: row.image_url_1 || null,
           image_url_2: row.image_url_2 || null,
+          image_url_3: row.image_url_3 || null,
+          image_url_4: row.image_url_4 || null,
+          image_url_5: row.image_url_5 || null,
           entrance_info: row.entrance_info || null,
           transport_info: row.transport_info || null,
           rules: row.rules || null,
@@ -80,12 +85,54 @@ export default function MekanlarPage() {
     }
   }
 
-  const venuesByCity = venues.reduce<Record<string, Venue[]>>((acc, v) => {
-    const city = v.city || "__other__";
-    if (!acc[city]) acc[city] = [];
-    acc[city].push(v);
-    return acc;
-  }, {});
+  const allCities = useMemo(() => {
+    const set = new Set<string>();
+    for (const v of venues) set.add(v.city || "__other__");
+
+    const others = set.has("__other__") ? ["__other__"] : [];
+    const primary = Array.from(set).filter((c) => c !== "__other__").sort((a, b) => a.localeCompare(b, locale));
+    return [...primary, ...others];
+  }, [venues, locale]);
+
+  const filteredVenues = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let list = venues;
+
+    if (selectedCity !== "__all__") {
+      list = list.filter((v) => (v.city || "__other__") === selectedCity);
+    }
+
+    if (q) {
+      list = list.filter((v) => {
+        const localized = getLocalizedVenue(v as unknown as Record<string, unknown>, locale) as {
+          name?: string;
+          address?: string | null;
+          city?: string | null;
+        };
+
+        const haystack = [
+          localized?.name ?? v.name,
+          localized?.address ?? v.address,
+          localized?.city ?? v.city,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(q);
+      });
+    }
+
+    return list;
+  }, [venues, search, selectedCity, locale]);
+
+  const venuesByCity = useMemo(() => {
+    return filteredVenues.reduce<Record<string, Venue[]>>((acc, v) => {
+      const city = v.city || "__other__";
+      if (!acc[city]) acc[city] = [];
+      acc[city].push(v);
+      return acc;
+    }, {});
+  }, [filteredVenues]);
 
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
@@ -99,6 +146,42 @@ export default function MekanlarPage() {
           </p>
         </div>
 
+        <div className="mb-8 rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="grid gap-3 md:grid-cols-[1fr_240px] items-end">
+            <div>
+              <label className="sr-only" htmlFor="venue-search">
+                {t("searchPlaceholder")}
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  id="venue-search"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder={t("searchPlaceholder")}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-10 py-2.5 text-sm focus:border-primary-500 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{t("filterCity")}</label>
+              <select
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm focus:border-primary-500 focus:ring-primary-500"
+              >
+                <option value="__all__">{t("allCities")}</option>
+                {allCities.map((city) => (
+                  <option key={city} value={city}>
+                    {city === "__other__" ? t("other") : city}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex justify-center py-16">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
@@ -108,6 +191,11 @@ export default function MekanlarPage() {
             <MapPin className="mx-auto h-16 w-16 text-slate-300" />
             <p className="mt-4 text-lg font-medium">{t("noVenues")}</p>
           </div>
+        ) : filteredVenues.length === 0 ? (
+          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+            <Search className="mx-auto h-16 w-16 text-slate-300" />
+            <p className="mt-4 text-lg font-medium">{t("noMatchingVenues")}</p>
+          </div>
         ) : (
           <div className="space-y-6">
             {Object.entries(venuesByCity).map(([city, cityVenues]) => (
@@ -115,24 +203,33 @@ export default function MekanlarPage() {
                 <h2 className="mb-3 text-lg font-semibold text-slate-800">{city === "__other__" ? t("other") : city}</h2>
                 <div className="space-y-1 rounded-xl border border-slate-200 bg-white overflow-hidden">
                   {cityVenues.map((venue) => {
-                    const isOpen = expandedId === venue.id;
                     const localized = getLocalizedVenue(venue as unknown as Record<string, unknown>, locale);
                     const addr = localized.address || venue.address;
                     const cityName = localized.city || venue.city;
+                    const href = `/mekanlar/${venue.id}`;
                     return (
                       <div key={venue.id} className="border-b border-slate-100 last:border-b-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setExpandedId((id) => (id === venue.id ? null : venue.id));
-                            setFaqOpenInVenue(null);
-                          }}
-                          className="w-full flex items-center gap-4 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+                        <Link
+                          href={href}
+                          className="w-full flex items-center gap-4 px-4 py-4 sm:px-5 sm:py-4 hover:bg-slate-50 transition-colors hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 rounded-xl"
                         >
                           <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                            {venue.image_url_1 || venue.seating_layout_image_url ? (
+                            {venue.image_url_1 ||
+                            venue.image_url_2 ||
+                            venue.image_url_3 ||
+                            venue.image_url_4 ||
+                            venue.image_url_5 ||
+                            venue.seating_layout_image_url ? (
                               <img
-                                src={venue.image_url_1 || venue.seating_layout_image_url || ""}
+                                src={
+                                  venue.image_url_1 ||
+                                  venue.image_url_2 ||
+                                  venue.image_url_3 ||
+                                  venue.image_url_4 ||
+                                  venue.image_url_5 ||
+                                  venue.seating_layout_image_url ||
+                                  ""
+                                }
                                 alt={localized.name || venue.name}
                                 className="h-full w-full object-cover"
                               />
@@ -142,11 +239,11 @@ export default function MekanlarPage() {
                           </div>
                           <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex-1 min-w-0">
-                              <p className="text-base sm:text-lg font-semibold text-slate-900 truncate">
+                              <p className="text-[15px] sm:text-lg font-semibold text-slate-900 leading-snug truncate">
                                 {localized.name || venue.name}
                               </p>
                               {(addr || cityName) && (
-                                <p className="mt-1 text-sm text-slate-600 truncate">
+                                <p className="mt-1 text-[13px] sm:text-sm text-slate-600 truncate">
                                   {[cityName, addr].filter(Boolean).join(" • ")}
                                 </p>
                               )}
@@ -159,152 +256,8 @@ export default function MekanlarPage() {
                                 </span>
                               </div>
                             )}
-                            <div className="ml-auto flex-shrink-0">
-                              {isOpen ? (
-                                <ChevronDown className="h-5 w-5 text-slate-400" />
-                              ) : (
-                                <ChevronRight className="h-5 w-5 text-slate-400" />
-                              )}
-                            </div>
                           </div>
-                        </button>
-                        {isOpen && (
-                          <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-6">
-                            <div className="flex flex-col md:flex-row gap-6">
-                              <div className="flex flex-col gap-3 flex-shrink-0">
-                                {(venue.image_url_1 || venue.image_url_2) ? (
-                                  <div className={`grid gap-2 ${venue.image_url_1 && venue.image_url_2 ? "grid-cols-2" : "grid-cols-1"} h-40 md:h-48 w-full md:w-64`}>
-                                    {venue.image_url_1 && (
-                                      <img
-                                        src={venue.image_url_1}
-                                        alt={`${venue.name} - ${t("photo")} 1`}
-                                        className="h-full w-full object-cover rounded-lg"
-                                      />
-                                    )}
-                                    {venue.image_url_2 && (
-                                      <img
-                                        src={venue.image_url_2}
-                                        alt={`${venue.name} - ${t("photo")} 2`}
-                                        className="h-full w-full object-cover rounded-lg"
-                                      />
-                                    )}
-                                  </div>
-                                ) : null}
-                                {venue.seating_layout_image_url && (
-                                  <div className="h-32 w-full md:w-64 rounded-lg overflow-hidden bg-slate-100">
-                                    <img
-                                      src={venue.seating_layout_image_url}
-                                      alt={`${venue.name} - ${t("seatingPlan")}`}
-                                      className="h-full w-full object-cover"
-                                    />
-                                  </div>
-                                )}
-                                {!venue.image_url_1 && !venue.image_url_2 && !venue.seating_layout_image_url && (
-                                  <div className="h-40 w-full md:w-64 rounded-lg bg-slate-100 flex items-center justify-center">
-                                    <MapPin className="h-12 w-12 text-slate-400" />
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0 space-y-4">
-                                {(() => {
-                                  const loc = getLocalizedVenue(venue as unknown as Record<string, unknown>, locale);
-                                  const addr = loc.address || venue.address;
-                                  const city = loc.city || venue.city;
-                                  return (addr || city) ? (
-                                    <p className="flex items-center gap-2 text-sm text-slate-600">
-                                      <MapPin className="h-4 w-4 flex-shrink-0" />
-                                      {[addr, city].filter(Boolean).join(", ")}
-                                    </p>
-                                  ) : null;
-                                })()}
-                                {venue.capacity != null && (
-                                  <p className="flex items-center gap-2 text-sm text-slate-600">
-                                    <Users className="h-4 w-4 flex-shrink-0" />
-                                    {t("capacity")}: {venue.capacity} {t("persons")}
-                                  </p>
-                                )}
-                                {(getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).seating_layout_description || venue.seating_layout_description) && (
-                                  <p className="text-sm text-slate-700">{getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).seating_layout_description || venue.seating_layout_description}</p>
-                                )}
-                                {(getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).transport_info || venue.transport_info) && (
-                                  <div className="flex items-start gap-2 text-sm">
-                                    <Car className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-600" />
-                                    <div className="flex-1 min-w-0">
-                                      <span className="font-medium text-slate-700">{t("transport")}:</span>
-                                      <div
-                                        className="text-slate-600 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-2"
-                                        dangerouslySetInnerHTML={{ __html: getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).transport_info || venue.transport_info || "" }}
-                                      />
-                                    </div>
-                                  </div>
-                                )}
-                                {(getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).entrance_info || venue.entrance_info) && (
-                                  <div className="flex items-start gap-2 text-sm">
-                                    <DoorOpen className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary-600" />
-                                    <div>
-                                      <span className="font-medium text-slate-700">{t("entrance")}:</span>
-                                      <p className="text-slate-600">{getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).entrance_info || venue.entrance_info}</p>
-                                    </div>
-                                  </div>
-                                )}
-                                {(getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).rules || venue.rules) && (
-                                  <p className="text-sm text-slate-600">
-                                    <span className="font-medium">{t("rules")}:</span> {getLocalizedVenue(venue as unknown as Record<string, unknown>, locale).rules || venue.rules}
-                                  </p>
-                                )}
-                                {venue.faq.length > 0 && (
-                                  <div>
-                                    <button
-                                      onClick={() =>
-                                        setFaqOpenInVenue((id) => (id === venue.id ? null : venue.id))
-                                      }
-                                      className="flex items-center gap-2 text-sm font-medium text-primary-600 hover:text-primary-700"
-                                    >
-                                      <HelpCircle className="h-4 w-4" />
-                                      {faqOpenInVenue === venue.id ? t("faqShow") : `${venue.faq.length} ${t("faqCount")}`}
-                                      <ChevronRight
-                                        className={`h-4 w-4 transition-transform ${
-                                          faqOpenInVenue === venue.id ? "rotate-90" : ""
-                                        }`}
-                                      />
-                                    </button>
-                                    {faqOpenInVenue === venue.id && (
-                                      <div className="mt-3 space-y-3 border-l-2 border-primary-200 pl-4">
-                                        {venue.faq.map((item, i) => (
-                                          <div key={i}>
-                                            <p className="font-medium text-slate-800">{item.soru}</p>
-                                            <p className="mt-1 text-sm text-slate-600">{item.cevap}</p>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            {(() => {
-                              const mapUrl = extractMapEmbedUrl(venue.map_embed_url);
-                              return mapUrl ? (
-                                <div className="mt-6">
-                                  <h4 className="text-sm font-semibold text-slate-800 mb-2">{t("map")}</h4>
-                                  <div className="aspect-video max-w-2xl overflow-hidden rounded-lg border border-slate-200">
-                                    <iframe
-                                      src={mapUrl}
-                                      width="100%"
-                                      height="100%"
-                                      style={{ border: 0 }}
-                                      allowFullScreen
-                                      loading="lazy"
-                                      referrerPolicy="no-referrer-when-downgrade"
-                                      title={`${venue.name} ${t("map")}`}
-                                      className="h-full w-full"
-                                    />
-                                  </div>
-                                </div>
-                              ) : null;
-                            })()}
-                          </div>
-                        )}
+                        </Link>
                       </div>
                     );
                   })}

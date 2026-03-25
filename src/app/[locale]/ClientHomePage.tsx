@@ -8,9 +8,8 @@ import Header from "@/components/Header";
 import HeroBackgroundSlider from "@/components/HeroBackgroundSlider";
 import type { Event, News } from "@/types/database";
 import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
-import EventSlider from "@/components/EventSlider";
-import NewsSlider from "@/components/NewsSlider";
 import FeaturedEvents from "@/components/FeaturedEvents";
+import AnaHeroSlider from "@/components/AnaHeroSlider";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
@@ -410,25 +409,17 @@ export default function ClientHomePage({
         </div>
       </section>
 
+      {/* Ana Slider: Slider'lar alanına taşındı */}
+
       {/* Slider'lar */}
       <section className="container mx-auto px-4 py-12">
-        <div className="grid gap-8 lg:grid-cols-2">
-          {/* Yaklaşan Etkinlikler Slider */}
-          <EventSlider 
-            events={displayEvents} 
-            title={t("upcomingEvents")} 
-            locale={locale as "tr" | "de" | "en"}
-            noEventsText={t("noEventsSlider")}
-            buyTicketText={t("buyTicket")}
-            freeText={t("free")}
-          />
-          
-          {/* Haberler Slider */}
-          <NewsSlider 
-            news={news} 
-            title={t("news")} 
-            locale={locale as "tr" | "de" | "en"}
-          />
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="p-6 pb-4">
+            <h2 className="text-xl font-bold text-slate-900">{t("upcomingEvents")}</h2>
+          </div>
+          <div className="border-t border-slate-200">
+            <AnaHeroSlider placement="main_slider" />
+          </div>
         </div>
 
         {/* Şehirler - Yaklaşan etkinlikler ve Haberler slider'larının altında */}

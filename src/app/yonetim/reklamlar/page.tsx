@@ -100,6 +100,15 @@ export default function ReklamlarPage() {
     if (!editingAd) return;
 
     try {
+      if (!newAd.title.trim()) {
+        alert("Reklam başlığı boş olamaz.");
+        return;
+      }
+      if (!newAd.image_url.trim()) {
+        alert("Reklam görseli boş olamaz.");
+        return;
+      }
+
       const headers = await getAuthorizedHeaders();
       const response = await fetch(`/api/advertisements/${editingAd.id}`, {
         method: "PUT",
@@ -263,6 +272,7 @@ export default function ReklamlarPage() {
                   className="w-full rounded-lg border border-slate-300 px-3 py-2"
                 >
                   <option value="news_slider">Haberler Slider</option>
+                  <option value="main_slider">Ana Slider</option>
                 </select>
               </div>
               <div className="flex items-center gap-2">
@@ -360,7 +370,11 @@ export default function ReklamlarPage() {
                         <div className="flex items-center text-slate-600">
                           <span className="font-medium">Yerleşim:</span>
                           <span className="ml-1">
-                            {ad.placement === 'news_slider' ? 'Haberler Slider' : ad.placement}
+                            {ad.placement === "news_slider"
+                              ? "Haberler Slider"
+                              : ad.placement === "main_slider"
+                                ? "Ana Slider"
+                                : ad.placement}
                           </span>
                         </div>
                       </div>

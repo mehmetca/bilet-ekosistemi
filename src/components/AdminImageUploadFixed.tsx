@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Upload, X, Image as ImageIcon } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Upload, X, Image as ImageIcon, Search, Grid2X2 } from "lucide-react";
 import { getAccessTokenForApi } from "@/lib/supabase-auth-token";
 
 interface AdminImageUploadProps {
@@ -22,6 +22,53 @@ export default function AdminImageUploadFixed({
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [libraryOpen, setLibraryOpen] = useState(false);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryQuery, setLibraryQuery] = useState("");
+  const [libraryError, setLibraryError] = useState<string | null>(null);
+  const [libraryImages, setLibraryImages] = useState<Array<{ path: string; url: string; name: string }>>([]);
+
+  const libraryFiltered = useMemo(() => {
+    const q = libraryQuery.trim().toLowerCase();
+    if (!q) return libraryImages;
+    return libraryImages.filter((img) => img.name.toLowerCase().includes(q));
+  }, [libraryImages, libraryQuery]);
+
+  async function loadLibrary() {
+    setLibraryLoading(true);
+    setLibraryError(null);
+    try {
+      const token = await getAccessTokenForApi();
+      if (!token) {
+        alert("Oturum bulunamadı veya süresi doldu. Lütfen sayfayı yenileyip tekrar giriş yapın.");
+        return;
+      }
+
+      const res = await fetch(`/api/list-images?folder=${encodeURIComponent(folder)}&limit=40`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(payload?.error || "Liste alınamadı.");
+      }
+
+      const payload = (await res.json()) as { images?: Array<{ path: string; url: string; name: string }> };
+      setLibraryImages(payload.images || []);
+    } catch (e) {
+      setLibraryError(e instanceof Error ? e.message : "Liste alınamadı");
+    } finally {
+      setLibraryLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!libraryOpen) return;
+    loadLibrary();
+    // folder değişince de liste yenilensin
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [libraryOpen, folder]);
 
   async function uploadImage(file: File) {
     setUploading(true);
@@ -107,8 +154,79 @@ export default function AdminImageUploadFixed({
   return (
     <div className="space-y-2">
       <label className="block text-sm font-medium text-slate-700 mb-2">
-        Etkinlik Görseli
+        Görsel
       </label>
+
+      {libraryOpen && (
+        <div
+          className="fixed inset-0 z-[2000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Görsel Galerisi"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setLibraryOpen(false);
+          }}
+        >
+          <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-white shadow-xl overflow-hidden">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Grid2X2 className="h-4 w-4 text-primary-600" />
+                <h3 className="font-semibold text-slate-900 text-sm">Galeriden seç</h3>
+                <span className="text-xs text-slate-500">({folder})</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLibraryOpen(false)}
+                className="rounded-lg p-2 hover:bg-slate-100 text-slate-600"
+                aria-label="Kapat"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  value={libraryQuery}
+                  onChange={(e) => setLibraryQuery(e.target.value)}
+                  placeholder="Ara..."
+                  className="w-full rounded-xl border border-slate-300 bg-white px-10 py-2.5 text-sm focus:border-primary-500 focus:ring-primary-500"
+                />
+              </div>
+
+              {libraryLoading ? (
+                <div className="text-sm text-slate-600">Görseller yükleniyor...</div>
+              ) : libraryError ? (
+                <div className="text-sm text-red-600">{libraryError}</div>
+              ) : libraryFiltered.length === 0 ? (
+                <div className="text-sm text-slate-500">Bu klasörde görsel bulunamadı.</div>
+              ) : (
+                <div className="max-h-[55vh] overflow-auto">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {libraryFiltered.map((img, idx) => (
+                      <button
+                        key={`${img.path}-${idx}`}
+                        type="button"
+                        onClick={() => {
+                          onChange(img.url);
+                          setLibraryOpen(false);
+                        }}
+                        className={`rounded-xl overflow-hidden border bg-slate-50 hover:border-primary-300 hover:shadow-sm transition-shadow ${
+                          img.url === value ? "border-primary-500" : "border-slate-200"
+                        }`}
+                        title={img.name}
+                      >
+                        <img src={img.url} alt={img.name} className="h-24 w-full object-cover object-top" />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       
       {value ? (
         <div className="relative">
@@ -167,6 +285,17 @@ export default function AdminImageUploadFixed({
           </div>
         </div>
       )}
+
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setLibraryOpen(true)}
+          className="flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+        >
+          <Grid2X2 className="h-4 w-4" />
+          Galeriden seç
+        </button>
+      </div>
       
       <div className="text-xs text-slate-500">
         Veya görsel URL'si girin:

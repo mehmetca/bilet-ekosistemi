@@ -53,6 +53,9 @@ export interface Venue {
   seating_layout_image_url: string | null;
   image_url_1?: string | null;
   image_url_2?: string | null;
+  image_url_3?: string | null;
+  image_url_4?: string | null;
+  image_url_5?: string | null;
   entrance_info: string | null;
   transport_info: string | null;
   map_embed_url: string | null;

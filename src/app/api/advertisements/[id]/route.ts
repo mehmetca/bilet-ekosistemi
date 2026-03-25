@@ -20,8 +20,18 @@ export async function PUT(
       .select()
       .maybeSingle();
 
-    if (error || !data) {
-      return NextResponse.json({ error: "Reklam guncellenemedi" }, { status: 500 });
+    if (error) {
+      return NextResponse.json(
+        { error: `Reklam guncellenemedi: ${error.message}` },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { error: "Reklam guncellenemedi: guncelleme sonucu bos dondu" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json(data);

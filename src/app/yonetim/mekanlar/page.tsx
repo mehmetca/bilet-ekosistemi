@@ -24,6 +24,9 @@ interface Venue {
   seating_layout_image_url: string | null;
   image_url_1: string | null;
   image_url_2: string | null;
+  image_url_3: string | null;
+  image_url_4: string | null;
+  image_url_5: string | null;
   entrance_info: string | null;
   transport_info: string | null;
   map_embed_url: string | null;
@@ -62,6 +65,9 @@ const EMPTY_VENUE = {
   seating_layout_image_url: "",
   image_url_1: "",
   image_url_2: "",
+  image_url_3: "",
+  image_url_4: "",
+  image_url_5: "",
   entrance_info: "",
   transport_info: "",
   map_embed_url: "",
@@ -106,15 +112,28 @@ function MekanlarContent() {
   const [showForm, setShowForm] = useState(false);
   const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
   const [form, setForm] = useState<
-    typeof EMPTY_VENUE & { seating_layout_image_url?: string; image_url_1?: string; image_url_2?: string }
+    typeof EMPTY_VENUE & {
+      seating_layout_image_url?: string;
+      image_url_1?: string;
+      image_url_2?: string;
+      image_url_3?: string;
+      image_url_4?: string;
+      image_url_5?: string;
+    }
   >({
     ...EMPTY_VENUE,
     seating_layout_image_url: "",
     image_url_1: "",
     image_url_2: "",
+    image_url_3: "",
+    image_url_4: "",
+    image_url_5: "",
   });
   const [imageUploading, setImageUploading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const formPreviewImages = [form.seating_layout_image_url, form.image_url_1, form.image_url_2, form.image_url_3, form.image_url_4, form.image_url_5].filter(
+    (x): x is string => typeof x === "string" && x.trim().length > 0
+  );
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -152,6 +171,9 @@ function MekanlarContent() {
       seating_layout_image_url: (row.seating_layout_image_url as string) || null,
       image_url_1: (row.image_url_1 as string) || null,
       image_url_2: (row.image_url_2 as string) || null,
+      image_url_3: (row.image_url_3 as string) || null,
+      image_url_4: (row.image_url_4 as string) || null,
+      image_url_5: (row.image_url_5 as string) || null,
       entrance_info: (row.entrance_info as string) || null,
       transport_info: (row.transport_info as string) || null,
       map_embed_url: (row.map_embed_url as string) || null,
@@ -183,7 +205,15 @@ function MekanlarContent() {
   }
 
   function resetForm() {
-    setForm({ ...EMPTY_VENUE, seating_layout_image_url: "", image_url_1: "", image_url_2: "" });
+    setForm({
+      ...EMPTY_VENUE,
+      seating_layout_image_url: "",
+      image_url_1: "",
+      image_url_2: "",
+      image_url_3: "",
+      image_url_4: "",
+      image_url_5: "",
+    });
     setEditingVenue(null);
     setShowForm(false);
   }
@@ -199,6 +229,9 @@ function MekanlarContent() {
       seating_layout_image_url: venue.seating_layout_image_url || "",
       image_url_1: venue.image_url_1 || "",
       image_url_2: venue.image_url_2 || "",
+      image_url_3: venue.image_url_3 || "",
+      image_url_4: venue.image_url_4 || "",
+      image_url_5: venue.image_url_5 || "",
       entrance_info: venue.entrance_info || "",
       transport_info: venue.transport_info || "",
       map_embed_url: venue.map_embed_url || "",
@@ -236,6 +269,9 @@ function MekanlarContent() {
       seating_layout_image_url: "",
       image_url_1: "",
       image_url_2: "",
+      image_url_3: "",
+      image_url_4: "",
+      image_url_5: "",
       faq: [{ soru: "", cevap: "" }],
     });
     setShowForm(true);
@@ -284,6 +320,9 @@ function MekanlarContent() {
         seating_layout_image_url: form.seating_layout_image_url?.trim() || null,
         image_url_1: form.image_url_1?.trim() || null,
         image_url_2: form.image_url_2?.trim() || null,
+        image_url_3: form.image_url_3?.trim() || null,
+        image_url_4: form.image_url_4?.trim() || null,
+        image_url_5: form.image_url_5?.trim() || null,
         entrance_info: form.entrance_info_tr?.trim() || form.entrance_info.trim() || null,
         transport_info: form.transport_info_tr?.trim() || form.transport_info.trim() || null,
         map_embed_url: form.map_embed_url?.trim() || null,
@@ -424,8 +463,8 @@ function MekanlarContent() {
         </Link>
 
         {showForm && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 relative">
+          <div className="mt-8">
+            <div className="bg-white rounded-xl max-w-2xl w-full p-6 relative">
               <button
                 type="button"
                 onClick={resetForm}
@@ -600,6 +639,29 @@ function MekanlarContent() {
                   />
                 </div>
 
+                {formPreviewImages.length > 0 ? (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold text-slate-900">Önizleme</h4>
+                      <span className="text-xs text-slate-500">{formPreviewImages.length} görsel</span>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                      {formPreviewImages.slice(0, 5).map((url, i) => (
+                        <div
+                          key={`${url}-${i}`}
+                          className="rounded-lg overflow-hidden border border-slate-200 bg-white"
+                        >
+                          <img src={url} alt={`Önizleme ${i + 1}`} className="h-16 w-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-slate-300 bg-white p-3 text-sm text-slate-500">
+                    Görsel seçildiğinde burada mini önizleme görünecek.
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -621,6 +683,40 @@ function MekanlarContent() {
                       onUploadingChange={setImageUploading}
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Mekan Fotoğrafı 3 (opsiyonel)
+                    </label>
+                    <AdminImageUpload
+                      value={form.image_url_3 || ""}
+                      onChange={(url) => setForm((p) => ({ ...p, image_url_3: url }))}
+                      onUploadingChange={setImageUploading}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                      Mekan Fotoğrafı 4 (opsiyonel)
+                    </label>
+                    <AdminImageUpload
+                      value={form.image_url_4 || ""}
+                      onChange={(url) => setForm((p) => ({ ...p, image_url_4: url }))}
+                      onUploadingChange={setImageUploading}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Mekan Fotoğrafı 5 (opsiyonel)
+                  </label>
+                  <AdminImageUpload
+                    value={form.image_url_5 || ""}
+                    onChange={(url) => setForm((p) => ({ ...p, image_url_5: url }))}
+                    onUploadingChange={setImageUploading}
+                  />
                 </div>
 
                 <div>
@@ -819,23 +915,55 @@ function MekanlarContent() {
           </div>
         ) : (
           <div className="grid gap-4">
-            {venues.map((venue) => (
-              <div
-                key={venue.id}
-                className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-              >
-                <div className="flex gap-6">
-                  <div className="w-24 h-24 rounded-lg bg-slate-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                    {(venue.image_url_1 || venue.seating_layout_image_url) ? (
-                      <img
-                        src={venue.image_url_1 || venue.seating_layout_image_url || ""}
-                        alt={venue.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <MapPin className="h-8 w-8 text-slate-400" />
-                    )}
-                  </div>
+            {venues.map((venue) => {
+              const venueThumbs = [
+                venue.image_url_1,
+                venue.image_url_2,
+                venue.image_url_3,
+                venue.image_url_4,
+                venue.image_url_5,
+                venue.seating_layout_image_url,
+              ].filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+
+              const thumbsToShow = venueThumbs.slice(0, 3);
+              const gridCols =
+                thumbsToShow.length === 1
+                  ? "grid-cols-1"
+                  : thumbsToShow.length === 2
+                    ? "grid-cols-2"
+                    : "grid-cols-3";
+              const extraCount = Math.max(0, venueThumbs.length - thumbsToShow.length);
+
+              return (
+                <div
+                  key={venue.id}
+                  className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+                >
+                  <div className="flex gap-6">
+                    <div className="w-24 h-24 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden">
+                      {thumbsToShow.length > 0 ? (
+                        <div className={`h-full grid ${gridCols} gap-1 bg-slate-100`}>
+                          {thumbsToShow.map((url, idx) => (
+                            <div key={`${url}-${idx}`} className="relative">
+                              <img
+                                src={url}
+                                alt={venue.name}
+                                className="h-full w-full object-cover"
+                              />
+                              {idx === 2 && extraCount > 0 && (
+                                <div className="absolute inset-0 bg-black/55 flex items-center justify-center text-white text-xs font-semibold">
+                                  +{extraCount}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center">
+                          <MapPin className="h-8 w-8 text-slate-400" />
+                        </div>
+                      )}
+                    </div>
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -917,7 +1045,8 @@ function MekanlarContent() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
