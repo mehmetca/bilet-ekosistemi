@@ -152,6 +152,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
 
   const venueFaq = (Array.isArray(venueRaw.faq) ? (venueRaw.faq as VenueFaqItem[]) : []).filter((x) => x?.soru && x?.cevap);
   const venueId = String(venueRaw.id ?? params.id);
+  const venueName = localized.name || (venueRaw.name as string | null) || venueId;
 
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
@@ -212,7 +213,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
       <div className="relative">
         <div className="h-44 sm:h-56 md:h-72 bg-black">
           {coverUrl ? (
-            <img src={coverUrl} alt={`${localized.name || venue.name} kapak`} className="h-full w-full object-cover object-top" />
+            <img src={coverUrl} alt={`${venueName} kapak`} className="h-full w-full object-cover object-top" />
           ) : (
             <div className="h-full w-full bg-slate-200" />
           )}
@@ -224,7 +225,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
             <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-5">
               <div className="flex flex-col gap-2">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white truncate">
-                  {localized.name || venue.name}
+                  {venueName}
                 </h1>
               </div>
             </div>
@@ -325,7 +326,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
             {/* Sağ tarafta küçük kapak özeti / görsel */}
             {coverUrl && gallery.length === 1 && (
               <div className="rounded-xl overflow-hidden border border-slate-200 bg-white">
-                <img src={coverUrl} alt={`${localized.name || venue.name} kapak`} className="w-full h-52 object-cover object-top" />
+                <img src={coverUrl} alt={`${venueName} kapak`} className="w-full h-52 object-cover object-top" />
               </div>
             )}
           </div>
