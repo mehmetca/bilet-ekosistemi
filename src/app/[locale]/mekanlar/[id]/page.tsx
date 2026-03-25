@@ -127,7 +127,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
     return (
       <div className="min-h-screen bg-[#f5f6f8]">
         <Header />
-        <div className="container mx-auto px-4 py-16 text-center text-slate-600">{t("title")}</div>
+        <div className="mx-auto max-w-5xl px-4 py-16 text-center text-slate-600">{t("title")}</div>
       </div>
     );
   }
@@ -136,7 +136,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
     return (
       <div className="min-h-screen bg-[#f5f6f8]">
         <Header />
-        <div className="container mx-auto px-4 py-16 text-center text-slate-600">Mekan bulunamadı.</div>
+        <div className="mx-auto max-w-5xl px-4 py-16 text-center text-slate-600">Mekan bulunamadı.</div>
       </div>
     );
   }
@@ -221,7 +221,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
         </div>
 
         <div className="absolute inset-x-0 bottom-[-26px]">
-          <div className="container mx-auto px-4 pb-6">
+          <div className="mx-auto max-w-5xl px-4 pb-6">
             <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-5">
               <div className="flex flex-col gap-2">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white truncate">
@@ -233,9 +233,9 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
         </div>
       </div>
 
-      <div className="container mx-auto px-4 pt-16 pb-10">
+      <div className="mx-auto max-w-5xl px-4 pt-16 pb-10">
         {/* Ayrıntılar */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
+        <div className="grid gap-6 xl:grid-cols-[1fr_340px] xl:items-start">
           <div className="space-y-4">
             {seatingDesc && <p className="text-slate-700">{seatingDesc}</p>}
 
