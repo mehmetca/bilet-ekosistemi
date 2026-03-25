@@ -21,6 +21,35 @@ function eventDateISO(event: Event): string {
   return d.includes("T") ? d.split("T")[0]! : d.slice(0, 10);
 }
 
+function getLocalISODateString(d: Date): string {
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function formatLocalDateDMY(d: Date): string {
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}.${mm}.${yyyy}`;
+}
+
+function parseDMYToISODateString(input: string): string | null {
+  const s = input.trim();
+  const match = /^(\d{1,2})[.\-/](\d{1,2})[.\-/](\d{4})$/.exec(s);
+  if (!match) return null;
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  if (!year || !month || !day) return null;
+
+  const dt = new Date(year, month - 1, day);
+  // Geçersiz gün/ay kontrolü (ör. 31.02)
+  if (dt.getFullYear() !== year || dt.getMonth() !== month - 1 || dt.getDate() !== day) return null;
+  return getLocalISODateString(dt);
+}
+
 interface HeroBg {
   id: string;
   title: string;
@@ -53,12 +82,16 @@ export default function ClientHomePage({
   initialCities = [],
 }: ClientHomePageProps) {
   const t = useTranslations("home");
+  const tCalendar = useTranslations("calendar");
   const locale = useLocale();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCity, setSelectedCity] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
-  /** YYYY-MM-DD; boş = tarih filtresi yok (o güne ait etkinlikler) */
+  /** YYYY-MM-DD; boş = tarih filtresi yok (tarih bazlı daraltma kapalı) */
   const [eventDate, setEventDate] = useState("");
+  /** true olduğunda tarih filtresi aktif olur (eventDate'a göre eşleştirir) */
+  const [isDateFilterActive, setIsDateFilterActive] = useState(false);
+  const [eventDateInput, setEventDateInput] = useState(() => formatLocalDateDMY(new Date()));
   const [sortBy, setSortBy] = useState<"yaklasan" | "populer">("yaklasan");
   const [events, setEvents] = useState<Event[]>(initialEvents);
   const [news, setNews] = useState<News[]>(initialNews);
@@ -240,7 +273,7 @@ export default function ClientHomePage({
     const matchesCity = selectedCity === "all" || eventCityPart.toLowerCase() === selectedCity.toLowerCase();
     const matchesCategory = selectedCategory === "all" || event.category === selectedCategory;
 
-    const matchesEventDate = !eventDate || eventDateISO(event) === eventDate;
+    const matchesEventDate = !isDateFilterActive || eventDateISO(event) === eventDate;
 
     return matchesSearch && matchesCity && matchesCategory && matchesEventDate;
   });
@@ -526,10 +559,30 @@ export default function ClientHomePage({
               ))}
             </select>
             <input
-              type="date"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
+              type="text"
+              inputMode="numeric"
+              value={eventDateInput}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (!v.trim()) {
+                  // Kullanıcı alanı boşaltırsa tekrar bugünü gösterelim.
+                  setEventDateInput(formatLocalDateDMY(new Date()));
+                  setEventDate("");
+                  setIsDateFilterActive(false);
+                  return;
+                }
+                setEventDateInput(v);
+                const iso = parseDMYToISODateString(v);
+                if (iso) {
+                  setEventDate(iso);
+                  setIsDateFilterActive(true);
+                } else {
+                  setEventDate("");
+                  setIsDateFilterActive(false);
+                }
+              }}
               aria-label={t("filters.eventDate")}
+              placeholder={tCalendar("datePlaceholder")}
               className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900"
             />
             <select
@@ -548,6 +601,8 @@ export default function ClientHomePage({
                 setSelectedCity("all");
                 setSelectedCategory("all");
                 setEventDate("");
+                setIsDateFilterActive(false);
+                setEventDateInput(formatLocalDateDMY(new Date()));
               }}
               className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm leading-tight"
             >

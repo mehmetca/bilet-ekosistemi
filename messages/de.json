@@ -4,7 +4,8 @@
     "home": "Startseite",
     "share": "Teilen",
     "shareNews": "Nachricht teilen",
-    "linkCopied": "Link kopiert!"
+    "linkCopied": "Link kopiert!",
+    "close": "Schließen"
   },
   "newsDetail": {
     "newsNotFound": "Nachricht nicht gefunden",
@@ -345,6 +346,7 @@
   "artists": {
     "title": "Künstlerinnen und Künstler",
     "subtitle": "Alle Künstlerbiografien und Bilder",
+    "filterAll": "Alle",
     "loading": "Wird geladen...",
     "noArtists": "Noch keine Künstler eingetragen.",
     "noPhoto": "Kein Foto",

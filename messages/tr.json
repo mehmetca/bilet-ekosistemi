@@ -4,7 +4,8 @@
     "home": "Ana Sayfa",
     "share": "Paylaş",
     "shareNews": "Haberi Paylaş",
-    "linkCopied": "Link kopyalandı!"
+    "linkCopied": "Link kopyalandı!",
+    "close": "Kapat"
   },
   "newsDetail": {
     "newsNotFound": "Haber Bulunamadı",
@@ -345,6 +346,7 @@
   "artists": {
     "title": "Sanatçılar",
     "subtitle": "Tüm sanatçı biyografileri ve görselleri",
+    "filterAll": "Tümü",
     "loading": "Yükleniyor...",
     "noArtists": "Henüz sanatçı kaydı yok.",
     "noPhoto": "Fotoğraf yok",

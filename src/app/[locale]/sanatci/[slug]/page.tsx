@@ -52,6 +52,8 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+  const [galleryModalIndex, setGalleryModalIndex] = useState(0);
 
   const fallbackImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
@@ -159,6 +161,46 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   const bottomGallery = parsedProfile.gallery.filter((item) => item.position === "bottom");
   const leftGallery = parsedProfile.gallery.filter((item) => item.position === "left");
   const rightGallery = parsedProfile.gallery.filter((item) => item.position === "right");
+  const allGallery = [...topGallery, ...leftGallery, ...rightGallery, ...bottomGallery];
+
+  function openGalleryModal(item: (typeof topGallery)[number]) {
+    const idx = allGallery.indexOf(item);
+    if (idx < 0) return;
+    setGalleryModalIndex(idx);
+    setIsGalleryModalOpen(true);
+  }
+
+  function closeGalleryModal() {
+    setIsGalleryModalOpen(false);
+  }
+
+  function goGalleryPrev() {
+    setGalleryModalIndex((prev) => {
+      if (allGallery.length === 0) return 0;
+      return (prev - 1 + allGallery.length) % allGallery.length;
+    });
+  }
+
+  function goGalleryNext() {
+    setGalleryModalIndex((prev) => {
+      if (allGallery.length === 0) return 0;
+      return (prev + 1) % allGallery.length;
+    });
+  }
+
+  useEffect(() => {
+    if (!isGalleryModalOpen) return;
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") closeGalleryModal();
+      if (e.key === "ArrowLeft") goGalleryPrev();
+      if (e.key === "ArrowRight") goGalleryNext();
+    }
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGalleryModalOpen, allGallery.length]);
   const youtubeEmbedUrls = parsedProfile.videoUrls
     .map((url) => getYouTubeEmbedUrl(url))
     .filter(Boolean) as string[];
@@ -279,6 +321,55 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
   return (
     <div className="min-h-screen bg-white">
       <Header />
+      {isGalleryModalOpen && allGallery[galleryModalIndex] && (
+        <div
+          className="fixed inset-0 z-[1000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Foto galeri"
+          onMouseDown={(e) => {
+            // Arka plana tıklanınca kapat
+            if (e.target === e.currentTarget) closeGalleryModal();
+          }}
+        >
+          <div className="relative w-full max-w-4xl">
+            <div className="w-full h-[80vh] overflow-hidden rounded-xl border border-white/20 bg-transparent">
+              <img
+                src={allGallery[galleryModalIndex].url}
+                alt={`${localized.name || artist.name} galeri`}
+                className="w-full h-full object-cover object-top"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={goGalleryPrev}
+              className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 hover:bg-black/70 p-2 text-white transition-colors"
+              aria-label="Önceki"
+            >
+              &lt;
+            </button>
+
+            <button
+              type="button"
+              onClick={goGalleryNext}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 hover:bg-black/70 p-2 text-white transition-colors"
+              aria-label="Sonraki"
+            >
+              &gt;
+            </button>
+
+            <button
+              type="button"
+              onClick={closeGalleryModal}
+              className="absolute -top-3 -right-3 rounded-full bg-black/70 hover:bg-black/90 text-white px-3 py-2 text-sm font-semibold border border-white/20"
+              aria-label={tCommon("close")}
+            >
+              {tCommon("close")}
+            </button>
+          </div>
+        </div>
+      )}
       {/* Hero Section */}
       <div className="relative">
         <div className="relative min-h-[320px] md:h-80 bg-black">
@@ -369,11 +460,18 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                       key={`${item.url}-${index}`}
                       className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
                     >
-                      <img
-                        src={item.url}
-                        alt={`${localized.name || artist.name} galeri`}
-                        className="h-full w-full object-cover object-top"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => openGalleryModal(item)}
+                        className="h-full w-full"
+                        aria-label="Fotoğrafı büyüt"
+                      >
+                        <img
+                          src={item.url}
+                          alt={`${localized.name || artist.name} galeri`}
+                          className="h-full w-full object-cover object-top"
+                        />
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -381,35 +479,53 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
               {parsedProfile.content ? (
                 <div className="flow-root">
                   {leftGallery.length > 0 && (
-                    <div className="w-full md:w-64 md:float-left md:mr-5 mb-4 space-y-3">
-                      {leftGallery.map((item, index) => (
-                        <div
-                          key={`${item.url}-left-${index}`}
-                          className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
-                        >
-                          <img
-                            src={item.url}
-                            alt={`${localized.name || artist.name} galeri`}
-                            className="h-full w-full object-cover object-top"
-                          />
-                        </div>
-                      ))}
+                    <div className="w-full md:w-64 md:float-left md:mr-5 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {leftGallery.map((item, index) => (
+                          <div
+                            key={`${item.url}-left-${index}`}
+                            className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => openGalleryModal(item)}
+                              className="h-full w-full"
+                              aria-label="Fotoğrafı büyüt"
+                            >
+                              <img
+                                src={item.url}
+                                alt={`${localized.name || artist.name} galeri`}
+                                className="h-full w-full object-cover object-top"
+                              />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {rightGallery.length > 0 && (
-                    <div className="w-full md:w-64 md:float-right md:ml-5 mb-4 space-y-3">
-                      {rightGallery.map((item, index) => (
-                        <div
-                          key={`${item.url}-right-${index}`}
-                          className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
-                        >
-                          <img
-                            src={item.url}
-                            alt={`${localized.name || artist.name} galeri`}
-                            className="h-full w-full object-cover object-top"
-                          />
-                        </div>
-                      ))}
+                    <div className="w-full md:w-64 md:float-right md:ml-5 mb-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {rightGallery.map((item, index) => (
+                          <div
+                            key={`${item.url}-right-${index}`}
+                            className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => openGalleryModal(item)}
+                              className="h-full w-full"
+                              aria-label="Fotoğrafı büyüt"
+                            >
+                              <img
+                                src={item.url}
+                                alt={`${localized.name || artist.name} galeri`}
+                                className="h-full w-full object-cover object-top"
+                              />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                   <div data-color-mode="light">
@@ -426,11 +542,18 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                       key={`${item.url}-bottom-${index}`}
                       className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
                     >
-                      <img
-                        src={item.url}
-                        alt={`${localized.name || artist.name} galeri`}
-                        className="h-full w-full object-cover object-top"
-                      />
+                      <button
+                        type="button"
+                        onClick={() => openGalleryModal(item)}
+                        className="h-full w-full"
+                        aria-label="Fotoğrafı büyüt"
+                      >
+                        <img
+                          src={item.url}
+                          alt={`${localized.name || artist.name} galeri`}
+                          className="h-full w-full object-cover object-top"
+                        />
+                      </button>
                     </div>
                   ))}
                 </div>

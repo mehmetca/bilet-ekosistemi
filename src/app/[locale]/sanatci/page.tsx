@@ -180,7 +180,7 @@ function SanatciIndexContent() {
                     : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
                 }`}
               >
-                Tümü
+                {t("filterAll")}
               </button>
               {LETTERS.map((letter) => (
                 <button

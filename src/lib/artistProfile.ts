@@ -47,6 +47,8 @@ export type ArtistProfileData = {
 };
 
 const VALID_POSITIONS: ArtistGalleryPosition[] = ["top", "bottom", "left", "right"];
+// Yönetim panelinde birden fazla görsel eklenebildiği için üst limit arttırıldı.
+const MAX_GALLERY_ITEMS = 12;
 
 function normalizePosition(value?: string): ArtistGalleryPosition {
   if (!value) return "top";
@@ -320,7 +322,7 @@ export function parseArtistBio(rawBio?: string | null): ArtistProfileData {
       };
     })
     .filter((item) => Boolean(item.url))
-    .slice(0, 3);
+    .slice(0, MAX_GALLERY_ITEMS);
 
   const content = working.slice(endIdx + GALLERY_END.length).trim();
   const fallbackSocials = extractSocialsFromText(content);
@@ -374,7 +376,7 @@ export function buildArtistBio(
       position: normalizePosition(item.position),
     }))
     .filter((item) => Boolean(item.url))
-    .slice(0, 3);
+    .slice(0, MAX_GALLERY_ITEMS);
 
   const cleanedContent = content.trim();
   const socialLines = [

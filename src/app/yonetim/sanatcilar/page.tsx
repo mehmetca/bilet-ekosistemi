@@ -30,6 +30,8 @@ type ArtistFormState = {
   gallery_2_position: ArtistGalleryPosition;
   gallery_3: string;
   gallery_3_position: ArtistGalleryPosition;
+  // İçerik yazısının hemen altına gelecek çoklu fotoğraf galerisi (position: "bottom")
+  content_gallery: string[];
   card_text: string;
   card_lines: number;
   video_1_url: string;
@@ -59,6 +61,7 @@ const EMPTY_FORM: ArtistFormState = {
   gallery_2_position: "top",
   gallery_3: "",
   gallery_3_position: "top",
+  content_gallery: [],
   card_text: "",
   card_lines: 3,
   video_1_url: "",
@@ -256,6 +259,11 @@ export default function SanatcilarPage() {
         gallery_2_position: parsed.gallery[1]?.position || "top",
         gallery_3: parsed.gallery[2]?.url || "",
         gallery_3_position: parsed.gallery[2]?.position || "top",
+        // İlk 3 görsel alanı (gallery_1..3) haricindekilerin içinden "bottom" olanları çoklu galeriye aktar.
+        content_gallery: parsed.gallery
+          .slice(3)
+          .filter((item) => item.position === "bottom")
+          .map((item) => item.url),
         card_text: parsed.cardText || "",
         card_lines: parsed.cardLines || 3,
         video_1_url: parsed.videoUrls[0] || "",
@@ -352,6 +360,10 @@ export default function SanatcilarPage() {
       { url: form.gallery_1, position: form.gallery_1_position },
       { url: form.gallery_2, position: form.gallery_2_position },
       { url: form.gallery_3, position: form.gallery_3_position },
+      ...(form.content_gallery || []).map((url) => ({
+        url,
+        position: "bottom" as ArtistGalleryPosition,
+      })),
     ];
     const socials = {
       youtube: form.youtube_url,
@@ -539,7 +551,6 @@ export default function SanatcilarPage() {
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <p className="font-medium text-slate-900 truncate">{artist.name}</p>
-                    <p className="text-xs text-slate-500">/{artist.slug}</p>
                   </div>
                   {isAdmin && (artistFollowCounts[artist.id] ?? 0) > 0 && (
                     <span
@@ -789,6 +800,68 @@ export default function SanatcilarPage() {
                   />
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Foto Galeri Ekle (İçeriğin Altında)
+            </label>
+
+            <div className="space-y-3">
+              {form.content_gallery.length === 0 && (
+                <p className="text-sm text-slate-500">
+                  Henüz fotoğraf eklenmedi. Birkaç fotoğraf ekleyebilirsiniz.
+                </p>
+              )}
+
+              {form.content_gallery.map((url, idx) => (
+                <div key={idx} className="rounded-lg border border-slate-200 p-3">
+                  <AdminImageUploadFixed
+                    value={url}
+                    onChange={(nextUrl: string) => {
+                      setForm((prev) => ({
+                        ...prev,
+                        content_gallery: prev.content_gallery.map((v, i) => (i === idx ? nextUrl : v)),
+                      }));
+                    }}
+                    folder="artist-images"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setForm((prev) => ({
+                        ...prev,
+                        content_gallery: prev.content_gallery.filter((_, i) => i !== idx),
+                      }));
+                    }}
+                    className="mt-3 rounded-lg bg-red-600 text-white px-3 py-2 text-sm hover:bg-red-700"
+                  >
+                    Galeriden Kaldır
+                  </button>
+                </div>
+              ))}
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  disabled={form.content_gallery.length >= 12}
+                  onClick={() => {
+                    setForm((prev) => ({
+                      ...prev,
+                      content_gallery: [...prev.content_gallery, ""],
+                    }));
+                  }}
+                  className="rounded-lg bg-slate-100 text-slate-800 px-3 py-2 text-sm hover:bg-slate-200 disabled:opacity-60"
+                >
+                  + Foto Galeri Ekle
+                </button>
+                <span className="text-xs text-slate-500">Maks. 12 fotoğraf</span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Önerilen: 4:3 oran (örn. 1200x900). Kırpma gerekirse üst kısım referans alınır.
+              </p>
             </div>
           </div>
 

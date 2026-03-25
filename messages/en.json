@@ -4,7 +4,8 @@
     "home": "Home",
     "share": "Share",
     "shareNews": "Share News",
-    "linkCopied": "Link copied!"
+    "linkCopied": "Link copied!",
+    "close": "Close"
   },
   "newsDetail": {
     "newsNotFound": "News Not Found",
@@ -345,6 +346,7 @@
   "artists": {
     "title": "Artists",
     "subtitle": "All artist biographies and images",
+    "filterAll": "All",
     "loading": "Loading...",
     "noArtists": "No artists registered yet.",
     "noPhoto": "No photo",
