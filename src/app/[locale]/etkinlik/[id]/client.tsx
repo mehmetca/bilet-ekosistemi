@@ -61,7 +61,7 @@ interface EventDetailClientProps {
 
 /** Oturum planı: bölüm > sıra > koltuk (koltuk seçimi UI için); bölümde ticket_type_label etkinlikteki bilet adıyla eşlenir */
 type SeatPlanSeat = { id: string; seat_label: string };
-type SeatPlanRow = { id: string; row_label: string; seats: SeatPlanSeat[] };
+type SeatPlanRow = { id: string; row_label: string; ticket_type_label?: string | null; seats: SeatPlanSeat[] };
 type SeatPlanSection = { id: string; name: string; ticket_type_label?: string | null; rows: SeatPlanRow[] };
 
 type TicketLike = { id: string; name?: string | null; price?: number | null; available?: number | null };
@@ -139,6 +139,41 @@ function getTicketForSection(
   return { ticket: byIndex ?? availableTickets[0], matchedBy: "index" };
 }
 
+function getTicketForRow(
+  section: SeatPlanSection,
+  row: SeatPlanRow | undefined,
+  sectionIndex: number,
+  availableTickets: TicketLike[]
+): { ticket: TicketLike; matchedBy: "name" | "index" } {
+  const rowLabel = (row?.ticket_type_label || "").trim();
+  if (rowLabel) {
+    const byRowLabel = availableTickets.find(
+      (t) => (t.name || "").trim().toLowerCase() === rowLabel.toLowerCase()
+    );
+    if (byRowLabel) return { ticket: byRowLabel, matchedBy: "name" };
+  }
+  return getTicketForSection(section, sectionIndex, availableTickets);
+}
+
+function getCategoryColorHex(rawCategory: string): string {
+  const category = (rawCategory || "").trim().toLowerCase();
+  const palette: Record<string, string> = {
+    vip: "#f59e0b",
+    "vip bilet": "#f59e0b",
+    "kategori 1": "#f43f5e",
+    "kategori 2": "#3b82f6",
+    "kategori 3": "#10b981",
+    "kategori 4": "#06b6d4",
+    "kategori 5": "#d946ef",
+    "kategori 6": "#84cc16",
+    "kategori 7": "#f97316",
+    "kategori 8": "#8b5cf6",
+    "kategori 9": "#14b8a6",
+    "kategori 10": "#ef4444",
+  };
+  return palette[category] ?? "#64748b";
+}
+
 /** Eventim tarzı şematik salon planı: bölümleri yan yana, sahne altta, koltuklar tıklanabilir. Satılmış koltuklar dolu gösterilir, tıklanamaz. */
 function SeatMapSvg({
   sections,
@@ -146,72 +181,75 @@ function SeatMapSvg({
   soldSeatIds,
   onSeatToggle,
   sectionColors,
+  selectableSeatIds,
+  seatTitleById,
+  stageLabel,
+  seatLabelWord,
 }: {
   sections: SeatPlanSection[];
   selectedSeatIds: Set<string>;
   soldSeatIds: Set<string>;
   onSeatToggle: (seatId: string) => void;
   sectionColors: Map<string, string>;
+  selectableSeatIds?: Set<string>;
+  seatTitleById?: Map<string, string>;
+  stageLabel: string;
+  seatLabelWord: string;
 }) {
+  const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
   const pad = 12;
-  const stageH = 44;
-  const mapH = 420;
-  const mapW = 720;
+  const stageH = 34;
+  const mapH = 560;
+  const mapW = 1040;
+  const stageGap = 8;
   const sectionGap = 10;
   const nSections = sections.length;
   if (nSections === 0) return null;
-  const sectionW = (mapW - (nSections - 1) * sectionGap) / nSections;
   const sectionMaxRows = Math.max(...sections.map((s) => s.rows.length), 1);
   const sectionMaxSeats = Math.max(
     ...sections.flatMap((s) => s.rows.map((r) => r.seats.length)),
     1
   );
+  const seatingAreaW = mapW * 0.9;
+  const sectionW = Math.max(150, Math.min(260, (seatingAreaW - (nSections - 1) * sectionGap) / nSections));
+  const seatingTotalW = sectionW * nSections + sectionGap * (nSections - 1);
+  const seatingStartX = pad + (mapW - seatingTotalW) / 2;
   const seatSize = Math.min(
-    (sectionW - 20) / sectionMaxSeats,
+    (sectionW - 26) / sectionMaxSeats,
     (mapH - 28) / sectionMaxRows,
-    20
+    24
   );
   const rowH = (mapH - 28) / sectionMaxRows;
-  const seatW = Math.min((sectionW - 20) / sectionMaxSeats, seatSize * 1.2);
+  const seatW = Math.min((sectionW - 26) / sectionMaxSeats, seatSize * 2.4);
+  const stageTarget = sectionMaxSeats * seatW * 1.05;
+  const stageWRaw = Math.max(mapW * 0.24, Math.min(mapW * 0.38, stageTarget));
+  const stageW = Math.min(stageWRaw, seatingTotalW * 0.92);
+  const stageX = pad + (mapW - stageW) / 2;
 
   return (
     <svg
-      viewBox={`0 0 ${mapW + pad * 2} ${mapH + stageH + pad * 2}`}
-      className="w-full rounded-lg border border-slate-200 bg-slate-50 block"
-      style={{ minWidth: 720, minHeight: 468 }}
+      viewBox={`0 0 ${mapW + pad * 2} ${mapH + stageH + stageGap + pad * 2}`}
+      className="w-full rounded-lg border border-slate-200 bg-white block"
+      style={{ minWidth: 1040, minHeight: 690 }}
     >
-      {/* Sahne */}
-      <rect x={pad} y={mapH + pad} width={mapW} height={stageH} rx={4} fill="#1e293b" />
-      <text
-        x={pad + mapW / 2}
-        y={mapH + pad + stageH / 2 + 5}
-        textAnchor="middle"
-        fill="#94a3b8"
-        fontSize={14}
-        fontWeight={600}
-      >
-        Sahne
-      </text>
       {/* Bölümler */}
       {sections.map((section, si) => {
-        const sx = pad + si * (sectionW + sectionGap);
-        const color = sectionColors.get(section.id) || "#cbd5e1";
+        const sx = seatingStartX + si * (sectionW + sectionGap);
         return (
           <g key={section.id}>
             <rect
               x={sx}
-              y={pad}
+              y={pad + stageH + stageGap}
               width={sectionW}
               height={mapH}
               rx={6}
-              fill={color}
-              fillOpacity={0.35}
+              fill="#ffffff"
               stroke="#94a3b8"
               strokeWidth={1}
             />
             <text
               x={sx + sectionW / 2}
-              y={pad + 16}
+              y={pad + stageH + stageGap + 16}
               textAnchor="middle"
               fill="#334155"
               fontSize={11}
@@ -219,38 +257,97 @@ function SeatMapSvg({
             >
               {section.name}
             </text>
-            {section.rows.map((row, ri) =>
-              row.seats.map((seat, ci) => {
+            {section.rows.map((row, ri) => {
+              const rowY = pad + stageH + stageGap + 24 + ri * rowH + rowH / 2;
+              return (
+                <g key={`row-${section.id}-${row.id}`}>
+                  <text
+                    x={sx + 3}
+                    y={rowY + 3}
+                    textAnchor="start"
+                    fill="#64748b"
+                    fontSize={9}
+                    fontWeight={600}
+                  >
+                    {row.row_label}
+                  </text>
+                  <text
+                    x={sx + sectionW - 3}
+                    y={rowY + 3}
+                    textAnchor="end"
+                    fill="#64748b"
+                    fontSize={9}
+                    fontWeight={600}
+                  >
+                    {row.row_label}
+                  </text>
+                  {row.seats.map((seat, ci) => {
                 const cx = sx + 10 + ci * seatW + seatW / 2;
-                const cy = pad + 24 + ri * rowH + rowH / 2;
+                const cy = rowY;
                 const isSelected = selectedSeatIds.has(seat.id);
                 const isSold = soldSeatIds.has(seat.id);
+                const isSelectable = selectableSeatIds ? selectableSeatIds.has(seat.id) : true;
+                const isUnavailable = !isSold && !isSelectable;
+                const isHovered = hoveredSeatId === seat.id;
                 return (
                   <g
                     key={seat.id}
-                    style={{ cursor: isSold ? "not-allowed" : "pointer" }}
-                    onClick={() => !isSold && onSeatToggle(seat.id)}
-                    onKeyDown={(e) => !isSold && e.key === "Enter" && onSeatToggle(seat.id)}
-                    role="button"
-                    tabIndex={isSold ? -1 : 0}
-                    aria-label={isSold ? `Koltuk ${seat.seat_label} (satıldı)` : `Koltuk ${seat.seat_label}`}
-                    aria-disabled={isSold}
+                    style={{ cursor: isSold || isUnavailable ? "not-allowed" : "pointer" }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
                   >
                     <circle
                       cx={cx}
                       cy={cy}
                       r={seatSize / 2}
-                      fill={isSold ? "#475569" : isSelected ? "#2563eb" : "#64748b"}
-                      stroke={isSold ? "#1e293b" : isSelected ? "#1d4ed8" : "#475569"}
-                      strokeWidth={isSold ? 2 : 1.5}
-                    />
+                      fill={
+                        isSold
+                          ? "#334155"
+                          : isUnavailable
+                          ? "#cbd5e1"
+                          : isSelected || isHovered
+                          ? "#bbf7d0"
+                          : "#bae6fd"
+                      }
+                      stroke={
+                        isSold
+                          ? "#0f172a"
+                          : isUnavailable
+                          ? "#94a3b8"
+                          : isSelected || isHovered
+                          ? "#86efac"
+                          : "#93c5fd"
+                      }
+                      strokeWidth={1.5}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={() => !isSold && !isUnavailable && onSeatToggle(seat.id)}
+                      onMouseEnter={() => !isSold && !isUnavailable && setHoveredSeatId(seat.id)}
+                      onMouseLeave={() => setHoveredSeatId((prev) => (prev === seat.id ? null : prev))}
+                    >
+                      <title>{seatTitleById?.get(seat.id) || `${seatLabelWord} ${seat.seat_label}`}</title>
+                    </circle>
                   </g>
                 );
-              })
-            )}
+              })}
+                </g>
+              );
+            })}
           </g>
         );
       })}
+      {/* Sahne */}
+      <rect x={stageX} y={pad} width={stageW} height={stageH} rx={4} fill="#1e293b" />
+      <text
+        x={stageX + stageW / 2}
+        y={pad + stageH / 2 + 5}
+        textAnchor="middle"
+        fill="#94a3b8"
+        fontSize={14}
+        fontWeight={600}
+      >
+        {stageLabel}
+      </text>
     </svg>
   );
 }
@@ -266,15 +363,23 @@ function SeatMapWithZoom({
   soldSeatIds,
   onSeatToggle,
   sectionColors,
+  selectableSeatIds,
+  seatTitleById,
+  stageLabel,
+  seatLabelWord,
 }: {
   sections: SeatPlanSection[];
   selectedSeatIds: Set<string>;
   soldSeatIds: Set<string>;
   onSeatToggle: (seatId: string) => void;
   sectionColors: Map<string, string>;
+  selectableSeatIds?: Set<string>;
+  seatTitleById?: Map<string, string>;
+  stageLabel: string;
+  seatLabelWord: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1.2);
+  const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
@@ -312,7 +417,6 @@ function SeatMapWithZoom({
   }, []);
 
   const handleSeatClick = useCallback((seatId: string) => {
-    if (didMove.current) return;
     onSeatToggle(seatId);
   }, [onSeatToggle]);
 
@@ -373,7 +477,7 @@ function SeatMapWithZoom({
       </div>
       <div
         ref={containerRef}
-        className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100 touch-none"
+        className="overflow-hidden rounded-lg border border-slate-200 bg-white touch-none"
         style={{ minHeight: 420, maxHeight: "70vh", cursor: isDragging ? "grabbing" : "grab" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -386,8 +490,10 @@ function SeatMapWithZoom({
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             transformOrigin: "0 0",
-            width: "fit-content",
+            width: "100%",
             minHeight: 468,
+            display: "flex",
+            justifyContent: "center",
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -397,6 +503,10 @@ function SeatMapWithZoom({
             soldSeatIds={soldSeatIds}
             onSeatToggle={handleSeatClick}
             sectionColors={sectionColors}
+            selectableSeatIds={selectableSeatIds}
+            seatTitleById={seatTitleById}
+            stageLabel={stageLabel}
+            seatLabelWord={seatLabelWord}
           />
         </div>
       </div>
@@ -419,7 +529,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const locale = (useLocale() as "tr" | "de" | "en") || localeProp;
   const searchParams = useSearchParams();
   const showSeatGridDebug = searchParams.get("seatDebug") === "1";
-  const { addItem, totalItems } = useCart();
+  const { addItem, removeSeatItem, totalItems } = useCart();
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
@@ -446,6 +556,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [soldSeatIds, setSoldSeatIds] = useState<Set<string>>(new Set());
   /** Eventim tarzı: "list" = liste görünümü, "map" = salon planı (şematik) */
   const [seatMapView, setSeatMapView] = useState<"list" | "map">("map");
+  const [selectedSeatCategory, setSelectedSeatCategory] = useState<string>("all");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   /** Yer seçerek bilet al akışında, seçilen koltuklar sepete eklendi mi? (sidebar mesajını değiştirmek için) */
   const [hasSeatSelectionAddedToCart, setHasSeatSelectionAddedToCart] = useState(false);
@@ -457,6 +568,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [reminderResult, setReminderResult] = useState<{ success: boolean; message: string } | null>(null);
   /** Site ayarı: sipariş başına max bilet (varsayılan 10) */
   const [maxTicketsPerOrder, setMaxTicketsPerOrder] = useState(10);
+  const stageLabel = locale === "de" ? "Bühne" : locale === "en" ? "Stage" : "Sahne";
+  const rowLabelWord = locale === "de" ? "Reihe" : locale === "en" ? "Row" : "Sıra";
+  const seatLabelWord = locale === "de" ? "Platz" : locale === "en" ? "Seat" : "Koltuk";
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
@@ -532,7 +646,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         }
         const { data: rows } = await supabase
           .from("seating_plan_rows")
-          .select("id, section_id, row_label")
+          .select("id, section_id, row_label, ticket_type_label")
           .in("section_id", sections.map((s) => s.id))
           .order("section_id")
           .order("sort_order")
@@ -553,8 +667,25 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         const rowsBySection = new Map<string, SeatPlanRow[]>();
         rows.forEach((r) => {
           const list = rowsBySection.get(r.section_id) || [];
-          const rowSeats = (seats || []).filter((s) => s.row_id === r.id).map((s) => ({ id: s.id, seat_label: s.seat_label }));
-          list.push({ id: r.id, row_label: r.row_label, seats: rowSeats });
+          const rowSeats = (seats || [])
+            .filter((s) => s.row_id === r.id)
+            .map((s) => ({ id: s.id, seat_label: s.seat_label }))
+            .sort((a, b) => {
+              const na = Number(String(a.seat_label).trim());
+              const nb = Number(String(b.seat_label).trim());
+              const aNum = Number.isFinite(na);
+              const bNum = Number.isFinite(nb);
+              if (aNum && bNum) return na - nb;
+              if (aNum && !bNum) return -1;
+              if (!aNum && bNum) return 1;
+              return String(a.seat_label).localeCompare(String(b.seat_label), undefined, { numeric: true, sensitivity: "base" });
+            });
+          list.push({
+            id: r.id,
+            row_label: r.row_label,
+            ticket_type_label: (r as { ticket_type_label?: string | null }).ticket_type_label ?? null,
+            seats: rowSeats,
+          });
           rowsBySection.set(r.section_id, list);
         });
         const result: SeatPlanSection[] = sections.map((s) => {
@@ -621,6 +752,185 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     }
     return m;
   }, [imagePlanSeats]);
+
+  const sectionColorMap = useMemo(() => {
+    const m = new Map<string, string>();
+    if (!seatingPlanData?.length) return m;
+    seatingPlanData.forEach((section, idx) => {
+      const { ticket } = getTicketForSection(section, idx, availableTickets);
+      const label = String(section.ticket_type_label || ticket.name || section.name || "");
+      m.set(section.id, getCategoryColorHex(label));
+    });
+    return m;
+  }, [seatingPlanData, availableTickets]);
+
+  const seatMetaById = useMemo(() => {
+    const seatToSection = new Map<string, SeatPlanSection>();
+    const seatToRow = new Map<string, SeatPlanRow>();
+    seatingPlanData?.forEach((sec) =>
+      sec.rows.forEach((row) =>
+        row.seats.forEach((seat) => {
+          seatToSection.set(seat.id, sec);
+          seatToRow.set(seat.id, row);
+        })
+      )
+    );
+    const meta = new Map<string, { ticket: TicketLike; venueLine: string }>();
+    seatToSection.forEach((sec, seatId) => {
+      const row = seatToRow.get(seatId);
+      const st = sec.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
+      const secIdx = seatingPlanData ? seatingPlanData.indexOf(sec) : 0;
+      const { ticket } = getTicketForRow(sec, row, secIdx, availableTickets);
+      const fallbackLine = `${sec?.name ?? "—"} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${st?.seat_label ?? "—"}`;
+      meta.set(seatId, {
+        ticket,
+        venueLine: duisburgSeatCaptionById.get(seatId) ?? fallbackLine,
+      });
+    });
+    return meta;
+  }, [seatingPlanData, availableTickets, duisburgSeatCaptionById]);
+
+  const seatCategoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    seatMetaById.forEach((meta) => {
+      const name = String(meta.ticket?.name || "").trim();
+      if (name) set.add(name);
+    });
+    return Array.from(set);
+  }, [seatMetaById]);
+
+  const selectableSeatIdsByCategory = useMemo(() => {
+    if (selectedSeatCategory === "all") return undefined;
+    const ids = new Set<string>();
+    seatMetaById.forEach((meta, seatId) => {
+      const tName = String(meta.ticket?.name || "").trim();
+      if (tName === selectedSeatCategory) ids.add(seatId);
+    });
+    return ids;
+  }, [seatMetaById, selectedSeatCategory]);
+
+  const seatTitleById = useMemo(() => {
+    const m = new Map<string, string>();
+    seatMetaById.forEach((meta, seatId) => {
+      const price = formatPrice(Number(meta.ticket?.price || 0), event.currency);
+      m.set(seatId, `${meta.venueLine} · ${meta.ticket?.name || "Bilet"} · ${price}`);
+    });
+    return m;
+  }, [seatMetaById, event.currency]);
+
+  const handleSeatToggle = useCallback(
+    async (seatId: string) => {
+      const sessionId = ensureSeatHoldSessionId(seatHoldSessionId);
+      if (!sessionId) return;
+      if (sessionId !== seatHoldSessionId) setSeatHoldSessionId(sessionId);
+      const isSelected = selectedSeatIds.has(seatId);
+
+      if (isSelected) {
+        setSelectedSeatIds((prev) => {
+          const next = new Set(prev);
+          next.delete(seatId);
+          return next;
+        });
+        removeSeatItem(event.id, seatId);
+        try {
+          await fetch("/api/seat-holds", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ eventId: event.id, seatId, sessionId }),
+          });
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+
+      if (selectedSeatIds.size >= maxTicketsPerOrder) {
+        setActionMessage(
+          locale === "de"
+            ? `Max. ${maxTicketsPerOrder} Platze pro Bestellung.`
+            : locale === "en"
+            ? `Maximum ${maxTicketsPerOrder} tickets per order.`
+            : `Siparis basina en fazla ${maxTicketsPerOrder} bilet alabilirsiniz.`
+        );
+        return;
+      }
+      try {
+        if (selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seatId)) return;
+        const res = await fetch("/api/seat-holds", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ seatId, eventId: event.id, sessionId }),
+        });
+        if (!res.ok) {
+          setActionMessage(
+            locale === "de"
+              ? "Der gewahlte Platz ist leider bereits verkauft oder reserviert."
+              : locale === "en"
+              ? "The selected seat is unfortunately already sold or reserved."
+              : "Sectiginiz bilet maalesef satildi."
+          );
+          return;
+        }
+        setSelectedSeatIds((prev) => {
+          const next = new Set(prev);
+          next.add(seatId);
+          return next;
+        });
+        const seatMeta = seatMetaById.get(seatId);
+        const fallbackTicket = availableTickets.find((t) => t.id === selectedTicketType) || availableTickets[0];
+        const ticketForCart = seatMeta?.ticket?.id ? seatMeta.ticket : fallbackTicket;
+        if (ticketForCart?.id) {
+          addItem({
+            ticketId: ticketForCart.id,
+            eventId: event.id,
+            eventTitle: localized.title || event.title,
+            eventDate: event.date,
+            eventTime: event.time || "20:00",
+            venue: localized.venue || event.venue,
+            location: event.location,
+            imageUrl: event.image_url,
+            ticketName: ticketForCart.name || "Bilet",
+            price: Number(ticketForCart.price || 0),
+            currency: event.currency,
+            eventCheckoutFee:
+              typeof event.checkout_processing_fee === "number" &&
+              event.checkout_processing_fee > 0
+                ? event.checkout_processing_fee
+                : undefined,
+            quantity: 1,
+            available: Number(ticketForCart.available || 0),
+            seatIds: [seatId],
+            seatCaptions: [seatMeta?.venueLine || seatId],
+          });
+          setHasSeatSelectionAddedToCart(true);
+          setActionMessage(tCheckout("addedToCart"));
+        }
+      } catch {
+        setActionMessage(
+          locale === "de"
+            ? "Platz konnte nicht reserviert werden."
+            : locale === "en"
+            ? "Could not reserve the seat."
+            : "Koltuk rezerve edilemedi."
+        );
+      }
+    },
+    [
+      addItem,
+      availableTickets,
+      event,
+      locale,
+      localized.title,
+      maxTicketsPerOrder,
+      removeSeatItem,
+      seatHoldSessionId,
+      seatMetaById,
+      selectableSeatIdsByCategory,
+      selectedSeatIds,
+      selectedTicketType,
+      tCheckout,
+    ]
+  );
 
   const eventDateTime = new Date(`${event.date} ${event.time || "23:59"}`);
   const isPastEvent = eventDateTime < new Date();
@@ -980,6 +1290,19 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           >
                             Liste
                           </button>
+                          <select
+                            value={selectedSeatCategory}
+                            onChange={(e) => setSelectedSeatCategory(e.target.value)}
+                            className="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
+                            aria-label="Alle Kategorien"
+                          >
+                            <option value="all">Alle Kategorien</option>
+                            {seatCategoryOptions.map((name) => (
+                              <option key={name} value={name}>
+                                {name}
+                              </option>
+                            ))}
+                          </select>
                         </div>
                         {seatMapView === "map" && (
                           <div className="mb-4">
@@ -996,13 +1319,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 onToggle={(logicalId) => {
                                   const dbId = musensaalIdMaps.logicalToDbId.get(logicalId);
                                   if (!dbId) return;
-                                  setSelectedSeatIds((prev) => {
-                                    const next = new Set(prev);
-                                    if (next.has(dbId)) next.delete(dbId);
-                                    else if (prev.size >= maxTicketsPerOrder) return prev;
-                                    else next.add(dbId);
-                                    return next;
-                                  });
+                                  void handleSeatToggle(dbId);
                                 }}
                               />
                             ) : isImagePlan ? (
@@ -1017,63 +1334,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 getCoord={getTheaterDuisburgCoord}
                                 selectedSeatIds={selectedSeatIds}
                                 soldSeatIds={soldSeatIds}
-                                onSeatToggle={async (seatId) => {
-                                  const sessionId = ensureSeatHoldSessionId(seatHoldSessionId);
-                                  if (!sessionId) return;
-                                  if (sessionId !== seatHoldSessionId) setSeatHoldSessionId(sessionId);
-                                  const isSelected = selectedSeatIds.has(seatId);
-                                  if (isSelected) {
-                                    setSelectedSeatIds((prev) => {
-                                      const next = new Set(prev);
-                                      next.delete(seatId);
-                                      return next;
-                                    });
-                                    try {
-                                      await fetch("/api/seat-holds", {
-                                        method: "DELETE",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ seatId, sessionId }),
-                                      });
-                                    } catch {
-                                      /* ignore */
-                                    }
-                                    return;
-                                  }
-                                  if (selectedSeatIds.size >= maxTicketsPerOrder) return;
-                                  try {
-                                    const res = await fetch("/api/seat-holds", {
-                                      method: "POST",
-                                      headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({ seatId, eventId: event.id, sessionId }),
-                                    });
-                                    if (!res.ok) {
-                                      const data = (await res.json().catch(() => ({}))) as { error?: string };
-                                      setActionMessage(
-                                        data.error ||
-                                          (locale === "de"
-                                            ? "Dieser Platz ist derzeit von einem anderen Benutzer reserviert."
-                                            : locale === "en"
-                                            ? "This seat is currently reserved by another user."
-                                            : "Bu koltuk şu anda başka bir kullanıcı tarafından tutuluyor.")
-                                      );
-                                      return;
-                                    }
-                                    setSelectedSeatIds((prev) => {
-                                      const next = new Set(prev);
-                                      next.add(seatId);
-                                      return next;
-                                    });
-                                  } catch (e) {
-                                    console.error("seat-hold toggle error:", e);
-                                    setActionMessage(
-                                      locale === "de"
-                                        ? "Platz konnte nicht reserviert werden."
-                                        : locale === "en"
-                                        ? "Could not reserve the seat."
-                                        : "Koltuk rezerve edilemedi."
-                                    );
-                                  }
-                                }}
+                                onSeatToggle={(seatId) => void handleSeatToggle(seatId)}
                               />
                             ) : (
                               <>
@@ -1093,65 +1354,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 sections={seatingPlanData}
                                 selectedSeatIds={selectedSeatIds}
                                 soldSeatIds={soldSeatIds}
-                                onSeatToggle={async (seatId) => {
-                                  const sessionId = ensureSeatHoldSessionId(seatHoldSessionId);
-                                  if (!sessionId) return;
-                                  if (sessionId !== seatHoldSessionId) setSeatHoldSessionId(sessionId);
-                                  const isSelected = selectedSeatIds.has(seatId);
-                                  if (isSelected) {
-                                    // Koltuğu bırak: hold kaydını da sil
-                                    setSelectedSeatIds((prev) => {
-                                      const next = new Set(prev);
-                                      next.delete(seatId);
-                                      return next;
-                                    });
-                                    try {
-                                      await fetch("/api/seat-holds", {
-                                        method: "DELETE",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ seatId, sessionId }),
-                                      });
-                                    } catch {
-                                      /* sessizce yut */
-                                    }
-                                    return;
-                                  }
-                                  if (selectedSeatIds.size >= maxTicketsPerOrder) return;
-                                  try {
-                                    const res = await fetch("/api/seat-holds", {
-                                      method: "POST",
-                                      headers: { "Content-Type": "application/json" },
-                                      body: JSON.stringify({ seatId, eventId: event.id, sessionId }),
-                                    });
-                                    if (!res.ok) {
-                                      const data = (await res.json().catch(() => ({}))) as { error?: string };
-                                      setActionMessage(
-                                        data.error ||
-                                          (locale === "de"
-                                            ? "Dieser Platz ist derzeit von einem anderen Benutzer reserviert."
-                                            : locale === "en"
-                                            ? "This seat is currently reserved by another user."
-                                            : "Bu koltuk şu anda başka bir kullanıcı tarafından tutuluyor.")
-                                      );
-                                      return;
-                                    }
-                                    setSelectedSeatIds((prev) => {
-                                      const next = new Set(prev);
-                                      next.add(seatId);
-                                      return next;
-                                    });
-                                  } catch (e) {
-                                    console.error("seat-hold toggle error:", e);
-                                    setActionMessage(
-                                      locale === "de"
-                                        ? "Platz konnte nicht reserviert werden."
-                                        : locale === "en"
-                                        ? "Could not reserve the seat."
-                                        : "Koltuk rezerve edilemedi."
-                                    );
-                                  }
-                                }}
-                                sectionColors={new Map(seatingPlanData.map((s, i) => [s.id, ["#bae6fd", "#c7d2fe", "#d9f99d", "#fde68a", "#fecaca"][i % 5]]))}
+                                onSeatToggle={(seatId) => void handleSeatToggle(seatId)}
+                                sectionColors={sectionColorMap}
+                                selectableSeatIds={selectableSeatIdsByCategory}
+                                seatTitleById={seatTitleById}
+                                stageLabel={stageLabel}
+                                seatLabelWord={seatLabelWord}
                               />
                               <p className="mt-2 text-xs text-slate-500">
                                 Bu görünüm, yönetim panelinde tanımladığınız bölüm / sıra / koltuk verisine göredir (Rosengarten Musensaal çizimi değildir).
@@ -1175,82 +1383,31 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   </p>
                                   {section.rows.map((row) => (
                                     <div key={row.id} className="flex flex-wrap items-center gap-2 mb-2">
-                                      <span className="text-sm font-medium text-slate-600 w-12">Sıra {row.row_label}</span>
+                                      <span className="text-sm font-medium text-slate-600 w-16">{rowLabelWord} {row.row_label}</span>
                                       <div className="flex flex-wrap gap-1">
                                         {row.seats.map((seat) => {
                                           const isSelected = selectedSeatIds.has(seat.id);
                                           const isSold = soldSeatIds.has(seat.id);
                                           const handleClick = async () => {
                                             if (isSold) return;
-                                            const sessionId = ensureSeatHoldSessionId(seatHoldSessionId);
-                                            if (!sessionId) return;
-                                            if (sessionId !== seatHoldSessionId) setSeatHoldSessionId(sessionId);
-                                            if (isSelected) {
-                                              setSelectedSeatIds((prev) => {
-                                                const next = new Set(prev);
-                                                next.delete(seat.id);
-                                                return next;
-                                              });
-                                              try {
-                                                await fetch("/api/seat-holds", {
-                                                  method: "DELETE",
-                                                  headers: { "Content-Type": "application/json" },
-                                                  body: JSON.stringify({ seatId: seat.id, sessionId }),
-                                                });
-                                              } catch {
-                                                /* sessizce yut */
-                                              }
-                                              return;
-                                            }
-                                            if (selectedSeatIds.size >= maxTicketsPerOrder) return;
-                                            try {
-                                              const res = await fetch("/api/seat-holds", {
-                                                method: "POST",
-                                                headers: { "Content-Type": "application/json" },
-                                                body: JSON.stringify({ seatId: seat.id, eventId: event.id, sessionId }),
-                                              });
-                                              if (!res.ok) {
-                                                const data = (await res.json().catch(() => ({}))) as { error?: string };
-                                                setActionMessage(
-                                                  data.error ||
-                                                    (locale === "de"
-                                                      ? "Dieser Platz ist derzeit von einem anderen Benutzer reserviert."
-                                                      : locale === "en"
-                                                      ? "This seat is currently reserved by another user."
-                                                      : "Bu koltuk şu anda başka bir kullanıcı tarafından tutuluyor.")
-                                                );
-                                                return;
-                                              }
-                                              setSelectedSeatIds((prev) => {
-                                                const next = new Set(prev);
-                                                next.add(seat.id);
-                                                return next;
-                                              });
-                                            } catch (e) {
-                                              console.error("seat-hold toggle error (list view):", e);
-                                              setActionMessage(
-                                                locale === "de"
-                                                  ? "Platz konnte nicht reserviert werden."
-                                                  : locale === "en"
-                                                  ? "Could not reserve the seat."
-                                                  : "Koltuk rezerve edilemedi."
-                                              );
-                                            }
+                                            await handleSeatToggle(seat.id);
                                           };
                                           return (
                                             <button
                                               key={seat.id}
                                               type="button"
-                                              disabled={isSold}
+                                              disabled={isSold || (selectableSeatIdsByCategory ? !selectableSeatIdsByCategory.has(seat.id) : false)}
                                               onClick={handleClick}
                                               className={`w-9 h-9 rounded text-sm font-medium transition-colors ${
                                                 isSold
                                                   ? "bg-slate-600 text-slate-200 cursor-not-allowed ring-1 ring-slate-700"
+                                                  : selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seat.id)
+                                                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
                                                   : isSelected
-                                                    ? "bg-primary-600 text-white"
-                                                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                                                    ? "bg-green-200 text-slate-900"
+                                                    : "bg-sky-200 text-slate-800 hover:bg-green-200"
                                               } ${!isSelected && !isSold && selectedSeatIds.size >= maxTicketsPerOrder ? "opacity-50 cursor-not-allowed" : ""}`}
-                                              title={isSold ? `${seat.seat_label} (satıldı)` : undefined}
+                                              title={seatTitleById.get(seat.id) || (isSold ? `${seat.seat_label} (satıldı)` : undefined)}
                                             >
                                               {seat.seat_label}
                                             </button>
@@ -1283,8 +1440,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           let totalCents = 0;
                           selectedSeatIds.forEach((seatId) => {
                             const sec = seatToSection.get(seatId);
+                            const row = seatToRow.get(seatId);
                             const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
-                            const { ticket: tk } = getTicketForSection(sec ?? { id: "", name: "", rows: [] }, sectionIdx, availableTickets);
+                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, availableTickets);
                             totalCents += Number(tk.price || 0) * 100;
                           });
                           const totalPrice = totalCents / 100;
@@ -1293,8 +1451,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             const row = seatToRow.get(seatId);
                             const seat = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
                             const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
-                            const { ticket: tk } = getTicketForSection(sec ?? { id: "", name: "", rows: [] }, sectionIdx, availableTickets);
-                            const fallbackLine = `${sec?.name ?? "—"} · Sıra ${row?.row_label ?? "—"} · Nr ${seat?.seat_label ?? "—"}`;
+                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, availableTickets);
+                            const fallbackLine = `${sec?.name ?? "—"} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${seat?.seat_label ?? "—"}`;
                             return {
                               seatId,
                               sectionName: sec?.name ?? "—",
@@ -1308,13 +1466,19 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           const seatIdsByTicketId = new Map<string, string[]>();
                           selectedSeatIds.forEach((seatId) => {
                             const sec = seatToSection.get(seatId);
+                            const row = seatToRow.get(seatId);
                             const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
-                            const { ticket: tk } = getTicketForSection(sec ?? { id: "", name: "", rows: [] }, sectionIdx, availableTickets);
+                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, availableTickets);
                             const arr = seatIdsByTicketId.get(tk.id) ?? [];
                             arr.push(seatId);
                             seatIdsByTicketId.set(tk.id, arr);
                           });
                           const atSeatLimit = selectedSeatIds.size >= maxTicketsPerOrder;
+                          const processingFee =
+                            typeof event.checkout_processing_fee === "number" && event.checkout_processing_fee > 0
+                              ? Number(event.checkout_processing_fee)
+                              : 0;
+                          const grandTotal = totalPrice + processingFee;
                           return (
                             <>
                               <ul className="space-y-2 max-h-56 overflow-y-auto mb-4">
@@ -1326,7 +1490,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                     <span className="font-semibold text-primary-600 flex-shrink-0">{formatPrice(item.price, event.currency)}</span>
                                     <button
                                       type="button"
-                                      onClick={() => setSelectedSeatIds((prev) => { const next = new Set(prev); next.delete(item.seatId); return next; })}
+                                      onClick={() => {
+                                        void handleSeatToggle(item.seatId);
+                                      }}
                                       className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
                                       aria-label="Kaldır"
                                     >
@@ -1340,9 +1506,21 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   {locale === "de" ? `Max. ${maxTicketsPerOrder} Plätze pro Bestellung.` : `Sipariş başına en fazla ${maxTicketsPerOrder} bilet.`}
                                 </p>
                               )}
-                              <p className="text-sm text-slate-700 mb-3">
-                                <strong>{selectedSeatIds.size}</strong> {locale === "de" ? "Plätze" : "koltuk"} · {formatPrice(totalPrice, event.currency)}
-                              </p>
+                              <div className="mb-3 space-y-1 text-sm text-slate-700">
+                                <p>
+                                  <strong>{selectedSeatIds.size}</strong>{" "}
+                                  {locale === "de" ? "Platze Gewahlt" : locale === "en" ? "Seats Selected" : "Koltuk Seçildi"}{" "}
+                                  <strong>{locale === "de" ? "Gesamt" : locale === "en" ? "Total" : "Toplam"} {formatPrice(totalPrice, event.currency)}</strong>
+                                </p>
+                                <p>
+                                  {locale === "de" ? "Bearbeitungsgebuhr" : locale === "en" ? "Processing Fee" : "İşlem Ücreti"}{" "}
+                                  <strong>{formatPrice(processingFee, event.currency)}</strong>
+                                </p>
+                                <p className="font-semibold text-slate-900">
+                                  {locale === "de" ? "Gesamtsumme" : locale === "en" ? "Grand Total" : "Genel Toplam"}{" "}
+                                  {formatPrice(grandTotal, event.currency)}
+                                </p>
+                              </div>
                               <button
                                 type="button"
                                 onClick={() => {
@@ -1363,7 +1541,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                         : undefined,
                                   };
                                   seatIdsByTicketId.forEach((seatIds, ticketId) => {
-                                    const tk = availableTickets.find((x) => x.id === ticketId)!;
+                                    const tk = availableTickets.find((x) => x.id === ticketId);
+                                    if (!tk) return;
                                     const seatCaptions = seatIds.map(
                                       (id) =>
                                         duisburgSeatCaptionById.get(id) ??
@@ -1371,7 +1550,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                           const sec = seatToSection.get(id);
                                           const row = seatToRow.get(id);
                                           const st = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === id);
-                                          return `${sec?.name ?? ""} · Sıra ${row?.row_label ?? ""} · Nr ${st?.seat_label ?? id}`;
+                                          return `${sec?.name ?? ""} · ${rowLabelWord} ${row?.row_label ?? ""} · ${seatLabelWord} ${st?.seat_label ?? id}`;
                                         })()
                                     );
                                     addItem({
@@ -1411,7 +1590,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             const sec = seatToSection.get(seatId);
                             const row = seatToRow.get(seatId);
                             const seat = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
-                            const fallbackLine = `${sec?.name ?? "—"} · Sıra ${row?.row_label ?? "—"} · Nr ${seat?.seat_label ?? "—"}`;
+                            const fallbackLine = `${sec?.name ?? "—"} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${seat?.seat_label ?? "—"}`;
                             return {
                               seatId,
                               sectionName: sec?.name ?? "—",
@@ -1433,7 +1612,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                     </span>
                                     <button
                                       type="button"
-                                      onClick={() => setSelectedSeatIds((prev) => { const next = new Set(prev); next.delete(item.seatId); return next; })}
+                                      onClick={() => {
+                                        void handleSeatToggle(item.seatId);
+                                      }}
                                       className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
                                       aria-label="Kaldır"
                                     >
@@ -1468,10 +1649,10 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                                 >
                                   {locale === "de"
-                                    ? "Zum Warenkorb"
+                                    ? "Zur Kasse"
                                     : locale === "en"
-                                    ? "Go to cart"
-                                    : "Alışveriş Sepetine Git"}
+                                    ? "Proceed to checkout"
+                                    : "Odemeye gec"}
                                 </Link>
                               </div>
                             </div>

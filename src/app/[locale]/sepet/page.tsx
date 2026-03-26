@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const [buyerAddress, setBuyerAddress] = useState("");
   const [buyerPlz, setBuyerPlz] = useState("");
   const [buyerCity, setBuyerCity] = useState("");
+  const [seatHoldSessionId, setSeatHoldSessionId] = useState<string | null>(null);
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
@@ -164,6 +165,9 @@ export default function CheckoutPage() {
         if (buyerCity.trim()) formData.append("buyer_city", buyerCity.trim());
         if (item.seatIds && item.seatIds.length > 0) {
           formData.append("seat_ids", JSON.stringify(item.seatIds));
+          if (seatHoldSessionId) {
+            formData.append("seat_hold_session_id", seatHoldSessionId);
+          }
         }
         const fee = item.eventCheckoutFee;
         const shouldApplyProcessingFee =
@@ -224,6 +228,14 @@ export default function CheckoutPage() {
     const timer = setTimeout(() => router.replace(`/giris?redirect=/${locale}/sepet`), 3000);
     return () => clearTimeout(timer);
   }, [user, authLoading, items.length, results.length, router, locale]);
+
+  useEffect(() => {
+    try {
+      setSeatHoldSessionId(window.localStorage.getItem("seatHoldSessionId"));
+    } catch {
+      setSeatHoldSessionId(null);
+    }
+  }, []);
 
   const allSuccess = results.length > 0 && results.every((r) => r.success);
 
@@ -386,13 +398,18 @@ export default function CheckoutPage() {
                       <span className="text-sm font-medium text-slate-700">{item.ticketName}</span>
                     </div>
                     {item.seatCaptions && item.seatCaptions.length > 0 ? (
-                      <ul className="mt-2 list-none space-y-0.5 pl-0 text-xs text-slate-600">
+                      <div className="mt-2">
+                        <p className="text-xs font-semibold text-slate-700">
+                          Koltuklar ({item.seatCaptions.length})
+                        </p>
+                        <ul className="mt-1 list-none space-y-0.5 pl-0 text-xs text-slate-600">
                         {item.seatCaptions.map((line, idx) => (
                           <li key={`${item.ticketId}-seat-${idx}`} className="truncate" title={line}>
                             {line}
                           </li>
                         ))}
-                      </ul>
+                        </ul>
+                      </div>
                     ) : null}
                   </div>
                   <div className="flex flex-col items-end gap-2">

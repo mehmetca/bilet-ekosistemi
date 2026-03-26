@@ -770,6 +770,11 @@ export async function POST(request: NextRequest) {
     const buyerPlz = (formData.get("buyer_plz") as string)?.trim() || null;
     const buyerCity = (formData.get("buyer_city") as string)?.trim() || null;
     let seatIds: string[] = [];
+    const seatHoldSessionIdRaw = (formData.get("seat_hold_session_id") as string | null) ?? null;
+    const seatHoldSessionId =
+      seatHoldSessionIdRaw && seatHoldSessionIdRaw.trim().length > 0
+        ? seatHoldSessionIdRaw.trim()
+        : null;
     try {
       const raw = formData.get("seat_ids") as string | null;
       if (raw) {
@@ -784,6 +789,16 @@ export async function POST(request: NextRequest) {
         { success: false, message: "Koltuk sayısı ile adet uyuşmuyor." },
         { status: 400 }
       );
+    }
+    if (seatIds.length > 0) {
+      const uniqueSeatIds = Array.from(new Set(seatIds));
+      if (uniqueSeatIds.length !== seatIds.length) {
+        return NextResponse.json(
+          { success: false, message: "Ayni koltuk bir sipariste birden fazla secilemez." },
+          { status: 400 }
+        );
+      }
+      seatIds = uniqueSeatIds;
     }
 
     if (!ticketId || !quantity || !buyerName || !buyerEmail) {
@@ -877,6 +892,57 @@ export async function POST(request: NextRequest) {
     const seatingPlanId = (eventRow as { seating_plan_id?: string }).seating_plan_id;
     const ticketTypeName = (ticket.name || ticket.ticket_type || "").toString().trim();
 
+    // Yer seçimi geldiğinde, tüm koltuklar etkinliğin bağlı olduğu salon planına ait olmalı.
+    if (seatIds.length > 0 && seatingPlanId) {
+      const { data: seatRows, error: seatRowsError } = await supabase
+        .from("seats")
+        .select("id, row_id")
+        .in("id", seatIds);
+      if (seatRowsError || !seatRows || seatRows.length !== seatIds.length) {
+        return NextResponse.json(
+          { success: false, message: "Secilen koltuklardan bazilari gecersiz." },
+          { status: 400 }
+        );
+      }
+
+      const rowIds = Array.from(new Set(seatRows.map((s) => (s as { row_id: string }).row_id).filter(Boolean)));
+      const { data: planRows, error: planRowsError } = await supabase
+        .from("seating_plan_rows")
+        .select("id, section_id")
+        .in("id", rowIds);
+      if (planRowsError || !planRows || planRows.length !== rowIds.length) {
+        return NextResponse.json(
+          { success: false, message: "Secilen koltuk satiri gecersiz." },
+          { status: 400 }
+        );
+      }
+
+      const sectionIds = Array.from(new Set(planRows.map((r) => (r as { section_id: string }).section_id).filter(Boolean)));
+      const { data: sections, error: sectionsError } = await supabase
+        .from("seating_plan_sections")
+        .select("id, seating_plan_id")
+        .in("id", sectionIds);
+      if (sectionsError || !sections || sections.length !== sectionIds.length) {
+        return NextResponse.json(
+          { success: false, message: "Secilen koltuk bolumu gecersiz." },
+          { status: 400 }
+        );
+      }
+
+      const sectionPlanById = new Map(
+        sections.map((s) => [s.id, (s as { seating_plan_id: string | null }).seating_plan_id])
+      );
+      const invalidSeat = planRows.some(
+        (row) => sectionPlanById.get((row as { section_id: string }).section_id) !== seatingPlanId
+      );
+      if (invalidSeat) {
+        return NextResponse.json(
+          { success: false, message: "Secilen koltuklar bu etkinlige ait degil." },
+          { status: 400 }
+        );
+      }
+    }
+
     // Fiyat kategorisine göre bilet (seat_ids yok): oturum planı varsa en iyi müsait N koltuğu ata
     if (seatIds.length === 0 && quantity >= 1 && seatingPlanId) {
       const assigned = await assignBestAvailableSeats(
@@ -932,6 +998,27 @@ export async function POST(request: NextRequest) {
 
     // Yer seçerek bilet: koltukların daha önce satılmamış olduğunu kontrol et (bir bilet bir defa satılır)
     if (seatIds.length > 0) {
+      // Aktif hold varsa, sadece hold sahibi bu koltuğu satin alabilsin.
+      const nowIso = new Date().toISOString();
+      const { data: activeHolds } = await supabase
+        .from("seat_holds")
+        .select("seat_id, user_id, session_id, held_until")
+        .eq("event_id", ticket.event_id)
+        .in("seat_id", seatIds)
+        .gt("held_until", nowIso);
+      const blockedByOther = (activeHolds || []).some((h) => {
+        const hold = h as { user_id?: string | null; session_id?: string | null };
+        const ownedByUser = Boolean(userId && hold.user_id === userId);
+        const ownedBySession = Boolean(seatHoldSessionId && hold.session_id === seatHoldSessionId);
+        return !ownedByUser && !ownedBySession;
+      });
+      if (blockedByOther) {
+        return NextResponse.json(
+          { success: false, message: "Seçilen koltuklardan biri su anda baska bir kullanici tarafindan rezerve." },
+          { status: 409 }
+        );
+      }
+
       const { data: completedOrders } = await supabase
         .from("orders")
         .select("id")

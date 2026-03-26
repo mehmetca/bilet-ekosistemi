@@ -29,6 +29,7 @@ interface CartContextValue {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
   removeItem: (ticketId: string) => void;
+  removeSeatItem: (eventId: string, seatId: string) => void;
   updateQuantity: (ticketId: string, quantity: number) => void;
   /** Güncel stok bilgisini günceller; quantity stoktan fazlaysa stoka indirilir */
   updateItemAvailable: (ticketId: string, available: number) => void;
@@ -101,7 +102,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       );
       if (existing) {
         const mergedSeatIds = seatIds
-          ? [...(existing.seatIds || []), ...seatIds].slice(0, cap)
+          ? Array.from(new Set([...(existing.seatIds || []), ...seatIds])).slice(0, cap)
           : existing.seatIds;
         const appendedCaps =
           seatIds && seatCaptions && seatCaptions.length === seatIds.length
@@ -144,6 +145,32 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems((prev) => prev.filter((i) => i.ticketId !== ticketId));
   }, []);
 
+  const removeSeatItem = useCallback((eventId: string, seatId: string) => {
+    setItems((prev) =>
+      prev
+        .map((item) => {
+          if (item.eventId !== eventId || !item.seatIds?.includes(seatId)) return item;
+          const oldSeatIds = item.seatIds || [];
+          const oldCaptions = item.seatCaptions || [];
+          const removeIdx = oldSeatIds.findIndex((id) => id === seatId);
+          if (removeIdx < 0) return item;
+          const nextSeatIds = oldSeatIds.filter((id) => id !== seatId);
+          const nextCaptions =
+            oldCaptions.length === oldSeatIds.length
+              ? oldCaptions.filter((_, idx) => idx !== removeIdx)
+              : undefined;
+          if (nextSeatIds.length === 0) return null;
+          return {
+            ...item,
+            seatIds: nextSeatIds,
+            seatCaptions: nextCaptions,
+            quantity: nextSeatIds.length,
+          };
+        })
+        .filter((i): i is CartItem => i !== null)
+    );
+  }, []);
+
   const updateQuantity = useCallback((ticketId: string, quantity: number) => {
     setItems((prev) =>
       prev.map((i) => {
@@ -177,6 +204,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         items,
         addItem,
         removeItem,
+        removeSeatItem,
         updateQuantity,
         updateItemAvailable,
         clearCart,

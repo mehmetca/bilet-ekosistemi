@@ -11,6 +11,7 @@ type HoldSeatBody = {
 };
 
 type ReleaseSeatBody = {
+  eventId?: string;
   seatId: string;
   sessionId?: string;
 };
@@ -28,7 +29,10 @@ async function getUserIdFromRequest(req: NextRequest, supabase: ReturnType<typeo
 export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
-    const body = (await req.json()) as HoldSeatBody;
+    const body = (await req.json().catch(() => null)) as HoldSeatBody | null;
+    if (!body) {
+      return NextResponse.json({ ok: false, error: "Gecersiz istek govdesi." }, { status: 400 });
+    }
     const { eventId, seatId, sessionId } = body;
     if (!eventId || !seatId) {
       return NextResponse.json({ ok: false, error: "eventId ve seatId zorunludur." }, { status: 400 });
@@ -71,15 +75,19 @@ export async function POST(req: NextRequest) {
 export async function DELETE(req: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
-    const body = (await req.json()) as ReleaseSeatBody;
-    const { seatId, sessionId } = body;
-    if (!seatId) {
-      return NextResponse.json({ ok: false, error: "seatId zorunludur." }, { status: 400 });
+    const body = (await req.json().catch(() => null)) as ReleaseSeatBody | null;
+    if (!body) {
+      return NextResponse.json({ ok: false, error: "Gecersiz istek govdesi." }, { status: 400 });
+    }
+    const { seatId, eventId, sessionId } = body;
+    if (!seatId || !eventId) {
+      return NextResponse.json({ ok: false, error: "eventId ve seatId zorunludur." }, { status: 400 });
     }
 
     const userId = await getUserIdFromRequest(req, supabase);
 
     const { error } = await supabase.rpc("release_seat_hold", {
+      p_event_id: eventId,
       p_seat_id: seatId,
       p_user_id: userId,
       p_session_id: sessionId ?? null,

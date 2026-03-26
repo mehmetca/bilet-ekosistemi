@@ -205,10 +205,10 @@ export default function ImageSeatPlanViewer({
             className={
               "absolute z-10 flex items-center justify-center rounded-full pointer-events-auto touch-manipulation transition-all duration-150 -translate-x-1/2 -translate-y-1/2 p-0 leading-none overflow-hidden " +
               (sold
-                ? "cursor-not-allowed bg-slate-900/55 text-white/90 ring-1 ring-slate-700"
+                ? "cursor-not-allowed bg-slate-700 text-white/90 ring-1 ring-slate-800"
                 : selected
-                  ? "cursor-pointer bg-emerald-400/35 text-emerald-950 ring-2 ring-emerald-600"
-                  : "cursor-pointer bg-white/85 text-slate-800 ring-1 ring-slate-500/70 shadow-sm hover:bg-white hover:ring-primary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600")
+                  ? "cursor-pointer bg-green-200 text-emerald-950 ring-2 ring-green-400"
+                  : "cursor-pointer bg-sky-200 text-slate-800 ring-1 ring-sky-300 shadow-sm hover:bg-green-200 hover:ring-green-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400")
             }
             style={{
               left: `${leftPct}%`,
@@ -266,7 +266,7 @@ export default function ImageSeatPlanViewer({
       </div>
       <div
         ref={containerRef}
-        className="overflow-hidden rounded-lg border border-slate-200 bg-slate-100 touch-none relative"
+        className="overflow-hidden rounded-lg border border-slate-200 bg-white touch-none relative"
         style={{ minHeight: 420, maxHeight: "70vh", cursor: isDragging ? "grabbing" : "grab" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}

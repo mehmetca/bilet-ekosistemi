@@ -112,6 +112,8 @@ export interface SeatingPlanRow {
   section_id: string;
   row_label: string;
   sort_order: number;
+  /** Sıra bazlı bilet türü adı (varsa bölüm etiketinden önce kullanılır) */
+  ticket_type_label?: string | null;
   created_at: string;
 }
 

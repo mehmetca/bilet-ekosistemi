@@ -14,6 +14,7 @@ import {
   Music2,
   ExternalLink,
   X,
+  GripVertical,
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
@@ -127,6 +128,26 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   ]);
 
   const [currentUserOrganizerName, setCurrentUserOrganizerName] = useState<string | null>(null);
+  const [dragTicketId, setDragTicketId] = useState<string | null>(null);
+
+  const autoSortTickets = () => {
+    const rank = (nameRaw: string) => {
+      const name = nameRaw.trim().toLowerCase();
+      if (name === "vip" || name === "vip bilet") return 0;
+      const m = name.match(/^kategori\s*(\d+)$/i);
+      if (m) return 100 + Number(m[1]);
+      return 1000;
+    };
+
+    setTickets((prev) =>
+      [...prev].sort((a, b) => {
+        const ra = rank(a.name || "");
+        const rb = rank(b.name || "");
+        if (ra !== rb) return ra - rb;
+        return (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" });
+      })
+    );
+  };
 
   useEffect(() => {
     if (!isAdmin && !isOrganizer) {
@@ -912,15 +933,51 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 <p className="mt-2 text-sm text-slate-600">Bu linki girerseniz biletler sitemiz üzerinden satılmayacak; &quot;Bilet Al&quot; bu linke gider. Bilet türü eklemeniz gerekmez.</p>
               </div>
               <p className="text-slate-600 mb-4">Biletler sitemizden satılacaksa aşağıdan bilet türü ekleyin: bilet türü veya ismi, fiyat ve kapasite zorunludur.</p>
+              <p className="text-xs text-slate-500 mb-3">Sıralama için kartları sürükleyip bırakabilirsiniz (örn: VIP, Kategori 1, Kategori 2...).</p>
+              <div className="mb-4">
+                <button
+                  type="button"
+                  onClick={autoSortTickets}
+                  className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Tek Tıkla Sırala (VIP, Kategori 1..10)
+                </button>
+              </div>
               {selectedSeatingPlanId && planDerivedTicketLabels.length > 0 && (
                 <div className="rounded-lg border border-primary-200 bg-primary-50/80 px-4 py-3 text-sm text-slate-800 mb-4">
                   <strong>Oturum planı eşlemesi:</strong> Aşağıdaki listede bu salondaki bölüm adları / bilet etiketleri görünür. Bilet adı, planda &quot;Bilet türü (etkinlikte eşlenecek)&quot; doluysa o metinle; boşsa <strong>bölüm adı</strong> ile aynı olmalıdır — böylece koltuk fiyatı doğru biletle eşleşir.
                 </div>
               )}
               {tickets.map((t) => (
-                <div key={t.id} className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-4">
+                <div
+                  key={t.id}
+                  draggable
+                  onDragStart={() => setDragTicketId(t.id)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => {
+                    if (!dragTicketId || dragTicketId === t.id) return;
+                    setTickets((prev) => {
+                      const from = prev.findIndex((x) => x.id === dragTicketId);
+                      const to = prev.findIndex((x) => x.id === t.id);
+                      if (from < 0 || to < 0) return prev;
+                      const next = [...prev];
+                      const [moved] = next.splice(from, 1);
+                      next.splice(to, 0, moved);
+                      return next;
+                    });
+                    setDragTicketId(null);
+                  }}
+                  onDragEnd={() => setDragTicketId(null)}
+                  className={`rounded-xl border p-5 space-y-4 ${
+                    dragTicketId === t.id ? "border-primary-400 bg-primary-50/60" : "border-slate-200 bg-slate-50/50"
+                  }`}
+                >
                   <div className="flex justify-between items-start gap-2">
                     <div className="flex-1 min-w-0">
+                      <div className="mb-2 inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500">
+                        <GripVertical className="h-3.5 w-3.5" />
+                        Sürükle
+                      </div>
                       <label className="block text-sm font-medium text-slate-700 mb-2">Bilet türü veya ismi</label>
                       <select
                         value={getTicketTypeSelectValue(t)}
