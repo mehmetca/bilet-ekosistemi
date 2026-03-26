@@ -35,15 +35,35 @@ export default function AnaHeroSlider({ placement = "main_slider" }: { placement
     async function load() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/advertisements?locale=${encodeURIComponent(locale)}`);
-        if (!res.ok) return;
+        const fetchAds = async (localeParam?: string) => {
+          const url = localeParam
+            ? `/api/advertisements?locale=${encodeURIComponent(localeParam)}`
+            : "/api/advertisements";
 
-        const payload = (await res.json()) as Advertisement[];
-        const filtered = (payload || [])
+          const res = await fetch(url);
+          if (!res.ok) return [];
+          const payload = (await res.json()) as Advertisement[];
+          return payload || [];
+        };
+
+        const payloadLocalized = await fetchAds(locale);
+        const localizedFiltered = payloadLocalized
           .filter((a) => a?.is_active && a?.placement === placement && !!a?.image_url)
           .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 
-        if (!cancelled) setAds(filtered);
+        // Eğer mevcut dilde hiç slider yoksa (özellikle de/en tarafında),
+        // TR veya locale'siz reklamları da yedek olarak göstereceğiz.
+        if (localizedFiltered.length === 0 && locale !== "tr") {
+          const payloadAll = await fetchAds(undefined);
+          const allFiltered = payloadAll
+            .filter((a) => a?.is_active && a?.placement === placement && !!a?.image_url)
+            .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+
+          if (!cancelled) setAds(allFiltered);
+          return;
+        }
+
+        if (!cancelled) setAds(localizedFiltered);
       } catch {
         // ignore
       } finally {
