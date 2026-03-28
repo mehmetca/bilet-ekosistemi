@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { CART_RESERVATION_SECONDS } from "@/lib/cart-reservation";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ async function getUserIdFromRequest(req: NextRequest, supabase: ReturnType<typeo
   return data.user.id;
 }
 
-/** Koltuğu kısa süreliğine rezerve et (ör. 5 dakika). */
+/** Koltuğu sepet süresi kadar rezerve et (cart-reservation ile aynı). */
 export async function POST(req: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
       p_seat_id: seatId,
       p_user_id: userId,
       p_session_id: sessionId ?? null,
-      p_hold_seconds: 300,
+      p_hold_seconds: CART_RESERVATION_SECONDS,
     });
 
     if (error) {

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import NextLink from "next/link";
-import { Ticket, User, LogIn, Menu, X, Globe, ChevronDown, ShoppingCart } from "lucide-react";
+import { Ticket, User, LogIn, Menu, X, Globe, ChevronDown, ShoppingCart, Clock } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { useCart } from "@/context/CartContext";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -21,7 +21,22 @@ const LOCALE_LABELS: Record<string, string> = { tr: "Türkçe", de: "Deutsch", e
 
 export default function Header() {
   const { user, isAdmin, isController, isOrganizer } = useSimpleAuth();
-  const { totalItems } = useCart();
+  const { totalItems, reservationExpiresAt } = useCart();
+  const tCheckout = useTranslations("checkout");
+  const [cartTick, setCartTick] = useState(0);
+  useEffect(() => {
+    if (!reservationExpiresAt || totalItems <= 0) return;
+    const id = window.setInterval(() => setCartTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [reservationExpiresAt, totalItems]);
+  const cartReserveSecLeft = useMemo(() => {
+    if (!reservationExpiresAt || totalItems <= 0) return 0;
+    return Math.max(0, Math.ceil((reservationExpiresAt - Date.now()) / 1000));
+  }, [reservationExpiresAt, totalItems, cartTick]);
+  const cartReserveStr =
+    cartReserveSecLeft > 0
+      ? `${Math.floor(cartReserveSecLeft / 60)}:${String(cartReserveSecLeft % 60).padStart(2, "0")}`
+      : "";
   const hasManagementRole = isAdmin || isController || isOrganizer;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -73,17 +88,28 @@ export default function Header() {
               {t(labelKey)}
             </Link>
           ))}
-          <NextLink
-            href={`/${locale}/sepet`}
-            className="relative flex items-center gap-1 text-slate-600 hover:text-primary-600 font-medium transition-colors"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {totalItems > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">
-                {totalItems > 9 ? "9+" : totalItems}
+          <div className="flex items-center gap-2">
+            {cartReserveSecLeft > 0 && (
+              <span
+                className="hidden lg:inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-900"
+                title={tCheckout("reservationTimer", { time: cartReserveStr })}
+              >
+                <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {cartReserveStr}
               </span>
             )}
-          </NextLink>
+            <NextLink
+              href={`/${locale}/sepet`}
+              className="relative flex items-center gap-1 text-slate-600 hover:text-primary-600 font-medium transition-colors"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {totalItems > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">
+                  {totalItems > 9 ? "9+" : totalItems}
+                </span>
+              )}
+            </NextLink>
+          </div>
           <div className="relative" ref={langDropdownRef}>
             <button
               type="button"

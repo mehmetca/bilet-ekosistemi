@@ -26,7 +26,7 @@ export function duisburgVenuePlateFromLeftIndex(leftIndex: number, seatsInRow: n
   return 2 + 2 * j;
 }
 
-function useSimpleSequentialNumbering(sectionName: string, seatsInRow: number): boolean {
+function shouldUseSimpleSequentialNumbering(sectionName: string, seatsInRow: number): boolean {
   const n = norm(sectionName);
   if (seatsInRow > 6) return false;
   return /\blogen\b|\brang\b/.test(n);
@@ -40,7 +40,7 @@ export function duisburgVenuePlate(
   leftIndexInRow: number,
   seatsInRow: number
 ): number {
-  if (useSimpleSequentialNumbering(sectionName, seatsInRow)) {
+  if (shouldUseSimpleSequentialNumbering(sectionName, seatsInRow)) {
     return leftIndexInRow + 1;
   }
   return duisburgVenuePlateFromLeftIndex(leftIndexInRow, seatsInRow);

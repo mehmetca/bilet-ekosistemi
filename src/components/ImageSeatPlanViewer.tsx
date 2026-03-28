@@ -29,6 +29,8 @@ interface ImageSeatPlanViewerProps {
   getCoord: GetSeatCoordFn;
   selectedSeatIds: Set<string>;
   soldSeatIds: Set<string>;
+  /** Satışa kapalı koltuklar (satılmış gibi tıklanamaz; görsel olarak ayrılır) */
+  blockedSeatIds?: Set<string>;
   onSeatToggle: (seatId: string) => void;
   /** `?seatDebug=1` (etkinlik sayfası URL’si): grid bölgelerini kırmızı çerçeveyle gösterir */
   planSections?: ImagePlanSectionGrid[];
@@ -50,6 +52,7 @@ export default function ImageSeatPlanViewer({
   getCoord,
   selectedSeatIds,
   soldSeatIds,
+  blockedSeatIds,
   onSeatToggle,
   planSections,
   showSeatGridDebug = false,
@@ -182,6 +185,7 @@ export default function ImageSeatPlanViewer({
       {seatsWithCoord.map((seat) => {
         const selected = selectedSeatIds.has(seat.id);
         const sold = soldSeatIds.has(seat.id);
+        const blocked = blockedSeatIds?.has(seat.id) ?? false;
         const { leftPct, topPct } = mapNormToOverlayPct(seat.x, seat.y);
         const svgLbl = seat.seat_display_label;
         const plate =
@@ -205,10 +209,12 @@ export default function ImageSeatPlanViewer({
             className={
               "absolute z-10 flex items-center justify-center rounded-full pointer-events-auto touch-manipulation transition-all duration-150 -translate-x-1/2 -translate-y-1/2 p-0 leading-none overflow-hidden " +
               (sold
-                ? "cursor-not-allowed bg-slate-700 text-white/90 ring-1 ring-slate-800"
+                ? "cursor-not-allowed bg-slate-300 text-slate-800 ring-0 shadow-none"
+                : blocked
+                  ? "cursor-not-allowed bg-amber-200 text-amber-950 ring-1 ring-amber-500"
                 : selected
-                  ? "cursor-pointer bg-green-200 text-emerald-950 ring-2 ring-green-400"
-                  : "cursor-pointer bg-sky-200 text-slate-800 ring-1 ring-sky-300 shadow-sm hover:bg-green-200 hover:ring-green-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400")
+                  ? "cursor-pointer bg-[#39ff14] text-slate-900 ring-0 shadow-none border-0"
+                  : "cursor-pointer bg-sky-200 text-slate-800 ring-0 shadow-sm border-0 hover:!bg-[#39ff14] hover:!text-slate-900 focus-visible:outline-none focus-visible:ring-0")
             }
             style={{
               left: `${leftPct}%`,
@@ -217,13 +223,13 @@ export default function ImageSeatPlanViewer({
               height: dPx,
               fontSize: fontPx,
             }}
-            disabled={sold}
+            disabled={sold || blocked}
             onMouseDown={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
             onClick={() => handleSeatClick(seat.id)}
-            title={sold ? `${tip} (satıldı)` : tip}
+            title={sold ? `${tip} (satıldı)` : blocked ? `${tip} (satışa kapalı)` : tip}
             aria-pressed={selected}
-            aria-disabled={sold}
+            aria-disabled={sold || blocked}
             aria-label={tip}
           >
             <span className="font-bold tabular-nums">{plate}</span>
@@ -267,7 +273,7 @@ export default function ImageSeatPlanViewer({
       <div
         ref={containerRef}
         className="overflow-hidden rounded-lg border border-slate-200 bg-white touch-none relative"
-        style={{ minHeight: 420, maxHeight: "70vh", cursor: isDragging ? "grabbing" : "grab" }}
+        style={{ minHeight: 520, maxHeight: "min(82vh, 920px)", cursor: isDragging ? "grabbing" : "grab" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseUp}
@@ -310,7 +316,7 @@ export default function ImageSeatPlanViewer({
               <img
                 src={imageUrl}
                 alt="Salon planı"
-                className="block h-auto max-h-[min(70vh,900px)] w-auto max-w-[min(100vw,920px)] min-w-[min(100%,560px)] pointer-events-none select-none"
+                className="block h-auto max-h-[min(82vh,960px)] w-auto max-w-[min(100vw,920px)] min-w-[min(100%,560px)] pointer-events-none select-none"
                 draggable={false}
                 decoding="async"
               />

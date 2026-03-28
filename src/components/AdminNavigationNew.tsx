@@ -12,7 +12,8 @@ import {
   CreditCard,
   BarChart3,
   LogOut,
-  User
+  User,
+  Music2
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { useRouter } from "next/navigation";
@@ -36,6 +37,18 @@ export default function AdminNavigationNew() {
       label: "Etkinlikler",
       icon: Calendar,
       description: "Etkinlik yönetimi"
+    },
+    {
+      href: "/yonetim/turneler",
+      label: "Turneler",
+      icon: Music2,
+      description: "Sanatçı turneleri ve etkinlikleri"
+    },
+    {
+      href: "/yonetim/sanatci-editor",
+      label: "Sanatçı Düzenleyici",
+      icon: User,
+      description: "Sanatçı ve turne düzenleme"
     },
     {
       href: "/yonetim/bilet-turleri",

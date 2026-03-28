@@ -1,21 +1,14 @@
 /**
- * .next cache'ini siler ve dev server'ı başlatır.
- * Takılan sayfalar, MODULE_NOT_FOUND, 404 chunk hatalarında kullanın.
+ * .next cache'ini siler (npm run clean) ve dev server'ı --turbo ile başlatır.
+ * Webpack dev için: npm run dev:fresh
+ * Takılan sayfalar, MODULE_NOT_FOUND, chunk hatalarında kullanın.
  */
-const { spawn } = require("child_process");
-const fs = require("fs");
-const path = require("path");
+const { spawn, spawnSync } = require("child_process");
 
-const nextDir = path.join(process.cwd(), ".next");
-if (fs.existsSync(nextDir)) {
-  console.log("Cleaning .next folder...");
-  fs.rmSync(nextDir, { recursive: true });
-  console.log("Done. Starting dev server...");
-} else {
-  console.log("No .next folder. Starting dev server...");
-}
+spawnSync("npm", ["run", "clean"], { stdio: "inherit", shell: true, cwd: process.cwd() });
+console.log("Starting dev server (turbo)...");
 
-const child = spawn("npx", ["next", "dev", "--turbo"], {
+const child = spawn("npx", ["next", "dev", "-p", "3000", "--turbo"], {
   stdio: "inherit",
   shell: true,
   cwd: process.cwd(),

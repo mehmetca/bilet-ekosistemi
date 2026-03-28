@@ -2,13 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Stage, Layer, Group, Circle, Text } from "react-konva";
-import { supabase } from "@/lib/supabase-client";
 import type { Seat } from "@/types/database";
-
-const STAGE_W = 900;
-const STAGE_H = 240;
-const R = 16;
-const GAP = 38;
+import {
+  ROW_EDITOR_GAP as GAP,
+  ROW_EDITOR_PAD_X as STAGE_PAD_X,
+  ROW_EDITOR_R as R,
+  ROW_EDITOR_STAGE_H as STAGE_H,
+  rowEditorStageWidth,
+} from "@/lib/seating-plans/row-editor-grid";
 
 function sortSeatsForGrid(seats: Seat[]) {
   return [...seats].sort((a, b) => {
@@ -19,21 +20,20 @@ function sortSeatsForGrid(seats: Seat[]) {
   });
 }
 
-function gridPosition(index: number) {
-  return { x: 32 + R + index * GAP, y: STAGE_H / 2 };
+function gridPosition(index: number, stageH: number) {
+  return { x: STAGE_PAD_X + R + index * GAP, y: stageH / 2 };
 }
 
 export type SeatingKonvaRowEditorProps = {
   rowId: string;
   rowLabel: string;
   seats: Seat[];
-  onSaved?: () => void;
+  onSeatsDraftChange?: (nextSeats: Seat[]) => void;
 };
 
-export default function SeatingKonvaRowEditor({ rowId, rowLabel, seats, onSaved }: SeatingKonvaRowEditorProps) {
+export default function SeatingKonvaRowEditor({ rowId, rowLabel, seats, onSeatsDraftChange }: SeatingKonvaRowEditorProps) {
   const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
   const [saving, setSaving] = useState(false);
-  const [lastError, setLastError] = useState<string | null>(null);
 
   useEffect(() => {
     const sorted = sortSeatsForGrid(seats);
@@ -46,53 +46,42 @@ export default function SeatingKonvaRowEditor({ rowId, rowLabel, seats, onSaved 
         !Number.isNaN(Number(s.y));
       next[s.id] = hasStored
         ? { x: Number(s.x), y: Number(s.y) }
-        : gridPosition(i);
+        : gridPosition(i, STAGE_H);
     });
     setPositions(next);
   }, [rowId, seats]);
 
-  const persistSeat = useCallback(
-    async (seatId: string, x: number, y: number) => {
-      setLastError(null);
-      const { error } = await supabase
-        .from("seats")
-        .update({
-          x: Math.round(x * 10000) / 10000,
-          y: Math.round(y * 10000) / 10000,
-        })
-        .eq("id", seatId);
-      if (error) {
-        setLastError(error.message);
-        return false;
-      }
-      onSaved?.();
-      return true;
+  const emitDraftSeats = useCallback(
+    (nextPos: Record<string, { x: number; y: number }>) => {
+      const nextSeats = seats.map((s) => {
+        const p = nextPos[s.id];
+        if (!p) return s;
+        return {
+          ...s,
+          x: Math.round(p.x * 10000) / 10000,
+          y: Math.round(p.y * 10000) / 10000,
+        };
+      });
+      onSeatsDraftChange?.(nextSeats);
     },
-    [onSaved]
+    [onSeatsDraftChange, seats]
   );
 
   const handleApplyGrid = async () => {
     const sorted = sortSeatsForGrid(seats);
     if (sorted.length === 0) return;
     setSaving(true);
-    setLastError(null);
     try {
       const nextPos: Record<string, { x: number; y: number }> = {};
       for (let i = 0; i < sorted.length; i++) {
         const s = sorted[i];
-        const p = gridPosition(i);
-        nextPos[s.id] = p;
-        const { error } = await supabase
-          .from("seats")
-          .update({ x: p.x, y: p.y })
-          .eq("id", s.id);
-        if (error) {
-          setLastError(error.message);
-          return;
-        }
+        nextPos[s.id] = gridPosition(i, STAGE_H);
       }
-      setPositions((prev) => ({ ...prev, ...nextPos }));
-      onSaved?.();
+      setPositions((prev) => {
+        const merged = { ...prev, ...nextPos };
+        queueMicrotask(() => emitDraftSeats(merged));
+        return merged;
+      });
     } finally {
       setSaving(false);
     }
@@ -103,28 +92,29 @@ export default function SeatingKonvaRowEditor({ rowId, rowLabel, seats, onSaved 
   }
 
   const sorted = sortSeatsForGrid(seats);
+  const stageW = rowEditorStageWidth(sorted.length);
 
   return (
-    <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50/80 p-3">
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <p className="text-xs text-slate-600">
-          Sıra <strong>{rowLabel}</strong>: koltukları sürükleyin; konum otomatik kaydedilir. İlk kez düzenliyorsanız &quot;Grid yerleştir&quot; ile hizalayın.
+    <div className="mt-2 rounded-md border border-slate-200 bg-slate-50/90 p-2">
+      <div className="flex flex-wrap items-center gap-2 mb-1.5">
+        <p className="text-[11px] text-slate-600 leading-snug flex-1 min-w-[12rem]">
+          <strong>Sıra {rowLabel}</strong>: koltukları sürükleyin (taslak). Kayıt: <strong>Salonu Kaydet</strong>.
         </p>
         <button
           type="button"
           onClick={handleApplyGrid}
           disabled={saving}
-          className="shrink-0 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          title="Koltukları eşit aralıklı tek yatay sıraya hizalar; konumlar taslağa yazılır."
+          className="shrink-0 rounded border border-slate-300 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50"
         >
-          {saving ? "Kaydediliyor…" : "Grid yerleştir ve kaydet"}
+          {saving ? "…" : "Sıraya hizala"}
         </button>
       </div>
-      {lastError && <p className="text-xs text-red-600 mb-2">{lastError}</p>}
-      <div className="rounded-md border border-slate-300 bg-white overflow-x-auto">
-        <Stage width={STAGE_W} height={STAGE_H}>
+      <div className="rounded border border-slate-300 bg-white overflow-x-auto max-w-full">
+        <Stage width={stageW} height={STAGE_H}>
           <Layer>
             {sorted.map((s) => {
-              const pos = positions[s.id] ?? gridPosition(0);
+              const pos = positions[s.id] ?? gridPosition(0, STAGE_H);
               const lbl = String(s.seat_label);
               const tw = Math.max(lbl.length * 8, 18);
               return (
@@ -134,17 +124,25 @@ export default function SeatingKonvaRowEditor({ rowId, rowLabel, seats, onSaved 
                   y={pos.y}
                   draggable
                   dragBoundFunc={(p) => ({
-                    x: Math.min(STAGE_W - R, Math.max(R, p.x)),
+                    x: Math.min(stageW - R, Math.max(R, p.x)),
                     y: Math.min(STAGE_H - R, Math.max(R, p.y)),
                   })}
                   onDragEnd={(e) => {
                     const nx = e.target.x();
                     const ny = e.target.y();
-                    setPositions((prev) => ({ ...prev, [s.id]: { x: nx, y: ny } }));
-                    void persistSeat(s.id, nx, ny);
+                    setPositions((prev) => {
+                      const next = { ...prev, [s.id]: { x: nx, y: ny } };
+                      queueMicrotask(() => emitDraftSeats(next));
+                      return next;
+                    });
                   }}
                 >
-                  <Circle radius={R} fill="#e2e8f0" stroke="#64748b" strokeWidth={1.5} />
+                  <Circle
+                    radius={R}
+                    fill={s.sales_blocked ? "#fde68a" : "#e2e8f0"}
+                    stroke={s.sales_blocked ? "#b45309" : "#64748b"}
+                    strokeWidth={1.5}
+                  />
                   <Text
                     text={lbl}
                     fontSize={10}

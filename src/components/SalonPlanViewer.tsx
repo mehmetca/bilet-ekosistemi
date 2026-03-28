@@ -24,14 +24,14 @@ function createSeat(
       disabled={disabled}
       className={`w-[14px] h-[14px] rounded-full border-0 p-0 flex-shrink-0 ${
         sold
-          ? "bg-slate-600 cursor-not-allowed opacity-90 ring-1 ring-slate-700"
+          ? "bg-slate-300 cursor-not-allowed ring-0"
           : unavailable
-            ? "bg-slate-400 cursor-not-allowed opacity-75"
+            ? "bg-slate-400 cursor-not-allowed opacity-75 ring-0"
             : selected
-              ? "bg-green-500 cursor-pointer"
+              ? "bg-[#39ff14] cursor-pointer ring-0"
               : isBlock
-                ? "bg-blue-300 hover:bg-blue-400 cursor-pointer"
-                : "bg-slate-300 hover:bg-slate-400 cursor-pointer"
+                ? "bg-blue-300 hover:bg-blue-400 cursor-pointer ring-0"
+                : "bg-slate-300 hover:bg-slate-400 cursor-pointer ring-0"
       }`}
       data-seat-id={id}
       onClick={() => !disabled && onToggle(id)}

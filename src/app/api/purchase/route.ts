@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from "crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
 import QRCode from "qrcode";
 import bwipjs from "bwip-js";
 import { PDFDocument, PDFPage, StandardFonts, degrees, rgb } from "pdf-lib";
+import { parsePhysicalDelivery, shippingFeeForPhysicalDelivery } from "@/lib/checkout-shipping";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -118,12 +120,14 @@ async function assignBestAvailableSeats(
   if (!rows?.length) return [];
 
   const rowIds = rows.map((r: { id: string }) => r.id);
-  const { data: seats } = await supabase
-    .from("seats")
-    .select("id, row_id, seat_label")
-    .in("row_id", rowIds);
+  let seats: { id: string; row_id: string; seat_label: string; sales_blocked?: boolean | null }[];
+  try {
+    seats = await fetchAllSeatsByRowIds(supabase, rowIds, "id, row_id, seat_label, sales_blocked");
+  } catch {
+    return [];
+  }
 
-  if (!seats?.length) return [];
+  if (!seats.length) return [];
 
   const rowById = new Map(rows.map((r: { id: string; section_id: string; row_label: string; sort_order?: number }) => [r.id, r]));
   const soldSet = new Set<string>();
@@ -142,7 +146,8 @@ async function assignBestAvailableSeats(
 
   type SeatInfo = { id: string; row_id: string; seat_label: string; section_sort: number; row_sort: number };
   const available: SeatInfo[] = [];
-  for (const s of seats as { id: string; row_id: string; seat_label: string }[]) {
+  for (const s of seats as { id: string; row_id: string; seat_label: string; sales_blocked?: boolean | null }[]) {
+    if (s.sales_blocked) continue;
     if (soldSet.has(s.id)) continue;
     const row = rowById.get(s.row_id);
     if (!row) continue;
@@ -769,6 +774,8 @@ export async function POST(request: NextRequest) {
     const buyerAddress = (formData.get("buyer_address") as string)?.trim() || null;
     const buyerPlz = (formData.get("buyer_plz") as string)?.trim() || null;
     const buyerCity = (formData.get("buyer_city") as string)?.trim() || null;
+    const physicalDelivery = parsePhysicalDelivery(formData.get("physical_delivery") as string | null);
+    const shippingFee = shippingFeeForPhysicalDelivery(physicalDelivery);
     let seatIds: string[] = [];
     const seatHoldSessionIdRaw = (formData.get("seat_hold_session_id") as string | null) ?? null;
     const seatHoldSessionId =
@@ -821,6 +828,19 @@ export async function POST(request: NextRequest) {
         { success: false, message: "Geçerli bir e-posta adresi girin." },
         { status: 400 }
       );
+    }
+
+    if (shippingFee > 0) {
+      if (!buyerAddress || !buyerPlz || !buyerCity) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Basılı bilet gönderimi için adres, posta kodu ve şehir alanlarının tamamı zorunludur.",
+          },
+          { status: 400 }
+        );
+      }
     }
 
     let supabase: SupabaseClient;
@@ -896,11 +916,18 @@ export async function POST(request: NextRequest) {
     if (seatIds.length > 0 && seatingPlanId) {
       const { data: seatRows, error: seatRowsError } = await supabase
         .from("seats")
-        .select("id, row_id")
+        .select("id, row_id, sales_blocked")
         .in("id", seatIds);
       if (seatRowsError || !seatRows || seatRows.length !== seatIds.length) {
         return NextResponse.json(
           { success: false, message: "Secilen koltuklardan bazilari gecersiz." },
+          { status: 400 }
+        );
+      }
+      const anyBlocked = seatRows.some((s) => (s as { sales_blocked?: boolean | null }).sales_blocked === true);
+      if (anyBlocked) {
+        return NextResponse.json(
+          { success: false, message: "Secilen koltuklardan biri satisa kapali." },
           { status: 400 }
         );
       }
@@ -986,7 +1013,7 @@ export async function POST(request: NextRequest) {
     );
     const lineProcessingFee =
       includeProcessingFee && serverProcessingFee > 0 ? serverProcessingFee : 0;
-    const totalPrice = ticketSubtotal + lineProcessingFee;
+    const totalPrice = ticketSubtotal + lineProcessingFee + shippingFee;
     const ticketCode = generateTicketCode(); // sipariş ana kodu (yer seçilmediyse veya tek bilet)
 
     if (Number(ticket.available || 0) < quantity) {
@@ -1040,25 +1067,48 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Direct insert
-    const { data: orderData, error: orderError } = await supabase
+    const orderRowBase: Record<string, unknown> = {
+      event_id: ticket.event_id,
+      ticket_id: ticketId,
+      quantity: quantity,
+      total_price: totalPrice,
+      ticket_code: ticketCode,
+      status: "completed",
+      buyer_name: buyerName,
+      buyer_email: buyerEmail,
+      ...(buyerAddress ? { buyer_address: buyerAddress } : {}),
+      ...(buyerPlz ? { buyer_plz: buyerPlz } : {}),
+      ...(buyerCity ? { buyer_city: buyerCity } : {}),
+      ...(userId ? { user_id: userId } : {}),
+    };
+
+    const orderRowWithShipping = {
+      ...orderRowBase,
+      shipping_fee: shippingFee,
+      delivery_method: physicalDelivery === "none" ? "e_ticket" : physicalDelivery,
+    };
+
+    let { data: orderData, error: orderError } = await supabase
       .from("orders")
-      .insert({
-        event_id: ticket.event_id,
-        ticket_id: ticketId,
-        quantity: quantity,
-        total_price: totalPrice,
-        ticket_code: ticketCode,
-        status: 'completed',
-        buyer_name: buyerName,
-        buyer_email: buyerEmail,
-        ...(buyerAddress ? { buyer_address: buyerAddress } : {}),
-        ...(buyerPlz ? { buyer_plz: buyerPlz } : {}),
-        ...(buyerCity ? { buyer_city: buyerCity } : {}),
-        ...(userId ? { user_id: userId } : {}),
-      })
+      .insert(orderRowWithShipping as never)
       .select()
       .single();
+
+    const errText = orderError ? String(orderError.message || "") : "";
+    const shippingColumnsMissing =
+      orderError &&
+      (/delivery_method|shipping_fee|schema cache|PGRST204|Could not find the/i.test(errText) ||
+        (orderError as { code?: string }).code === "PGRST204");
+
+    if (shippingColumnsMissing) {
+      console.warn(
+        "[purchase] orders.shipping kolonları yok veya şema önbelleği eski; kargo alanları olmadan tekrar deneniyor. Migration 085 uygulayıp şemayı yenileyin:",
+        errText
+      );
+      const retry = await supabase.from("orders").insert(orderRowBase as never).select().single();
+      orderData = retry.data;
+      orderError = retry.error;
+    }
 
     if (orderError) {
       console.error("API Order error:", orderError);
@@ -1086,7 +1136,7 @@ export async function POST(request: NextRequest) {
       console.error("API Stock update error:", updateError);
     }
 
-    let seatDetails: SeatDetail[] = [];
+    const seatDetails: SeatDetail[] = [];
     if (orderData?.id && seatIds.length > 0) {
       for (const seatId of seatIds) {
         const { data: seatRow } = await supabase

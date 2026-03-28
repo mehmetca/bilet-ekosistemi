@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
@@ -17,10 +17,15 @@ const LOCALES = ["tr", "de", "en"] as const;
 
 export const dynamic = "force-dynamic";
 
+/** Next 14.2+: viewport metadata’dan ayrı olmalı; aksi halde RSC/metadata uyarıları ve istikrarsız prefetch görülebilir. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export const metadata: Metadata = {
   title: "Bilet Ekosistemi",
   description: "Etkinlik biletleri ve daha fazlası",
-  viewport: { width: "device-width", initialScale: 1 },
 };
 
 export default async function RootLayout({

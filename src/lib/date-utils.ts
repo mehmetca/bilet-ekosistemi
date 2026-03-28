@@ -165,3 +165,13 @@ export function formatEventLongDateTime(
     lineLong: `${longFmt.format(localDate)}, ${time}`,
   };
 }
+
+/** Sepet / özet: Eventim tarzı — hafta günü, gg.aa.yyyy, saat (yerel). */
+export function formatCartEventWhen(
+  locale: "tr" | "de" | "en",
+  dateStr: string | undefined,
+  timeStr: string | undefined
+): string {
+  const { lineLong } = formatEventLongDateTime(dateStr, timeStr, locale);
+  return lineLong;
+}

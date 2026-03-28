@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import {
+  CART_RESERVATION_MS,
+  CART_EXPIRY_KEY,
+  CART_EXPIRED_FLAG_KEY,
+  CART_EXPIRED_SNAPSHOT_KEY,
+} from "@/lib/cart-reservation";
 
 /** Yer seçerek bilet al: sepette hangi koltukların satın alındığı (bilette ve dolu gösterimi için) */
 export interface CartItem {
@@ -23,10 +29,14 @@ export interface CartItem {
   seatCaptions?: string[];
   /** Etkinlikte tanımlıysa: bu etkinlik için sepet özetinde bir kez gösterilir / ödemede ilk satırda uygulanır */
   eventCheckoutFee?: number | null;
+  /** Sepete eklendiği an (ms epoch). Süre dolunca otomatik temizlenir. */
+  addedAt?: number;
 }
 
 interface CartContextValue {
   items: CartItem[];
+  /** Sepet rezervasyonunun bittiği epoch ms; yoksa süre yok. */
+  reservationExpiresAt: number | null;
   addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
   removeItem: (ticketId: string) => void;
   removeSeatItem: (eventId: string, seatId: string) => void;
@@ -39,18 +49,65 @@ interface CartContextValue {
 }
 
 const CART_STORAGE_KEY = "bilet_ekosistemi_cart";
+const SEAT_HOLD_LS_KEY = "seatHoldSessionId";
+
+/** seatIds sırasıyla aynı uzunlukta açıklama (birleştirme sonrası kaybolmasın). */
+function captionsAlignedWithSeatIds(
+  seatIds: string[],
+  prevIds: string[],
+  prevCaps: string[] | undefined,
+  newCaps: string[] | undefined,
+  newIds: string[]
+): string[] {
+  const byId = new Map<string, string>();
+  prevIds.forEach((id, i) => {
+    if (prevCaps?.[i]) byId.set(id, prevCaps[i]!);
+  });
+  newIds.forEach((id, i) => {
+    if (!byId.has(id) && newCaps?.[i]) byId.set(id, newCaps[i]!);
+  });
+  return seatIds.map((id, idx) => byId.get(id) ?? `Koltuk ${idx + 1}`);
+}
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-function loadCart(): CartItem[] {
-  if (typeof window === "undefined") return [];
+type LoadedCart = { items: CartItem[]; expiresAt: number | null };
+
+function loadCart(): LoadedCart {
+  if (typeof window === "undefined") return { items: [], expiresAt: null };
+  const now = Date.now();
+  const expRaw = localStorage.getItem(CART_EXPIRY_KEY);
+  const exp = expRaw ? parseInt(expRaw, 10) : NaN;
+  const expiresValid = Number.isFinite(exp) && exp > now;
+
   try {
     const raw = localStorage.getItem(CART_STORAGE_KEY);
-    if (!raw) return [];
+    if (!raw) {
+      localStorage.removeItem(CART_EXPIRY_KEY);
+      return { items: [], expiresAt: null };
+    }
     const parsed = JSON.parse(raw) as CartItem[];
-    return Array.isArray(parsed) ? parsed : [];
+    if (!Array.isArray(parsed) || parsed.length === 0) {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem(CART_EXPIRY_KEY);
+      return { items: [], expiresAt: null };
+    }
+    if (!expiresValid) {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      localStorage.removeItem(CART_EXPIRY_KEY);
+      return { items: [], expiresAt: null };
+    }
+    return {
+      items: parsed.map((item) => ({
+        ...item,
+        addedAt: typeof item.addedAt === "number" ? item.addedAt : now,
+      })),
+      expiresAt: exp,
+    };
   } catch {
-    return [];
+    localStorage.removeItem(CART_STORAGE_KEY);
+    localStorage.removeItem(CART_EXPIRY_KEY);
+    return { items: [], expiresAt: null };
   }
 }
 
@@ -67,11 +124,16 @@ const DEFAULT_MAX_TICKET_QUANTITY = 10;
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [reservationExpiresAt, setReservationExpiresAt] = useState<number | null>(null);
   const [hydrated, setHydrated] = useState(false);
   const [maxTicketQuantity, setMaxTicketQuantity] = useState(DEFAULT_MAX_TICKET_QUANTITY);
+  const itemsRef = useRef<CartItem[]>([]);
+  itemsRef.current = items;
 
   useEffect(() => {
-    setItems(loadCart());
+    const { items: loaded, expiresAt } = loadCart();
+    setItems(loaded);
+    setReservationExpiresAt(expiresAt);
     setHydrated(true);
   }, []);
 
@@ -88,11 +150,98 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (hydrated) saveCart(items);
+    if (hydrated && items.length === 0) {
+      setReservationExpiresAt(null);
+      if (typeof window !== "undefined") localStorage.removeItem(CART_EXPIRY_KEY);
+    }
   }, [items, hydrated]);
+
+  const releaseSeatHoldsForItems = useCallback(async (targetItems: CartItem[]) => {
+    if (typeof window === "undefined") return;
+    const sessionId = window.localStorage.getItem(SEAT_HOLD_LS_KEY);
+    if (!sessionId) return;
+    const tasks: Promise<Response>[] = [];
+    for (const item of targetItems) {
+      const seatIds = item.seatIds || [];
+      for (const seatId of seatIds) {
+        tasks.push(
+          fetch("/api/seat-holds", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ eventId: item.eventId, seatId, sessionId }),
+          })
+        );
+      }
+    }
+    if (tasks.length > 0) {
+      await Promise.allSettled(tasks);
+    }
+  }, []);
+
+  const clearCart = useCallback((opts?: { reason?: "reservation_expired" }) => {
+    const snapshot = itemsRef.current;
+    if (opts?.reason === "reservation_expired" && snapshot.length > 0 && typeof window !== "undefined") {
+      const first = snapshot[0];
+      try {
+        sessionStorage.setItem(
+          CART_EXPIRED_SNAPSHOT_KEY,
+          JSON.stringify({
+            eventId: first.eventId,
+            eventTitle: first.eventTitle,
+            imageUrl: first.imageUrl ?? "",
+            venue: first.venue,
+            location: first.location,
+            eventDate: first.eventDate,
+            eventTime: first.eventTime,
+          })
+        );
+        sessionStorage.setItem(CART_EXPIRED_FLAG_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+    }
+    setItems([]);
+    setReservationExpiresAt(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(CART_EXPIRY_KEY);
+    }
+    if (snapshot.length > 0) {
+      void releaseSeatHoldsForItems(snapshot);
+    }
+  }, [releaseSeatHoldsForItems]);
+
+  useEffect(() => {
+    if (!hydrated || items.length === 0 || reservationExpiresAt == null) return;
+    const tick = () => {
+      if (Date.now() >= reservationExpiresAt) {
+        clearCart({ reason: "reservation_expired" });
+      }
+    };
+    const id = window.setInterval(tick, 1000);
+    tick();
+    return () => window.clearInterval(id);
+  }, [hydrated, items.length, reservationExpiresAt, clearCart]);
+
+  const bumpReservation = useCallback(() => {
+    const next = Date.now() + CART_RESERVATION_MS;
+    setReservationExpiresAt(next);
+    if (typeof window !== "undefined") {
+      localStorage.setItem(CART_EXPIRY_KEY, String(next));
+    }
+  }, []);
 
   const addItem = useCallback((item: Omit<CartItem, "quantity"> & { quantity?: number }) => {
     const cap = Math.max(1, maxTicketQuantity);
     const qty = Math.max(1, Math.min(cap, item.quantity ?? 1));
+    const now = Date.now();
+    bumpReservation();
+    try {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem(CART_EXPIRED_SNAPSHOT_KEY);
+      }
+    } catch {
+      /* ignore */
+    }
     const seatIds = item.seatIds && item.seatIds.length > 0 ? item.seatIds : undefined;
     const seatCaptions =
       item.seatCaptions && item.seatCaptions.length > 0 ? item.seatCaptions : undefined;
@@ -101,17 +250,20 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         (i) => i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()
       );
       if (existing) {
+        const prevIds = existing.seatIds || [];
         const mergedSeatIds = seatIds
-          ? Array.from(new Set([...(existing.seatIds || []), ...seatIds])).slice(0, cap)
+          ? Array.from(new Set([...prevIds, ...seatIds])).slice(0, cap)
           : existing.seatIds;
-        const appendedCaps =
-          seatIds && seatCaptions && seatCaptions.length === seatIds.length
-            ? [...(existing.seatCaptions || []), ...seatCaptions].slice(0, cap)
-            : existing.seatCaptions;
-        const captionsOk =
-          !mergedSeatIds?.length ||
-          (appendedCaps && appendedCaps.length === mergedSeatIds.length);
-        const mergedCaptions = captionsOk ? appendedCaps : undefined;
+        const mergedCaptions =
+          mergedSeatIds && mergedSeatIds.length > 0
+            ? captionsAlignedWithSeatIds(
+                mergedSeatIds,
+                prevIds,
+                existing.seatCaptions,
+                seatCaptions,
+                seatIds || []
+              )
+            : undefined;
         const newQty = mergedSeatIds ? mergedSeatIds.length : Math.min(existing.available, cap, existing.quantity + qty);
         if (newQty <= 0) return prev.filter((i) => !(i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()));
         return prev.map((i) =>
@@ -120,30 +272,42 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 ...i,
                 quantity: newQty,
                 seatIds: mergedSeatIds,
-                seatCaptions: captionsOk ? mergedCaptions : undefined,
+                seatCaptions: mergedCaptions,
                 available: Math.max(i.available, item.available),
                 eventCheckoutFee: item.eventCheckoutFee ?? i.eventCheckoutFee,
+                addedAt: now,
               }
             : i
         );
       }
+      const cappedSeatIds = seatIds ? seatIds.slice(0, cap) : undefined;
       const captionsNew =
-        seatIds && seatCaptions && seatCaptions.length === seatIds.length ? seatCaptions : undefined;
+        cappedSeatIds && cappedSeatIds.length > 0
+          ? captionsAlignedWithSeatIds(cappedSeatIds, [], undefined, seatCaptions, cappedSeatIds)
+          : undefined;
       return [
         ...prev,
         {
           ...item,
-          quantity: seatIds ? Math.min(seatIds.length, cap) : Math.min(item.available, cap, qty),
-          seatIds,
+          quantity: cappedSeatIds ? cappedSeatIds.length : Math.min(item.available, cap, qty),
+          seatIds: cappedSeatIds,
           seatCaptions: captionsNew,
+          addedAt: now,
         },
       ];
     });
-  }, [maxTicketQuantity]);
+  }, [maxTicketQuantity, bumpReservation]);
 
   const removeItem = useCallback((ticketId: string) => {
-    setItems((prev) => prev.filter((i) => i.ticketId !== ticketId));
-  }, []);
+    let removed: CartItem[] = [];
+    setItems((prev) => {
+      removed = prev.filter((i) => i.ticketId === ticketId);
+      return prev.filter((i) => i.ticketId !== ticketId);
+    });
+    if (removed.length > 0) {
+      void releaseSeatHoldsForItems(removed);
+    }
+  }, [releaseSeatHoldsForItems]);
 
   const removeSeatItem = useCallback((eventId: string, seatId: string) => {
     setItems((prev) =>
@@ -165,11 +329,28 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             seatIds: nextSeatIds,
             seatCaptions: nextCaptions,
             quantity: nextSeatIds.length,
+            addedAt: Date.now(),
           };
         })
         .filter((i): i is CartItem => i !== null)
     );
-  }, []);
+    void releaseSeatHoldsForItems([
+      {
+        ticketId: "",
+        eventId,
+        eventTitle: "",
+        eventDate: "",
+        eventTime: "",
+        venue: "",
+        location: "",
+        ticketName: "",
+        price: 0,
+        quantity: 1,
+        available: 0,
+        seatIds: [seatId],
+      },
+    ]);
+  }, [releaseSeatHoldsForItems]);
 
   const updateQuantity = useCallback((ticketId: string, quantity: number) => {
     setItems((prev) =>
@@ -193,8 +374,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  const clearCart = useCallback(() => setItems([]), []);
-
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
 
@@ -202,6 +381,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     <CartContext.Provider
       value={{
         items,
+        reservationExpiresAt,
         addItem,
         removeItem,
         removeSeatItem,

@@ -5,6 +5,8 @@ import { Plus, Edit2, Trash2, Ticket, AlertCircle } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { supabase } from "@/lib/supabase-client";
+import { EVENT_TICKET_TYPE_PRESET_LABELS } from "@/lib/ticket-type-presets";
+import type { Event } from "@/types/database";
 
 interface TicketType {
   id: string;
@@ -20,22 +22,7 @@ interface TicketType {
   };
 }
 
-const PRESET_TICKET_NAMES = [
-  "Standart Bilet",
-  "VIP Bilet",
-  "Kategori 1",
-  "Kategori 2",
-  "Kategori 3",
-  "Kategori 4",
-  "Kategori 5",
-  "Kategori 6",
-  "Kategori 7",
-  "Kategori 8",
-  "Kategori 9",
-  "Kategori 10",
-] as const;
-
-import type { Event } from "@/types/database";
+const PRESET_TICKET_NAMES = [...EVENT_TICKET_TYPE_PRESET_LABELS];
 
 export default function BiletTurleriPage() {
   const { isAdmin } = useSimpleAuth();

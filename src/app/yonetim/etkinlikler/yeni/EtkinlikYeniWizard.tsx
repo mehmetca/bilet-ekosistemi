@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
+import { fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
 import type { EventCategory, EventCurrency } from "@/types/database";
 import {
   CATEGORY_LABELS,
@@ -49,6 +50,26 @@ const BILET_TURU_SECENEKLERI = [
 ];
 
 const SALON_PLAN_VALUE_PREFIX = "salon_plan|";
+
+/** Sihirbaz / etkinlik eşlemesi: sırada sadece "vip" yazılmışsa bölüm adı ile birleştirir (örn. Blok A + vip → Blok A vip). */
+function expandPlanTicketDisplayName(
+  sectionName: string,
+  rowTicketType: string | null | undefined,
+  sectionTicketType: string | null | undefined
+): string {
+  const sn = (sectionName || "").trim();
+  const rt = (rowTicketType || "").trim();
+  const st = (sectionTicketType || "").trim();
+  const base = rt || st || sn;
+  if (!base) return "";
+  if (!sn) return base;
+  const lowBase = base.toLowerCase();
+  const lowSn = sn.toLowerCase();
+  if (lowBase.startsWith(lowSn + " ") || lowBase === lowSn) return base;
+  if (rt) return `${sn} ${rt}`.trim();
+  if (st) return `${sn} ${st}`.trim();
+  return base;
+}
 
 function salonPlanSelectValue(label: string) {
   return `${SALON_PLAN_VALUE_PREFIX}${encodeURIComponent(label)}`;
@@ -120,8 +141,16 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const [seatingPlans, setSeatingPlans] = useState<SeatingPlanOption[]>([]);
   const [selectedSeatingPlanId, setSelectedSeatingPlanId] = useState("");
   const [sectionCapacitiesByTicketLabel, setSectionCapacitiesByTicketLabel] = useState<Record<string, number>>({});
-  /** Seçili oturum planı: bilet adı = bölümde ticket_type_label (doluysa) yoksa bölüm adı */
+  /** Seçili oturum planı: bilet adı = sırada ticket_type_label → bölümde ticket_type_label → bölüm adı */
   const [planDerivedTicketLabels, setPlanDerivedTicketLabels] = useState<string[]>([]);
+  /** Sıra+bölüm bazlı eşlenmiş etiketler ve koltuk sayıları (sihirbaz özet tablosu) */
+  const [planTicketBreakdown, setPlanTicketBreakdown] = useState<{ label: string; seatCount: number }[]>([]);
+  /** Her fiziksel sıra için satır (bilet adı bölüm+sıra kategorisi ile genişletilmiş) */
+  const [planTicketRowsDetail, setPlanTicketRowsDetail] = useState<
+    { sectionName: string; rowLabel: string; label: string; seatCount: number }[]
+  >([]);
+  /** Yeni etkinlikte: bu plan için 3. adımda bilet satırları otomatik dolduruldu mu */
+  const ticketsAutoFilledForPlanRef = useRef<string | null>(null);
 
   const [tickets, setTickets] = useState<WizardTicket[]>([
     { id: crypto.randomUUID(), presetKey: "normal_standart", name: "Normal / Standart Bilet", type: "normal", price: 0, quantity: 100, description: "", discountRules: "", groupMinQuantity: undefined },
@@ -262,15 +291,24 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         .order("name");
       const plans = (data || []) as SeatingPlanOption[];
       setSeatingPlans(plans);
-      const defaultPlan = plans.find((p) => p.is_default);
-      setSelectedSeatingPlanId(defaultPlan?.id || (plans[0]?.id ?? ""));
+      setSelectedSeatingPlanId((current) => {
+        if (current && plans.some((p) => p.id === current)) return current;
+        const defaultPlan = plans.find((p) => p.is_default);
+        return defaultPlan?.id || (plans[0]?.id ?? "");
+      });
     })();
   }, [selectedVenueId]);
+
+  useEffect(() => {
+    ticketsAutoFilledForPlanRef.current = null;
+  }, [selectedSeatingPlanId]);
 
   useEffect(() => {
     if (!selectedSeatingPlanId) {
       setSectionCapacitiesByTicketLabel({});
       setPlanDerivedTicketLabels([]);
+      setPlanTicketBreakdown([]);
+      setPlanTicketRowsDetail([]);
       return;
     }
     (async () => {
@@ -282,55 +320,126 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       if (!sections?.length) {
         setSectionCapacitiesByTicketLabel({});
         setPlanDerivedTicketLabels([]);
+        setPlanTicketBreakdown([]);
+        setPlanTicketRowsDetail([]);
         return;
       }
       const ordered = [...sections].sort(
         (a, b) => ((a as { sort_order?: number }).sort_order ?? 0) - ((b as { sort_order?: number }).sort_order ?? 0)
       );
-      const labels: string[] = [];
-      const seen = new Set<string>();
-      for (const sec of ordered) {
-        const s = sec as { name?: string; ticket_type_label?: string | null };
-        const eff = (s.ticket_type_label?.trim() || s.name?.trim() || "");
-        if (!eff) continue;
-        const k = eff.toLowerCase();
-        if (seen.has(k)) continue;
-        seen.add(k);
-        labels.push(eff);
-      }
-      setPlanDerivedTicketLabels(labels);
-
       const sectionIds = sections.map((s) => s.id);
       const { data: rows } = await supabase
         .from("seating_plan_rows")
-        .select("id, section_id")
+        .select("id, section_id, row_label, ticket_type_label, sort_order")
         .in("section_id", sectionIds);
       if (!rows?.length) {
         setSectionCapacitiesByTicketLabel({});
+        setPlanDerivedTicketLabels([]);
+        setPlanTicketBreakdown([]);
         return;
       }
+      const rowsBySection = new Map<string, typeof rows>();
+      for (const r of rows) {
+        const list = rowsBySection.get(r.section_id) || [];
+        list.push(r);
+        rowsBySection.set(r.section_id, list);
+      }
+      for (const list of rowsBySection.values()) {
+        list.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+      }
       const rowIds = rows.map((r) => r.id);
-      const { data: seats } = await supabase.from("seats").select("id, row_id").in("row_id", rowIds);
+      let seats: { id: string; row_id: string }[] = [];
+      try {
+        seats = await fetchAllSeatsByRowIds<{ id: string; row_id: string }>(
+          supabase,
+          rowIds,
+          "id, row_id"
+        );
+      } catch {
+        seats = [];
+      }
       const countByRowId: Record<string, number> = {};
-      (seats || []).forEach((s) => {
+      seats.forEach((s) => {
         countByRowId[s.row_id] = (countByRowId[s.row_id] || 0) + 1;
       });
-      const countBySectionId: Record<string, number> = {};
-      rows.forEach((r) => {
-        countBySectionId[r.section_id] = (countBySectionId[r.section_id] || 0) + (countByRowId[r.id] || 0);
-      });
-      const byLabel: Record<string, number> = {};
-      ordered.forEach((sec) => {
+
+      const breakdown: { label: string; seatCount: number }[] = [];
+      const keyToBreakdownIdx = new Map<string, number>();
+      const detail: { sectionName: string; rowLabel: string; label: string; seatCount: number }[] = [];
+
+      for (const sec of ordered) {
         const s = sec as { id: string; name?: string; ticket_type_label?: string | null };
-        const eff = (s.ticket_type_label?.trim() || s.name?.trim() || "");
-        const count = countBySectionId[s.id] || 0;
-        if (eff) {
-          byLabel[eff] = (byLabel[eff] || 0) + count;
+        const secRows = rowsBySection.get(s.id) || [];
+        for (const row of secRows) {
+          const displayLabel = expandPlanTicketDisplayName(
+            s.name || "",
+            row.ticket_type_label,
+            s.ticket_type_label
+          );
+          if (!displayLabel) continue;
+          const n = countByRowId[row.id] || 0;
+          if (n <= 0) continue;
+          detail.push({
+            sectionName: (s.name || "").trim() || "—",
+            rowLabel: String(row.row_label ?? ""),
+            label: displayLabel,
+            seatCount: n,
+          });
+          const lk = displayLabel.toLowerCase();
+          let idx = keyToBreakdownIdx.get(lk);
+          if (idx === undefined) {
+            idx = breakdown.length;
+            keyToBreakdownIdx.set(lk, idx);
+            breakdown.push({ label: displayLabel, seatCount: n });
+          } else {
+            breakdown[idx].seatCount += n;
+          }
         }
-      });
+      }
+
+      const byLabel = Object.fromEntries(breakdown.map((b) => [b.label, b.seatCount]));
+      setPlanTicketBreakdown(breakdown);
+      setPlanTicketRowsDetail(detail);
+      setPlanDerivedTicketLabels(breakdown.map((b) => b.label));
       setSectionCapacitiesByTicketLabel(byLabel);
     })();
   }, [selectedSeatingPlanId]);
+
+  /** Oturum planındaki koltuk etiketlerine göre bilet satırları; mevcut fiyatları aynı isimde korur */
+  const fillTicketsFromPlan = useCallback(() => {
+    setTickets((prev) => {
+      const breakdown = planTicketBreakdown;
+      if (breakdown.length === 0) return prev;
+      const priceByNorm = new Map<string, number>();
+      for (const t of prev) {
+        const k = (t.name || "").trim().toLowerCase();
+        if (k) priceByNorm.set(k, t.price);
+      }
+      return breakdown.map((row) => {
+        const k = row.label.trim().toLowerCase();
+        const prevPrice = priceByNorm.get(k);
+        return {
+          id: crypto.randomUUID(),
+          presetKey: "salon_plan" as const,
+          name: row.label,
+          type: "normal" as const,
+          price: prevPrice !== undefined ? prevPrice : 0,
+          quantity: row.seatCount,
+          description: "",
+          discountRules: "",
+          groupMinQuantity: undefined,
+        };
+      });
+    });
+  }, [planTicketBreakdown]);
+
+  useEffect(() => {
+    if (isEditMode) return;
+    if (step !== 3 || !selectedSeatingPlanId || planTicketBreakdown.length === 0) return;
+    if (ticketsAutoFilledForPlanRef.current === selectedSeatingPlanId) return;
+    ticketsAutoFilledForPlanRef.current = selectedSeatingPlanId;
+    fillTicketsFromPlan();
+  }, [step, selectedSeatingPlanId, planTicketBreakdown, isEditMode, fillTicketsFromPlan]);
 
   const selectedVenue = venues.find((v) => v.id === selectedVenueId);
   const wizardReturnPath =
@@ -943,9 +1052,80 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   Tek Tıkla Sırala (VIP, Kategori 1..10)
                 </button>
               </div>
+              {selectedSeatingPlanId && planTicketBreakdown.length > 0 && (
+                <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 mb-4 space-y-3">
+                  <p className="font-semibold text-slate-900">Oturum planından bilet türleri ve koltuk sayıları</p>
+                  <p className="text-xs text-slate-600">
+                    Aşağıdaki <strong>bilet adı</strong>, etkinlik sayfasında koltuk rengi ve fiyat eşlemesi için kullanılır. Sırada sadece{" "}
+                    <em>vip</em> veya <em>Kategori 1</em> yazıyorsa bölüm adı otomatik eklenir (örn. Blok A + vip → Blok A vip). Aynı bilet adına
+                    düşen sıralar üst tabloda tek satırda toplanır. Yeni etkinlikte 3. adımda otomatik bilet satırları bu isimlerle oluşur; siz{" "}
+                    <strong>fiyat</strong> girersiniz.
+                  </p>
+                  <div className="overflow-x-auto rounded-md border border-slate-100">
+                    <p className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 border-b border-slate-100">
+                      Bilet türü özeti (satış satırı — otomatik doldurma)
+                    </p>
+                    <table className="min-w-full text-left text-sm">
+                      <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-600">
+                        <tr>
+                          <th className="px-3 py-2">Bilet adı (etkinlikte yazılacak)</th>
+                          <th className="px-3 py-2 text-right">Koltuk</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {planTicketBreakdown.map((row) => (
+                          <tr key={row.label} className="border-t border-slate-100">
+                            <td className="px-3 py-2 font-medium text-slate-800">{row.label}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-slate-700">{row.seatCount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {planTicketRowsDetail.length > 0 && (
+                    <div className="overflow-x-auto rounded-md border border-slate-100">
+                      <p className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 border-b border-slate-100">
+                        Sıra sıra plan (salondaki düzen)
+                      </p>
+                      <table className="min-w-full text-left text-sm">
+                        <thead className="bg-slate-50 text-xs font-semibold uppercase text-slate-600">
+                          <tr>
+                            <th className="px-3 py-2">Bölüm</th>
+                            <th className="px-3 py-2">Sıra</th>
+                            <th className="px-3 py-2">Bilet adı</th>
+                            <th className="px-3 py-2 text-right">Koltuk</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {planTicketRowsDetail.map((r, i) => (
+                            <tr key={`${r.sectionName}-${r.rowLabel}-${i}`} className="border-t border-slate-100">
+                              <td className="px-3 py-2 text-slate-800">{r.sectionName}</td>
+                              <td className="px-3 py-2 tabular-nums text-slate-700">{r.rowLabel}</td>
+                              <td className="px-3 py-2 font-medium text-slate-800">{r.label}</td>
+                              <td className="px-3 py-2 text-right tabular-nums text-slate-700">{r.seatCount}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                  {isEditMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        ticketsAutoFilledForPlanRef.current = selectedSeatingPlanId || null;
+                        fillTicketsFromPlan();
+                      }}
+                      className="rounded-lg border border-primary-600 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-800 hover:bg-primary-100"
+                    >
+                      Plana göre bilet satırlarını yeniden oluştur (fiyatları aynı isimde korur)
+                    </button>
+                  )}
+                </div>
+              )}
               {selectedSeatingPlanId && planDerivedTicketLabels.length > 0 && (
                 <div className="rounded-lg border border-primary-200 bg-primary-50/80 px-4 py-3 text-sm text-slate-800 mb-4">
-                  <strong>Oturum planı eşlemesi:</strong> Aşağıdaki listede bu salondaki bölüm adları / bilet etiketleri görünür. Bilet adı, planda &quot;Bilet türü (etkinlikte eşlenecek)&quot; doluysa o metinle; boşsa <strong>bölüm adı</strong> ile aynı olmalıdır — böylece koltuk fiyatı doğru biletle eşleşir.
+                  <strong>Oturum planı eşlemesi:</strong> Bilet adı, planda önce <strong>sıradaki</strong> bilet türü, yoksa bölümdeki bilet türü, o da yoksa <strong>bölüm adı</strong> ile aynı olmalıdır — böylece koltuk doğru biletle eşleşir.
                 </div>
               )}
               {tickets.map((t) => (

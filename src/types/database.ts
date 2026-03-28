@@ -104,6 +104,14 @@ export interface SeatingPlanSection {
   created_at: string;
   /** Etkinlikteki bilet türü adı (Kategori 1, VIP vb.); koltuk seçiminde bu biletin fiyatı kullanılır */
   ticket_type_label?: string | null;
+  /** Salon önizlemesi: yatay = bloklar arası sabit boşluk; dikey = corridor_after_seat_label sonrası sırayı böler */
+  corridor_mode?: "none" | "horizontal" | "vertical" | null;
+  /** Eski kayıtlar; yeni mantıkta kullanılmıyor */
+  corridor_gap_px?: number | null;
+  /** Dikey koridor: bu koltuk etiketinden sonra (örn. "10") */
+  corridor_after_seat_label?: string | null;
+  /** Bölüm önizleme hizası */
+  section_align?: "left" | "center" | "right" | null;
 }
 
 /** Bölümdeki sıra (row_label: "1", "A" vb.) */
@@ -124,6 +132,8 @@ export interface Seat {
   seat_label: string;
   x?: number | null;
   y?: number | null;
+  /** Yönetimden satışa kapalı: seçim ve hold reddedilir */
+  sales_blocked?: boolean | null;
   created_at: string;
 }
 
@@ -206,6 +216,9 @@ export interface Order {
   payment_status?: 'pending' | 'paid' | 'failed';
   buyer_name?: string | null;
   buyer_email?: string | null;
+  /** e_ticket | standard | express (basılı gönderim) */
+  delivery_method?: string | null;
+  shipping_fee?: number;
   checked_at?: string | null;
   events?: { title?: string; date?: string; time?: string; venue?: string };
   tickets?: { name?: string; ticket_type?: string; price?: number };

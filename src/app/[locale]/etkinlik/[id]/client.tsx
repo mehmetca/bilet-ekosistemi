@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell, Building2, Armchair, LayoutGrid } from "lucide-react";
+import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, ChevronLeft, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell, Building2, Armchair, LayoutGrid, X } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/lib/supabase-client";
+import { fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
 import { getPlan } from "@/lib/seating-plans";
 import { musensaal } from "@/lib/seating-plans/musensaal";
 import SalonPlanViewer from "@/components/SalonPlanViewer";
@@ -30,6 +31,7 @@ import {
 } from "@/lib/seating-plans/theaterduisburg";
 import { planSectionsMatchMusensaalTemplate } from "@/lib/seating-plans/musensaal-structure-match";
 import { formatEventDateDMY } from "@/lib/date-utils";
+import { darkenHex, getTicketCategoryColorHex, lightenHex } from "@/lib/seating-plans/ticket-category-colors";
 
 const SEAT_HOLD_LS_KEY = "seatHoldSessionId";
 
@@ -60,9 +62,15 @@ interface EventDetailClientProps {
 }
 
 /** Oturum planı: bölüm > sıra > koltuk (koltuk seçimi UI için); bölümde ticket_type_label etkinlikteki bilet adıyla eşlenir */
-type SeatPlanSeat = { id: string; seat_label: string };
+type SeatPlanSeat = { id: string; seat_label: string; sales_blocked?: boolean | null };
 type SeatPlanRow = { id: string; row_label: string; ticket_type_label?: string | null; seats: SeatPlanSeat[] };
-type SeatPlanSection = { id: string; name: string; ticket_type_label?: string | null; rows: SeatPlanRow[] };
+type SeatPlanSection = {
+  id: string;
+  name: string;
+  ticket_type_label?: string | null;
+  section_align?: "left" | "center" | "right" | null;
+  rows: SeatPlanRow[];
+};
 
 type TicketLike = { id: string; name?: string | null; price?: number | null; available?: number | null };
 const MUSENSAAL_PREFIXES = ["P", "EML", "EMR", "SEL", "SER", "EH"] as const;
@@ -145,111 +153,230 @@ function getTicketForRow(
   sectionIndex: number,
   availableTickets: TicketLike[]
 ): { ticket: TicketLike; matchedBy: "name" | "index" } {
-  const rowLabel = (row?.ticket_type_label || "").trim();
-  if (rowLabel) {
-    const byRowLabel = availableTickets.find(
-      (t) => (t.name || "").trim().toLowerCase() === rowLabel.toLowerCase()
-    );
-    if (byRowLabel) return { ticket: byRowLabel, matchedBy: "name" };
+  const rowL = (row?.ticket_type_label || "").trim();
+  const sectionName = (section.name ?? "").trim();
+  const norm = (s: string) => s.trim().toLowerCase();
+
+  if (rowL) {
+    const byRow = availableTickets.find((t) => norm(t.name || "") === norm(rowL));
+    if (byRow) return { ticket: byRow, matchedBy: "name" };
+    if (sectionName) {
+      const composite = `${sectionName} ${rowL}`.trim();
+      const byComposite = availableTickets.find((t) => norm(t.name || "") === norm(composite));
+      if (byComposite) return { ticket: byComposite, matchedBy: "name" };
+      const sn = norm(sectionName);
+      const rl = norm(rowL);
+      const bySectionPlus = availableTickets.find((t) => {
+        const n = norm(t.name || "");
+        return n === `${sn} ${rl}` || (n.startsWith(`${sn} `) && (n.endsWith(` ${rl}`) || n.endsWith(rl)));
+      });
+      if (bySectionPlus) return { ticket: bySectionPlus, matchedBy: "name" };
+    }
   }
   return getTicketForSection(section, sectionIndex, availableTickets);
 }
 
-function getCategoryColorHex(rawCategory: string): string {
-  const category = (rawCategory || "").trim().toLowerCase();
-  const palette: Record<string, string> = {
-    vip: "#f59e0b",
-    "vip bilet": "#f59e0b",
-    "kategori 1": "#f43f5e",
-    "kategori 2": "#3b82f6",
-    "kategori 3": "#10b981",
-    "kategori 4": "#06b6d4",
-    "kategori 5": "#d946ef",
-    "kategori 6": "#84cc16",
-    "kategori 7": "#f97316",
-    "kategori 8": "#8b5cf6",
-    "kategori 9": "#14b8a6",
-    "kategori 10": "#ef4444",
-  };
-  return palette[category] ?? "#64748b";
-}
+/** Sepette veya anlık seçimde: plan üzerinde fosforlu yeşil (satılmadıkça). */
+const HELD_SEAT_FLUO = "#39ff14";
 
 /** Eventim tarzı şematik salon planı: bölümleri yan yana, sahne altta, koltuklar tıklanabilir. Satılmış koltuklar dolu gösterilir, tıklanamaz. */
 function SeatMapSvg({
   sections,
-  selectedSeatIds,
+  heldSeatIds,
   soldSeatIds,
   onSeatToggle,
-  sectionColors,
+  seatCategoryHexBySeatId,
   selectableSeatIds,
+  salesBlockedSeatIds,
   seatTitleById,
   stageLabel,
   seatLabelWord,
 }: {
   sections: SeatPlanSection[];
-  selectedSeatIds: Set<string>;
+  /** Seçili + bu etkinlik için sepetteki koltuklar (satın alınana kadar fosforlu yeşil). */
+  heldSeatIds: Set<string>;
   soldSeatIds: Set<string>;
   onSeatToggle: (seatId: string) => void;
-  sectionColors: Map<string, string>;
+  seatCategoryHexBySeatId: Map<string, string>;
   selectableSeatIds?: Set<string>;
+  salesBlockedSeatIds?: Set<string>;
   seatTitleById?: Map<string, string>;
   stageLabel: string;
   seatLabelWord: string;
 }) {
   const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
   const pad = 12;
-  const stageH = 34;
-  const mapH = 560;
-  const mapW = 1040;
+  const stageH = 32;
+  const mapW = 720;
   const stageGap = 8;
-  const sectionGap = 10;
+  const sectionGap = 8;
+  const corridorGap = 36;
   const nSections = sections.length;
   if (nSections === 0) return null;
-  const sectionMaxRows = Math.max(...sections.map((s) => s.rows.length), 1);
+  const sectionGroup = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes("sol") || n.includes("left")) return 0;
+    if (n.includes("sağ") || n.includes("sag") || n.includes("right")) return 2;
+    return 1;
+  };
+  const sectionAlignment = (name: string): "left" | "center" | "right" => {
+    const n = name.toLowerCase();
+    if (n.includes("sola hizala") || n.includes("left align")) return "left";
+    if (n.includes("saga hizala") || n.includes("sağa hizala") || n.includes("right align")) return "right";
+    if (n.includes("ortala") || n.includes("center align")) return "center";
+    const g = sectionGroup(name);
+    if (g === 0) return "left";
+    if (g === 2) return "right";
+    return "center";
+  };
+  const sectionDepth = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes("ön") || n.includes("on") || n.includes("front")) return 0;
+    if (n.includes("orta") || n.includes("middle")) return 1;
+    if (n.includes("arka") || n.includes("back")) return 2;
+    return 0;
+  };
+  const displaySections = [...sections].sort((a, b) => {
+    const ga = sectionGroup(String(a.name || ""));
+    const gb = sectionGroup(String(b.name || ""));
+    if (ga !== gb) return ga - gb;
+    const da = sectionDepth(String(a.name || ""));
+    const db = sectionDepth(String(b.name || ""));
+    if (da !== db) return da - db;
+    return String(a.name || "").localeCompare(String(b.name || ""), undefined, { numeric: true, sensitivity: "base" });
+  });
+  const sectionMaxRows = Math.max(...displaySections.map((s) => s.rows.length), 1);
   const sectionMaxSeats = Math.max(
-    ...sections.flatMap((s) => s.rows.map((r) => r.seats.length)),
+    ...displaySections.flatMap((s) => s.rows.map((r) => r.seats.length)),
     1
   );
-  const seatingAreaW = mapW * 0.9;
-  const sectionW = Math.max(150, Math.min(260, (seatingAreaW - (nSections - 1) * sectionGap) / nSections));
-  const seatingTotalW = sectionW * nSections + sectionGap * (nSections - 1);
-  const seatingStartX = pad + (mapW - seatingTotalW) / 2;
-  const seatSize = Math.min(
-    (sectionW - 26) / sectionMaxSeats,
-    (mapH - 28) / sectionMaxRows,
-    24
-  );
-  const rowH = (mapH - 28) / sectionMaxRows;
-  const seatW = Math.min((sectionW - 26) / sectionMaxSeats, seatSize * 2.4);
+  const leftSections = displaySections.filter((s) => sectionGroup(String(s.name || "")) === 0);
+  const centerSections = displaySections.filter((s) => sectionGroup(String(s.name || "")) === 1);
+  const rightSections = displaySections.filter((s) => sectionGroup(String(s.name || "")) === 2);
+
+  const usableW = mapW - pad * 2;
+  const baseY = pad + stageH + stageGap;
+  const sectionHeaderH = 24;
+  const sectionBottomPad = 10;
+  const sectionStackGap = 18;
+
+  const hasSideTop = leftSections.length > 0 || rightSections.length > 0;
+  const hasLeftRightPair = leftSections.length > 0 && rightSections.length > 0;
+  const topLaneGap = hasLeftRightPair ? corridorGap : sectionGap;
+  const topLaneW = hasLeftRightPair ? (usableW - topLaneGap) / 2 : usableW;
+  const topLeftX = pad + (hasLeftRightPair ? 0 : (usableW - topLaneW) / 2);
+  const topRightX = hasLeftRightPair ? topLeftX + topLaneW + topLaneGap : topLeftX;
+
+  /** Orta bloklar (Blok A/B/C): 2 sütun + tek kalan satırda ortala — salon tasarımı önizlemesiyle uyumlu. */
+  const centerSlotW =
+    centerSections.length <= 1
+      ? Math.min(usableW, Math.max(220, usableW - 16))
+      : Math.max(200, Math.min(340, (usableW - sectionGap) / 2));
+
+  /** Koltuk ölçeği: en dar yerleşim kutusuna göre (üst şerit veya orta ızgarada dar sütun). */
+  const sectionWForSeats = hasSideTop
+    ? Math.min(Math.max(220, topLaneW - 8), centerSections.length ? centerSlotW : Math.max(220, topLaneW - 8))
+    : centerSlotW;
+
+  const seatSize = Math.min((sectionWForSeats - 26) / sectionMaxSeats, 18, 22);
+  const rowH = Math.max(22, Math.min(30, seatSize * 1.45));
+  /** Dar çerçeve: koltuk merkezleri birbirine yakın (eski 2.4 çarpanı fazla boşluk bırakıyordu). */
+  const seatW = Math.min((sectionWForSeats - 26) / sectionMaxSeats, seatSize * 1.28);
+  const getSectionH = (s: SeatPlanSection) => sectionHeaderH + Math.max(1, s.rows.length) * rowH + sectionBottomPad;
+
+  const sectionLayout = new Map<string, { sx: number; sy: number; sectionH: number; width: number }>();
+  let contentBottom = baseY;
+
+  const placeStack = (list: SeatPlanSection[], sx: number, blockW: number) => {
+    let y = baseY;
+    for (const s of list) {
+      const sectionH = getSectionH(s);
+      sectionLayout.set(s.id, { sx, sy: y, sectionH, width: blockW });
+      contentBottom = Math.max(contentBottom, y + sectionH);
+      y += sectionH + sectionStackGap;
+    }
+  };
+
+  if (hasSideTop) {
+    if (leftSections.length) placeStack(leftSections, topLeftX, topLaneW);
+    if (rightSections.length) placeStack(rightSections, topRightX, topLaneW);
+  }
+
+  let yCenterBand = baseY;
+  if (hasSideTop) {
+    let maxTop = baseY;
+    for (const s of leftSections) {
+      const L = sectionLayout.get(s.id);
+      if (L) maxTop = Math.max(maxTop, L.sy + L.sectionH);
+    }
+    for (const s of rightSections) {
+      const L = sectionLayout.get(s.id);
+      if (L) maxTop = Math.max(maxTop, L.sy + L.sectionH);
+    }
+    yCenterBand = maxTop + sectionStackGap;
+  }
+
+  if (centerSections.length) {
+    let i = 0;
+    let y = yCenterBand;
+    while (i < centerSections.length) {
+      const remaining = centerSections.length - i;
+      const inRow = remaining === 1 ? 1 : 2;
+      const rowSlice = centerSections.slice(i, i + inRow);
+      const rowWidth = rowSlice.length * centerSlotW + (rowSlice.length - 1) * sectionGap;
+      const startX = pad + Math.max(0, (usableW - rowWidth) / 2);
+      let rowBottom = y;
+      rowSlice.forEach((s, c) => {
+        const sectionH = getSectionH(s);
+        const sx = startX + c * (centerSlotW + sectionGap);
+        sectionLayout.set(s.id, { sx, sy: y, sectionH, width: centerSlotW });
+        rowBottom = Math.max(rowBottom, y + sectionH);
+      });
+      contentBottom = Math.max(contentBottom, rowBottom);
+      y = rowBottom + sectionStackGap;
+      i += inRow;
+    }
+  }
+
+  const mapH = Math.max(300, contentBottom - baseY + sectionBottomPad);
+
   const stageTarget = sectionMaxSeats * seatW * 1.05;
   const stageWRaw = Math.max(mapW * 0.24, Math.min(mapW * 0.38, stageTarget));
-  const stageW = Math.min(stageWRaw, seatingTotalW * 0.92);
+  const stageW = Math.min(
+    stageWRaw,
+    hasLeftRightPair ? (topLaneW * 2 + topLaneGap) * 0.92 : Math.max(centerSlotW, topLaneW) * 0.92
+  );
   const stageX = pad + (mapW - stageW) / 2;
 
   return (
     <svg
       viewBox={`0 0 ${mapW + pad * 2} ${mapH + stageH + stageGap + pad * 2}`}
-      className="w-full rounded-lg border border-slate-200 bg-white block"
-      style={{ minWidth: 1040, minHeight: 690 }}
+      className="w-full max-w-full rounded-lg border border-slate-200 bg-white block h-auto"
+      preserveAspectRatio="xMidYMid meet"
     >
       {/* Bölümler */}
-      {sections.map((section, si) => {
-        const sx = seatingStartX + si * (sectionW + sectionGap);
+      {displaySections.map((section, si) => {
+        const layout = sectionLayout.get(section.id);
+        if (!layout) return null;
+        const sx = layout.sx;
+        const sy = layout.sy;
+        const sectionH = layout.sectionH;
+        const blockW = layout.width;
         return (
           <g key={section.id}>
             <rect
               x={sx}
-              y={pad + stageH + stageGap}
-              width={sectionW}
-              height={mapH}
+              y={sy}
+              width={blockW}
+              height={sectionH}
               rx={6}
               fill="#ffffff"
               stroke="#94a3b8"
               strokeWidth={1}
             />
             <text
-              x={sx + sectionW / 2}
-              y={pad + stageH + stageGap + 16}
+              x={sx + blockW / 2}
+              y={sy + 16}
               textAnchor="middle"
               fill="#334155"
               fontSize={11}
@@ -258,23 +385,32 @@ function SeatMapSvg({
               {section.name}
             </text>
             {section.rows.map((row, ri) => {
-              const rowY = pad + stageH + stageGap + 24 + ri * rowH + rowH / 2;
+              const rowY = sy + sectionHeaderH + ri * rowH + rowH / 2;
+              const rowSeatCount = Math.max(row.seats.length, 1);
+              const rowSeatAreaW = Math.max(0, rowSeatCount * seatW);
+              const usableLeft = sx + 10;
+              const usableRight = sx + blockW - 10;
+              const usableW = Math.max(0, usableRight - usableLeft);
+              const persistAlign = section.section_align;
+              const align =
+                persistAlign === "left" || persistAlign === "center" || persistAlign === "right"
+                  ? persistAlign
+                  : sectionAlignment(String(section.name || ""));
+              let rowStartX = usableLeft;
+              if (align === "center") {
+                rowStartX = usableLeft + Math.max(0, (usableW - rowSeatAreaW) / 2);
+              } else if (align === "right") {
+                rowStartX = usableRight - rowSeatAreaW;
+              }
+              const group = sectionGroup(String(section.name || ""));
+              const rowLabelX = group === 2 ? sx + blockW - 3 : sx + 3;
+              const rowLabelAnchor = group === 2 ? "end" : "start";
               return (
                 <g key={`row-${section.id}-${row.id}`}>
                   <text
-                    x={sx + 3}
+                    x={rowLabelX}
                     y={rowY + 3}
-                    textAnchor="start"
-                    fill="#64748b"
-                    fontSize={9}
-                    fontWeight={600}
-                  >
-                    {row.row_label}
-                  </text>
-                  <text
-                    x={sx + sectionW - 3}
-                    y={rowY + 3}
-                    textAnchor="end"
+                    textAnchor={rowLabelAnchor}
                     fill="#64748b"
                     fontSize={9}
                     fontWeight={600}
@@ -282,17 +418,44 @@ function SeatMapSvg({
                     {row.row_label}
                   </text>
                   {row.seats.map((seat, ci) => {
-                const cx = sx + 10 + ci * seatW + seatW / 2;
+                const cx = rowStartX + ci * seatW + seatW / 2;
                 const cy = rowY;
-                const isSelected = selectedSeatIds.has(seat.id);
+                const isHeld = heldSeatIds.has(seat.id);
                 const isSold = soldSeatIds.has(seat.id);
+                const isSalesBlocked = salesBlockedSeatIds?.has(seat.id) ?? false;
                 const isSelectable = selectableSeatIds ? selectableSeatIds.has(seat.id) : true;
-                const isUnavailable = !isSold && !isSelectable;
+                const isUnavailable = isSold || isSalesBlocked || !isSelectable;
                 const isHovered = hoveredSeatId === seat.id;
+                const catHex = seatCategoryHexBySeatId.get(seat.id) ?? "#64748b";
+                let fill: string;
+                let stroke: string;
+                let sw = 0;
+                if (isSold) {
+                  fill = "#d1d5db";
+                  stroke = "#d1d5db";
+                } else if (isSalesBlocked) {
+                  fill = "#fde68a";
+                  stroke = "#b45309";
+                  sw = 1.5;
+                } else if (isUnavailable) {
+                  fill = "#cbd5e1";
+                  stroke = "#94a3b8";
+                  sw = 1.5;
+                } else if (isHeld) {
+                  fill = HELD_SEAT_FLUO;
+                  stroke = HELD_SEAT_FLUO;
+                } else if (isHovered) {
+                  fill = HELD_SEAT_FLUO;
+                  stroke = HELD_SEAT_FLUO;
+                } else {
+                  fill = catHex;
+                  stroke = darkenHex(catHex, 0.2);
+                  sw = 1.5;
+                }
                 return (
                   <g
                     key={seat.id}
-                    style={{ cursor: isSold || isUnavailable ? "not-allowed" : "pointer" }}
+                    style={{ cursor: isUnavailable ? "not-allowed" : "pointer" }}
                     onMouseDown={(e) => e.stopPropagation()}
                     onPointerDown={(e) => e.stopPropagation()}
                   >
@@ -300,29 +463,13 @@ function SeatMapSvg({
                       cx={cx}
                       cy={cy}
                       r={seatSize / 2}
-                      fill={
-                        isSold
-                          ? "#334155"
-                          : isUnavailable
-                          ? "#cbd5e1"
-                          : isSelected || isHovered
-                          ? "#bbf7d0"
-                          : "#bae6fd"
-                      }
-                      stroke={
-                        isSold
-                          ? "#0f172a"
-                          : isUnavailable
-                          ? "#94a3b8"
-                          : isSelected || isHovered
-                          ? "#86efac"
-                          : "#93c5fd"
-                      }
-                      strokeWidth={1.5}
+                      fill={fill}
+                      stroke={stroke}
+                      strokeWidth={sw}
                       onMouseDown={(e) => e.stopPropagation()}
                       onPointerDown={(e) => e.stopPropagation()}
-                      onClick={() => !isSold && !isUnavailable && onSeatToggle(seat.id)}
-                      onMouseEnter={() => !isSold && !isUnavailable && setHoveredSeatId(seat.id)}
+                      onClick={() => !isUnavailable && onSeatToggle(seat.id)}
+                      onMouseEnter={() => !isUnavailable && setHoveredSeatId(seat.id)}
                       onMouseLeave={() => setHoveredSeatId((prev) => (prev === seat.id ? null : prev))}
                     >
                       <title>{seatTitleById?.get(seat.id) || `${seatLabelWord} ${seat.seat_label}`}</title>
@@ -359,21 +506,23 @@ const ZOOM_STEP = 0.25;
 /** Eventim tarzı: salon planını büyük alan içinde zoom/pan ile kullanılabilir yapar. Satılmış koltuklar dolu gösterilir. */
 function SeatMapWithZoom({
   sections,
-  selectedSeatIds,
+  heldSeatIds,
   soldSeatIds,
   onSeatToggle,
-  sectionColors,
+  seatCategoryHexBySeatId,
   selectableSeatIds,
+  salesBlockedSeatIds,
   seatTitleById,
   stageLabel,
   seatLabelWord,
 }: {
   sections: SeatPlanSection[];
-  selectedSeatIds: Set<string>;
+  heldSeatIds: Set<string>;
   soldSeatIds: Set<string>;
   onSeatToggle: (seatId: string) => void;
-  sectionColors: Map<string, string>;
+  seatCategoryHexBySeatId: Map<string, string>;
   selectableSeatIds?: Set<string>;
+  salesBlockedSeatIds?: Set<string>;
   seatTitleById?: Map<string, string>;
   stageLabel: string;
   seatLabelWord: string;
@@ -440,7 +589,7 @@ function SeatMapWithZoom({
   const zoomIn = () => setScale((s) => Math.min(MAX_ZOOM, s + ZOOM_STEP));
   const zoomOut = () => setScale((s) => Math.max(MIN_ZOOM, s - ZOOM_STEP));
   const resetView = () => {
-    setScale(1.2);
+    setScale(1);
     setPan({ x: 0, y: 0 });
   };
 
@@ -478,7 +627,7 @@ function SeatMapWithZoom({
       <div
         ref={containerRef}
         className="overflow-hidden rounded-lg border border-slate-200 bg-white touch-none"
-        style={{ minHeight: 420, maxHeight: "70vh", cursor: isDragging ? "grabbing" : "grab" }}
+        style={{ minHeight: 520, maxHeight: "min(78vh, 800px)", cursor: isDragging ? "grabbing" : "grab" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseUp}
@@ -491,7 +640,7 @@ function SeatMapWithZoom({
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             transformOrigin: "0 0",
             width: "100%",
-            minHeight: 468,
+            minHeight: 520,
             display: "flex",
             justifyContent: "center",
           }}
@@ -499,11 +648,12 @@ function SeatMapWithZoom({
         >
           <SeatMapSvg
             sections={sections}
-            selectedSeatIds={selectedSeatIds}
+            heldSeatIds={heldSeatIds}
             soldSeatIds={soldSeatIds}
             onSeatToggle={handleSeatClick}
-            sectionColors={sectionColors}
+            seatCategoryHexBySeatId={seatCategoryHexBySeatId}
             selectableSeatIds={selectableSeatIds}
+            salesBlockedSeatIds={salesBlockedSeatIds}
             seatTitleById={seatTitleById}
             stageLabel={stageLabel}
             seatLabelWord={seatLabelWord}
@@ -512,6 +662,15 @@ function SeatMapWithZoom({
       </div>
     </div>
   );
+}
+
+/** Mekan galerisi: tüm foto kutuları aynı genişlikte (satır başına eşit sütun). */
+function venuePhotoGridColsClass(count: number): string {
+  if (count <= 1) return "grid-cols-1 max-w-xl mx-auto";
+  if (count === 2) return "grid-cols-2";
+  if (count === 3) return "grid-cols-3";
+  if (count === 4) return "grid-cols-2 sm:grid-cols-4";
+  return "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";
 }
 
 /** Bilet açıklamasındaki "Min. X adet." ifadesinden minimum adedi döndürür (grup indirimli bilet). */
@@ -529,7 +688,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const locale = (useLocale() as "tr" | "de" | "en") || localeProp;
   const searchParams = useSearchParams();
   const showSeatGridDebug = searchParams.get("seatDebug") === "1";
-  const { addItem, removeSeatItem, totalItems } = useCart();
+  const { addItem, removeSeatItem, totalItems, items: cartItems } = useCart();
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
@@ -552,6 +711,24 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [seatingPlanName, setSeatingPlanName] = useState("");
   const [seatingPlanLoading, setSeatingPlanLoading] = useState(false);
   const [selectedSeatIds, setSelectedSeatIds] = useState<Set<string>>(new Set());
+
+  const cartSeatIdsForEvent = useMemo(() => {
+    const s = new Set<string>();
+    for (const it of cartItems) {
+      if (it.eventId !== event.id) continue;
+      for (const id of it.seatIds || []) s.add(id);
+    }
+    return s;
+  }, [cartItems, event.id]);
+
+  /** Plan rengi: anlık seçim + sepet (satın alınana kadar fosforlu yeşil). */
+  const heldSeatIds = useMemo(() => {
+    const u = new Set<string>();
+    selectedSeatIds.forEach((id) => u.add(id));
+    cartSeatIdsForEvent.forEach((id) => u.add(id));
+    return u;
+  }, [selectedSeatIds, cartSeatIdsForEvent]);
+
   /** Satılmış koltuklar (completed siparişlerdeki order_seats) – salon planında dolu gösterilir, seçilemez */
   const [soldSeatIds, setSoldSeatIds] = useState<Set<string>>(new Set());
   /** Eventim tarzı: "list" = liste görünümü, "map" = salon planı (şematik) */
@@ -563,6 +740,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   /** Koltuk geçici rezervasyonları için anonim oturum kimliği */
   const [seatHoldSessionId, setSeatHoldSessionId] = useState<string | null>(null);
   const [venueFaqOpen, setVenueFaqOpen] = useState(false);
+  /** Mekan foto galerisi lightbox (0..n-1) */
+  const [venueGalleryIndex, setVenueGalleryIndex] = useState<number | null>(null);
   const [reminderEmail, setReminderEmail] = useState("");
   const [reminderPending, setReminderPending] = useState(false);
   const [reminderResult, setReminderResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -571,6 +750,35 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const stageLabel = locale === "de" ? "Bühne" : locale === "en" ? "Stage" : "Sahne";
   const rowLabelWord = locale === "de" ? "Reihe" : locale === "en" ? "Row" : "Sıra";
   const seatLabelWord = locale === "de" ? "Platz" : locale === "en" ? "Seat" : "Koltuk";
+  const venuePhotoUrls = useMemo(() => {
+    if (!venue) return [];
+    return [venue.image_url_1, venue.image_url_2, venue.image_url_3, venue.image_url_4, venue.image_url_5]
+      .map((u) => String(u ?? "").trim())
+      .filter((u) => u.length > 0);
+  }, [venue]);
+
+  useEffect(() => {
+    if (venueGalleryIndex === null || venuePhotoUrls.length === 0) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setVenueGalleryIndex(null);
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        setVenueGalleryIndex((i) => (i !== null && i > 0 ? i - 1 : i));
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        setVenueGalleryIndex((i) =>
+          i !== null && i < venuePhotoUrls.length - 1 ? i + 1 : i
+        );
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [venueGalleryIndex, venuePhotoUrls.length]);
+
   useEffect(() => {
     fetch("/api/settings")
       .then((r) => r.json())
@@ -634,7 +842,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       try {
         const [planRes, sectionsRes] = await Promise.all([
           supabase.from("seating_plans").select("name").eq("id", seatingPlanId).single(),
-          supabase.from("seating_plan_sections").select("id, name, ticket_type_label").eq("seating_plan_id", seatingPlanId).order("sort_order"),
+          supabase.from("seating_plan_sections").select("id, name, ticket_type_label, section_align").eq("seating_plan_id", seatingPlanId).order("sort_order"),
         ]);
         if (cancelled) return;
         const sections = sectionsRes.data;
@@ -658,18 +866,23 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           }
           return;
         }
-        const { data: seats } = await supabase
-          .from("seats")
-          .select("id, row_id, seat_label")
-          .in("row_id", rows.map((r) => r.id))
-          .range(0, 19999);
+        const seats = await fetchAllSeatsByRowIds<{
+          id: string;
+          row_id: string;
+          seat_label: string;
+          sales_blocked?: boolean | null;
+        }>(supabase, rows.map((r) => r.id), "id, row_id, seat_label, sales_blocked");
         if (cancelled) return;
         const rowsBySection = new Map<string, SeatPlanRow[]>();
         rows.forEach((r) => {
           const list = rowsBySection.get(r.section_id) || [];
-          const rowSeats = (seats || [])
+          const rowSeats = seats
             .filter((s) => s.row_id === r.id)
-            .map((s) => ({ id: s.id, seat_label: s.seat_label }))
+            .map((s) => ({
+              id: s.id,
+              seat_label: s.seat_label,
+              sales_blocked: (s as { sales_blocked?: boolean | null }).sales_blocked === true,
+            }))
             .sort((a, b) => {
               const na = Number(String(a.seat_label).trim());
               const nb = Number(String(b.seat_label).trim());
@@ -700,6 +913,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             id: s.id,
             name: s.name,
             ticket_type_label: (s as { ticket_type_label?: string }).ticket_type_label ?? null,
+            section_align: (s as { section_align?: "left" | "center" | "right" | null }).section_align ?? null,
             rows: sorted,
           };
         });
@@ -740,6 +954,28 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     return buildMusensaalIdMaps(seatingPlanData);
   }, [isMusensaalPlan, seatingPlanData]);
 
+  const salesBlockedSeatIds = useMemo(() => {
+    const ids = new Set<string>();
+    seatingPlanData?.forEach((sec) =>
+      sec.rows.forEach((row) =>
+        row.seats.forEach((seat) => {
+          if (seat.sales_blocked) ids.add(seat.id);
+        })
+      )
+    );
+    return ids;
+  }, [seatingPlanData]);
+
+  const musensaalSelectableIds = useMemo(() => {
+    if (!musensaalIdMaps) return undefined;
+    const out = new Set<string>();
+    for (const logicalId of musensaalIdMaps.logicalToDbId.keys()) {
+      const dbId = musensaalIdMaps.logicalToDbId.get(logicalId);
+      if (dbId && !salesBlockedSeatIds.has(dbId)) out.add(logicalId);
+    }
+    return out;
+  }, [musensaalIdMaps, salesBlockedSeatIds]);
+
   const imagePlanSeats = useMemo(() => {
     if (!seatingPlanData?.length || !isImagePlan) return [];
     return buildTheaterDuisburgSeatItemsWithCoords(seatingPlanData);
@@ -752,17 +988,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     }
     return m;
   }, [imagePlanSeats]);
-
-  const sectionColorMap = useMemo(() => {
-    const m = new Map<string, string>();
-    if (!seatingPlanData?.length) return m;
-    seatingPlanData.forEach((section, idx) => {
-      const { ticket } = getTicketForSection(section, idx, availableTickets);
-      const label = String(section.ticket_type_label || ticket.name || section.name || "");
-      m.set(section.id, getCategoryColorHex(label));
-    });
-    return m;
-  }, [seatingPlanData, availableTickets]);
 
   const seatMetaById = useMemo(() => {
     const seatToSection = new Map<string, SeatPlanSection>();
@@ -788,7 +1013,16 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       });
     });
     return meta;
-  }, [seatingPlanData, availableTickets, duisburgSeatCaptionById]);
+  }, [seatingPlanData, availableTickets, duisburgSeatCaptionById, rowLabelWord, seatLabelWord]);
+
+  const seatCategoryHexBySeatId = useMemo(() => {
+    const m = new Map<string, string>();
+    seatMetaById.forEach((meta, seatId) => {
+      const name = String(meta.ticket?.name || "").trim();
+      m.set(seatId, getTicketCategoryColorHex(name));
+    });
+    return m;
+  }, [seatMetaById]);
 
   const seatCategoryOptions = useMemo(() => {
     const set = new Set<string>();
@@ -813,24 +1047,29 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     const m = new Map<string, string>();
     seatMetaById.forEach((meta, seatId) => {
       const price = formatPrice(Number(meta.ticket?.price || 0), event.currency);
-      m.set(seatId, `${meta.venueLine} · ${meta.ticket?.name || "Bilet"} · ${price}`);
+      const tname = meta.ticket?.name || "Bilet";
+      m.set(seatId, `${tname} · ${meta.venueLine} · ${price}`);
     });
     return m;
   }, [seatMetaById, event.currency]);
 
   const handleSeatToggle = useCallback(
     async (seatId: string) => {
+      if (salesBlockedSeatIds.has(seatId)) return;
       const sessionId = ensureSeatHoldSessionId(seatHoldSessionId);
       if (!sessionId) return;
       if (sessionId !== seatHoldSessionId) setSeatHoldSessionId(sessionId);
-      const isSelected = selectedSeatIds.has(seatId);
+      const inCartOnly = cartSeatIdsForEvent.has(seatId) && !selectedSeatIds.has(seatId);
+      const isSelected = selectedSeatIds.has(seatId) || inCartOnly;
 
       if (isSelected) {
-        setSelectedSeatIds((prev) => {
-          const next = new Set(prev);
-          next.delete(seatId);
-          return next;
-        });
+        if (selectedSeatIds.has(seatId)) {
+          setSelectedSeatIds((prev) => {
+            const next = new Set(prev);
+            next.delete(seatId);
+            return next;
+          });
+        }
         removeSeatItem(event.id, seatId);
         try {
           await fetch("/api/seat-holds", {
@@ -844,7 +1083,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         return;
       }
 
-      if (selectedSeatIds.size >= maxTicketsPerOrder) {
+      if (heldSeatIds.size >= maxTicketsPerOrder) {
         setActionMessage(
           locale === "de"
             ? `Max. ${maxTicketsPerOrder} Platze pro Bestellung.`
@@ -918,13 +1157,16 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     [
       addItem,
       availableTickets,
+      cartSeatIdsForEvent,
       event,
+      heldSeatIds,
       locale,
       localized.title,
       maxTicketsPerOrder,
       removeSeatItem,
       seatHoldSessionId,
       seatMetaById,
+      salesBlockedSeatIds,
       selectableSeatIdsByCategory,
       selectedSeatIds,
       selectedTicketType,
@@ -1274,7 +1516,10 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             </ul>
                           </div>
                         )}
-                        <p className="text-sm text-slate-600 mb-3">Bölüm ve koltuk seçin. Her bölümün fiyatı, etkinlikte tanımlı bilet türü adıyla eşleşir.</p>
+                        <p className="text-sm text-slate-600 mb-3">
+                          Bölüm ve koltuk seçin. Renkler, etkinlik bilet adıyla eşleşen kategoriye göredir (VIP, Kategori 1–10 vb.). Sırada veya bölümde
+                          yazdığınız bilet türü, tam ad veya <strong>Bölüm + kısa etiket</strong> (örn. Blok A vip) ile eşleşir.
+                        </p>
                         <div className="flex gap-2 mb-4">
                           <button
                             type="button"
@@ -1310,12 +1555,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               <SalonPlanViewer
                                 plan={getPlan("musensaal")!}
                                 selectedIds={new Set(
-                                  Array.from(selectedSeatIds).map((id) => musensaalIdMaps.dbIdToLogical.get(id)).filter(Boolean) as string[]
+                                  Array.from(heldSeatIds).map((id) => musensaalIdMaps.dbIdToLogical.get(id)).filter(Boolean) as string[]
                                 )}
                                 soldIds={new Set(
                                   Array.from(soldSeatIds).map((id) => musensaalIdMaps.dbIdToLogical.get(id)).filter(Boolean) as string[]
                                 )}
-                                selectableIds={new Set(musensaalIdMaps.logicalToDbId.keys())}
+                                selectableIds={musensaalSelectableIds}
                                 onToggle={(logicalId) => {
                                   const dbId = musensaalIdMaps.logicalToDbId.get(logicalId);
                                   if (!dbId) return;
@@ -1332,8 +1577,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 showSeatGridDebug={showSeatGridDebug}
                                 seats={imagePlanSeats}
                                 getCoord={getTheaterDuisburgCoord}
-                                selectedSeatIds={selectedSeatIds}
+                                selectedSeatIds={heldSeatIds}
                                 soldSeatIds={soldSeatIds}
+                                blockedSeatIds={salesBlockedSeatIds}
                                 onSeatToggle={(seatId) => void handleSeatToggle(seatId)}
                               />
                             ) : (
@@ -1352,24 +1598,22 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               ) : null}
                               <SeatMapWithZoom
                                 sections={seatingPlanData}
-                                selectedSeatIds={selectedSeatIds}
+                                heldSeatIds={heldSeatIds}
                                 soldSeatIds={soldSeatIds}
                                 onSeatToggle={(seatId) => void handleSeatToggle(seatId)}
-                                sectionColors={sectionColorMap}
+                                seatCategoryHexBySeatId={seatCategoryHexBySeatId}
                                 selectableSeatIds={selectableSeatIdsByCategory}
+                                salesBlockedSeatIds={salesBlockedSeatIds}
                                 seatTitleById={seatTitleById}
                                 stageLabel={stageLabel}
                                 seatLabelWord={seatLabelWord}
                               />
-                              <p className="mt-2 text-xs text-slate-500">
-                                Bu görünüm, yönetim panelinde tanımladığınız bölüm / sıra / koltuk verisine göredir (Rosengarten Musensaal çizimi değildir).
-                              </p>
                               </>
                             )}
                           </div>
                         )}
                         {seatMapView === "list" && (
-                          <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                          <div className="space-y-4 max-h-[min(52vh,520px)] overflow-y-auto">
                             {seatingPlanData.map((section, sectionIdx) => {
                               const { ticket: sectionTicket, matchedBy } = getTicketForSection(section, sectionIdx, availableTickets);
                               return (
@@ -1381,33 +1625,72 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       <span className="ml-2 text-xs text-slate-500">({section.ticket_type_label} → {sectionTicket.name || "—"})</span>
                                     )}
                                   </p>
-                                  {section.rows.map((row) => (
-                                    <div key={row.id} className="flex flex-wrap items-center gap-2 mb-2">
-                                      <span className="text-sm font-medium text-slate-600 w-16">{rowLabelWord} {row.row_label}</span>
-                                      <div className="flex flex-wrap gap-1">
+                                  {section.rows.map((row) => {
+                                    const { ticket: rowTk } = getTicketForRow(section, row, sectionIdx, availableTickets);
+                                    return (
+                                    <div key={row.id} className="mb-3">
+                                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-1.5">
+                                        <span className="text-sm font-medium text-slate-600 w-16 shrink-0">{rowLabelWord} {row.row_label}</span>
+                                        <span className="text-xs font-semibold text-primary-800">{rowTk.name || "—"}</span>
+                                        <span className="text-xs text-slate-500">
+                                          {formatPrice(Number(rowTk.price || 0), event.currency)} / {seatLabelWord}
+                                        </span>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1 pl-0 sm:pl-16">
                                         {row.seats.map((seat) => {
-                                          const isSelected = selectedSeatIds.has(seat.id);
+                                          const isHeld = heldSeatIds.has(seat.id);
                                           const isSold = soldSeatIds.has(seat.id);
+                                          const isBlocked = salesBlockedSeatIds.has(seat.id);
                                           const handleClick = async () => {
-                                            if (isSold) return;
+                                            if (isSold || isBlocked) return;
                                             await handleSeatToggle(seat.id);
                                           };
+                                          const catHex = seatCategoryHexBySeatId.get(seat.id) ?? "#64748b";
+                                          const softFill = lightenHex(catHex, 0.4);
+                                          const hoverFill = lightenHex(catHex, 0.25);
+                                          const fluoFill = HELD_SEAT_FLUO;
                                           return (
                                             <button
                                               key={seat.id}
                                               type="button"
-                                              disabled={isSold || (selectableSeatIdsByCategory ? !selectableSeatIdsByCategory.has(seat.id) : false)}
+                                              disabled={
+                                                isSold ||
+                                                isBlocked ||
+                                                (selectableSeatIdsByCategory ? !selectableSeatIdsByCategory.has(seat.id) : false)
+                                              }
                                               onClick={handleClick}
-                                              className={`w-9 h-9 rounded text-sm font-medium transition-colors ${
+                                              className={`w-9 h-9 rounded-full text-sm font-medium transition-colors outline-none focus-visible:outline-none ${
                                                 isSold
-                                                  ? "bg-slate-600 text-slate-200 cursor-not-allowed ring-1 ring-slate-700"
+                                                  ? "bg-slate-300 text-slate-700 cursor-not-allowed ring-0"
+                                                  : isBlocked
+                                                    ? "bg-amber-200 text-amber-950 cursor-not-allowed ring-1 ring-amber-400"
                                                   : selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seat.id)
-                                                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
-                                                  : isSelected
-                                                    ? "bg-green-200 text-slate-900"
-                                                    : "bg-sky-200 text-slate-800 hover:bg-green-200"
-                                              } ${!isSelected && !isSold && selectedSeatIds.size >= maxTicketsPerOrder ? "opacity-50 cursor-not-allowed" : ""}`}
-                                              title={seatTitleById.get(seat.id) || (isSold ? `${seat.seat_label} (satıldı)` : undefined)}
+                                                    ? "bg-slate-300 text-slate-500 cursor-not-allowed ring-0"
+                                                  : isHeld
+                                                    ? "text-slate-900 cursor-pointer ring-0 shadow-none border-0"
+                                                    : "text-slate-900 ring-0 border-0 hover:bg-[#39ff14] hover:text-slate-900"
+                                              } ${!isHeld && !isSold && !isBlocked && heldSeatIds.size >= maxTicketsPerOrder ? "opacity-50 cursor-not-allowed" : ""}`}
+                                              style={
+                                                isSold || isBlocked || (selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seat.id))
+                                                  ? undefined
+                                                  : isHeld
+                                                    ? { backgroundColor: fluoFill }
+                                                    : { backgroundColor: softFill }
+                                              }
+                                              onMouseEnter={(e) => {
+                                                if (isSold || isBlocked || isHeld) return;
+                                                if (selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seat.id)) return;
+                                                e.currentTarget.style.backgroundColor = hoverFill;
+                                              }}
+                                              onMouseLeave={(e) => {
+                                                if (isSold || isBlocked || isHeld) return;
+                                                if (selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seat.id)) return;
+                                                e.currentTarget.style.backgroundColor = softFill;
+                                              }}
+                                              title={
+                                                seatTitleById.get(seat.id) ||
+                                                (isSold ? `${seat.seat_label} (satıldı)` : isBlocked ? `${seat.seat_label} (satışa kapalı)` : undefined)
+                                              }
                                             >
                                               {seat.seat_label}
                                             </button>
@@ -1415,7 +1698,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                         })}
                                       </div>
                                     </div>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               );
                             })}
@@ -1481,7 +1765,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           const grandTotal = totalPrice + processingFee;
                           return (
                             <>
-                              <ul className="space-y-2 max-h-56 overflow-y-auto mb-4">
+                              <ul className="mb-4 space-y-2">
                                 {selectedSeatsList.map((item) => (
                                   <li key={item.seatId} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-slate-100 px-3 py-2 text-sm shadow-sm">
                                     <span className="text-slate-700 truncate" title={item.venueLine}>
@@ -1604,7 +1888,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               <p className="text-sm text-rose-800 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
                                 Satışta bilet yok; sepete eklenemez. Yönetimden bilet stoğu açın veya &quot;Fiyat kategorisine göre&quot; modunu kullanın.
                               </p>
-                              <ul className="space-y-2 max-h-56 overflow-y-auto">
+                              <ul className="space-y-2">
                                 {selectedSeatsList.map((item) => (
                                   <li key={item.seatId} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-slate-100 px-3 py-2 text-sm shadow-sm">
                                     <span className="text-slate-700 truncate" title={item.venueLine}>
@@ -1627,32 +1911,40 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           );
                         })()
                         ) : (
-                          hasSeatSelectionAddedToCart ? (
+                          hasSeatSelectionAddedToCart || cartSeatIdsForEvent.size > 0 ? (
                             <div className="space-y-3 py-4">
                               <p className="text-sm text-slate-700">
-                                {locale === "de"
-                                  ? "Ihre ausgewählten Plätze wurden in den Warenkorb gelegt."
-                                  : locale === "en"
-                                  ? "Your selected seats have been added to the shopping cart."
-                                  : "Seçtiğiniz koltuklar alışveriş sepetinize eklendi."}
+                                {hasSeatSelectionAddedToCart
+                                  ? locale === "de"
+                                    ? "Ihre ausgewählten Plätze wurden in den Warenkorb gelegt."
+                                    : locale === "en"
+                                      ? "Your selected seats have been added to the shopping cart."
+                                      : "Seçtiğiniz koltuklar alışveriş sepetinize eklendi."
+                                  : locale === "de"
+                                    ? "Für diese Veranstaltung befinden sich bereits Plätze in Ihrem Warenkorb."
+                                    : locale === "en"
+                                      ? "You already have seats for this event in your shopping cart."
+                                      : "Bu etkinlik için sepetinizde koltuklar bulunmaktadır."}
                               </p>
                               <p className="text-xs text-slate-500">
-                                {locale === "de"
-                                  ? "Bitte gehen Sie zum Warenkorb, um Ihre Buchung abzuschließen."
-                                  : locale === "en"
-                                  ? "Please go to your shopping cart to complete the payment."
-                                  : "Lütfen alışveriş sepetine gidip ödemenizi tamamlayın."}
+                                {hasSeatSelectionAddedToCart
+                                  ? locale === "de"
+                                    ? "Bitte gehen Sie zum Warenkorb, um Ihre Buchung abzuschließen."
+                                    : locale === "en"
+                                      ? "Please go to your shopping cart to complete the payment."
+                                      : "Lütfen alışveriş sepetine gidip ödemenizi tamamlayın."
+                                  : locale === "de"
+                                    ? "Bitte gehen Sie zum Warenkorb, um die Zahlung abzuschließen. Weitere Plätze können Sie im Plan auswählen, sofern Ihr Limit es zulässt."
+                                    : locale === "en"
+                                      ? "Go to your cart to complete payment. You can add more seats from the plan if your order limit allows."
+                                      : "Ödemeyi tamamlamak için sepete gidin. Kotanız uygunsa plandan ek koltuk da seçebilirsiniz."}
                               </p>
                               <div className="flex flex-col gap-2">
                                 <Link
                                   href={`/${locale}/sepet`}
                                   className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                                 >
-                                  {locale === "de"
-                                    ? "Zur Kasse"
-                                    : locale === "en"
-                                    ? "Proceed to checkout"
-                                    : "Odemeye gec"}
+                                  {tCheckout("goToCheckout")}
                                 </Link>
                               </div>
                             </div>
@@ -1661,8 +1953,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               {locale === "de"
                                 ? "Wählen Sie Plätze im Plan."
                                 : locale === "en"
-                                ? "Select seats from the seating plan."
-                                : "Plandan koltuk seçin."}
+                                  ? "Select seats from the seating plan."
+                                  : "Plandan koltuk seçin."}
                             </p>
                           )
                         )}
@@ -1928,22 +2220,41 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   </Link>
                 </div>
                 <div className="space-y-6">
-                  {(venue.image_url_1 || venue.image_url_2) && (
-                    <div className="flex gap-2">
-                      {venue.image_url_1 && (
-                        <img
-                          src={venue.image_url_1}
-                          alt={`${venue.name} - Fotoğraf 1`}
-                          className="rounded-lg border border-slate-200 object-cover h-32 w-full max-w-[200px]"
-                        />
-                      )}
-                      {venue.image_url_2 && (
-                        <img
-                          src={venue.image_url_2}
-                          alt={`${venue.name} - Fotoğraf 2`}
-                          className="rounded-lg border border-slate-200 object-cover h-32 w-full max-w-[200px]"
-                        />
-                      )}
+                  {venuePhotoUrls.length > 0 && (
+                    <div>
+                      <h3 className="font-semibold text-slate-800 mb-3">
+                        {locale === "de" ? "Fotos" : locale === "en" ? "Photos" : "Fotoğraflar"}
+                      </h3>
+                      <p className="text-sm text-slate-500 mb-3">
+                        {locale === "de"
+                          ? "Tippen zum Vergrößern · Pfeiltasten in der Galerie"
+                          : locale === "en"
+                          ? "Tap to enlarge · Arrow keys in gallery"
+                          : "Büyütmek için tıklayın · Galeride ok tuşları"}
+                      </p>
+                      <div className={`grid w-full gap-3 ${venuePhotoGridColsClass(venuePhotoUrls.length)}`}>
+                        {venuePhotoUrls.map((url, idx) => (
+                          <button
+                            key={`${url}-${idx}`}
+                            type="button"
+                            onClick={() => setVenueGalleryIndex(idx)}
+                            className="group relative aspect-[4/3] w-full min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                            aria-label={
+                              locale === "en"
+                                ? `Open photo ${idx + 1} in gallery`
+                                : locale === "de"
+                                ? `Foto ${idx + 1} in Galerie öffnen`
+                                : `Fotoğraf ${idx + 1} galeride aç`
+                            }
+                          >
+                            <img
+                              src={url}
+                              alt={`${venue.name} – ${idx + 1}`}
+                              className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+                            />
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                   {venue.seating_layout_description && (
@@ -1955,7 +2266,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         <img
                           src={venue.seating_layout_image_url}
                           alt={`${venue.name} oturma planı`}
-                          className="mt-3 rounded-lg border border-slate-200 max-w-md"
+                          className="mt-3 w-full max-w-2xl rounded-lg border border-slate-200 object-contain"
                         />
                         {hasSeatingPlan && (
                           <p className="mt-2 text-xs text-slate-500">
@@ -1981,9 +2292,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   {(() => {
                     const mapUrl = extractMapEmbedUrl(venue.map_embed_url);
                     return mapUrl ? (
-                      <div>
+                      <div className="w-full">
                         <h3 className="font-semibold text-slate-800 mb-2">{t("map")}</h3>
-                        <div className="aspect-video w-full max-w-2xl overflow-hidden rounded-lg border border-slate-200">
+                        <div className="h-40 w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 sm:h-44">
                           <iframe
                             src={mapUrl}
                             width="100%"
@@ -2043,6 +2354,59 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               </div>
             )}
+
+        {venueGalleryIndex !== null && venuePhotoUrls.length > 0 && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-label={locale === "en" ? "Photo gallery" : locale === "de" ? "Fotogalerie" : "Foto galerisi"}
+            onClick={() => setVenueGalleryIndex(null)}
+          >
+            <button
+              type="button"
+              className="absolute right-3 top-3 rounded-full bg-white/15 p-2 text-white hover:bg-white/25"
+              aria-label={locale === "en" ? "Close" : locale === "de" ? "Schließen" : "Kapat"}
+              onClick={() => setVenueGalleryIndex(null)}
+            >
+              <X className="h-6 w-6" />
+            </button>
+            {venueGalleryIndex > 0 && (
+              <button
+                type="button"
+                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/15 p-2 text-white hover:bg-white/25 sm:left-4"
+                aria-label={locale === "en" ? "Previous" : locale === "de" ? "Zurück" : "Önceki"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setVenueGalleryIndex((i) => (i !== null && i > 0 ? i - 1 : i));
+                }}
+              >
+                <ChevronLeft className="h-8 w-8" />
+              </button>
+            )}
+            {venueGalleryIndex < venuePhotoUrls.length - 1 && (
+              <button
+                type="button"
+                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-white/15 p-2 text-white hover:bg-white/25 sm:right-4"
+                aria-label={locale === "en" ? "Next" : locale === "de" ? "Weiter" : "Sonraki"}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setVenueGalleryIndex((i) =>
+                    i !== null && i < venuePhotoUrls.length - 1 ? i + 1 : i
+                  );
+                }}
+              >
+                <ChevronRight className="h-8 w-8" />
+              </button>
+            )}
+            <img
+              src={venuePhotoUrls[venueGalleryIndex]}
+              alt=""
+              className="max-h-[min(85vh,900px)] max-w-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+        )}
         </div>
       </div>
     </div>

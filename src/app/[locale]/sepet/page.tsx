@@ -8,8 +8,32 @@ import { supabase } from "@/lib/supabase-client";
 import Header from "@/components/Header";
 import { Link, useRouter } from "@/i18n/navigation";
 import { formatPrice } from "@/lib/formatPrice";
-import { formatEventDateDMY } from "@/lib/date-utils";
-import { ShoppingCart, Trash2, Calendar, MapPin, Ticket, ChevronRight, CreditCard, Lock } from "lucide-react";
+import { formatEventDateDMY, formatCartEventWhen } from "@/lib/date-utils";
+import {
+  ShoppingCart,
+  Trash2,
+  Calendar,
+  MapPin,
+  Ticket,
+  ChevronRight,
+  CreditCard,
+  Lock,
+  Mail,
+  Truck,
+  Zap,
+  Clock,
+  ArrowLeft,
+  ArrowUp,
+} from "lucide-react";
+import {
+  shippingFeeForPhysicalDelivery,
+  type CheckoutPhysicalDelivery,
+} from "@/lib/checkout-shipping";
+import {
+  CART_EXPIRED_FLAG_KEY,
+  CART_EXPIRED_SNAPSHOT_KEY,
+  type CartExpiredSnapshot,
+} from "@/lib/cart-reservation";
 import TicketPrint from "@/components/TicketPrint";
 
 export default function CheckoutPage() {
@@ -19,7 +43,16 @@ export default function CheckoutPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useSimpleAuth();
 
-  const { items, removeItem, updateQuantity, updateItemAvailable, clearCart, totalPrice } = useCart();
+  const {
+    items,
+    removeItem,
+    updateQuantity,
+    updateItemAvailable,
+    clearCart,
+    totalPrice,
+    totalItems,
+    reservationExpiresAt,
+  } = useCart();
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
   const [buyerAddress, setBuyerAddress] = useState("");
@@ -67,7 +100,56 @@ export default function CheckoutPage() {
     loadProfile();
   }, [user, user?.email]);
   const [currentStep, setCurrentStep] = useState(1);
+  /** e_ticket = yalnızca e-posta/PDF; standard | express = basılı gönderim + kargo ücreti (checkout’ta bir kez). */
+  const [deliveryChoice, setDeliveryChoice] = useState<"e_ticket" | "standard" | "express">("e_ticket");
+  const [step2AddressError, setStep2AddressError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
+  const [resTick, setResTick] = useState(0);
+  const [showReservationExpired, setShowReservationExpired] = useState(false);
+  const [expiredSnapshot, setExpiredSnapshot] = useState<CartExpiredSnapshot | null>(null);
+
+  useEffect(() => {
+    try {
+      if (typeof window !== "undefined" && sessionStorage.getItem(CART_EXPIRED_FLAG_KEY) === "1") {
+        const raw = sessionStorage.getItem(CART_EXPIRED_SNAPSHOT_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as CartExpiredSnapshot;
+          if (parsed?.eventId) setExpiredSnapshot(parsed);
+        }
+        setShowReservationExpired(true);
+        sessionStorage.removeItem(CART_EXPIRED_FLAG_KEY);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (items.length > 0) {
+      setShowReservationExpired(false);
+      setExpiredSnapshot(null);
+      try {
+        sessionStorage.removeItem(CART_EXPIRED_SNAPSHOT_KEY);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [items.length]);
+
+  useEffect(() => {
+    if (!reservationExpiresAt || items.length === 0) return;
+    const id = window.setInterval(() => setResTick((n) => n + 1), 1000);
+    return () => clearInterval(id);
+  }, [reservationExpiresAt, items.length]);
+
+  const reservationSecLeft =
+    reservationExpiresAt && items.length > 0
+      ? Math.max(0, Math.ceil((reservationExpiresAt - Date.now()) / 1000))
+      : 0;
+  const reservationTimeStr =
+    reservationSecLeft > 0
+      ? `${Math.floor(reservationSecLeft / 60)}:${String(reservationSecLeft % 60).padStart(2, "0")}`
+      : "0:00";
 
   // Sepet açıldığında güncel stok bilgisini çek; stoktan fazla adet varsa stoka indir
   useEffect(() => {
@@ -117,7 +199,16 @@ export default function CheckoutPage() {
     return sum;
   }, [items]);
 
-  const grandTotal = totalPrice + processingFeesTotal;
+  const checkoutCurrency = items[0]?.currency as import("@/types/database").EventCurrency | undefined;
+
+  const physicalDeliveryForCheckout: CheckoutPhysicalDelivery =
+    deliveryChoice === "e_ticket" ? "none" : deliveryChoice;
+  const shippingFeeOnce = shippingFeeForPhysicalDelivery(physicalDeliveryForCheckout);
+
+  const grandTotal = totalPrice + processingFeesTotal + shippingFeeOnce;
+  const subtotalUntilShipping = totalPrice + processingFeesTotal;
+  const displayGrandTotal =
+    currentStep === 1 ? subtotalUntilShipping : grandTotal;
 
   async function handleCompleteOrder(e: React.FormEvent) {
     e.preventDefault();
@@ -139,6 +230,12 @@ export default function CheckoutPage() {
       setError(t("cardFieldsRequired"));
       return;
     }
+    if (shippingFeeOnce > 0) {
+      if (!buyerAddress.trim() || !buyerPlz.trim() || !buyerCity.trim()) {
+        setError(t("addressRequiredShipping"));
+        return;
+      }
+    }
     setError(null);
     setIsPending(true);
     const orderResults: typeof results = [];
@@ -154,6 +251,7 @@ export default function CheckoutPage() {
       if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
 
       const feeChargedForEventId = new Set<string>();
+      let shippingApplied = false;
       for (const item of items) {
         const formData = new FormData();
         formData.append("ticket_id", item.ticketId);
@@ -163,6 +261,12 @@ export default function CheckoutPage() {
         if (buyerAddress.trim()) formData.append("buyer_address", buyerAddress.trim());
         if (buyerPlz.trim()) formData.append("buyer_plz", buyerPlz.trim());
         if (buyerCity.trim()) formData.append("buyer_city", buyerCity.trim());
+        const shouldApplyShippingForThisItem =
+          !shippingApplied && physicalDeliveryForCheckout !== "none";
+        formData.append(
+          "physical_delivery",
+          shouldApplyShippingForThisItem ? physicalDeliveryForCheckout : "none"
+        );
         if (item.seatIds && item.seatIds.length > 0) {
           formData.append("seat_ids", JSON.stringify(item.seatIds));
           if (seatHoldSessionId) {
@@ -184,6 +288,7 @@ export default function CheckoutPage() {
         const data = await res.json();
 
         if (data.success) {
+          if (shouldApplyShippingForThisItem) shippingApplied = true;
           if (shouldApplyProcessingFee) feeChargedForEventId.add(item.eventId);
           const od = data.orderDetails as
             | { price?: number; seatDetails?: Array<{ section_name: string; row_label: string; seat_label: string }> }
@@ -239,12 +344,26 @@ export default function CheckoutPage() {
 
   const allSuccess = results.length > 0 && results.every((r) => r.success);
 
+  const clearExpiredSession = () => {
+    setShowReservationExpired(false);
+    setExpiredSnapshot(null);
+    try {
+      sessionStorage.removeItem(CART_EXPIRED_SNAPSHOT_KEY);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const showExpiredFullPage =
+    showReservationExpired && items.length === 0 && results.length === 0 && !allSuccess;
+
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
       <Header />
 
-      <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="mx-auto max-w-6xl px-4 py-8">
         {/* Progress steps - Eventim style */}
+        {!showExpiredFullPage ? (
         <div className="mb-10 flex items-center justify-center gap-2 sm:gap-4">
           <button
             type="button"
@@ -297,8 +416,30 @@ export default function CheckoutPage() {
             </span>
           </button>
         </div>
+        ) : null}
 
-        <h1 className="mb-8 text-2xl font-bold text-slate-900 md:text-3xl">{t("title")}</h1>
+        {!showExpiredFullPage ? (
+        <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">{t("title")}</h1>
+          {items.length > 0 ? (
+            <p className="text-base font-semibold text-primary-600 md:text-lg">
+              {t("cartHeadlineSummary", {
+                count: totalItems,
+                total: formatPrice(displayGrandTotal, checkoutCurrency),
+              })}
+            </p>
+          ) : null}
+        </div>
+        ) : null}
+
+        {!showExpiredFullPage && items.length > 0 && reservationExpiresAt && reservationSecLeft > 0 ? (
+          <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-950 shadow-sm">
+            <Clock className="h-6 w-6 shrink-0 text-emerald-700" aria-hidden />
+            <p className="text-sm font-semibold sm:text-base">
+              {t("reservationTimer", { time: reservationTimeStr })}
+            </p>
+          </div>
+        ) : null}
 
         {!user && !authLoading && items.length > 0 ? (
           <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
@@ -351,6 +492,92 @@ export default function CheckoutPage() {
             </Link>
           </div>
         ) : items.length === 0 && results.length === 0 ? (
+          showExpiredFullPage ? (
+            <div className="pb-10">
+              <Link
+                href="/"
+                onClick={clearExpiredSession}
+                className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-800"
+              >
+                <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+                {t("backToShop")}
+              </Link>
+              <div className="mt-10 text-center px-2">
+                <h2 className="text-2xl font-bold text-primary-800 md:text-3xl">
+                  {t("reservationExpiredPageTitle")}
+                </h2>
+                <p className="mt-3 max-w-lg mx-auto text-base text-slate-600">
+                  {t("reservationExpiredPageSubtitle")}
+                </p>
+              </div>
+              {expiredSnapshot ? (
+                <div className="mx-auto mt-10 max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
+                  <div className="relative h-48 w-full overflow-hidden bg-slate-200">
+                    {expiredSnapshot.imageUrl && String(expiredSnapshot.imageUrl).trim() ? (
+                      <>
+                        <img
+                          src={expiredSnapshot.imageUrl}
+                          alt=""
+                          className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-50"
+                          aria-hidden
+                        />
+                        <div className="relative flex h-full items-center justify-center p-6">
+                          <img
+                            src={expiredSnapshot.imageUrl}
+                            alt=""
+                            className="max-h-40 w-auto max-w-[220px] rounded-lg object-cover shadow-md"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex h-full items-center justify-center bg-slate-100">
+                        <Ticket className="h-16 w-16 text-slate-300" aria-hidden />
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-6 text-left">
+                    <h3 className="text-xl font-bold text-slate-900">{expiredSnapshot.eventTitle}</h3>
+                    <p className="mt-2 text-sm text-slate-600">
+                      {expiredSnapshot.venue}, {expiredSnapshot.location}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {formatCartEventWhen(locale, expiredSnapshot.eventDate, expiredSnapshot.eventTime)}
+                    </p>
+                    <Link
+                      href={`/etkinlik/${expiredSnapshot.eventId}`}
+                      onClick={clearExpiredSession}
+                      className="mt-6 flex w-full items-center justify-center rounded-xl bg-primary-600 px-4 py-3.5 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+                    >
+                      {t("checkAvailability")}
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="mx-auto mt-10 max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-md">
+                  <p className="text-sm leading-relaxed whitespace-pre-line text-slate-700">
+                    {t("reservationExpiredNotice")}
+                  </p>
+                  <Link
+                    href="/"
+                    onClick={clearExpiredSession}
+                    className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white hover:bg-primary-700"
+                  >
+                    {t("continueShopping")}
+                  </Link>
+                </div>
+              )}
+              <div className="mt-14 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-800"
+                >
+                  <ArrowUp className="h-4 w-4 shrink-0" aria-hidden />
+                  {t("scrollToTop")}
+                </button>
+              </div>
+            </div>
+          ) : (
           <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
             <ShoppingCart className="mx-auto mb-4 h-16 w-16 text-slate-300" />
             <h2 className="mb-2 text-xl font-semibold text-slate-800">{t("emptyCart")}</h2>
@@ -362,8 +589,10 @@ export default function CheckoutPage() {
               {t("continueShopping")}
             </Link>
           </div>
+          )
         ) : (
-          <div className={currentStep === 3 ? "grid gap-8 lg:grid-cols-[1fr_360px] lg:items-start" : "space-y-6"}>
+          <div className="grid gap-8 lg:grid-cols-[1fr_minmax(280px,360px)] lg:items-start">
+            <div className="min-w-0 space-y-6">
             {/* Adım 1: Sepet */}
             {currentStep === 1 && (
               <div className="space-y-4">
@@ -397,17 +626,26 @@ export default function CheckoutPage() {
                       <Ticket className="h-4 w-4 text-primary-600" />
                       <span className="text-sm font-medium text-slate-700">{item.ticketName}</span>
                     </div>
-                    {item.seatCaptions && item.seatCaptions.length > 0 ? (
+                    {item.seatIds && item.seatIds.length > 0 ? (
                       <div className="mt-2">
                         <p className="text-xs font-semibold text-slate-700">
-                          Koltuklar ({item.seatCaptions.length})
+                          {t("seatsInCart", { count: item.seatIds.length })}
                         </p>
                         <ul className="mt-1 list-none space-y-0.5 pl-0 text-xs text-slate-600">
-                        {item.seatCaptions.map((line, idx) => (
-                          <li key={`${item.ticketId}-seat-${idx}`} className="truncate" title={line}>
-                            {line}
-                          </li>
-                        ))}
+                          {item.seatIds.map((seatId, idx) => {
+                            const line =
+                              item.seatCaptions?.[idx]?.trim() ||
+                              t("seatLineFallback", { n: idx + 1 });
+                            return (
+                              <li
+                                key={`${item.ticketId}-seat-${seatId}`}
+                                className="truncate"
+                                title={line}
+                              >
+                                {line}
+                              </li>
+                            );
+                          })}
                         </ul>
                       </div>
                     ) : null}
@@ -467,18 +705,117 @@ export default function CheckoutPage() {
             {/* Adım 2: Teslimat */}
             {currentStep === 2 && (
               <div className="space-y-4">
-              <div className="rounded-xl border border-slate-200 bg-white p-6">
-                <h2 className="mb-4 text-lg font-bold text-slate-900">{t("deliveryMethod")}</h2>
-                <div className="flex items-start gap-3 rounded-lg border-2 border-blue-500 bg-blue-50 p-4">
-                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-600 text-white">
-                    <Ticket className="h-5 w-5" />
+                <div className="rounded-xl border border-slate-200 bg-white p-6">
+                  <h2 className="mb-2 text-lg font-bold text-slate-900">{t("deliveryMethod")}</h2>
+                  <p className="mb-4 text-sm text-slate-600">{t("deliveryOptionsIntro")}</p>
+                  <div className="divide-y divide-slate-200 rounded-lg border border-slate-200 overflow-hidden">
+                    {(
+                      [
+                        {
+                          id: "e_ticket" as const,
+                          icon: Mail,
+                          title: t("eTicket"),
+                          desc: t("eTicketDesc"),
+                          fee: 0,
+                        },
+                        {
+                          id: "standard" as const,
+                          icon: Truck,
+                          title: t("shippingStandard"),
+                          desc: t("shippingStandardDesc"),
+                          fee: shippingFeeForPhysicalDelivery("standard"),
+                        },
+                        {
+                          id: "express" as const,
+                          icon: Zap,
+                          title: t("shippingExpress"),
+                          desc: t("shippingExpressDesc"),
+                          fee: shippingFeeForPhysicalDelivery("express"),
+                        },
+                      ] as const
+                    ).map((opt) => {
+                      const Icon = opt.icon;
+                      const selected = deliveryChoice === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => {
+                            setDeliveryChoice(opt.id);
+                            setStep2AddressError(null);
+                          }}
+                          className={`flex w-full items-start gap-3 p-4 text-left transition-colors ${
+                            selected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
+                          }`}
+                        >
+                          <div
+                            className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
+                              selected ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
+                            }`}
+                          >
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-slate-900">{opt.title}</p>
+                            <p className="mt-0.5 text-sm text-slate-600">{opt.desc}</p>
+                          </div>
+                          <div className="flex-shrink-0 text-right">
+                            {opt.fee > 0 ? (
+                              <span className="text-sm font-bold text-slate-900">
+                                +{formatPrice(opt.fee, checkoutCurrency)}
+                              </span>
+                            ) : (
+                              <span className="text-sm font-semibold text-emerald-700">{t("shippingIncluded")}</span>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
-                  <div>
-                    <p className="font-semibold text-slate-900">{t("eTicket")}</p>
-                    <p className="mt-1 text-sm text-slate-600">{t("eTicketDesc")}</p>
-                  </div>
+
+                  {deliveryChoice !== "e_ticket" ? (
+                    <div className="mt-6 space-y-3">
+                      <p className="text-sm font-medium text-slate-800">{t("shippingAddressTitle")}</p>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                          <label className="mb-2 block text-sm font-medium text-slate-600">
+                            {t("addressRequired")}
+                          </label>
+                          <input
+                            type="text"
+                            value={buyerAddress}
+                            onChange={(e) => setBuyerAddress(e.target.value)}
+                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                            placeholder={t("address")}
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-slate-600">{t("plz")}</label>
+                          <input
+                            type="text"
+                            value={buyerPlz}
+                            onChange={(e) => setBuyerPlz(e.target.value)}
+                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                            placeholder={t("plz")}
+                          />
+                        </div>
+                        <div>
+                          <label className="mb-2 block text-sm font-medium text-slate-600">{t("city")}</label>
+                          <input
+                            type="text"
+                            value={buyerCity}
+                            onChange={(e) => setBuyerCity(e.target.value)}
+                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                            placeholder={t("city")}
+                          />
+                        </div>
+                      </div>
+                      {step2AddressError ? (
+                        <p className="text-sm text-red-600">{step2AddressError}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
-              </div>
                 <div className="flex justify-between">
                   <button
                     type="button"
@@ -489,7 +826,16 @@ export default function CheckoutPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCurrentStep(3)}
+                    onClick={() => {
+                      if (deliveryChoice !== "e_ticket") {
+                        if (!buyerAddress.trim() || !buyerPlz.trim() || !buyerCity.trim()) {
+                          setStep2AddressError(t("addressRequiredShipping"));
+                          return;
+                        }
+                      }
+                      setStep2AddressError(null);
+                      setCurrentStep(3);
+                    }}
                     className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
                   >
                     {t("stepContinue")}
@@ -499,9 +845,8 @@ export default function CheckoutPage() {
               </div>
             )}
 
-            {/* Adım 3: Ödeme bilgileri + Müşteri bilgileri + Sipariş özeti */}
+            {/* Adım 3: Ödeme bilgileri + Müşteri bilgileri */}
             {currentStep === 3 && (
-              <>
               <div className="space-y-4">
               {/* Kredi kartı - üstte */}
               <div className="rounded-xl border border-slate-200 bg-white p-6">
@@ -611,11 +956,13 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 )}
-                <p className="mt-3 text-xs text-slate-500">{t("addressHint")}</p>
+                <p className="mt-3 text-xs text-slate-500">
+                  {deliveryChoice !== "e_ticket" ? t("addressHintPhysical") : t("addressHint")}
+                </p>
                 <div className="mt-3 grid gap-4 sm:grid-cols-2">
                   <div className="sm:col-span-2">
                     <label className="mb-2 block text-sm font-medium text-slate-600">
-                      {t("addressOptional")}
+                      {deliveryChoice !== "e_ticket" ? t("addressRequired") : t("addressOptional")}
                     </label>
                     <input
                       type="text"
@@ -663,63 +1010,99 @@ export default function CheckoutPage() {
                 </button>
               </div>
             </div>
+            )}
+            </div>
 
-            {/* Sağ: Sipariş özeti - sticky */}
-            <div className="lg:sticky lg:top-24">
+            {/* Sağ: Bestellübersicht — tüm adımlar */}
+            <aside className="lg:sticky lg:top-24">
               <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-6 text-lg font-bold text-slate-900">{t("yourOrder")}</h2>
-                <div className="space-y-3 border-b border-slate-200 pb-4">
-                  <div className="flex justify-between text-slate-600">
+                <h2 className="mb-4 text-lg font-bold text-slate-900">{t("orderOverview")}</h2>
+                <div className="space-y-4 border-b border-slate-200 pb-4">
+                  {items.map((item) => (
+                    <div key={item.ticketId} className="text-sm">
+                      <div className="flex justify-between gap-3 font-semibold text-slate-900">
+                        <span>
+                          {item.quantity} × {item.ticketName}
+                        </span>
+                        <span className="shrink-0">
+                          {formatPrice(
+                            item.price * item.quantity,
+                            item.currency as import("@/types/database").EventCurrency | undefined
+                          )}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-xs text-slate-500">
+                        {item.venue}, {item.location}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        {formatCartEventWhen(locale, item.eventDate, item.eventTime)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                  <div className="flex justify-between">
                     <span>{t("subtotal")}</span>
-                    <span>{formatPrice(totalPrice, items[0]?.currency as import("@/types/database").EventCurrency | undefined)}</span>
+                    <span>{formatPrice(totalPrice, checkoutCurrency)}</span>
                   </div>
                   {processingFeesTotal > 0 && (
-                    <div className="flex justify-between text-slate-600">
+                    <div className="flex justify-between">
                       <span>{t("fees")}</span>
-                      <span>
-                        {formatPrice(processingFeesTotal, items[0]?.currency as import("@/types/database").EventCurrency | undefined)}
-                      </span>
+                      <span>{formatPrice(processingFeesTotal, checkoutCurrency)}</span>
+                    </div>
+                  )}
+                  {currentStep >= 2 && shippingFeeOnce > 0 && (
+                    <div className="flex justify-between">
+                      <span>{t("shippingFeeLabel")}</span>
+                      <span>{formatPrice(shippingFeeOnce, checkoutCurrency)}</span>
                     </div>
                   )}
                 </div>
                 <div className="mt-4 flex justify-between text-lg font-bold text-slate-900">
                   <span>{t("total")}</span>
                   <span className="text-primary-700">
-                    {formatPrice(grandTotal, items[0]?.currency as import("@/types/database").EventCurrency | undefined)}
+                    {formatPrice(displayGrandTotal, checkoutCurrency)}
                   </span>
                 </div>
+                <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                  {currentStep === 1
+                    ? t("summaryFooterStep1")
+                    : deliveryChoice !== "e_ticket" && shippingFeeOnce > 0
+                      ? t("summaryFooterWithShipping")
+                      : t("summaryFooterDigital")}
+                </p>
 
-                {error && (
-                  <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
-                    {error}
-                  </p>
-                )}
-
-                {results.some((r) => !r.success) && (
-                  <div className="mt-4 space-y-2">
-                    {results.filter((r) => !r.success).map((r, i) => (
-                      <p key={i} className="text-sm text-red-600">
-                        {r.message}
+                {currentStep === 3 && (
+                  <>
+                    {error && (
+                      <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                        {error}
                       </p>
-                    ))}
-                  </div>
+                    )}
+                    {results.some((r) => !r.success) && (
+                      <div className="mt-4 space-y-2">
+                        {results.filter((r) => !r.success).map((r, i) => (
+                          <p key={i} className="text-sm text-red-600">
+                            {r.message}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleCompleteOrder(e as unknown as React.FormEvent);
+                      }}
+                      disabled={isPending || items.length === 0 || !user}
+                      className="mt-6 w-full rounded-lg !bg-blue-600 py-4 font-semibold text-white transition-colors hover:!bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"
+                    >
+                      {isPending ? t("processing") : t("completeOrder")}
+                    </button>
+                  </>
                 )}
-
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    handleCompleteOrder(e as unknown as React.FormEvent);
-                  }}
-                  disabled={isPending || items.length === 0 || !user}
-                  className="mt-6 w-full rounded-lg !bg-blue-600 py-4 font-semibold text-white transition-colors hover:!bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"
-                >
-                  {isPending ? t("processing") : t("completeOrder")}
-                </button>
               </div>
-            </div>
-              </>
-            )}
+            </aside>
           </div>
         )}
       </div>

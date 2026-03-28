@@ -1,17 +1,32 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useParams, useSearchParams } from "next/navigation";
-import { ArrowLeft, Plus, ChevronDown, ChevronRight, Copy, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, ChevronDown, ChevronRight, Copy, Trash2, Ban } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
+import { fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
 import OrganizerOrAdminGuard from "@/components/OrganizerOrAdminGuard";
 import { getMusensaalTemplateCopy } from "@/lib/seating-plans/musensaal-to-db";
 import { getPlan } from "@/lib/seating-plans";
 import SalonPlanViewer from "@/components/SalonPlanViewer";
+import TicketTypeLabelSelect from "@/components/TicketTypeLabelSelect";
 import type { SeatingPlan, SeatingPlanSection, SeatingPlanRow, Seat } from "@/types/database";
 import { planSectionsMatchMusensaalTemplate } from "@/lib/seating-plans/musensaal-structure-match";
+import {
+  ROW_EDITOR_GAP,
+  ROW_EDITOR_GRID_BASE_X,
+  ROW_EDITOR_GRID_CENTER_Y,
+} from "@/lib/seating-plans/row-editor-grid";
+import {
+  SALON_PRESET_OPTIONS,
+  buildSalonPresetDraft,
+  presetUsesFlankCount,
+  presetUsesSideDimensions,
+  type SalonPresetCorridorMode,
+  type SalonPresetId,
+} from "@/lib/seating-plans/salon-layout-presets";
 
 const SeatingKonvaRowEditor = dynamic(
   () => import("@/components/SeatingKonvaRowEditor"),
@@ -31,6 +46,64 @@ function sortSeatsByLabel(seats: Seat[]) {
     if (aNum && bNum) return na - nb;
     return String(a.seat_label).localeCompare(String(b.seat_label), undefined, { numeric: true });
   });
+}
+
+/** Sıra editöründe elle taşınmamışsa koltukları varsayılan ızgaraya hizalar; aksi halde `seats` aynı referansla döner. */
+function alignSeatsToGridIfStillDefault(seats: Seat[]): Seat[] {
+  if (seats.length === 0) return seats;
+  const sorted = sortSeatsByLabel(seats);
+  const baseX = ROW_EDITOR_GRID_BASE_X;
+  const gap = ROW_EDITOR_GAP;
+  const centerY = ROW_EDITOR_GRID_CENTER_Y;
+  const tolerance = 1;
+  const hasCustomLayout = sorted.some((seat, idx) => {
+    const sx = Number(seat.x);
+    const sy = Number(seat.y);
+    if (!Number.isFinite(sx) || !Number.isFinite(sy)) return false;
+    const expectedX = baseX + idx * gap;
+    const expectedY = centerY;
+    return Math.abs(sx - expectedX) > tolerance || Math.abs(sy - expectedY) > tolerance;
+  });
+  if (hasCustomLayout) return seats;
+  const byId = new Map(sorted.map((seat, i) => [seat.id, { x: baseX + i * gap, y: centerY }]));
+  return seats.map((seat) => {
+    const pos = byId.get(seat.id);
+    return pos ? { ...seat, ...pos } : seat;
+  });
+}
+
+/** Önizlemede koridor: bu etikete sahip son koltuktan sonra böl (örn. "10" → 1–10 | koridor | 11+). */
+function splitSeatsAfterSeatLabel(seats: Seat[], afterLabel: string): [Seat[], Seat[]] | null {
+  const t = afterLabel.trim();
+  if (!t) return null;
+  const sorted = sortSeatsByLabel([...seats]);
+  let idx = -1;
+  for (let i = 0; i < sorted.length; i++) {
+    if (String(sorted[i].seat_label).trim() === t) idx = i;
+  }
+  if (idx < 0) return null;
+  return [sorted.slice(0, idx + 1), sorted.slice(idx + 1)];
+}
+
+function getTicketColor(label: string): string {
+  const key = (label || "").trim().toLowerCase();
+  if (!key) return "bg-slate-300";
+  if (key === "vip" || key === "vip bilet") return "bg-amber-500";
+  if (key === "kategori 1") return "bg-rose-500";
+  if (key === "kategori 2") return "bg-blue-500";
+  if (key === "kategori 3") return "bg-emerald-500";
+  if (key === "kategori 4") return "bg-cyan-500";
+  if (key === "kategori 5") return "bg-fuchsia-500";
+  if (key === "kategori 6") return "bg-lime-500";
+  if (key === "kategori 7") return "bg-orange-500";
+  if (key === "kategori 8") return "bg-violet-500";
+  if (key === "kategori 9") return "bg-pink-500";
+  if (key === "kategori 10") return "bg-teal-500";
+  return "bg-slate-500";
+}
+
+function makeTempId(prefix: string): string {
+  return `tmp_${prefix}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
 export default function OturumPlaniPage() {
@@ -74,10 +147,30 @@ function OturumPlaniContent() {
   const [sectionTicketLabel, setSectionTicketLabel] = useState<Record<string, string>>({}); // sectionId -> ticket_type_label (düzenleme)
   const [rowTicketLabelDraft, setRowTicketLabelDraft] = useState<Record<string, string>>({}); // rowId -> ticket_type_label
   const [rowRangeAssign, setRowRangeAssign] = useState<Record<string, { range: string; label: string }>>({}); // sectionId -> range+label
+  const [bulkGridRows, setBulkGridRows] = useState<Record<string, string>>({});
+  const [bulkGridSeats, setBulkGridSeats] = useState<Record<string, string>>({});
+  const [categoryWizardText, setCategoryWizardText] = useState<Record<string, string>>({});
+  const [sectionAlignDraft, setSectionAlignDraft] = useState<Record<string, "left" | "center" | "right">>({});
+  const [saveFeedbackByPlan, setSaveFeedbackByPlan] = useState<
+    Record<string, { type: "saving" | "ok" | "error"; message: string }>
+  >({});
   const [copyingTemplate, setCopyingTemplate] = useState(false);
   const [creatingTheaterDuisburg, setCreatingTheaterDuisburg] = useState(false);
   const [addingMissingRows, setAddingMissingRows] = useState(false);
   const [addingMissingSeats, setAddingMissingSeats] = useState(false);
+  const [salonPresetId, setSalonPresetId] = useState<SalonPresetId>("single_center");
+  const [salonPresetRows, setSalonPresetRows] = useState(12);
+  const [salonPresetSeats, setSalonPresetSeats] = useState(16);
+  const [salonPresetSideRows, setSalonPresetSideRows] = useState(10);
+  const [salonPresetSideSeats, setSalonPresetSideSeats] = useState(12);
+  const [salonPresetFlank, setSalonPresetFlank] = useState<2 | 3 | 4>(3);
+  const [salonPresetTicket, setSalonPresetTicket] = useState("");
+  const [salonPresetCorridorMode, setSalonPresetCorridorMode] = useState<SalonPresetCorridorMode>("none");
+  const [salonPresetCorridorAfterSeat, setSalonPresetCorridorAfterSeat] = useState("");
+  const [newSectionCorridorMode, setNewSectionCorridorMode] = useState<
+    Record<string, "none" | "horizontal" | "vertical">
+  >({});
+  const [newSectionCorridorAfterSeat, setNewSectionCorridorAfterSeat] = useState<Record<string, string>>({});
 
   const parseNumericRange = (value: string): { start: number; end: number } | null => {
     const m = value.trim().match(/^(\d+)\s*-\s*(\d+)$/);
@@ -131,9 +224,9 @@ function OturumPlaniContent() {
 
           const rowIds = (rows || []).map((r) => r.id);
           if (rowIds.length) {
-            const { data: seats } = await supabase.from("seats").select("*").in("row_id", rowIds);
+            const seats = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
             const byRow: Record<string, Seat[]> = {};
-            (seats || []).forEach((s) => {
+            seats.forEach((s) => {
               if (!byRow[s.row_id]) byRow[s.row_id] = [];
               byRow[s.row_id].push(s);
             });
@@ -167,8 +260,8 @@ function OturumPlaniContent() {
     setRowsBySection((prev) => ({ ...prev, [sectionId]: data || [] }));
   };
 
-  const normalizeRowsOrder = async (sectionId: string) => {
-    const rows = rowsBySection[sectionId] || [];
+  const normalizeRowsOrder = (sectionId: string, sourceRows?: SeatingPlanRow[]) => {
+    const rows = sourceRows || rowsBySection[sectionId] || [];
     if (rows.length <= 1) return;
 
     const sorted = [...rows].sort((a, b) => {
@@ -184,104 +277,39 @@ function OturumPlaniContent() {
       return aLabel.localeCompare(bLabel, undefined, { numeric: true, sensitivity: "base" });
     });
 
-    for (let i = 0; i < sorted.length; i++) {
-      const row = sorted[i];
-      if (row.sort_order === i) continue;
-      const { error } = await supabase.from("seating_plan_rows").update({ sort_order: i }).eq("id", row.id);
-      if (error) {
-        console.error("Row sort_order update failed:", error);
-        break;
-      }
-    }
+    setRowsBySection((prev) => ({
+      ...prev,
+      [sectionId]: sorted.map((row, i) => ({ ...row, sort_order: i })),
+    }));
   };
   const refreshSeats = async (rowId: string) => {
     const { data } = await supabase.from("seats").select("*").eq("row_id", rowId);
     setSeatsByRow((prev) => ({ ...prev, [rowId]: data || [] }));
   };
 
-  const autoNormalizeSeatPositionsIfUnedited = async (rowId: string) => {
-    const { data, error } = await supabase.from("seats").select("*").eq("row_id", rowId);
-    if (error || !data || data.length === 0) return;
-
-    const sorted = sortSeatsByLabel(data as Seat[]);
-    const baseX = 48; // SeatingKonvaRowEditor ile aynı grid başlangıcı (32 + R)
-    const gap = 38;
-    const centerY = 120; // STAGE_H / 2
-    const tolerance = 1;
-
-    const hasCustomLayout = sorted.some((seat, idx) => {
-      const sx = Number(seat.x);
-      const sy = Number(seat.y);
-      if (!Number.isFinite(sx) || !Number.isFinite(sy)) return false;
-      const expectedX = baseX + idx * gap;
-      const expectedY = centerY;
-      return Math.abs(sx - expectedX) > tolerance || Math.abs(sy - expectedY) > tolerance;
-    });
-
-    // Kullanıcı yuvarlakları elle taşımadıysa otomatik sıralı hizala.
-    if (hasCustomLayout) return;
-
-    for (let i = 0; i < sorted.length; i++) {
-      const seat = sorted[i];
-      const x = baseX + i * gap;
-      const y = centerY;
-      const { error: updateError } = await supabase.from("seats").update({ x, y }).eq("id", seat.id);
-      if (updateError) return;
-    }
+  const autoNormalizeSeatPositionsIfUnedited = (rowId: string) => {
+    const data = seatsByRow[rowId] || [];
+    const aligned = alignSeatsToGridIfStillDefault(data);
+    if (aligned === data) return;
+    setSeatsByRow((prev) => ({ ...prev, [rowId]: aligned }));
   };
 
   const handleDeleteSeat = async (seatId: string, rowId: string) => {
     if (!confirm("Bu koltuk silinsin mi? Satılmış koltuk silinemez.")) return;
-    const { data: soldSeatRef, error: soldCheckError } = await supabase
-      .from("order_seats")
-      .select("id")
-      .eq("seat_id", seatId)
-      .limit(1)
-      .maybeSingle();
-    if (soldCheckError) {
-      alert("Koltuk satış kontrolü yapılamadı: " + soldCheckError.message);
-      return;
-    }
-    if (soldSeatRef) {
-      alert("Bu koltuk daha önce satıldığı için silinemez.");
-      return;
-    }
-    const { error } = await supabase.from("seats").delete().eq("id", seatId);
-    if (error) {
-      if (error.code === "23503") alert("Bu koltuk daha önce satıldığı için silinemez.");
-      else alert("Koltuk silinemedi: " + error.message);
-      return;
-    }
-    await refreshSeats(rowId);
+    setSeatsByRow((prev) => ({
+      ...prev,
+      [rowId]: (prev[rowId] || []).filter((s) => s.id !== seatId),
+    }));
   };
 
   const handleDeleteRow = async (rowId: string, sectionId: string, planId: string) => {
     if (!confirm("Bu sıra ve içindeki tüm koltuklar silinsin mi? Sırada satılmış koltuk varsa sıra silinemez.")) return;
-    const rowSeats = seatsByRow[rowId] || [];
-    const seatIds = rowSeats.map((s) => s.id).filter(Boolean);
-    if (seatIds.length > 0) {
-      const { data: soldRef, error: soldCheckError } = await supabase
-        .from("order_seats")
-        .select("id")
-        .in("seat_id", seatIds)
-        .limit(1)
-        .maybeSingle();
-      if (soldCheckError) {
-        alert("Sıra satış kontrolü yapılamadı: " + soldCheckError.message);
-        return;
-      }
-      if (soldRef) {
-        alert("Bu sırada satılmış koltuk var, sıra silinemez.");
-        return;
-      }
-    }
-    const { error } = await supabase.from("seating_plan_rows").delete().eq("id", rowId);
-    if (error) {
-      if (error.code === "23503") alert("Bu sırada satılmış koltuk var, sıra silinemez.");
-      else alert("Sıra silinemedi: " + error.message);
-      return;
-    }
-    await refreshRows(sectionId);
+    setRowsBySection((prev) => ({
+      ...prev,
+      [sectionId]: (prev[sectionId] || [])
+        .filter((r) => r.id !== rowId)
+        .map((r, i) => ({ ...r, sort_order: i })),
+    }));
     setSeatsByRow((prev) => {
       const next = { ...prev };
       delete next[rowId];
@@ -339,22 +367,65 @@ function OturumPlaniContent() {
     const name = newSectionName[planId]?.trim();
     if (!name) return;
     const sections = sectionsByPlan[planId] || [];
-    const { error } = await supabase.from("seating_plan_sections").insert({
-      seating_plan_id: planId,
-      name,
-      sort_order: sections.length,
-    });
-    if (error) {
-      alert("Bölüm eklenemedi: " + error.message);
-      return;
-    }
+    const sectionId = makeTempId("section");
+    const mode = newSectionCorridorMode[planId] ?? "none";
+    const afterSeat =
+      mode === "vertical" ? (newSectionCorridorAfterSeat[planId] ?? "").trim() || null : null;
+    setSectionsByPlan((prev) => ({
+      ...prev,
+      [planId]: [
+        ...sections,
+        {
+          id: sectionId,
+          seating_plan_id: planId,
+          name,
+          sort_order: sections.length,
+          ticket_type_label: null,
+          corridor_mode: mode,
+          corridor_gap_px: 0,
+          corridor_after_seat_label: afterSeat,
+          section_align: inferSectionAlignFromName(name),
+        } as SeatingPlanSection,
+      ],
+    }));
     setNewSectionName((prev) => ({ ...prev, [planId]: "" }));
-    await refreshSections(planId);
+    setNewSectionCorridorMode((prev) => ({ ...prev, [planId]: "none" }));
+    setNewSectionCorridorAfterSeat((prev) => ({ ...prev, [planId]: "" }));
   };
 
-  const handleAddRow = async (sectionId: string, planId: string) => {
-    const rows = rowsBySection[sectionId] || [];
-    const rawInput = (newRowLabel[sectionId] ?? "").trim();
+  const sectionNameGroup = (name: string) => {
+    const n = String(name || "").toLowerCase();
+    const side = n.includes("sağ") || n.includes("sag") || n.includes("right")
+      ? "right"
+      : n.includes("sol") || n.includes("left")
+      ? "left"
+      : "center";
+    const base = n
+      .replace(/\b(sağ|sag|right|sol|left)\b/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return { side, base };
+  };
+
+  const inferSectionAlignFromName = (sectionName: string): "left" | "center" | "right" => {
+    const n = String(sectionName || "").toLowerCase();
+    if (n.includes("sol") || n.includes("left")) return "left";
+    if (n.includes("sağ") || n.includes("sag") || n.includes("right")) return "right";
+    return "center";
+  };
+
+  const getSectionAlign = (
+    sectionId: string,
+    sectionName: string,
+    persistedAlign?: "left" | "center" | "right" | null
+  ): "left" | "center" | "right" => {
+    const explicit = sectionAlignDraft[sectionId];
+    if (explicit) return explicit;
+    if (persistedAlign === "left" || persistedAlign === "center" || persistedAlign === "right") return persistedAlign;
+    return inferSectionAlignFromName(sectionName);
+  };
+
+  const buildRowLabelsToInsert = (rows: SeatingPlanRow[], rawInput: string) => {
     let labelsToInsert: string[] = [];
 
     // "1-14" veya "1 - 14" ise toplu sıra ekle
@@ -375,25 +446,40 @@ function OturumPlaniContent() {
 
     const existingLabels = new Set(rows.map((r) => String(r.row_label).trim().toLowerCase()));
     labelsToInsert = labelsToInsert.filter((label) => !existingLabels.has(label.trim().toLowerCase()));
-    if (labelsToInsert.length === 0) {
-      setNewRowLabel((prev) => ({ ...prev, [sectionId]: "" }));
-      return;
-    }
+    return labelsToInsert;
+  };
+
+  const addRowsToSectionDraft = (sectionId: string, labelsToInsert: string[]) => {
+    if (labelsToInsert.length === 0) return;
+    const rows = rowsBySection[sectionId] || [];
 
     const payload = labelsToInsert.map((label, idx) => ({
       section_id: sectionId,
       row_label: label,
       sort_order: rows.length + idx,
     }));
-    const { error } = await supabase.from("seating_plan_rows").insert(payload);
-    if (error) {
-      alert("Sıra eklenemedi: " + error.message);
+    const nextRows = payload.map((p) => ({
+      id: makeTempId("row"),
+      section_id: p.section_id,
+      row_label: p.row_label,
+      sort_order: p.sort_order,
+      ticket_type_label: null,
+    })) as SeatingPlanRow[];
+    const merged = [...rows, ...nextRows];
+    setRowsBySection((prev) => ({ ...prev, [sectionId]: merged }));
+    normalizeRowsOrder(sectionId, merged);
+  };
+
+  const handleAddRow = async (sectionId: string, planId: string) => {
+    const rows = rowsBySection[sectionId] || [];
+    const rawInput = (newRowLabel[sectionId] ?? "").trim();
+    const labelsToInsert = buildRowLabelsToInsert(rows, rawInput);
+    if (labelsToInsert.length === 0) {
+      setNewRowLabel((prev) => ({ ...prev, [sectionId]: "" }));
       return;
     }
+    addRowsToSectionDraft(sectionId, labelsToInsert);
     setNewRowLabel((prev) => ({ ...prev, [sectionId]: "" }));
-    await refreshRows(sectionId);
-    await normalizeRowsOrder(sectionId);
-    await refreshRows(sectionId);
   };
 
   const handleAddSeats = async (rowId: string, sectionId: string) => {
@@ -426,14 +512,15 @@ function OturumPlaniContent() {
       alert("Yeni koltuk bulunamadı. Bu numaralar zaten ekli olabilir.");
       return;
     }
-    const { error } = await supabase.from("seats").insert(toInsert.map((seat_label) => ({ row_id: rowId, seat_label })));
-    if (error) {
-      alert("Koltuk eklenemedi: " + error.message);
-      return;
-    }
+    const toDraftSeats = toInsert.map((seat_label) => ({
+      id: makeTempId("seat"),
+      row_id: rowId,
+      seat_label,
+      sales_blocked: false,
+    })) as Seat[];
+    setSeatsByRow((prev) => ({ ...prev, [rowId]: [...existing, ...toDraftSeats] }));
     setNewSeatRange((prev) => ({ ...prev, [rowId]: "" }));
-    await autoNormalizeSeatPositionsIfUnedited(rowId);
-    await refreshSeats(rowId);
+    autoNormalizeSeatPositionsIfUnedited(rowId);
   };
 
   /** Şablondan kopya oluşturur veya mevcut Musensaal planını şablonla yeniler. */
@@ -600,9 +687,9 @@ function OturumPlaniContent() {
         setRowsBySection((prev) => ({ ...prev, ...bySection }));
         const rowIds = (rows || []).map((r) => r.id);
         if (rowIds?.length) {
-          const { data: seats } = await supabase.from("seats").select("*").in("row_id", rowIds);
+          const seats = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
           const byRow: Record<string, Seat[]> = {};
-          (seats || []).forEach((s) => {
+          seats.forEach((s) => {
             if (!byRow[s.row_id]) byRow[s.row_id] = [];
             byRow[s.row_id].push(s);
           });
@@ -644,12 +731,13 @@ function OturumPlaniContent() {
           .from("seating_plan_rows")
           .select("id, row_label")
           .eq("section_id", dbSection.id);
-        const { data: existingSeats } = await supabase
-          .from("seats")
-          .select("row_id")
-          .in("row_id", (dbRows || []).map((r) => r.id));
+        const existingSeats = await fetchAllSeatsByRowIds<{ row_id: string }>(
+          supabase,
+          (dbRows || []).map((r) => r.id),
+          "row_id"
+        );
         const seatCountByRowId = new Map<string, number>();
-        (existingSeats || []).forEach((s) => {
+        existingSeats.forEach((s) => {
           seatCountByRowId.set(s.row_id, (seatCountByRowId.get(s.row_id) ?? 0) + 1);
         });
         for (const dbRow of dbRows || []) {
@@ -682,9 +770,9 @@ function OturumPlaniContent() {
         setRowsBySection((prev) => ({ ...prev, ...bySection }));
         const rowIds = (rows || []).map((r) => r.id);
         if (rowIds?.length) {
-          const { data: seats } = await supabase.from("seats").select("*").in("row_id", rowIds);
+          const seats = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
           const byRow: Record<string, Seat[]> = {};
-          (seats || []).forEach((s) => {
+          seats.forEach((s) => {
             if (!byRow[s.row_id]) byRow[s.row_id] = [];
             byRow[s.row_id].push(s);
           });
@@ -732,9 +820,9 @@ function OturumPlaniContent() {
         setRowsBySection((prev) => ({ ...prev, ...bySection }));
         const rowIds = (rows || []).map((r) => r.id);
         if (rowIds.length) {
-          const { data: seats } = await supabase.from("seats").select("*").in("row_id", rowIds);
+          const seats = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
           const byRow: Record<string, Seat[]> = {};
-          (seats || []).forEach((s) => {
+          seats.forEach((s) => {
             if (!byRow[s.row_id]) byRow[s.row_id] = [];
             byRow[s.row_id].push(s);
           });
@@ -760,18 +848,6 @@ function OturumPlaniContent() {
     else await refreshPlans();
   };
 
-  const saveSectionTicketLabel = async (sectionId: string, label: string) => {
-    const { error } = await supabase
-      .from("seating_plan_sections")
-      .update({ ticket_type_label: label.trim() || null })
-      .eq("id", sectionId);
-    if (error) alert("Bilet türü kaydedilemedi: " + error.message);
-    else {
-      const planId = (sectionsByPlan && Object.keys(sectionsByPlan).find((pid) => (sectionsByPlan[pid] || []).some((s) => s.id === sectionId))) || "";
-      if (planId) await refreshSections(planId);
-    }
-  };
-
   const parseRange = (raw: string): { start: number; end: number } | null => {
     const m = raw.trim().match(/^(\d+)\s*-\s*(\d+)$/);
     if (!m) return null;
@@ -779,18 +855,6 @@ function OturumPlaniContent() {
     const b = Number(m[2]);
     if (!Number.isFinite(a) || !Number.isFinite(b)) return null;
     return { start: Math.min(a, b), end: Math.max(a, b) };
-  };
-
-  const saveRowTicketLabel = async (rowId: string, sectionId: string, label: string) => {
-    const { error } = await supabase
-      .from("seating_plan_rows")
-      .update({ ticket_type_label: label.trim() || null })
-      .eq("id", rowId);
-    if (error) {
-      alert("Sıra bilet türü kaydedilemedi: " + error.message);
-      return;
-    }
-    await refreshRows(sectionId);
   };
 
   const applyRowRangeTicketLabel = async (sectionId: string) => {
@@ -817,37 +881,421 @@ function OturumPlaniContent() {
       return;
     }
 
-    for (const row of targets) {
-      const { error } = await supabase
-        .from("seating_plan_rows")
-        .update({ ticket_type_label: label })
-        .eq("id", row.id);
-      if (error) {
-        alert("Toplu atama sırasında hata: " + error.message);
-        return;
+    const targetIds = new Set(targets.map((r) => r.id));
+    setRowsBySection((prev) => ({
+      ...prev,
+      [sectionId]: (prev[sectionId] || []).map((row) =>
+        targetIds.has(row.id) ? { ...row, ticket_type_label: label } : row
+      ),
+    }));
+    setRowRangeAssign((prev) => ({
+      ...prev,
+      [sectionId]: { range: prev[sectionId]?.range || "", label },
+    }));
+  };
+
+  /** Örn. sıra 1–100, her sırada koltuk 1–25 tek seferde (mevcut sıra/koltuklara dokunmadan eksikleri tamamlar). */
+  const bulkFillNumericGrid = (sectionId: string) => {
+    const rawRows = (bulkGridRows[sectionId] ?? "").trim();
+    const rawSeats = (bulkGridSeats[sectionId] ?? "").trim();
+    const rowR = parseNumericRange(rawRows);
+    const seatR = parseNumericRange(rawSeats);
+    if (!rowR || !seatR) {
+      alert("Sıra ve koltuk alanları aralık olmalı (örn. 1-100 ve 1-25).");
+      return;
+    }
+    const curRows = [...(rowsBySection[sectionId] || [])];
+    const byLabel = new Map(curRows.map((r) => [String(r.row_label).trim().toLowerCase(), r]));
+    for (let n = rowR.start; n <= rowR.end; n++) {
+      const lb = String(n);
+      const key = lb.toLowerCase();
+      if (!byLabel.has(key)) {
+        const nr = {
+          id: makeTempId("row"),
+          section_id: sectionId,
+          row_label: lb,
+          sort_order: curRows.length,
+          ticket_type_label: null,
+        } as SeatingPlanRow;
+        curRows.push(nr);
+        byLabel.set(key, nr);
       }
     }
-    await refreshRows(sectionId);
+    const sorted = [...curRows].sort((a, b) => {
+      const aLabel = String(a.row_label || "").trim();
+      const bLabel = String(b.row_label || "").trim();
+      const na = Number(aLabel);
+      const nb = Number(bLabel);
+      const aNum = Number.isFinite(na);
+      const bNum = Number.isFinite(nb);
+      if (aNum && bNum) return na - nb;
+      if (aNum && !bNum) return -1;
+      if (!aNum && bNum) return 1;
+      return aLabel.localeCompare(bLabel, undefined, { numeric: true, sensitivity: "base" });
+    });
+    const reindexed = sorted.map((row, i) => ({ ...row, sort_order: i }));
+    setRowsBySection((prev) => ({ ...prev, [sectionId]: reindexed }));
+
+    const seatLabels: string[] = [];
+    for (let s = seatR.start; s <= seatR.end; s++) seatLabels.push(String(s));
+
+    setSeatsByRow((prev) => {
+      const next = { ...prev };
+      for (const row of reindexed) {
+        const rn = Number(String(row.row_label).trim());
+        if (!Number.isFinite(rn) || rn < rowR.start || rn > rowR.end) continue;
+        const existing = next[row.id] || [];
+        const existingLbl = new Set(existing.map((x) => String(x.seat_label).trim().toLowerCase()));
+        const toAdd = seatLabels
+          .filter((l) => !existingLbl.has(l.toLowerCase()))
+          .map(
+            (seat_label) =>
+              ({
+                id: makeTempId("seat"),
+                row_id: row.id,
+                seat_label,
+                sales_blocked: false,
+              }) as Seat
+          );
+        if (toAdd.length === 0) continue;
+        const merged = alignSeatsToGridIfStillDefault([...existing, ...toAdd]);
+        next[row.id] = merged;
+      }
+      return next;
+    });
+  };
+
+  /**
+   * Çok satırlı kategori kuralları (aşağıdan yukarı öncelik yoksa son eşleşen kazanır):
+   *   1-5 VIP
+   *   6-10 Kategori 1
+   */
+  const applyCategoryWizardLines = (sectionId: string) => {
+    const text = categoryWizardText[sectionId] ?? "";
+    const lines = text
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0 && !l.startsWith("#"));
+    const rowLine = /^(\d+)\s*-\s*(\d+)\s+(.+)$/;
+    const rules: { start: number; end: number; label: string }[] = [];
+    const bad: string[] = [];
+    for (const line of lines) {
+      const m = line.match(rowLine);
+      if (!m) {
+        bad.push(line);
+        continue;
+      }
+      const a = Number(m[1]);
+      const b = Number(m[2]);
+      const label = (m[3] || "").trim();
+      if (!Number.isFinite(a) || !Number.isFinite(b) || !label) {
+        bad.push(line);
+        continue;
+      }
+      rules.push({ start: Math.min(a, b), end: Math.max(a, b), label });
+    }
+    if (rules.length === 0) {
+      alert("En az bir geçerli satır girin (örn. 1-5 VIP).");
+      if (bad.length) alert("Okunamayan satırlar:\n" + bad.join("\n"));
+      return;
+    }
+    setRowsBySection((prev) => {
+      const cur = [...(prev[sectionId] || [])];
+      const nextRows = cur.map((row) => {
+        const n = Number(String(row.row_label).trim());
+        if (!Number.isFinite(n)) return row;
+        let label: string | undefined;
+        for (const rule of rules) {
+          if (n >= rule.start && n <= rule.end) label = rule.label;
+        }
+        if (label === undefined) return row;
+        return { ...row, ticket_type_label: label };
+      });
+      return { ...prev, [sectionId]: nextRows };
+    });
+    if (bad.length) alert("Okunamayan satırlar:\n" + bad.join("\n"));
   };
 
   const handleSavePlan = async (planId: string) => {
-    const sections = sectionsByPlan[planId] || [];
+    const draftSections = sectionsByPlan[planId] || [];
     try {
-      for (const section of sections) {
-        const draftValue = sectionTicketLabel[section.id];
-        if (draftValue === undefined) continue;
+      setSaveFeedbackByPlan((prev) => ({
+        ...prev,
+        [planId]: { type: "saving", message: "Salon kaydediliyor..." },
+      }));
+      const fail = (message: string) => {
+        setSaveFeedbackByPlan((prev) => ({
+          ...prev,
+          [planId]: { type: "error", message },
+        }));
+        alert(message);
+      };
+      const sectionIdMap = new Map<string, string>();
+
+      const { data: dbSections, error: dbSectionsError } = await supabase
+        .from("seating_plan_sections")
+        .select("id")
+        .eq("seating_plan_id", planId);
+      if (dbSectionsError) {
+        fail("Salon kaydedilemedi: " + dbSectionsError.message);
+        return;
+      }
+
+      const keptSectionIds = new Set(
+        draftSections.filter((s) => !s.id.startsWith("tmp_")).map((s) => s.id)
+      );
+      const sectionsToDelete = (dbSections || [])
+        .map((s) => s.id)
+        .filter((id) => !keptSectionIds.has(id));
+      if (sectionsToDelete.length) {
         const { error } = await supabase
           .from("seating_plan_sections")
-          .update({ ticket_type_label: draftValue.trim() || null })
-          .eq("id", section.id);
+          .delete()
+          .in("id", sectionsToDelete);
         if (error) {
-          alert("Salon kaydedilemedi: " + error.message);
+          fail("Salon kaydedilemedi: " + error.message);
           return;
         }
       }
+
+      for (let si = 0; si < draftSections.length; si++) {
+        const section = draftSections[si];
+        const draftValue = sectionTicketLabel[section.id];
+        const ticketTypeLabel =
+          draftValue !== undefined
+            ? draftValue.trim() || null
+            : (section as SeatingPlanSection & { ticket_type_label?: string }).ticket_type_label ?? null;
+
+        const corridorMode = section.corridor_mode ?? "none";
+        const corridorAfterSeat =
+          corridorMode === "vertical"
+            ? (section.corridor_after_seat_label ?? "").trim() || null
+            : null;
+        const sectionAlign = getSectionAlign(section.id, section.name, section.section_align ?? null);
+
+        if (section.id.startsWith("tmp_")) {
+          const { data, error } = await supabase
+            .from("seating_plan_sections")
+            .insert({
+              seating_plan_id: planId,
+              name: section.name,
+              sort_order: si,
+              ticket_type_label: ticketTypeLabel,
+              corridor_mode: corridorMode,
+              corridor_gap_px: 0,
+              corridor_after_seat_label: corridorAfterSeat,
+              section_align: sectionAlign,
+            })
+            .select("id")
+            .single();
+          if (error) {
+            fail("Salon kaydedilemedi: " + error.message);
+            return;
+          }
+          sectionIdMap.set(section.id, data.id);
+        } else {
+          const { error } = await supabase
+            .from("seating_plan_sections")
+            .update({
+              name: section.name,
+              sort_order: si,
+              ticket_type_label: ticketTypeLabel,
+              corridor_mode: corridorMode,
+              corridor_gap_px: 0,
+              corridor_after_seat_label: corridorAfterSeat,
+              section_align: sectionAlign,
+            })
+            .eq("id", section.id);
+          if (error) {
+            fail("Salon kaydedilemedi: " + error.message);
+            return;
+          }
+          sectionIdMap.set(section.id, section.id);
+        }
+      }
+
+      for (const section of draftSections) {
+        const mappedSectionId = sectionIdMap.get(section.id);
+        if (!mappedSectionId) continue;
+        const draftRows = rowsBySection[section.id] || [];
+
+        const { data: dbRows, error: dbRowsError } = await supabase
+          .from("seating_plan_rows")
+          .select("id")
+          .eq("section_id", mappedSectionId);
+        if (dbRowsError) {
+          fail("Salon kaydedilemedi: " + dbRowsError.message);
+          return;
+        }
+
+        const keptRowIds = new Set(draftRows.filter((r) => !r.id.startsWith("tmp_")).map((r) => r.id));
+        const rowsToDelete = (dbRows || []).map((r) => r.id).filter((id) => !keptRowIds.has(id));
+        if (rowsToDelete.length) {
+          const { error } = await supabase.from("seating_plan_rows").delete().in("id", rowsToDelete);
+          if (error) {
+            fail("Salon kaydedilemedi: " + error.message);
+            return;
+          }
+        }
+
+        const rowIdMap = new Map<string, string>();
+        for (let ri = 0; ri < draftRows.length; ri++) {
+          const row = draftRows[ri];
+          const rowDraft = rowTicketLabelDraft[row.id];
+          const rowTicketTypeLabel = rowDraft !== undefined ? rowDraft.trim() || null : row.ticket_type_label ?? null;
+
+          if (row.id.startsWith("tmp_")) {
+            const { data, error } = await supabase
+              .from("seating_plan_rows")
+              .insert({
+                section_id: mappedSectionId,
+                row_label: row.row_label,
+                sort_order: ri,
+                ticket_type_label: rowTicketTypeLabel,
+              })
+              .select("id")
+              .single();
+            if (error) {
+              fail("Salon kaydedilemedi: " + error.message);
+              return;
+            }
+            rowIdMap.set(row.id, data.id);
+          } else {
+            const { error } = await supabase
+              .from("seating_plan_rows")
+              .update({
+                section_id: mappedSectionId,
+                row_label: row.row_label,
+                sort_order: ri,
+                ticket_type_label: rowTicketTypeLabel,
+              })
+              .eq("id", row.id);
+            if (error) {
+              fail("Salon kaydedilemedi: " + error.message);
+              return;
+            }
+            rowIdMap.set(row.id, row.id);
+          }
+        }
+
+        for (let ri = 0; ri < draftRows.length; ri++) {
+          const row = draftRows[ri];
+          const mappedRowId = rowIdMap.get(row.id);
+          if (!mappedRowId) {
+            fail(`Salon kaydedilemedi: "${row.row_label}" sırası için eşleme bulunamadı. Sayfayı yenileyip tekrar deneyin.`);
+            return;
+          }
+          const draftSeats = seatsByRow[row.id] || [];
+          const { data: dbSeats, error: dbSeatsError } = await supabase
+            .from("seats")
+            .select("id, seat_label")
+            .eq("row_id", mappedRowId);
+          if (dbSeatsError) {
+            fail("Salon kaydedilemedi: " + dbSeatsError.message);
+            return;
+          }
+
+          // Aynı satırda aynı seat_label tek olmalı; kaydetmede etiket bazlı senkron yap.
+          const normalizeSeatLabel = (v: string) => String(v || "").trim().toLowerCase();
+          const draftByLabel = new Map<string, Seat>();
+          for (const seat of draftSeats) {
+            const key = normalizeSeatLabel(seat.seat_label);
+            if (!key) continue;
+            const prev = draftByLabel.get(key);
+            // Aynı etiket hem tmp hem kalıcı id ile varsa kalıcı kaydı tercih et.
+            if (!prev || (prev.id.startsWith("tmp_") && !seat.id.startsWith("tmp_"))) {
+              draftByLabel.set(key, seat);
+            }
+          }
+
+          const dbByLabel = new Map<string, { id: string; seat_label: string }>();
+          for (const s of dbSeats || []) {
+            dbByLabel.set(normalizeSeatLabel(s.seat_label), s);
+          }
+
+          const seatsToDelete = (dbSeats || [])
+            .filter((s) => !draftByLabel.has(normalizeSeatLabel(s.seat_label)))
+            .map((s) => s.id);
+          if (seatsToDelete.length) {
+            const { error } = await supabase.from("seats").delete().in("id", seatsToDelete);
+            if (error) {
+              fail("Salon kaydedilemedi: " + error.message);
+              return;
+            }
+          }
+
+          for (const [key, seat] of draftByLabel.entries()) {
+            const payload = {
+              row_id: mappedRowId,
+              seat_label: String(seat.seat_label).trim(),
+              x: seat.x ?? null,
+              y: seat.y ?? null,
+              sales_blocked: seat.sales_blocked === true,
+            };
+            const existingSeat = dbByLabel.get(key);
+            if (existingSeat) {
+              const { row_id: _ignored, ...updatePayload } = payload;
+              const { error } = await supabase.from("seats").update(updatePayload).eq("id", existingSeat.id);
+              if (error) {
+                fail("Salon kaydedilemedi: " + error.message);
+                return;
+              }
+            } else {
+              const { error } = await supabase.from("seats").insert(payload);
+              if (error) {
+                fail("Salon kaydedilemedi: " + error.message);
+                return;
+              }
+            }
+          }
+        }
+      }
+
       await refreshSections(planId);
+      const { data: sectionsAfter } = await supabase
+        .from("seating_plan_sections")
+        .select("*")
+        .eq("seating_plan_id", planId)
+        .order("sort_order");
+      const nextSections = sectionsAfter || [];
+      setSectionsByPlan((prev) => ({ ...prev, [planId]: nextSections }));
+
+      const sectionIds = nextSections.map((s) => s.id);
+      if (sectionIds.length) {
+        const { data: rowsAfter } = await supabase
+          .from("seating_plan_rows")
+          .select("*")
+          .in("section_id", sectionIds)
+          .order("sort_order");
+        const nextRowsBySection: Record<string, SeatingPlanRow[]> = {};
+        (rowsAfter || []).forEach((r) => {
+          if (!nextRowsBySection[r.section_id]) nextRowsBySection[r.section_id] = [];
+          nextRowsBySection[r.section_id].push(r);
+        });
+        setRowsBySection((prev) => ({ ...prev, ...nextRowsBySection }));
+
+        const rowIds = (rowsAfter || []).map((r) => r.id);
+        if (rowIds.length) {
+          const seatsAfter = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
+          const nextSeatsByRow: Record<string, Seat[]> = {};
+          seatsAfter.forEach((s) => {
+            if (!nextSeatsByRow[s.row_id]) nextSeatsByRow[s.row_id] = [];
+            nextSeatsByRow[s.row_id].push(s);
+          });
+          setSeatsByRow((prev) => ({ ...prev, ...nextSeatsByRow }));
+        }
+      }
+
+      setSaveFeedbackByPlan((prev) => ({
+        ...prev,
+        [planId]: { type: "ok", message: "Salon başarıyla kaydedildi." },
+      }));
       alert("Salon başarıyla kaydedildi.");
     } catch (e) {
+      setSaveFeedbackByPlan((prev) => ({
+        ...prev,
+        [planId]: { type: "error", message: "Salon kaydedilemedi." },
+      }));
       alert("Salon kaydedilemedi.");
       console.error(e);
     }
@@ -855,19 +1303,80 @@ function OturumPlaniContent() {
 
   const handleDeleteSection = async (sectionId: string, planId: string, sectionName: string) => {
     if (!confirm(`"${sectionName}" bölümü silinsin mi? Bu bölümdeki tüm sıra/koltuklar da silinir.`)) return;
-    const { error } = await supabase.from("seating_plan_sections").delete().eq("id", sectionId);
-    if (error) {
-      if (error.code === "23503") alert("Bu bölümde satılmış koltuklar olduğu için silinemez.");
-      else alert("Bölüm silinemedi: " + error.message);
-      return;
-    }
-    await refreshSections(planId);
+    const sectionRows = rowsBySection[sectionId] || [];
+    setSectionsByPlan((prev) => ({
+      ...prev,
+      [planId]: (prev[planId] || [])
+        .filter((s) => s.id !== sectionId)
+        .map((s, i) => ({ ...s, sort_order: i })),
+    }));
     setRowsBySection((prev) => {
       const next = { ...prev };
       delete next[sectionId];
       return next;
     });
+    setSeatsByRow((prev) => {
+      const next = { ...prev };
+      for (const row of sectionRows) delete next[row.id];
+      return next;
+    });
     setExpandedSection((cur) => (cur === sectionId ? null : cur));
+  };
+
+  const handleApplySalonLayoutPreset = (planId: string) => {
+    const existing = sectionsByPlan[planId] || [];
+    if (existing.length > 0) {
+      const ok = window.confirm(
+        "Bu salondaki mevcut taslak bölüm, sıra ve koltuklar silinip seçilen şablon uygulanacak. Devam edilsin mi?"
+      );
+      if (!ok) return;
+    }
+    const oldSectionIds = existing.map((s) => s.id);
+    const oldRowIds: string[] = [];
+    for (const sid of oldSectionIds) {
+      for (const r of rowsBySection[sid] || []) oldRowIds.push(r.id);
+    }
+    const draft = buildSalonPresetDraft(planId, salonPresetId, {
+      rowCount: salonPresetRows,
+      seatsPerRow: salonPresetSeats,
+      sideRowCount: salonPresetSideRows,
+      sideSeatsPerRow: salonPresetSideSeats,
+      flankSegmentsPerSide: salonPresetFlank,
+      defaultTicketLabel: salonPresetTicket.trim() || null,
+      corridorMode: salonPresetCorridorMode,
+      corridorAfterSeatLabel:
+        salonPresetCorridorMode === "vertical" ? salonPresetCorridorAfterSeat.trim() || null : null,
+    });
+    setSectionsByPlan((prev) => ({ ...prev, [planId]: draft.sections }));
+    setRowsBySection((prev) => {
+      const next = { ...prev };
+      for (const sid of oldSectionIds) delete next[sid];
+      for (const sid of Object.keys(draft.rowsBySection)) {
+        next[sid] = draft.rowsBySection[sid];
+      }
+      return next;
+    });
+    setSeatsByRow((prev) => {
+      const next = { ...prev };
+      for (const rid of oldRowIds) delete next[rid];
+      Object.assign(next, draft.seatsByRow);
+      return next;
+    });
+    setSectionTicketLabel((prev) => {
+      const next = { ...prev };
+      for (const sid of oldSectionIds) delete next[sid];
+      return next;
+    });
+    setRowTicketLabelDraft((prev) => {
+      const next = { ...prev };
+      for (const rid of oldRowIds) delete next[rid];
+      return next;
+    });
+    setSectionAlignDraft((prev) => {
+      const next = { ...prev };
+      for (const sid of oldSectionIds) delete next[sid];
+      return next;
+    });
   };
 
   if (loading) {
@@ -879,7 +1388,7 @@ function OturumPlaniContent() {
   }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
+    <div className="p-8 w-full max-w-[1600px] mx-auto">
       <div className="mb-6 flex items-center gap-4">
         <Link
           href="/yonetim/mekanlar"
@@ -902,7 +1411,7 @@ function OturumPlaniContent() {
         </div>
       )}
       <p className="mt-1 text-slate-600">
-        <strong>{venueName}</strong> için salonları burada tanımlayın. Musensaal (Rosengarten Mannheim) koltuk planını kullanmak için şablondan kopyalayın; açtığınız salonda görsel koltuk planı önizlemesi gösterilir. Etkinlik oluştururken mekan + salon seçilir. Her sıra altında <strong>sürükle-bırak</strong> ile koltuk konumlarını kaydedebilirsiniz.
+        <strong>{venueName}</strong> için salonları burada tanımlayın. Salonda <strong>Hızlı salon şablonu</strong> ile tek/çift parket, yan şeritler ve Musensaal tarzı çoklu yan blokları saniyeler içinde oluşturabilirsiniz. Musensaal (Rosengarten Mannheim) ayrıntılı planını kullanmak için aşağıdan şablondan kopyalayın; açtığınız salonda görsel koltuk planı önizlemesi gösterilir. Etkinlik oluştururken mekan + salon seçilir. Her sıra altında <strong>sürükle-bırak</strong> ile koltuk konumlarını kaydedebilirsiniz.
       </p>
       <p className="mt-1 text-xs text-slate-500">
         Blok taslağı ile tasarlamak isterseniz: <Link href="/yonetim/salon-tasarim-vizor" className="text-primary-600 hover:underline">Salon Tasarım Vizörü</Link> ile tasarlayıp &quot;Bu planı mekana aktar&quot; ile bu mekana ekleyebilirsiniz.
@@ -1045,6 +1554,148 @@ function OturumPlaniContent() {
             </div>
             {expandedPlan === plan.id && (
               <div className="border-t border-slate-200 px-5 pb-5 pt-2">
+                <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50/80 p-4">
+                  <h3 className="text-sm font-semibold text-slate-800 mb-1">Hızlı salon şablonu</h3>
+                  <p className="text-xs text-slate-600 mb-3">
+                    Adlandırılmış düzenlerle bölüm ve sıraları otomatik oluşturun; konumu düzenlemek için aşağıdaki sürükle-bırak alanını kullanın. Koridor seçerseniz{" "}
+                    <strong>şablondan oluşan her bölüme</strong> aynı ayar uygulanır (sonradan bölüm başına değiştirebilirsiniz). Veritabanına yazmak için{" "}
+                    <strong>Salonu Kaydet</strong> gerekir.
+                  </p>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <label className="flex flex-col gap-1 text-xs text-slate-600 min-w-[220px] flex-1">
+                      Şablon
+                      <select
+                        value={salonPresetId}
+                        onChange={(e) => setSalonPresetId(e.target.value as SalonPresetId)}
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-900"
+                      >
+                        {SALON_PRESET_OPTIONS.map((o) => (
+                          <option key={o.id} value={o.id}>
+                            {o.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs text-slate-600 w-24">
+                      Sıra
+                      <input
+                        type="number"
+                        min={1}
+                        max={200}
+                        value={salonPresetRows}
+                        onChange={(e) => setSalonPresetRows(Number(e.target.value) || 1)}
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                      />
+                    </label>
+                    <label className="flex flex-col gap-1 text-xs text-slate-600 w-24">
+                      Koltuk
+                      <input
+                        type="number"
+                        min={1}
+                        max={200}
+                        value={salonPresetSeats}
+                        onChange={(e) => setSalonPresetSeats(Number(e.target.value) || 1)}
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                      />
+                    </label>
+                    {presetUsesSideDimensions(salonPresetId) && (
+                      <>
+                        <label className="flex flex-col gap-1 text-xs text-slate-600 w-24">
+                          Yan sıra
+                          <input
+                            type="number"
+                            min={1}
+                            max={200}
+                            value={salonPresetSideRows}
+                            onChange={(e) => setSalonPresetSideRows(Number(e.target.value) || 1)}
+                            className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                          />
+                        </label>
+                        <label className="flex flex-col gap-1 text-xs text-slate-600 w-24">
+                          Yan koltuk
+                          <input
+                            type="number"
+                            min={1}
+                            max={200}
+                            value={salonPresetSideSeats}
+                            onChange={(e) => setSalonPresetSideSeats(Number(e.target.value) || 1)}
+                            className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                          />
+                        </label>
+                      </>
+                    )}
+                    {presetUsesFlankCount(salonPresetId) && (
+                      <label className="flex flex-col gap-1 text-xs text-slate-600 w-28">
+                        Yan şerit
+                        <select
+                          value={salonPresetFlank}
+                          onChange={(e) => setSalonPresetFlank(Number(e.target.value) as 2 | 3 | 4)}
+                          className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                        >
+                          <option value={2}>2 / yan</option>
+                          <option value={3}>3 / yan</option>
+                          <option value={4}>4 / yan</option>
+                        </select>
+                      </label>
+                    )}
+                    <div className="flex flex-col gap-1 text-xs text-slate-600 min-w-[200px] flex-1 max-w-md">
+                      <span>Varsayılan bilet türü (opsiyonel)</span>
+                      <TicketTypeLabelSelect
+                        value={salonPresetTicket}
+                        onChange={setSalonPresetTicket}
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm w-full max-w-sm"
+                      />
+                    </div>
+                    <label className="flex flex-col gap-1 text-xs text-slate-600 w-44">
+                      Koridor (tüm bölümler)
+                      <select
+                        value={salonPresetCorridorMode}
+                        onChange={(e) => setSalonPresetCorridorMode(e.target.value as SalonPresetCorridorMode)}
+                        className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                        title="Yatay: bölüm kartları arası boşluk. Dikey: her sırayı yazdığınız koltuktan sonra böler."
+                      >
+                        <option value="none">Yok</option>
+                        <option value="horizontal">Yatay (bloklar arası)</option>
+                        <option value="vertical">Dikey (koltuktan sonra)</option>
+                      </select>
+                    </label>
+                    {salonPresetCorridorMode === "vertical" && (
+                      <label className="flex flex-col gap-1 text-xs text-slate-600 w-28">
+                        Koltuk no
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={salonPresetCorridorAfterSeat}
+                          onChange={(e) => setSalonPresetCorridorAfterSeat(e.target.value)}
+                          placeholder="örn. 10"
+                          className="rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                        />
+                      </label>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleApplySalonLayoutPreset(plan.id)}
+                      className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700"
+                    >
+                      Şablonu uygula
+                    </button>
+                  </div>
+                  <p className="mt-2 text-[11px] text-slate-500">
+                    {SALON_PRESET_OPTIONS.find((x) => x.id === salonPresetId)?.description}
+                    {salonPresetCorridorMode !== "none" && (
+                      <>
+                        {" "}
+                        <span className="text-slate-600">
+                          Koridor:{" "}
+                          {salonPresetCorridorMode === "horizontal"
+                            ? "yatay (her bölüm altında boşluk)"
+                            : `dikey (koltuk ${salonPresetCorridorAfterSeat.trim() || "…"} sonrası)`}
+                          .
+                        </span>
+                      </>
+                    )}
+                  </p>
+                </div>
                 {planHasMusensaalStructure(sectionsByPlan[plan.id] || []) && (() => {
                   const musensaalPlan = getPlan("musensaal");
                   return musensaalPlan ? (
@@ -1057,14 +1708,242 @@ function OturumPlaniContent() {
                     </div>
                   ) : null;
                 })()}
-                <div className="flex gap-2 mt-2 mb-4">
-                  <input
-                    type="text"
-                    value={newSectionName[plan.id] ?? ""}
-                    onChange={(e) => setNewSectionName((prev) => ({ ...prev, [plan.id]: e.target.value }))}
-                    placeholder="Bölüm adı (örn. Blok A)"
-                    className="rounded-lg border border-slate-300 px-3 py-2 flex-1 max-w-xs"
-                  />
+                {(() => {
+                  const planSections = sectionsByPlan[plan.id] || [];
+                  if (!planSections.length) return null;
+                  const sectionGroup = (name: string) => {
+                    const n = String(name || "").toLowerCase();
+                    if (n.includes("sol") || n.includes("left")) return 0;
+                    if (n.includes("sağ") || n.includes("sag") || n.includes("right")) return 2;
+                    return 1;
+                  };
+                  const orderedSections = [...planSections].sort((a, b) => {
+                    const sa = Number(a.sort_order);
+                    const sb = Number(b.sort_order);
+                    const oa = Number.isFinite(sa) ? sa : 0;
+                    const ob = Number.isFinite(sb) ? sb : 0;
+                    if (oa !== ob) return oa - ob;
+                    return String(a.name || "").localeCompare(String(b.name || ""), undefined, { numeric: true, sensitivity: "base" });
+                  });
+                  const hasAnyRows = orderedSections.some((s) => (rowsBySection[s.id] || []).length > 0);
+                  if (!hasAnyRows) return null;
+                  const leftSections = orderedSections.filter((s) => sectionGroup(s.name) === 0);
+                  const centerSections = orderedSections.filter((s) => sectionGroup(s.name) === 1);
+                  const rightSections = orderedSections.filter((s) => sectionGroup(s.name) === 2);
+                  const onlyCenterSide =
+                    leftSections.length === 0 && rightSections.length === 0 && centerSections.length > 0;
+                  const renderSectionCard = (section: SeatingPlanSection) => {
+                    const align = getSectionAlign(section.id, section.name, section.section_align ?? null);
+                    const side = sectionNameGroup(section.name).side;
+                    const rows = rowsBySection[section.id] || [];
+                    if (!rows.length) return null;
+                    const cm = section.corridor_mode ?? "none";
+                    const afterSeat = (section.corridor_after_seat_label ?? "").trim();
+                    /** En az ~16 koltuk tek satırda sığsın (önizleme); dar ekranda yatay kaydırma. */
+                    const sectionCardClass =
+                      cm === "horizontal"
+                        ? "min-w-0 w-full basis-full shrink-0 rounded border border-slate-200 bg-white p-1"
+                        : onlyCenterSide
+                          ? "min-w-[min(100%,34rem)] w-max max-w-full shrink-0 rounded border border-slate-200 bg-white p-1"
+                          : "min-w-[min(100%,34rem)] w-max max-w-full shrink-0 rounded border border-slate-200 bg-white p-1";
+                    return (
+                      <div key={section.id} className={sectionCardClass}>
+                        <div className="mb-1 flex items-center justify-between gap-1">
+                          <div className="text-xs font-semibold text-slate-700">{section.name}</div>
+                          <div className="inline-flex rounded border border-slate-300 bg-white p-0.5">
+                            <button
+                              type="button"
+                              onClick={() => setSectionAlignDraft((prev) => ({ ...prev, [section.id]: "left" }))}
+                              className={`rounded px-1.5 py-0.5 text-[10px] ${align === "left" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                            >
+                              Sola Yasla
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSectionAlignDraft((prev) => ({ ...prev, [section.id]: "center" }))}
+                              className={`rounded px-1.5 py-0.5 text-[10px] ${align === "center" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                            >
+                              Ortala
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setSectionAlignDraft((prev) => ({ ...prev, [section.id]: "right" }))}
+                              className={`rounded px-1.5 py-0.5 text-[10px] ${align === "right" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                            >
+                              Sağa Yasla
+                            </button>
+                          </div>
+                        </div>
+                        <div className="space-y-0.5">
+                          {rows.map((row) => {
+                            const rowLabel = String(row.row_label || "");
+                            const seats = sortSeatsByLabel(seatsByRow[row.id] || []);
+                            const rowTicket =
+                              (rowTicketLabelDraft[row.id] ??
+                                row.ticket_type_label ??
+                                sectionTicketLabel[section.id] ??
+                                section.ticket_type_label ??
+                                ""
+                              ).trim();
+                            const seatSplit =
+                              cm === "vertical" && afterSeat
+                                ? splitSeatsAfterSeatLabel(seats, afterSeat)
+                                : null;
+                            const renderSeatDot = (seat: Seat) => (
+                              <span
+                                key={seat.id}
+                                className={`inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-medium text-white transition-colors ${getTicketColor(rowTicket)} hover:!bg-[#39ff14] hover:!text-slate-900 hover:ring-2 hover:ring-[#166534]`}
+                                title={`${section.name} · Sıra ${rowLabel} · Koltuk ${seat.seat_label}${rowTicket ? ` · ${rowTicket}` : ""}`}
+                              >
+                                {seat.seat_label}
+                              </span>
+                            );
+                            const seatClusterClass = `flex flex-nowrap gap-1 items-center ${
+                              align === "left"
+                                ? "justify-start"
+                                : align === "right"
+                                ? "justify-end"
+                                : "justify-center"
+                            }`;
+                            return (
+                              <div key={row.id} className="flex min-w-0 items-center gap-1">
+                                {side !== "right" && (
+                                  <div className="w-10 shrink-0 text-[11px] font-medium text-slate-600 text-left">S{rowLabel}</div>
+                                )}
+                                <div
+                                  className={`flex min-w-0 flex-nowrap gap-1 flex-1 items-center overflow-x-auto ${align === "left" ? "justify-start" : align === "right" ? "justify-end" : "justify-center"}`}
+                                >
+                                  {seatSplit ? (
+                                    <>
+                                      <div className={seatClusterClass}>{seatSplit[0].map(renderSeatDot)}</div>
+                                      <div
+                                        className="w-2 shrink-0 self-stretch min-h-[1.25rem] rounded-sm bg-amber-200/90 border border-amber-400/60"
+                                        title={`Koridor: koltuk ${afterSeat} sonrası`}
+                                      />
+                                      <div className={seatClusterClass}>{seatSplit[1].map(renderSeatDot)}</div>
+                                    </>
+                                  ) : (
+                                    <div className={seatClusterClass}>{seats.map(renderSeatDot)}</div>
+                                  )}
+                                </div>
+                                {side === "right" && (
+                                  <div className="w-10 shrink-0 text-[11px] font-medium text-slate-600 text-right">S{rowLabel}</div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  };
+                  return (
+                    <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
+                      <h3 className="text-sm font-semibold text-slate-800 mb-2">Salon önizleme (canlı taslak)</h3>
+                      <p className="text-xs text-slate-500 mb-3">
+                        Bu alan kaydetmeden önce mevcut taslağı gösterir. Veritabanına yazmak için <strong>Salonu Kaydet</strong> kullanın. Bölüm sırası listedeki
+                        sıraya göredir; yalnızca isimde <em>sol/left</em> veya <em>sağ/right</em> geçenler yan koridorun solunda veya sağında, diğerleri altta yan
+                        yana yerleşir. <strong>Yatay koridor</strong> modundaki bölüm önizlemede tam satır kaplar; altındaki bloklar bir sonraki satıra iner.
+                      </p>
+                      <div className="overflow-x-auto">
+                        <div className="min-w-0 max-w-full rounded-lg border border-slate-100 bg-slate-50 p-2">
+                          <div className="mx-auto mb-2 w-64 rounded bg-slate-800 py-1.5 text-center text-xs font-semibold tracking-wide text-white">
+                            SAHNE
+                          </div>
+                          {onlyCenterSide ? (
+                            <div className="flex w-full flex-col items-center gap-y-1">
+                              {(() => {
+                                const rows: ReactNode[] = [];
+                                let idx = 0;
+                                while (idx < centerSections.length) {
+                                  const remaining = centerSections.length - idx;
+                                  const inRow = remaining === 1 ? 1 : 2;
+                                  const slice = centerSections.slice(idx, idx + inRow);
+                                  rows.push(
+                                    <div
+                                      key={`preview-row-${idx}`}
+                                      className="flex w-full flex-row flex-wrap items-start justify-center gap-x-1 gap-y-1"
+                                    >
+                                      {slice.map((s) => renderSectionCard(s))}
+                                    </div>
+                                  );
+                                  idx += inRow;
+                                }
+                                return rows;
+                              })()}
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-1">
+                              <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-x-1">
+                                <div className="flex min-w-0 flex-col gap-1">
+                                  {leftSections.map((s) => renderSectionCard(s))}
+                                </div>
+                                <div
+                                  className="w-3 min-h-[4rem] shrink-0 self-stretch rounded bg-slate-200/80"
+                                  title="Koridor"
+                                />
+                                <div className="flex min-w-0 flex-col gap-1">
+                                  {rightSections.map((s) => renderSectionCard(s))}
+                                </div>
+                              </div>
+                              {centerSections.length > 0 ? (
+                                <div className="flex flex-wrap items-start justify-center gap-x-1 gap-y-1 border-t border-slate-200/80 pt-1">
+                                  {centerSections.map((s) => renderSectionCard(s))}
+                                </div>
+                              ) : null}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+                <div className="flex flex-wrap items-end gap-2 mt-2 mb-4">
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 min-w-[140px]">
+                    Bölüm adı
+                    <input
+                      type="text"
+                      value={newSectionName[plan.id] ?? ""}
+                      onChange={(e) => setNewSectionName((prev) => ({ ...prev, [plan.id]: e.target.value }))}
+                      placeholder="örn. Blok A, Parket Sol"
+                      className="rounded-lg border border-slate-300 px-3 py-2 text-sm w-full max-w-xs"
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-xs text-slate-600 w-44">
+                    Koridor
+                    <select
+                      value={newSectionCorridorMode[plan.id] ?? "none"}
+                      onChange={(e) =>
+                        setNewSectionCorridorMode((prev) => ({
+                          ...prev,
+                          [plan.id]: e.target.value as "none" | "horizontal" | "vertical",
+                        }))
+                      }
+                      className="rounded-lg border border-slate-300 bg-white px-2 py-2 text-sm"
+                      title="Yatay: üst-alt bölüm blokları arasında sabit boşluk. Dikey: her sırayı yazdığınız koltuk etiketinden sonra böler (örn. 10 → 1–10 | koridor | 11+)."
+                    >
+                      <option value="none">Yok</option>
+                      <option value="horizontal">Yatay (bloklar arası)</option>
+                      <option value="vertical">Dikey (koltuktan sonra)</option>
+                    </select>
+                  </label>
+                  {(newSectionCorridorMode[plan.id] ?? "none") === "vertical" && (
+                    <label className="flex flex-col gap-1 text-xs text-slate-600 w-28">
+                      Koltuk no
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={newSectionCorridorAfterSeat[plan.id] ?? ""}
+                        onChange={(e) =>
+                          setNewSectionCorridorAfterSeat((prev) => ({
+                            ...prev,
+                            [plan.id]: e.target.value,
+                          }))
+                        }
+                        placeholder="örn. 10"
+                        className="rounded-lg border border-slate-300 px-2 py-2 text-sm"
+                      />
+                    </label>
+                  )}
                   <button
                     type="button"
                     onClick={() => handleAddSection(plan.id)}
@@ -1080,6 +1959,19 @@ function OturumPlaniContent() {
                     Salonu Kaydet
                   </button>
                 </div>
+                {saveFeedbackByPlan[plan.id] && (
+                  <p
+                    className={`-mt-2 mb-4 text-xs ${
+                      saveFeedbackByPlan[plan.id]?.type === "ok"
+                        ? "text-emerald-700"
+                        : saveFeedbackByPlan[plan.id]?.type === "saving"
+                        ? "text-slate-600"
+                        : "text-red-600"
+                    }`}
+                  >
+                    {saveFeedbackByPlan[plan.id]?.message}
+                  </p>
+                )}
                 {(sectionsByPlan[plan.id] || []).map((section) => (
                   <div key={section.id} className="ml-4 mt-4 rounded-lg border border-slate-100 bg-slate-50/50 p-4">
                     <div className="flex items-center justify-between gap-2">
@@ -1103,17 +1995,80 @@ function OturumPlaniContent() {
                     </div>
                     {expandedSection === section.id && (
                       <div className="mt-3 ml-4 space-y-3">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <label className="text-sm text-slate-600">Bilet türü / fiyat (etkinlikte eşlenecek):</label>
-                          <input
-                            type="text"
-                            value={sectionTicketLabel[section.id] ?? (section as SeatingPlanSection & { ticket_type_label?: string }).ticket_type_label ?? ""}
-                            onChange={(e) => setSectionTicketLabel((prev) => ({ ...prev, [section.id]: e.target.value }))}
-                            onBlur={(e) => saveSectionTicketLabel(section.id, e.target.value)}
-                            placeholder="Örn: Kategori 1, VIP"
-                            className="rounded border border-slate-300 px-2 py-1.5 text-sm w-48"
-                          />
-                          <span className="text-xs text-slate-500">Etkinlikteki bilet türü adıyla aynı yazın; koltuk fiyatı o biletin fiyatı olur.</span>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:gap-3">
+                          <div>
+                            <label className="text-sm text-slate-600 block mb-1">Bilet türü (etkinlikte eşlenecek)</label>
+                            <TicketTypeLabelSelect
+                              value={
+                                sectionTicketLabel[section.id] ??
+                                (section as SeatingPlanSection & { ticket_type_label?: string }).ticket_type_label ??
+                                ""
+                              }
+                              onChange={(next) =>
+                                setSectionTicketLabel((prev) => ({ ...prev, [section.id]: next }))
+                              }
+                            />
+                          </div>
+                          <p className="text-xs text-slate-500 max-w-md pt-1">
+                            Listeyi{" "}
+                            <Link href="/yonetim/bilet-turleri" className="text-primary-600 hover:underline">
+                              Bilet türleri
+                            </Link>{" "}
+                            ile uyumlu tutun; etkinlikte oluşturduğunuz <code className="text-[11px]">tickets.name</code> ile birebir aynı olmalı.
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-end gap-2 rounded border border-slate-200 bg-white p-2">
+                          <label className="flex flex-col gap-1 text-xs text-slate-600 w-44">
+                            Koridor (önizleme)
+                            <select
+                              value={section.corridor_mode ?? "none"}
+                              onChange={(e) => {
+                                const m = e.target.value as "none" | "horizontal" | "vertical";
+                                setSectionsByPlan((prev) => ({
+                                  ...prev,
+                                  [plan.id]: (prev[plan.id] || []).map((s) =>
+                                    s.id === section.id
+                                      ? {
+                                          ...s,
+                                          corridor_mode: m,
+                                          corridor_gap_px: 0,
+                                          corridor_after_seat_label:
+                                            m === "vertical"
+                                              ? (s.corridor_after_seat_label ?? "").trim() || null
+                                              : null,
+                                        }
+                                      : s
+                                  ),
+                                }));
+                              }}
+                              className="rounded border border-slate-300 bg-white px-2 py-1.5 text-sm"
+                            >
+                              <option value="none">Yok</option>
+                              <option value="horizontal">Yatay (bloklar arası)</option>
+                              <option value="vertical">Dikey (koltuktan sonra)</option>
+                            </select>
+                          </label>
+                          {(section.corridor_mode ?? "none") === "vertical" && (
+                            <label className="flex flex-col gap-1 text-xs text-slate-600 w-28">
+                              Koltuk no
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={section.corridor_after_seat_label ?? ""}
+                                onChange={(e) => {
+                                  const v = e.target.value;
+                                  setSectionsByPlan((prev) => ({
+                                    ...prev,
+                                    [plan.id]: (prev[plan.id] || []).map((s) =>
+                                      s.id === section.id ? { ...s, corridor_after_seat_label: v || null } : s
+                                    ),
+                                  }));
+                                }}
+                                placeholder="örn. 10"
+                                className="rounded border border-slate-300 px-2 py-1.5 text-sm"
+                              />
+                            </label>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <input
@@ -1165,6 +2120,69 @@ function OturumPlaniContent() {
                             Uygula
                           </button>
                         </div>
+                        <div className="rounded border border-slate-200 bg-white p-2 space-y-2">
+                          <p className="text-xs font-medium text-slate-700">Toplu sıra + koltuk ızgarası</p>
+                          <p className="text-[11px] text-slate-500">
+                            Örneğin sıra <strong>1-100</strong>, koltuk <strong>1-25</strong>: eksik sıraları oluşturur; her sıraya bu numaralı koltukları ekler (mevcut etiketleri silmez).
+                          </p>
+                          <div className="flex flex-wrap items-end gap-2">
+                            <label className="flex flex-col gap-0.5 text-xs text-slate-600">
+                              Sıra aralığı
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={bulkGridRows[section.id] ?? ""}
+                                onChange={(e) =>
+                                  setBulkGridRows((prev) => ({ ...prev, [section.id]: e.target.value }))
+                                }
+                                placeholder="1-100"
+                                className="rounded border border-slate-300 px-2 py-1 w-24 text-sm"
+                              />
+                            </label>
+                            <label className="flex flex-col gap-0.5 text-xs text-slate-600">
+                              Koltuk aralığı
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={bulkGridSeats[section.id] ?? ""}
+                                onChange={(e) =>
+                                  setBulkGridSeats((prev) => ({ ...prev, [section.id]: e.target.value }))
+                                }
+                                placeholder="1-25"
+                                className="rounded border border-slate-300 px-2 py-1 w-24 text-sm"
+                              />
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => bulkFillNumericGrid(section.id)}
+                              className="rounded bg-primary-600 px-3 py-1.5 text-xs text-white hover:bg-primary-700"
+                            >
+                              Izgarayı doldur
+                            </button>
+                          </div>
+                        </div>
+                        <div className="rounded border border-slate-200 bg-white p-2 space-y-1">
+                          <p className="text-xs font-medium text-slate-700">Kategori sihirbazı (sıra aralığı → bilet adı)</p>
+                          <p className="text-[11px] text-slate-500">
+                            Satır başına: <code className="text-[10px]">1-5 VIP</code> — etkinlikteki bilet adıyla aynı yazın. Boş satırlar ve # ile başlayanlar yok sayılır.
+                          </p>
+                          <textarea
+                            value={categoryWizardText[section.id] ?? ""}
+                            onChange={(e) =>
+                              setCategoryWizardText((prev) => ({ ...prev, [section.id]: e.target.value }))
+                            }
+                            placeholder={"1-5 VIP\n6-10 Kategori 1\n11-13 Kategori 3"}
+                            rows={4}
+                            className="w-full max-w-md rounded border border-slate-300 px-2 py-1.5 text-xs font-mono"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => applyCategoryWizardLines(section.id)}
+                            className="rounded bg-slate-800 px-2 py-1 text-xs text-white hover:bg-slate-900"
+                          >
+                            Sıra kategorilerini uygula
+                          </button>
+                        </div>
                         {(rowsBySection[section.id] || []).map((row) => (
                           <div key={row.id} className="rounded border border-slate-200 bg-white p-3">
                             <div className="flex items-center justify-between gap-2">
@@ -1187,9 +2205,6 @@ function OturumPlaniContent() {
                                 onChange={(e) =>
                                   setRowTicketLabelDraft((prev) => ({ ...prev, [row.id]: e.target.value }))
                                 }
-                                onBlur={(e) => {
-                                  void saveRowTicketLabel(row.id, section.id, e.target.value);
-                                }}
                                 placeholder="VIP / Kategori 1"
                                 className="rounded border border-slate-300 px-2 py-1 text-xs w-40"
                               />
@@ -1217,9 +2232,31 @@ function OturumPlaniContent() {
                               {sortSeatsByLabel(seatsByRow[row.id] || []).map((s) => (
                                 <span
                                   key={s.id}
-                                  className="inline-flex items-center gap-0.5 rounded bg-slate-100 pl-2 pr-1 py-0.5 text-xs text-slate-700"
+                                  className={`inline-flex items-center gap-0.5 rounded pl-2 pr-1 py-0.5 text-xs ${
+                                    s.sales_blocked ? "bg-amber-100 text-amber-950 ring-1 ring-amber-300" : "bg-slate-100 text-slate-700"
+                                  }`}
                                 >
                                   {s.seat_label}
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setSeatsByRow((prev) => ({
+                                        ...prev,
+                                        [row.id]: (prev[row.id] || []).map((st) =>
+                                          st.id === s.id ? { ...st, sales_blocked: !st.sales_blocked } : st
+                                        ),
+                                      }))
+                                    }
+                                    className={`p-0.5 rounded hover:bg-slate-200 ${
+                                      s.sales_blocked ? "text-amber-800" : "text-slate-500 hover:text-amber-700"
+                                    }`}
+                                    title={s.sales_blocked ? "Satışa aç" : "Satışa kapat"}
+                                    aria-label={
+                                      s.sales_blocked ? `Koltuk ${s.seat_label} satışa aç` : `Koltuk ${s.seat_label} satışa kapat`
+                                    }
+                                  >
+                                    <Ban className="h-3 w-3" />
+                                  </button>
                                   <button
                                     type="button"
                                     onClick={() => handleDeleteSeat(s.id, row.id)}
@@ -1236,8 +2273,8 @@ function OturumPlaniContent() {
                               rowId={row.id}
                               rowLabel={row.row_label}
                               seats={seatsByRow[row.id] || []}
-                              onSaved={() => {
-                                void refreshSeats(row.id);
+                              onSeatsDraftChange={(nextSeats) => {
+                                setSeatsByRow((prev) => ({ ...prev, [row.id]: nextSeats }));
                               }}
                             />
                           </div>
