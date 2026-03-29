@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase-client";
 import OrganizerOrAdminGuard from "@/components/OrganizerOrAdminGuard";
 import AdminImageUpload from "@/components/AdminImageUpload";
 import RichTextEditor from "@/components/RichTextEditor";
+import { getAccessTokenForApi } from "@/lib/supabase-auth-token";
 
 interface VenueFaqItem {
   soru: string;
@@ -96,6 +97,36 @@ const EMPTY_VENUE = {
   rules_en: "",
 };
 
+const MAX_VENUE_GALLERY_IMAGES = 4;
+
+type VenueFormState = typeof EMPTY_VENUE & {
+  seating_layout_image_url?: string;
+  image_url_1?: string;
+  image_url_2?: string;
+  image_url_3?: string;
+  image_url_4?: string;
+  image_url_5?: string;
+};
+
+type LibraryImage = { url: string; path: string; name: string };
+
+function getGalleryFromForm(form: VenueFormState): string[] {
+  return [form.image_url_2, form.image_url_3, form.image_url_4, form.image_url_5]
+    .map((x) => (x || "").trim())
+    .filter((x) => x.length > 0);
+}
+
+function applyGalleryToForm(prev: VenueFormState, gallery: string[]): VenueFormState {
+  const next = gallery.slice(0, MAX_VENUE_GALLERY_IMAGES);
+  return {
+    ...prev,
+    image_url_2: next[0] || "",
+    image_url_3: next[1] || "",
+    image_url_4: next[2] || "",
+    image_url_5: next[3] || "",
+  };
+}
+
 export default function MekanlarPage() {
   return (
     <OrganizerOrAdminGuard>
@@ -111,16 +142,7 @@ function MekanlarContent() {
   const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingVenue, setEditingVenue] = useState<Venue | null>(null);
-  const [form, setForm] = useState<
-    typeof EMPTY_VENUE & {
-      seating_layout_image_url?: string;
-      image_url_1?: string;
-      image_url_2?: string;
-      image_url_3?: string;
-      image_url_4?: string;
-      image_url_5?: string;
-    }
-  >({
+  const [form, setForm] = useState<VenueFormState>({
     ...EMPTY_VENUE,
     seating_layout_image_url: "",
     image_url_1: "",
@@ -130,15 +152,25 @@ function MekanlarContent() {
     image_url_5: "",
   });
   const [imageUploading, setImageUploading] = useState(false);
+  const [libraryLoading, setLibraryLoading] = useState(false);
+  const [libraryImages, setLibraryImages] = useState<LibraryImage[]>([]);
+  const [libraryQuery, setLibraryQuery] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const formPreviewImages = [form.seating_layout_image_url, form.image_url_1, form.image_url_2, form.image_url_3, form.image_url_4, form.image_url_5].filter(
-    (x): x is string => typeof x === "string" && x.trim().length > 0
-  );
+  const coverImage = (form.image_url_1 || "").trim();
+  const galleryImages = getGalleryFromForm(form);
+  const formPreviewImages = [coverImage, ...galleryImages, form.seating_layout_image_url]
+    .map((x) => (x || "").trim())
+    .filter((x) => x.length > 0);
 
   useEffect(() => {
     if (!isAdmin) return;
     fetchVenues();
   }, [isAdmin]);
+
+  useEffect(() => {
+    if (!showForm || !isAdmin) return;
+    void fetchLibraryImages();
+  }, [showForm, isAdmin]);
 
   async function fetchVenues() {
     try {
@@ -216,6 +248,7 @@ function MekanlarContent() {
     });
     setEditingVenue(null);
     setShowForm(false);
+    setLibraryQuery("");
   }
 
   function startEdit(venue: Venue) {
@@ -259,6 +292,7 @@ function MekanlarContent() {
       rules_de: venue.rules_de || "",
       rules_en: venue.rules_en || "",
     });
+    setLibraryQuery("");
     setShowForm(true);
   }
 
@@ -274,6 +308,7 @@ function MekanlarContent() {
       image_url_5: "",
       faq: [{ soru: "", cevap: "" }],
     });
+    setLibraryQuery("");
     setShowForm(true);
   }
 
@@ -297,6 +332,53 @@ function MekanlarContent() {
       ...prev,
       faq: prev.faq.filter((_, i) => i !== index),
     }));
+  }
+
+  async function fetchLibraryImages() {
+    setLibraryLoading(true);
+    try {
+      const token = await getAccessTokenForApi();
+      if (!token) {
+        setLibraryImages([]);
+        return;
+      }
+      const res = await fetch("/api/list-images?folder=images&limit=50", {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "same-origin",
+      });
+      if (!res.ok) throw new Error("Görsel listesi alınamadı");
+      const data = (await res.json()) as { images?: LibraryImage[] };
+      setLibraryImages(Array.isArray(data.images) ? data.images : []);
+    } catch (err) {
+      console.error("Görsel kütüphanesi alınamadı:", err);
+      setLibraryImages([]);
+    } finally {
+      setLibraryLoading(false);
+    }
+  }
+
+  function addGalleryImage(url: string) {
+    const clean = url.trim();
+    if (!clean) return;
+    setForm((prev) => {
+      const current = getGalleryFromForm(prev);
+      if (current.includes(clean)) return prev;
+      if (current.length >= MAX_VENUE_GALLERY_IMAGES) {
+        alert(`Galeri en fazla ${MAX_VENUE_GALLERY_IMAGES} görsel alır.`);
+        return prev;
+      }
+      return applyGalleryToForm(prev, [...current, clean]);
+    });
+  }
+
+  function removeGalleryImage(index: number) {
+    setForm((prev) => {
+      const current = getGalleryFromForm(prev);
+      return applyGalleryToForm(
+        prev,
+        current.filter((_, i) => i !== index)
+      );
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -662,61 +744,111 @@ function MekanlarContent() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Mekan Fotoğrafı 1
-                    </label>
-                    <AdminImageUpload
-                      value={form.image_url_1 || ""}
-                      onChange={(url) => setForm((p) => ({ ...p, image_url_1: url }))}
-                      onUploadingChange={setImageUploading}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Mekan Fotoğrafı 2 (opsiyonel)
-                    </label>
-                    <AdminImageUpload
-                      value={form.image_url_2 || ""}
-                      onChange={(url) => setForm((p) => ({ ...p, image_url_2: url }))}
-                      onUploadingChange={setImageUploading}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Mekan Fotoğrafı 3 (opsiyonel)
-                    </label>
-                    <AdminImageUpload
-                      value={form.image_url_3 || ""}
-                      onChange={(url) => setForm((p) => ({ ...p, image_url_3: url }))}
-                      onUploadingChange={setImageUploading}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Mekan Fotoğrafı 4 (opsiyonel)
-                    </label>
-                    <AdminImageUpload
-                      value={form.image_url_4 || ""}
-                      onChange={(url) => setForm((p) => ({ ...p, image_url_4: url }))}
-                      onUploadingChange={setImageUploading}
-                    />
-                  </div>
-                </div>
-
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Mekan Fotoğrafı 5 (opsiyonel)
+                    Kapak Fotoğrafı
                   </label>
                   <AdminImageUpload
-                    value={form.image_url_5 || ""}
-                    onChange={(url) => setForm((p) => ({ ...p, image_url_5: url }))}
+                    value={form.image_url_1 || ""}
+                    onChange={(url) => setForm((p) => ({ ...p, image_url_1: url }))}
                     onUploadingChange={setImageUploading}
                   />
+                </div>
+
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="text-sm font-semibold text-slate-900">
+                      Galeri Ekle
+                    </h4>
+                    <span className="text-xs text-slate-500">
+                      {galleryImages.length}/{MAX_VENUE_GALLERY_IMAGES}
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {Array.from({ length: MAX_VENUE_GALLERY_IMAGES }).map((_, idx) => {
+                      const current = galleryImages[idx] || "";
+                      return (
+                        <div key={`gallery-slot-${idx}`} className="rounded-lg border border-slate-200 bg-white p-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-medium text-slate-600">Galeri Görseli {idx + 1}</p>
+                            {current ? (
+                              <button
+                                type="button"
+                                onClick={() => removeGalleryImage(idx)}
+                                className="text-xs text-red-600 hover:text-red-700"
+                              >
+                                Kaldır
+                              </button>
+                            ) : null}
+                          </div>
+                          <AdminImageUpload
+                            value={current}
+                            onChange={(url) =>
+                              setForm((prev) => {
+                                const next = [...getGalleryFromForm(prev)];
+                                if ((url || "").trim()) {
+                                  next[idx] = url.trim();
+                                } else {
+                                  next.splice(idx, 1);
+                                }
+                                return applyGalleryToForm(prev, next.filter((x) => x && x.trim().length > 0));
+                              })
+                            }
+                            onUploadingChange={setImageUploading}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 border-t border-slate-200 pt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                        Galeriden Seç
+                      </h5>
+                      <button
+                        type="button"
+                        onClick={() => void fetchLibraryImages()}
+                        className="text-xs text-primary-600 hover:text-primary-700"
+                      >
+                        Yenile
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={libraryQuery}
+                      onChange={(e) => setLibraryQuery(e.target.value)}
+                      placeholder="Dosya adıyla ara..."
+                      className="mb-2 w-full rounded-lg border border-slate-300 px-3 py-1.5 text-xs"
+                    />
+                    {libraryLoading ? (
+                      <p className="text-xs text-slate-500">Kütüphane yükleniyor...</p>
+                    ) : (
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-48 overflow-auto pr-1">
+                        {libraryImages
+                          .filter((img) =>
+                            libraryQuery.trim()
+                              ? img.name.toLowerCase().includes(libraryQuery.trim().toLowerCase())
+                              : true
+                          )
+                          .map((img) => (
+                            <button
+                              type="button"
+                              key={img.path}
+                              onClick={() => addGalleryImage(img.url)}
+                              className="group rounded-md border border-slate-200 bg-white p-1 hover:border-primary-400"
+                              title={img.name}
+                            >
+                              <img src={img.url} alt={img.name} className="h-14 w-full rounded object-cover" />
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                    {!libraryLoading && libraryImages.length === 0 && (
+                      <p className="text-xs text-slate-500">Kütüphanede görsel bulunamadı.</p>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -916,14 +1048,10 @@ function MekanlarContent() {
         ) : (
           <div className="grid gap-4">
             {venues.map((venue) => {
-              const venueThumbs = [
-                venue.image_url_1,
-                venue.image_url_2,
-                venue.image_url_3,
-                venue.image_url_4,
-                venue.image_url_5,
-                venue.seating_layout_image_url,
-              ].filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+              const cover = (venue.image_url_1 || "").trim();
+              const venueThumbs = [venue.image_url_2, venue.image_url_3, venue.image_url_4, venue.image_url_5]
+                .map((x) => (x || "").trim())
+                .filter((x): x is string => x.length > 0);
 
               const thumbsToShow = venueThumbs.slice(0, 3);
               const gridCols =
@@ -941,7 +1069,9 @@ function MekanlarContent() {
                 >
                   <div className="flex gap-6">
                     <div className="w-24 h-24 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden">
-                      {thumbsToShow.length > 0 ? (
+                      {cover ? (
+                        <img src={cover} alt={`${venue.name} kapak`} className="h-full w-full object-cover" />
+                      ) : thumbsToShow.length > 0 ? (
                         <div className={`h-full grid ${gridCols} gap-1 bg-slate-100`}>
                           {thumbsToShow.map((url, idx) => (
                             <div key={`${url}-${idx}`} className="relative">
@@ -981,6 +1111,9 @@ function MekanlarContent() {
                           <p className="mt-2 text-sm text-slate-600 line-clamp-2">
                             {venue.seating_layout_description}
                           </p>
+                        )}
+                        {venueThumbs.length > 0 && (
+                          <p className="mt-1 text-xs text-slate-500">Galeri: {venueThumbs.length} görsel</p>
                         )}
                         {venue.faq.length > 0 && (
                           <button

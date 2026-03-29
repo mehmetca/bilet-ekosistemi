@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, ChevronLeft, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell, Building2, Armchair, LayoutGrid, X } from "lucide-react";
+import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, ChevronLeft, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell, Building2, Armchair, LayoutGrid, X, Search } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
@@ -31,7 +31,7 @@ import {
 } from "@/lib/seating-plans/theaterduisburg";
 import { planSectionsMatchMusensaalTemplate } from "@/lib/seating-plans/musensaal-structure-match";
 import { formatEventDateDMY } from "@/lib/date-utils";
-import { darkenHex, getTicketCategoryColorHex, lightenHex } from "@/lib/seating-plans/ticket-category-colors";
+import { getTicketCategoryColorHex, lightenHex } from "@/lib/seating-plans/ticket-category-colors";
 
 const SEAT_HOLD_LS_KEY = "seatHoldSessionId";
 
@@ -449,8 +449,8 @@ function SeatMapSvg({
                   stroke = HELD_SEAT_FLUO;
                 } else {
                   fill = catHex;
-                  stroke = darkenHex(catHex, 0.2);
-                  sw = 1.5;
+                  stroke = catHex;
+                  sw = 0;
                 }
                 return (
                   <g
@@ -515,6 +515,11 @@ function SeatMapWithZoom({
   seatTitleById,
   stageLabel,
   seatLabelWord,
+  availableTickets,
+  selectedSeatCategory,
+  onSelectSeatCategory,
+  locale,
+  currency,
 }: {
   sections: SeatPlanSection[];
   heldSeatIds: Set<string>;
@@ -526,11 +531,17 @@ function SeatMapWithZoom({
   seatTitleById?: Map<string, string>;
   stageLabel: string;
   seatLabelWord: string;
+  availableTickets: TicketLike[];
+  selectedSeatCategory: string;
+  onSelectSeatCategory: (value: string) => void;
+  locale: "tr" | "de" | "en";
+  currency: Event["currency"];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const didMove = useRef(false);
 
@@ -595,34 +606,111 @@ function SeatMapWithZoom({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-slate-600">Salon planı:</span>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setCategoryOpen((o) => !o)}
+            className="inline-flex w-[320px] max-w-[86vw] items-center justify-between rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          >
+            <span className="truncate text-left">
+              {selectedSeatCategory === "all"
+                ? locale === "de"
+                  ? "Alle Kategorien"
+                  : locale === "en"
+                  ? "All categories"
+                  : "Tüm kategoriler"
+                : selectedSeatCategory}
+            </span>
+            {categoryOpen ? (
+              <ChevronUp className="h-4 w-4 shrink-0 text-slate-500" />
+            ) : (
+              <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+            )}
+          </button>
+          {categoryOpen && (
+            <div className="absolute left-0 top-full z-20 mt-1 w-[320px] max-w-[86vw] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectSeatCategory("all");
+                  setCategoryOpen(false);
+                }}
+                className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm ${
+                  selectedSeatCategory === "all" ? "bg-primary-50" : "hover:bg-slate-50"
+                }`}
+              >
+                <span className="inline-flex items-center gap-1">
+                  <span className="h-3 w-3 rounded-[3px] bg-[#ef4444]" />
+                  <span className="h-3 w-3 rounded-[3px] bg-[#3b82f6]" />
+                  <span className="h-3 w-3 rounded-[3px] bg-[#10b981]" />
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                  {locale === "de" ? "Alle Kategorien" : locale === "en" ? "All categories" : "Tüm kategoriler"}
+                </span>
+              </button>
+              {availableTickets.map((tk) => {
+                const name = (tk.name || "Bilet").trim();
+                const active = selectedSeatCategory === name;
+                return (
+                  <button
+                    key={tk.id}
+                    type="button"
+                    onClick={() => {
+                      onSelectSeatCategory(name);
+                      setCategoryOpen(false);
+                    }}
+                      className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm ${
+                      active ? "bg-primary-50" : "hover:bg-slate-50"
+                    }`}
+                  >
+                    <span
+                      className="h-3.5 w-3.5 rounded-[4px] shrink-0"
+                      style={{ backgroundColor: getTicketCategoryColorHex(name) }}
+                    />
+                    <span className="min-w-0 flex-1 truncate text-slate-800">{name}</span>
+                    <span className="shrink-0 font-semibold text-slate-700">
+                      {formatPrice(Number(tk.price || 0), currency)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
         <button
           type="button"
           onClick={zoomIn}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
           aria-label="Yakınlaştır"
+          title="Yakınlaştır"
         >
-          + Büyüt
+          <span className="relative inline-flex h-5 w-5 items-center justify-center">
+            <Search className="h-5 w-5" />
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold leading-none">+</span>
+          </span>
         </button>
         <button
           type="button"
           onClick={zoomOut}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
           aria-label="Uzaklaştır"
+          title="Uzaklaştır"
         >
-          − Küçült
+          <span className="relative inline-flex h-5 w-5 items-center justify-center">
+            <Search className="h-5 w-5" />
+            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold leading-none">−</span>
+          </span>
         </button>
         <button
           type="button"
           onClick={resetView}
-          className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
         >
-          Sıfırla
+          Ortala
         </button>
-        <span className="text-xs text-slate-500">
-          Fare tekerleği ile zoom · Sürükleyerek hareket ettirin
-        </span>
+        </div>
       </div>
       <div
         ref={containerRef}
@@ -664,15 +752,6 @@ function SeatMapWithZoom({
   );
 }
 
-/** Mekan galerisi: tüm foto kutuları aynı genişlikte (satır başına eşit sütun). */
-function venuePhotoGridColsClass(count: number): string {
-  if (count <= 1) return "grid-cols-1 max-w-xl mx-auto";
-  if (count === 2) return "grid-cols-2";
-  if (count === 3) return "grid-cols-3";
-  if (count === 4) return "grid-cols-2 sm:grid-cols-4";
-  return "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";
-}
-
 /** Bilet açıklamasındaki "Min. X adet." ifadesinden minimum adedi döndürür (grup indirimli bilet). */
 function getMinQuantityFromDescription(description: string | null | undefined): number {
   if (!description) return 1;
@@ -701,10 +780,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     availableTickets[0]?.id || ""
   );
   const [ticketCount, setTicketCount] = useState<number>(1);
-  /** Faz 1: Fiyat kategorisine göre (mevcut) / Yer seçerek (oturum planı varsa) */
-  const [bookingMode, setBookingMode] = useState<"price" | "seat">(() =>
-    !!(event as Event & { seating_plan_id?: string }).seating_plan_id ? "seat" : "price"
-  );
+  /** Kullanıcı hangi akıştan ilerleyeceğine kendisi karar verir (başlangıçta ikisi de kapalı). */
+  const [bookingMode, setBookingMode] = useState<"price" | "seat" | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   /** Koltuk seçimi: yüklü plan yapısı (bölüm > sıra > koltuk) */
   const [seatingPlanData, setSeatingPlanData] = useState<SeatPlanSection[] | null>(null);
@@ -1022,15 +1099,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       m.set(seatId, getTicketCategoryColorHex(name));
     });
     return m;
-  }, [seatMetaById]);
-
-  const seatCategoryOptions = useMemo(() => {
-    const set = new Set<string>();
-    seatMetaById.forEach((meta) => {
-      const name = String(meta.ticket?.name || "").trim();
-      if (name) set.add(name);
-    });
-    return Array.from(set);
   }, [seatMetaById]);
 
   const selectableSeatIdsByCategory = useMemo(() => {
@@ -1454,6 +1522,15 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   </button>
                 </div>
               )}
+              {!isExternalOnlyEvent && bookingMode === null && (
+                <p className="mb-8 text-sm text-slate-600">
+                  {locale === "de"
+                    ? "Bitte wählen Sie eine Buchungsart."
+                    : locale === "en"
+                    ? "Please choose a booking method."
+                    : "Lütfen bir bilet alma yöntemi seçin."}
+                </p>
+              )}
 
               {isExternalOnlyEvent && (
                 <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
@@ -1497,28 +1574,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
                       {/* Sol: Plan + harita/liste */}
                       <div className="min-w-0">
-                        {availableTickets.length === 0 ? (
+                        {availableTickets.length === 0 && (
                           <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
                             <strong>Bilet stoku yok.</strong> Koltukları işaretleyebilirsiniz; sepete eklemek için yönetimde bu etkinlik için en az bir bilet türü tanımlayıp adedi 0&apos;dan büyük yapın.
                           </div>
-                        ) : (
-                          <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                            <p className="font-semibold text-slate-800 mb-2">Satıştaki bilet türleri (bölüm etiketi veya sıra ile eşleşir)</p>
-                            <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0">
-                              {availableTickets.map((tk) => (
-                                <li key={tk.id}>
-                                  <span className="font-medium text-slate-800">{tk.name || "Bilet"}</span>
-                                  <span className="text-slate-500"> · </span>
-                                  {formatPrice(Number(tk.price || 0), event.currency)}
-                                  <span className="text-slate-500"> ({tk.available} kalan)</span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
                         )}
                         <p className="text-sm text-slate-600 mb-3">
-                          Bölüm ve koltuk seçin. Renkler, etkinlik bilet adıyla eşleşen kategoriye göredir (VIP, Kategori 1–10 vb.). Sırada veya bölümde
-                          yazdığınız bilet türü, tam ad veya <strong>Bölüm + kısa etiket</strong> (örn. Blok A vip) ile eşleşir.
+                          Bölüm ve koltuk seçin. Renkler, etkinlik bilet adıyla eşleşen kategoriye göredir.
                         </p>
                         <div className="flex gap-2 mb-4">
                           <button
@@ -1535,19 +1597,15 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           >
                             Liste
                           </button>
-                          <select
-                            value={selectedSeatCategory}
-                            onChange={(e) => setSelectedSeatCategory(e.target.value)}
-                            className="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700"
-                            aria-label="Alle Kategorien"
-                          >
-                            <option value="all">Alle Kategorien</option>
-                            {seatCategoryOptions.map((name) => (
-                              <option key={name} value={name}>
-                                {name}
-                              </option>
-                            ))}
-                          </select>
+                          {selectedSeatCategory !== "all" ? (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedSeatCategory("all")}
+                              className="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                            >
+                              {locale === "de" ? "Filter zurücksetzen" : locale === "en" ? "Reset filter" : "Filtreyi temizle"}
+                            </button>
+                          ) : null}
                         </div>
                         {seatMapView === "map" && (
                           <div className="mb-4">
@@ -1607,6 +1665,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 seatTitleById={seatTitleById}
                                 stageLabel={stageLabel}
                                 seatLabelWord={seatLabelWord}
+                                availableTickets={availableTickets}
+                                selectedSeatCategory={selectedSeatCategory}
+                                onSelectSeatCategory={setSelectedSeatCategory}
+                                locale={locale}
+                                currency={event.currency}
                               />
                               </>
                             )}
@@ -2139,17 +2202,219 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               </div>}
             </div>
 
-            {/* Etkinlik Detayları */}
-            <div className="bg-white rounded-xl border border-slate-200 p-8 mt-8">
-              <h2 className="text-2xl font-bold text-slate-900 mb-6">{t("aboutEvent")}</h2>
-              <div className="prose prose-slate max-w-none">
-                <p className="text-slate-700 leading-relaxed">
-                  {parsedDescription.content || t("aboutPlaceholder")}
-                </p>
-              </div>
+            {/* Etkinlik Hakkında - Eventim tarzı, daha düzenli içerik + sağ özet panel */}
+            <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+                <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t("aboutEvent")}</h2>
+                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+                    {locale === "de" ? "Information" : locale === "en" ? "Information" : "Bilgilendirme"}
+                  </span>
+                </div>
+                <div className="prose prose-slate max-w-none">
+                  <p className="whitespace-pre-line text-[15px] leading-7 text-slate-700">
+                    {parsedDescription.content || t("aboutPlaceholder")}
+                  </p>
+                </div>
+              </section>
+
+              <aside className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 h-fit">
+                <h3 className="mb-4 text-base font-bold text-slate-900">
+                  {locale === "de" ? "Auf einen Blick" : locale === "en" ? "At a glance" : "Hızlı Özet"}
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {locale === "de" ? "Datum" : locale === "en" ? "Date" : "Tarih"}
+                      </p>
+                      <p className="text-sm font-medium text-slate-800">{formatEventDateDMY(event.date)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {locale === "de" ? "Uhrzeit" : locale === "en" ? "Time" : "Saat"}
+                      </p>
+                      <p className="text-sm font-medium text-slate-800">{event.time || "20:00"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {locale === "de" ? "Veranstaltungsort" : locale === "en" ? "Venue" : "Mekan"}
+                      </p>
+                      <p className="text-sm font-medium text-slate-800">{localized.venue || event.venue}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        {locale === "de" ? "Standort" : locale === "en" ? "Location" : "Konum"}
+                      </p>
+                      <p className="text-sm font-medium text-slate-800">
+                        {event.location || localized.venue || event.venue}
+                      </p>
+                    </div>
+                  </div>
+                  {organizerDisplayName && (
+                    <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                      <Users className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          {locale === "de" ? "Veranstalter" : locale === "en" ? "Organizer" : "Organizatör"}
+                        </p>
+                        <p className="text-sm font-medium text-slate-800">{organizerDisplayName}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </aside>
             </div>
 
-            {/* Bilet hatırlatıcısı + Güvenli alışveriş – mekan bilgisinin hemen üstünde, yan yana */}
+            {/* Mekan Bilgisi - Eventim benzeri toplu düzen */}
+            {venue && (
+              <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t("venueInfo")}</h2>
+                  <Link
+                    href={`/${locale}/mekanlar`}
+                    className="text-sm font-medium text-primary-600 hover:text-primary-700"
+                  >
+                    {t("allVenues")} →
+                  </Link>
+                </div>
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+                  <div className="space-y-5">
+                    {venuePhotoUrls.length > 0 && (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+                        <h3 className="mb-2 text-base font-bold text-slate-900">
+                          {locale === "de" ? "Fotos" : locale === "en" ? "Photos" : "Fotoğraflar"}
+                        </h3>
+                        <p className="mb-3 text-sm text-slate-500">
+                          {locale === "de"
+                            ? "Tippen zum Vergrößern · Pfeiltasten in der Galerie"
+                            : locale === "en"
+                            ? "Tap to enlarge · Arrow keys in gallery"
+                            : "Büyütmek için tıklayın · Galeride ok tuşları"}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {venuePhotoUrls.map((url, idx) => (
+                            <button
+                              key={`${url}-${idx}`}
+                              type="button"
+                              onClick={() => setVenueGalleryIndex(idx)}
+                              className="group relative h-16 w-24 overflow-hidden rounded-md border border-slate-200 bg-slate-100 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500 sm:h-20 sm:w-28"
+                              aria-label={
+                                locale === "en"
+                                  ? `Open photo ${idx + 1} in gallery`
+                                  : locale === "de"
+                                  ? `Foto ${idx + 1} in Galerie öffnen`
+                                  : `Fotoğraf ${idx + 1} galeride aç`
+                              }
+                            >
+                              <img
+                                src={url}
+                                alt={`${venue.name} – ${idx + 1}`}
+                                className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {venue.transport_info && (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+                        <div className="mb-1 flex items-center gap-2">
+                          <Car className="h-4 w-4 text-primary-600" />
+                          <h3 className="text-base font-bold text-slate-900">{t("transport")}</h3>
+                        </div>
+                        <div
+                          className="prose prose-sm max-w-none text-slate-700 [&_p]:my-1 [&_ul]:my-2"
+                          dangerouslySetInnerHTML={{ __html: venue.transport_info }}
+                        />
+                      </div>
+                    )}
+                    {(() => {
+                      const mapUrl = extractMapEmbedUrl(venue.map_embed_url);
+                      return mapUrl ? (
+                        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+                          <h3 className="mb-2 text-base font-bold text-slate-900">{t("map")}</h3>
+                          <div className="h-40 w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 sm:h-52">
+                            <iframe
+                              src={mapUrl}
+                              width="100%"
+                              height="100%"
+                              style={{ border: 0 }}
+                              allowFullScreen
+                              loading="lazy"
+                              referrerPolicy="no-referrer-when-downgrade"
+                              title={`${venue.name} harita`}
+                              className="h-full w-full"
+                            />
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
+                    {venue.faq.length > 0 && (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+                        <button
+                          onClick={() => setVenueFaqOpen((o) => !o)}
+                          className="flex items-center gap-2 text-slate-900 font-semibold hover:text-primary-600"
+                        >
+                          <HelpCircle className="h-5 w-5" />
+                          {t("faq")}
+                          {venueFaqOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                        </button>
+                        {venueFaqOpen && (
+                          <div className="mt-4 space-y-4 border-l-2 border-primary-200 pl-4">
+                            {venue.faq.map((item, i) => (
+                              <div key={i}>
+                                <p className="font-medium text-slate-800">{item.soru}</p>
+                                <p className="mt-1 text-slate-600">{item.cevap}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <aside className="space-y-4">
+                    {venue.entrance_info && (
+                      <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="mb-1 flex items-center gap-2">
+                          <DoorOpen className="h-4 w-4 text-primary-600" />
+                          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-800">{t("entranceInfo")}</h3>
+                        </div>
+                        <p className="text-sm leading-6 text-slate-700">{venue.entrance_info}</p>
+                      </div>
+                    )}
+                    {venue.rules && (
+                      <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-slate-800">{t("entranceRules")}</h3>
+                        <p className="text-sm leading-6 text-slate-700">{venue.rules}</p>
+                      </div>
+                    )}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-xs leading-relaxed text-slate-600">
+                        {locale === "de"
+                          ? "Hinweis: Sitzplatzauswahl und Ticketkategorien finden Sie oben im Bereich Buchung."
+                          : locale === "en"
+                          ? "Note: Seat selection and ticket categories are available above in the booking area."
+                          : "Not: Koltuk seçimi ve bilet kategorileri sayfanın üstündeki rezervasyon alanındadır."}
+                      </p>
+                    </div>
+                  </aside>
+                </div>
+              </section>
+            )}
+
+            {/* Bilet hatırlatıcısı + Güvenli alışveriş */}
             <div className="grid sm:grid-cols-2 gap-4 mt-8">
               {!isPastEvent && (
                 <div className="bg-amber-50 rounded-xl border border-amber-200 p-6">
@@ -2206,154 +2471,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               </div>
             </div>
-
-            {/* Mekan Bilgisi - SSS, Ulaşım, Giriş */}
-            {venue && (
-              <div className="bg-white rounded-xl border border-slate-200 p-8 mt-8">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-slate-900">{t("venueInfo")}</h2>
-                  <Link
-                    href={`/${locale}/mekanlar`}
-                    className="text-sm font-medium text-primary-600 hover:text-primary-700"
-                  >
-                    {t("allVenues")} →
-                  </Link>
-                </div>
-                <div className="space-y-6">
-                  {venuePhotoUrls.length > 0 && (
-                    <div>
-                      <h3 className="font-semibold text-slate-800 mb-3">
-                        {locale === "de" ? "Fotos" : locale === "en" ? "Photos" : "Fotoğraflar"}
-                      </h3>
-                      <p className="text-sm text-slate-500 mb-3">
-                        {locale === "de"
-                          ? "Tippen zum Vergrößern · Pfeiltasten in der Galerie"
-                          : locale === "en"
-                          ? "Tap to enlarge · Arrow keys in gallery"
-                          : "Büyütmek için tıklayın · Galeride ok tuşları"}
-                      </p>
-                      <div className={`grid w-full gap-3 ${venuePhotoGridColsClass(venuePhotoUrls.length)}`}>
-                        {venuePhotoUrls.map((url, idx) => (
-                          <button
-                            key={`${url}-${idx}`}
-                            type="button"
-                            onClick={() => setVenueGalleryIndex(idx)}
-                            className="group relative aspect-[4/3] w-full min-w-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                            aria-label={
-                              locale === "en"
-                                ? `Open photo ${idx + 1} in gallery`
-                                : locale === "de"
-                                ? `Foto ${idx + 1} in Galerie öffnen`
-                                : `Fotoğraf ${idx + 1} galeride aç`
-                            }
-                          >
-                            <img
-                              src={url}
-                              alt={`${venue.name} – ${idx + 1}`}
-                              className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
-                            />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {venue.seating_layout_description && (
-                    <div>
-                      <h3 className="font-semibold text-slate-800 mb-2">{t("seatingPlan")}</h3>
-                      <p className="text-slate-600">{venue.seating_layout_description}</p>
-                      {venue.seating_layout_image_url && (
-                        <>
-                        <img
-                          src={venue.seating_layout_image_url}
-                          alt={`${venue.name} oturma planı`}
-                          className="mt-3 w-full max-w-2xl rounded-lg border border-slate-200 object-contain"
-                        />
-                        {hasSeatingPlan && (
-                          <p className="mt-2 text-xs text-slate-500">
-                            Bu görsel mekân tanıtımı içindir. Gerçek koltuk seçimi sayfanın üstündeki &quot;Yer seçerek bilet al&quot; bölümündedir.
-                          </p>
-                        )}
-                        </>
-                      )}
-                    </div>
-                  )}
-                  {venue.transport_info && (
-                    <div className="flex items-start gap-3">
-                      <Car className="h-5 w-5 text-primary-600 mt-0.5 flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-slate-800 mb-1">{t("transport")}</h3>
-                        <div
-                          className="text-slate-600 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-2"
-                          dangerouslySetInnerHTML={{ __html: venue.transport_info }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {(() => {
-                    const mapUrl = extractMapEmbedUrl(venue.map_embed_url);
-                    return mapUrl ? (
-                      <div className="w-full">
-                        <h3 className="font-semibold text-slate-800 mb-2">{t("map")}</h3>
-                        <div className="h-40 w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 sm:h-44">
-                          <iframe
-                            src={mapUrl}
-                            width="100%"
-                            height="100%"
-                            style={{ border: 0 }}
-                            allowFullScreen
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            title={`${venue.name} harita`}
-                            className="h-full w-full"
-                          />
-                        </div>
-                      </div>
-                    ) : null;
-                  })()}
-                  {venue.entrance_info && (
-                    <div className="flex items-start gap-3">
-                      <DoorOpen className="h-5 w-5 text-primary-600 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <h3 className="font-semibold text-slate-800 mb-1">{t("entranceInfo")}</h3>
-                        <p className="text-slate-600">{venue.entrance_info}</p>
-                      </div>
-                    </div>
-                  )}
-                  {venue.rules && (
-                    <div>
-                      <h3 className="font-semibold text-slate-800 mb-1">{t("entranceRules")}</h3>
-                      <p className="text-slate-600">{venue.rules}</p>
-                    </div>
-                  )}
-                  {venue.faq.length > 0 && (
-                    <div>
-                      <button
-                        onClick={() => setVenueFaqOpen((o) => !o)}
-                        className="flex items-center gap-2 text-slate-800 font-semibold hover:text-primary-600"
-                      >
-                        <HelpCircle className="h-5 w-5" />
-                        {t("faq")}
-                        {venueFaqOpen ? (
-                          <ChevronUp className="h-4 w-4" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4" />
-                        )}
-                      </button>
-                      {venueFaqOpen && (
-                        <div className="mt-4 space-y-4 border-l-2 border-primary-200 pl-4">
-                          {venue.faq.map((item, i) => (
-                            <div key={i}>
-                              <p className="font-medium text-slate-800">{item.soru}</p>
-                              <p className="mt-1 text-slate-600">{item.cevap}</p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
 
         {venueGalleryIndex !== null && venuePhotoUrls.length > 0 && (
           <div

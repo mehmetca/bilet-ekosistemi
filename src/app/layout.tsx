@@ -9,6 +9,7 @@ import AppErrorBoundary from "@/components/AppErrorBoundary";
 import GlobalErrorHandler from "@/components/GlobalErrorHandler";
 import Heartbeat from "@/components/Heartbeat";
 import ConsoleCapture from "@/components/ConsoleCapture";
+import ScrollResetOnReload from "@/components/ScrollResetOnReload";
 import { NextIntlClientProvider } from "next-intl";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
@@ -74,6 +75,7 @@ export default async function RootLayout({
                 <ServiceWorkerRegister />
                 <Heartbeat />
                 <ConsoleCapture />
+                <ScrollResetOnReload />
                 </Providers>
               </SimpleAuthProvider>
             </AppErrorBoundary>
