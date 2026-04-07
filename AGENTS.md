@@ -35,5 +35,7 @@ npm with `package-lock.json`.
 ### Key gotchas
 - `npm run dev` (webpack mode) returns 500 on all routes due to a pre-existing component resolution bug. Always use `npm run dev:turbo`.
 - The `NEXT_PUBLIC_SUPABASE_URL` env var must be a valid URL (not a bare string like `your_supabase_url`) or `npm run build` will fail on the `/api/test-supabase` prerender step.
+- Without real Supabase credentials, the homepage (`/tr`) may show a client-side error modal from `GlobalErrorHandler` due to failed Supabase fetch. Other pages (FAQ, login, cart, admin) render fine. To test UI without credentials, use pages like `/tr/bilgilendirme/sss`, `/giris`, `/tr/sepet`.
 - Sentry is only active during production builds when `NEXT_PUBLIC_SENTRY_DSN` is set; it's safely disabled otherwise.
 - `eslint: { ignoreDuringBuilds: true }` is set in `next.config.mjs`, so `npm run build` skips lint. Run `npm run lint` separately.
+- The i18n language switcher in the header works for switching between `/tr/`, `/de/`, `/en/` prefixed routes.
