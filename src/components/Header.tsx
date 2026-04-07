@@ -73,8 +73,8 @@ export default function Header() {
           <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary-600 text-white shrink-0">
             <Ticket className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
-          <span className="hidden sm:inline">Bilet Ekosistemi</span>
-          <span className="sm:hidden">Bilet</span>
+          <span className="hidden sm:inline">EventSeat</span>
+          <span className="sm:hidden">EventSeat</span>
         </Link>
 
         {/* Masaüstü menü - ortada: nav + sepet + dil */}

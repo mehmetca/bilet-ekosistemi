@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const event = showEvents[0] || slugResult?.event;
   if (!event) return { title: "Etkinlik Bulunamadı" };
 
-  const title = `${event.title} | Bilet Ekosistemi`;
+  const title = `${event.title} | EventSeat`;
   const description =
     event.description?.replace(/<[^>]*>/g, "").slice(0, 160) ||
     `${event.title} - ${event.date} ${event.time || ""} ${event.venue || ""}. Bilet alın.`;
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title,
       description,
       url,
-      siteName: "Bilet Ekosistemi",
+      siteName: "EventSeat",
       locale: "tr_TR",
       type: "website",
       images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630, alt: event.title }] : undefined,

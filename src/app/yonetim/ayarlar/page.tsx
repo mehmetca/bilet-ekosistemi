@@ -21,9 +21,9 @@ export default function AyarlarPage() {
   }, []);
 
   const [settings, setSettings] = useState({
-    siteName: "Bilet Ekosistemi",
+    siteName: "EventSeat",
     siteDescription: "Modern bilet satış platformu",
-    contactEmail: "info@bilet-ekosistemi.com",
+    contactEmail: "info@eventseat.com",
     maxTicketQuantity: 10,
     enableNotifications: true,
     maintenanceMode: false

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Edit2, Trash2, Copy, Calendar, MapPin, Music2, CheckCircle, Heart, Bell, Building2 } from "lucide-react";
+import { Plus, Edit2, Trash2, Copy, Calendar, MapPin, Music2, CheckCircle, Heart, Bell, Building2, Shield } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import type { Event, EventCategory, EventCurrency } from "@/types/database";
@@ -138,6 +138,21 @@ function EtkinliklerContent() {
     } catch (err) {
       console.error("Öne çıkan ayarı güncellenemedi:", err);
       alert("Öne çıkan ayarı güncellenemedi. " + (err instanceof Error ? err.message : ""));
+    }
+  }
+
+  async function handleSetDraft(eventId: string, isDraft: boolean) {
+    if (!isAdmin) return;
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({ is_draft: isDraft })
+        .eq("id", eventId);
+      if (error) throw error;
+      await fetchEvents();
+    } catch (err) {
+      console.error("Taslak ayarı güncellenemedi:", err);
+      alert("Taslak ayarı güncellenemedi. " + (err instanceof Error ? err.message : ""));
     }
   }
 
@@ -388,6 +403,12 @@ function EtkinliklerContent() {
                             Onay Bekliyor
                           </span>
                         )}
+                        {(event as Event & { is_draft?: boolean }).is_draft && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500 text-white gap-1">
+                            <Shield className="h-3 w-3" />
+                            Taslak
+                          </span>
+                        )}
                       </div>
                       <h3 className="mt-1 text-lg font-semibold text-slate-900">
                         {event.title}
@@ -421,19 +442,31 @@ function EtkinliklerContent() {
                         : "Ücretsiz"}
                     </span>
                     {isAdmin && (
-                      <select
-                        value={(event as Event & { homepage_featured_order?: number | null }).homepage_featured_order ?? ""}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          handleSetFeaturedOrder(event.id, v === "" ? null : parseInt(v, 10));
-                        }}
-                        className="text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
-                        title="Ana sayfa öne çıkan"
-                      >
-                        <option value="">Ana sayfa: —</option>
-                        <option value="1">1. sıra (sol)</option>
-                        <option value="2">2. sıra (sağ)</option>
-                      </select>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={(event as Event & { homepage_featured_order?: number | null }).homepage_featured_order ?? ""}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            handleSetFeaturedOrder(event.id, v === "" ? null : parseInt(v, 10));
+                          }}
+                          className="text-sm border border-slate-200 rounded-lg px-2 py-1.5 bg-white"
+                          title="Ana sayfa öne çıkan"
+                        >
+                          <option value="">Ana sayfa: —</option>
+                          <option value="1">1. sıra (sol)</option>
+                          <option value="2">2. sıra (sağ)</option>
+                        </select>
+                        <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer px-2 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50">
+                          <input
+                            type="checkbox"
+                            checked={(event as Event & { is_draft?: boolean }).is_draft ?? false}
+                            onChange={(e) => handleSetDraft(event.id, e.target.checked)}
+                            title="Taslak - Sadece admin görebilir"
+                            className="h-4 w-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                          />
+                          <span className="text-amber-600 font-medium">Taslak</span>
+                        </label>
+                      </div>
                     )}
                     <div className="flex gap-2">
                       {isAdmin && (event as Event & { is_approved?: boolean }).is_approved === false && (

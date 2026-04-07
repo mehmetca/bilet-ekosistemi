@@ -21,7 +21,7 @@ interface TicketPrintProps {
   ticketType: string;
   price: number;
   currency?: EventCurrency | null;
-  /** Yer seçerek alınan bilet: koltuk bilgisi (Platz / Koltuk) */
+  /** EventSeat bilgisi (Platz / Koltuk) */
   seatDetails?: SeatDetail[] | null;
 }
 
@@ -49,6 +49,7 @@ export default function TicketPrint({
 
   const eventDateText = eventDate ? formatEventDateDMY(eventDate) : "-";
   const timeText = eventTime || "--:--";
+  const title = `${eventTitle} | EventSeat`;
   const totalPriceNumber = Number(price);
   const priceText = formatPrice(totalPriceNumber, currency);
   const multiSeat = !!seatDetails && seatDetails.length > 1;
@@ -141,7 +142,7 @@ export default function TicketPrint({
       return `
       <div style="max-width:900px;margin:0 auto;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#fff;">
         <div style="background:#003f8c;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;letter-spacing:.4px;">
-          BILET EKOSISTEMI E-TICKET
+          EventSeat E-TICKET
         </div>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <tr>
@@ -158,7 +159,7 @@ export default function TicketPrint({
                   </td>
                   <td style="vertical-align:top;">
                     <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:.4px;color:#000;">MUSTERI/ETKINLIK BILETI</p>
-                    <p style="margin:6px 0 0;font-size:36px;line-height:42px;font-weight:900;color:#000;">${esc(eventTitle || "Etkinlik")}</p>
+                    <p style="margin:6px 0 0;font-size:36px;line-height:42px;font-weight:900;color:#000;">${esc(title || "Etkinlik")}</p>
                     <p style="margin:12px 0 0;font-size:18px;line-height:22px;font-weight:800;color:#000;">${eventDateText}, ${timeText}</p>
                     <p style="margin:4px 0 0;font-size:13px;line-height:16px;color:#000;font-weight:700;">${esc(venue)}</p>
                     <p style="margin:2px 0 0;font-size:13px;color:#000;">${esc(location)}</p>
@@ -184,6 +185,7 @@ export default function TicketPrint({
             </td>
             <td style="width:27%;padding:14px 16px;vertical-align:top;border-left:2px dashed #94a3b8;">
               <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:.6px;color:#000;">KOPARILABILIR BOLUM</p>
+              <p style="font-medium text-slate-800 mb-2">EventSeat</p>
               <p style="margin:8px 0 0;font-size:12px;font-weight:700;color:#000;">Bilet Kodu</p>
               <p style="margin:2px 0 0;font-size:18px;font-weight:800;letter-spacing:1px;font-family:monospace;color:#000;">${esc(codeForSeat)}</p>
               <p style="margin:10px 0 0;font-size:11px;color:#000;">Giris Noktasi</p>
@@ -311,7 +313,7 @@ export default function TicketPrint({
       return `
       <div style="max-width:900px;margin:0 auto;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#fff;">
         <div style="background:#003f8c;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;letter-spacing:.4px;">
-          BILET EKOSISTEMI E-TICKET
+          EventSeat E-TICKET
         </div>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <tr>
@@ -328,7 +330,7 @@ export default function TicketPrint({
                   </td>
                   <td style="vertical-align:top;">
                     <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:.4px;color:#000;">MUSTERI/ETKINLIK BILETI</p>
-                    <p style="margin:6px 0 0;font-size:36px;line-height:42px;font-weight:900;color:#000;">${esc(eventTitle || "Etkinlik")}</p>
+                    <p style="margin:6px 0 0;font-size:36px;line-height:42px;font-weight:900;color:#000;">${esc(title || "Etkinlik")}</p>
                     <p style="margin:12px 0 0;font-size:18px;line-height:22px;font-weight:800;color:#000;">${eventDateText}, ${timeText}</p>
                     <p style="margin:4px 0 0;font-size:13px;line-height:16px;color:#000;font-weight:700;">${esc(venue)}</p>
                     <p style="margin:2px 0 0;font-size:13px;color:#000;">${esc(location)}</p>
@@ -344,6 +346,7 @@ export default function TicketPrint({
             </td>
             <td style="width:27%;padding:14px 16px;vertical-align:top;border-left:2px dashed #94a3b8;">
               <p style="margin:0;font-size:10px;font-weight:700;letter-spacing:.6px;color:#000;">KOPARILABILIR BOLUM</p>
+              <p style="font-medium text-slate-800 mb-2">EventSeat</p>
               <p style="margin:8px 0 0;font-size:12px;font-weight:700;color:#000;">Bilet Kodu</p>
               <p style="margin:2px 0 0;font-size:18px;font-weight:800;letter-spacing:1px;font-family:monospace;color:#000;">${esc(codeForSeat)}</p>
               <p style="margin:10px 0 0;font-size:11px;color:#000;">Giris Noktasi</p>
@@ -431,7 +434,7 @@ export default function TicketPrint({
             >
         {/* Header */}
         <div className="bg-[#003f8c] px-4 py-2.5 text-sm font-bold tracking-wide text-white">
-          BILET EKOSISTEMI E-TICKET
+          EventSeat E-TICKET
         </div>
 
         {/* Ana içerik */}
@@ -457,7 +460,7 @@ export default function TicketPrint({
                 MUSTERI/ETKINLIK BILETI
               </p>
               <p className="mt-1.5 truncate text-4xl font-black leading-tight text-black md:text-5xl">
-                {eventTitle || "Etkinlik"}
+                {title || "Etkinlik"}
               </p>
               <p className="mt-3 text-lg font-extrabold text-black">
                 {eventDateText}, {timeText}
@@ -507,7 +510,7 @@ export default function TicketPrint({
             <p className="text-[10px] font-bold tracking-wide text-black">
               KOPARILABILIR BOLUM
             </p>
-            <p className="mt-2 text-xs font-bold text-black">Bilet Kodu</p>
+            <p className="font-medium text-slate-800 mb-2">eventseat</p>
             <p className="mt-0.5 font-mono text-lg font-extrabold tracking-wide text-black">
               {codeForSeat}
             </p>
@@ -549,7 +552,7 @@ export default function TicketPrint({
         </button>
       </div>
       <p className="text-center text-xs text-slate-500 print:hidden">
-        Yazdır: Her sayfada 2 bilet. İndir: Barkod ve QR kodu dosyaya gömülür; internet olmadan da salon girişinde gösterebilirsiniz.
+        Yazdır: Her sayfada 2 bilet. İndir: Barkod ve QR kodu dosyaya gömülür; internet olmadan da salon girişinde gösterebilirsiniz. Bu e-posta, EventSeat hesabınız için şifre sıfırlama talebiniz üzerine gönderilmiştir.
       </p>
     </div>
   );

@@ -25,7 +25,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Bilet Ekosistemi",
+  title: "EventSeat",
   description: "Etkinlik biletleri ve daha fazlası",
 };
 
@@ -58,7 +58,7 @@ export default async function RootLayout({
     try {
       messages = (await import("../../messages/tr.json")).default;
     } catch {
-      messages = { common: { backToHome: "Ana Sayfaya Dön" }, home: { heroTitle: "Bilet Ekosistemi" } };
+      messages = { common: { backToHome: "Ana Sayfaya Dön" }, home: { heroTitle: "EventSeat" } };
     }
   }
   return (

@@ -111,7 +111,7 @@ export default function ClientHomePage({
     const { supabase } = await import("@/lib/supabase-client");
     try {
       const [eventsRes, newsRes, citiesRes] = await Promise.all([
-        supabase.from("events").select("*").eq("is_active", true).order("created_at", { ascending: false }),
+        supabase.from("events").select("*").eq("is_active", true).eq("is_draft", false).order("created_at", { ascending: false }),
         supabase.from("news").select("*").eq("is_published", true).order("published_at", { ascending: false }).limit(5),
         supabase.from("cities").select("id, slug, name_tr, name_de, name_en, image_url").eq("is_active", true).order("sort_order", { ascending: true }),
       ]);
@@ -672,6 +672,16 @@ export default function ClientHomePage({
                           </span>
                         </div>
                       )}
+
+                      {/* Taslak etkinlik göstergesi - sadece admin görür */}
+                      {(event as Event & { is_draft?: boolean }).is_draft && (
+                        <div className="absolute right-2 bottom-2">
+                          <span className="px-2 py-1 text-xs font-bold text-white bg-amber-500 rounded flex items-center gap-1">
+                            <Shield className="h-3 w-3" />
+                            Taslak
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </Link>
                   
@@ -681,6 +691,12 @@ export default function ClientHomePage({
                         <span className="text-xs font-medium text-primary-600">
                           {CATEGORY_LABELS[event.category as keyof typeof CATEGORY_LABELS] ?? event.category ?? "Etkinlik"}
                         </span>
+                        {(event as Event & { is_draft?: boolean }).is_draft && (
+                          <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded flex items-center gap-1">
+                            <Shield className="h-3 w-3" />
+                            Taslak (Sadece Sen)
+                          </span>
+                        )}
                         {eventStatus.isPast && (
                           <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
                             {t("eventEnded")}

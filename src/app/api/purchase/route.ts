@@ -37,7 +37,7 @@ type TicketMailPayload = {
   seatDetails?: SeatDetail[];
 };
 
-const PDF_TICKET_HEADER_TEXT = "BILET EKOSISTEMI E-TICKET";
+const PDF_TICKET_HEADER_TEXT = "EVENTSEAT E-TICKET";
 const PDF_CUSTOMER_TICKET_TEXT = "MUSTERI/ETKINLIK BILETI";
 
 async function getEventSummary(
@@ -242,7 +242,7 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
         <div style="position:relative;background:#fff;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;">
           <div style="position:absolute;top:0;bottom:0;left:73%;border-left:2px dashed #94a3b8;"></div>
           <div style="background:#003f8c;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;letter-spacing:.4px;">
-            BILET EKOSISTEMI E-TICKET
+            EVENTSEAT E-TICKET
           </div>
           <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
             <tr>
