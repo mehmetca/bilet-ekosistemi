@@ -41,7 +41,8 @@ export async function DELETE(
     });
 
     if (error) {
-      // Fonksiyon yoksa manuel silme dene
+      console.error("RPC delete_my_order error:", error);
+      // Fonksiyon yoksa veya hata alırsa manuel silme dene
       const { data: order, error: orderError } = await supabase
         .from("orders")
         .select("id, user_id, buyer_email, ticket_id, quantity")
