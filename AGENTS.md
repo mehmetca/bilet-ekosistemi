@@ -28,4 +28,6 @@ Copy `.env.example` to `.env.local`. The three Supabase variables (`NEXT_PUBLIC_
 - **i18n routing**: All public pages are under `/{locale}/` (`tr`, `de`, `en`). The root `/` redirects to `/tr`.
 - **Admin panel** is at `/yonetim` (not locale-prefixed). It requires Supabase auth.
 - The `eslint: { ignoreDuringBuilds: true }` in `next.config.mjs` means `npm run build` skips lint — run `npm run lint` separately.
+- **Login / auth pages** at `/tr/giris` render fully without real Supabase credentials. Form submission returns "Failed to fetch" (expected). `/yonetim` redirects to `/tr/giris` when unauthenticated.
+- **i18n check script**: `node scripts/check-i18n-keys.js` validates all 3 locale files match (743 keys). Run this after editing translation files.
 - 112 SQL migrations live in `supabase/migrations/`; they are applied via Supabase Dashboard or `supabase db push`, not during local dev.
