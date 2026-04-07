@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
       .select(
         `
           id,
+          order_number,
           ticket_code,
           quantity,
           total_price,
@@ -28,6 +29,14 @@ export async function GET(request: NextRequest) {
             date,
             time,
             venue
+          ),
+          order_seats(
+            id,
+            seat_id,
+            section_name,
+            row_label,
+            seat_label,
+            ticket_code
           )
         `
       )

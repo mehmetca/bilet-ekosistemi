@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, Ticket, QrCode, Eye } from "lucide-react";
+import { Search, Ticket, QrCode, Eye, ChevronDown } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import type { Order } from "@/types/database";
 import QRScanner from "@/components/QRScanner";
@@ -10,14 +10,17 @@ import { supabase } from "@/lib/supabase-client";
 export default function BiletListesiPage() {
   // Auth kontrolünü basitleştir - sadece admin mi diye kontrol et
   type AdminOrder = Order & {
+    order_number?: string;
     events?: { title?: string; date?: string; time?: string; venue?: string };
     tickets?: { name?: string; type?: string; price?: number };
+    order_seats?: { id?: string; seat_id?: string; section_name?: string; row_label?: string; seat_label?: string; ticket_code?: string }[];
   };
 
   const [tickets, setTickets] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
 
   useEffect(() => {
     fetchTickets();
@@ -74,12 +77,26 @@ export default function BiletListesiPage() {
     }
   }
 
-  const filteredTickets = tickets.filter(ticket => 
-    ticket.ticket_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.events?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.buyer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    ticket.buyer_email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTickets = tickets.filter(ticket => {
+    const searchLower = searchTerm.toLowerCase();
+    // Tüm bilet kodlarını topla
+    const seatCodes = ticket.order_seats?.map(s => s.ticket_code).filter(Boolean) || [];
+    const allCodes = [ticket.ticket_code, ...seatCodes].filter(Boolean);
+    
+    return (
+      // Sipariş No
+      ticket.order_number?.toLowerCase().includes(searchLower) ||
+      // Sipariş ID
+      ticket.id?.toLowerCase().includes(searchLower) ||
+      // Bilet kodları
+      allCodes.some(code => code?.toLowerCase().includes(searchLower)) ||
+      // Etkinlik adı
+      ticket.events?.title?.toLowerCase().includes(searchLower) ||
+      // Alıcı bilgileri
+      ticket.buyer_name?.toLowerCase().includes(searchLower) ||
+      ticket.buyer_email?.toLowerCase().includes(searchLower)
+    );
+  });
 
   function handleQRScan(code: string) {
     setShowQRScanner(false);
@@ -139,7 +156,7 @@ export default function BiletListesiPage() {
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Bilet kodu, etkinlik adı veya alıcı ara..."
+              placeholder="Sipariş no, bilet kodu, etkinlik adı veya alıcı ara..."
               className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
             />
           </div>
@@ -151,7 +168,7 @@ export default function BiletListesiPage() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="text-left p-4 text-sm font-medium text-slate-700">Bilet Kodu</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700">Sipariş No</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Etkinlik</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Bilet Türü</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Alıcı</th>
@@ -162,21 +179,18 @@ export default function BiletListesiPage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredTickets.map((ticket) => (
+                {filteredTickets.map((ticket) => {
+                  // Her bilet için ayrı kodları hazırla
+                  const seatCodes = ticket.order_seats && ticket.order_seats.length > 0 
+                    ? ticket.order_seats 
+                    : [{ ticket_code: ticket.ticket_code }];
+                  
+                  return (
                   <tr key={ticket.id} className="border-b border-slate-100">
                     <td className="p-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono font-medium text-slate-900">
-                          {ticket.ticket_code}
-                        </span>
-                        <button
-                          onClick={() => window.location.href = `/yonetim/bilet-kontrol?code=${ticket.ticket_code}`}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-                          title="Kontrol Et"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                      </div>
+                      <span className="font-mono font-medium text-slate-900">
+                        {ticket.order_number || `#${ticket.id?.slice(0, 8)}`}
+                      </span>
                     </td>
                     <td className="p-4 text-sm text-slate-900">
                       <div className="font-medium">
@@ -230,18 +244,50 @@ export default function BiletListesiPage() {
                       </span>
                     </td>
                     <td className="p-4 text-sm">
-                      <div className="flex gap-2">
+                      {seatCodes.length <= 1 ? (
+                        // Tek bilet - direkt kontrol butonu
                         <button
-                          onClick={() => window.location.href = `/yonetim/bilet-kontrol?code=${ticket.ticket_code}`}
-                          className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                          onClick={() => window.location.href = `/yonetim/bilet-kontrol?code=${seatCodes[0]?.ticket_code || ticket.ticket_code}`}
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
                           title="Kontrol Et"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3 w-3" />
+                          Kontrol
                         </button>
-                      </div>
+                      ) : (
+                        // Çoklu bilet - dropdown menü
+                        <div className="relative">
+                          <button
+                            onClick={() => setExpandedOrder(expandedOrder === ticket.id ? null : ticket.id || null)}
+                            className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                          >
+                            <Eye className="h-3 w-3" />
+                            Kontrol
+                            <ChevronDown className={`h-3 w-3 transition-transform ${expandedOrder === ticket.id ? 'rotate-180' : ''}`} />
+                          </button>
+                          {expandedOrder === ticket.id && (
+                            <div className="absolute right-0 mt-1 w-64 bg-white border border-slate-200 rounded-lg shadow-lg z-10">
+                              <div className="p-2 text-xs text-slate-500 border-b">Biletleri Kontrol Et</div>
+                              {seatCodes.map((seat, idx) => (
+                                <a
+                                  key={idx}
+                                  href={`/yonetim/bilet-kontrol?code=${seat.ticket_code || ticket.ticket_code}`}
+                                  className="flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-50 border-b last:border-0"
+                                >
+                                  <span className="font-mono text-slate-700">{seat.ticket_code || ticket.ticket_code}</span>
+                                  {seat.row_label && (
+                                    <span className="text-slate-400">{seat.section_name} · Sıra {seat.row_label}</span>
+                                  )}
+                                </a>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
