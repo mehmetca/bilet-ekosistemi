@@ -255,8 +255,8 @@ export default function BiletListesiPage() {
                           Kontrol
                         </button>
                       ) : (
-                        // Çoklu bilet - inline genişleyen menü
-                        <div>
+                        // Çoklu bilet - absolute dropdown menü (önceki satırların üzerine)
+                        <div className="relative">
                           <button
                             onClick={() => setExpandedOrder(expandedOrder === ticket.id ? null : ticket.id || null)}
                             className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
@@ -266,12 +266,12 @@ export default function BiletListesiPage() {
                             <ChevronDown className={`h-3 w-3 transition-transform ${expandedOrder === ticket.id ? 'rotate-180' : ''}`} />
                           </button>
                           {expandedOrder === ticket.id && (
-                            <div className="mt-2 space-y-1">
+                            <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
                               {seatCodes.map((seat, idx) => (
                                 <a
                                   key={idx}
                                   href={`/yonetim/bilet-kontrol?code=${seat.ticket_code || ticket.ticket_code}`}
-                                  className="flex items-center justify-between px-2 py-1.5 text-xs bg-slate-50 rounded hover:bg-blue-50 border border-slate-200"
+                                  className="flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-50 border-b last:border-0 last:rounded-b-lg first:rounded-t-lg"
                                 >
                                   <span className="font-mono text-slate-700">{seat.ticket_code || ticket.ticket_code}</span>
                                   {seat.row_label && (
