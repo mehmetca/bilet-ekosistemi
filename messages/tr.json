@@ -770,6 +770,10 @@
       "title": "Etkinlik Sponsorları",
       "overview": "Genel Bakış",
       "overviewDesc": "Etkinliklere sponsor olmak isteyenler (marka, kurum veya birey), EventSeat veya doğrudan organizatör ile ayrı sponsorluk sözleşmesi akdeder. Sponsorluk, etkinlik tanıtımında marka görünürlüğü, sahne alanı kullanımı veya diğer anlaşılma türlerini içerebilir. Koşullar proje bazında belirlenir.",
+      "branding": "Marka Kullanımı",
+      "brandingDesc": "Sponsor, sağladığı logo ve marka malzemelerinin kullanım haklarına sahip olduğunu garanti eder. EventSeat ve organizatör, sponsorluk kapsamında markayı etkinlik materyallerinde (poster, dijital kanallar, bilet vb.) kullanma hakkına sahip olur. Kullanım süresi ve kapsamı sponsorluk sözleşmesinde belirtilir.",
+      "contract": "Sözleşme ve Ödeme",
+      "contractDesc": "Sponsorluk ücreti, sağlanan haklar ve süre sözleşmede yer alır. Ödeme koşulları (vade, taksit vb.) ayrıca belirlenir. Sponsor, sözleşmede belirtilen yükümlülükleri yerine getirmekle yükümlüdür. Etkinlik iptali durumunda iade veya erteleme koşulları sponsorluk sözleşmesinde düzenlenir.",
       "contact": "Başvuru",
       "contactDesc": "Sponsorluk talepleri için İletişim Bilgileri (Impressum) sayfasındaki bilgiler üzerinden veya b2b@eventseat.com adresinden bize ulaşabilirsiniz. Ayrıntılı teklif ve sözleşme taslağı talep üzerine sunulur."
     },
