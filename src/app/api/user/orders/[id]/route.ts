@@ -77,6 +77,15 @@ export async function DELETE(
         }
       }
 
+      // Önce order_seats kayıtlarını sil (RLS cascade sorununu önlemek için)
+      const { error: deleteSeatsError } = await supabase
+        .from("order_seats")
+        .delete()
+        .eq("order_id", orderId);
+      if (deleteSeatsError) {
+        console.error("Order seats delete error:", deleteSeatsError);
+      }
+
       const { error: deleteError } = await supabase.from("orders").delete().eq("id", orderId);
       if (deleteError) {
         console.error("Order delete error:", deleteError);

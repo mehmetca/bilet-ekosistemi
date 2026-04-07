@@ -45,6 +45,9 @@ BEGIN
     WHERE t.id = v_order.ticket_id;
   END IF;
 
+  -- Önce order_seats kayıtlarını sil (RLS cascade sorununu önlemek için)
+  DELETE FROM public.order_seats WHERE order_id = p_order_id;
+
   -- Siparişi sil
   DELETE FROM public.orders WHERE id = p_order_id;
 
