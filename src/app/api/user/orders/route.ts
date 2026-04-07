@@ -34,13 +34,16 @@ export async function GET(request: NextRequest) {
     }
 
     // Veritabanı fonksiyonu ile siparişleri al (user_id + buyer_email eşleşmesi)
+    console.log("[DEBUG] Fetching orders for user:", user.id, "email:", user.email);
     const { data: rows, error } = await supabase.rpc("get_user_orders", {
       p_user_id: user.id,
       p_email: user.email || "",
     });
 
+    console.log("[DEBUG] get_user_orders result:", { rowsCount: rows?.length || 0, error: error?.message || null });
+
     if (error) {
-      console.error("get_user_orders error:", error);
+      console.error("[DEBUG] get_user_orders error:", error);
       // Fallback: eski yöntem
       const selectFields = `
         id, event_id, ticket_id, quantity, total_price, status, created_at,
@@ -70,6 +73,7 @@ export async function GET(request: NextRequest) {
       });
       // Fallback: koltuk bilgilerini order_seats ile zenginleştir
       const fallbackIds = merged.map((o) => (o as { id?: string }).id).filter(Boolean) as string[];
+      console.log("[DEBUG] Fallback query returned:", merged.length, "orders, fallbackIds:", fallbackIds.length);
       if (fallbackIds.length > 0) {
         const { data: seatsRows } = await supabase
           .from("order_seats")
@@ -95,6 +99,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Fonksiyon düz dizi döndürüyor (events/tickets join değil) - frontend formatına çevir
+    console.log("[DEBUG] Processing", rows?.length || 0, "orders from RPC");
     const orders: OrderRow[] = (rows || []).map((r: Record<string, unknown>) => ({
       id: r.id,
       event_id: r.event_id,
@@ -143,6 +148,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    console.log("[DEBUG] Returning", orders.length, "orders to frontend");
     return NextResponse.json(orders);
   } catch (err) {
     console.error("user orders API error:", err);
