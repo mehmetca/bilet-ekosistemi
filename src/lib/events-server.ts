@@ -241,6 +241,7 @@ export async function getEventsForCity(
       .from("events")
       .select("*, venues(city)")
       .eq("is_active", true)
+      .eq("is_approved", true)
       .order("date", { ascending: true })
       .order("time", { ascending: true });
 
@@ -248,6 +249,7 @@ export async function getEventsForCity(
 
     const filtered = eventsData.filter((e: Record<string, unknown>) => {
       const loc = ((e.location as string) || "").toLowerCase().trim();
+      const cityField = ((e.city as string) || "").toLowerCase().trim();
       const v = e.venues;
       let venueCity = "";
       if (v != null) {
@@ -255,7 +257,8 @@ export async function getEventsForCity(
         else venueCity = (v as { city?: string }).city || "";
       }
       const vc = venueCity.toLowerCase().trim();
-      return matchesCity(loc, vc, matchTerms);
+      return matchesCity(loc, vc, matchTerms) || 
+             matchesCity(cityField, vc, matchTerms);
     });
 
     return filtered.map((e: Record<string, unknown>) => {
