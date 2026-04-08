@@ -236,16 +236,23 @@ export async function getEventsForCity(
   try {
     const supabase = createServerSupabase();
     const matchTerms = getMatchTerms(citySlug, city);
+    console.log("[DEBUG getEventsForCity] slug:", citySlug, "matchTerms:", matchTerms);
 
     const { data: eventsData, error } = await supabase
       .from("events")
       .select("*, venues(city)")
       .eq("is_active", true)
       .eq("is_approved", true)
+      .eq("is_draft", false)
       .order("date", { ascending: true })
       .order("time", { ascending: true });
 
-    if (error || !eventsData) return [];
+    if (error) {
+      console.error("[DEBUG getEventsForCity] Supabase error:", error);
+      return [];
+    }
+    
+    console.log("[DEBUG getEventsForCity] Total events fetched:", eventsData?.length || 0);
 
     const filtered = eventsData.filter((e: Record<string, unknown>) => {
       const loc = ((e.location as string) || "").toLowerCase().trim();
@@ -257,15 +264,22 @@ export async function getEventsForCity(
         else venueCity = (v as { city?: string }).city || "";
       }
       const vc = venueCity.toLowerCase().trim();
-      return matchesCity(loc, vc, matchTerms) || 
+      const match = matchesCity(loc, vc, matchTerms) || 
              matchesCity(cityField, vc, matchTerms);
+      if (match) {
+        console.log("[DEBUG getEventsForCity] Matched event:", e.title, "city:", cityField, "location:", loc, "venueCity:", vc);
+      }
+      return match;
     });
+
+    console.log("[DEBUG getEventsForCity] Filtered events:", filtered.length);
 
     return filtered.map((e: Record<string, unknown>) => {
       const { venues, ...ev } = e;
       return ev;
     }) as unknown as Event[];
-  } catch {
+  } catch (err) {
+    console.error("[DEBUG getEventsForCity] Error:", err);
     return [];
   }
 }
