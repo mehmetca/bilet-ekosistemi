@@ -157,7 +157,7 @@ function SanatciIndexContent() {
 
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
           <div className="flex flex-col gap-3">
-            <div className="mx-auto max-w-4xl">
+            <div className="mx-auto max-w-4xl px-4 py-12">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
                 <input

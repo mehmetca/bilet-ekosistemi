@@ -143,7 +143,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
             </p>
           </div>
         ) : (
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {upcomingEvents.map((event) => (
               <Link
                 key={event.id}
@@ -211,7 +211,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 ({pastEvents.length} {t("calendar.eventsCount")})
               </span>
             </h3>
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {pastEvents.map((event) => (
                 <div
                   key={`past-${event.id}`}
