@@ -18,7 +18,7 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 import { useTranslations } from "next-intl";
 import Header from "@/components/Header";
-import { createSupabaseBrowserClient } from "@/lib/supabase-ssr";
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
 
 const PASSWORD_EXISTS_PATTERN = /already registered|already exists/i;
 const PASSWORD_VALIDATION_PATTERN = /password|weak|at least \d+ characters/i;
