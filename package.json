@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3000",
     "clean": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true});console.log('.next silindi.')}catch(e){if(e.code!=='ENOENT')throw e;}\"",
-    "dev:fresh": "npm run clean && next dev -p 3000",
+    "dev:fresh": "npm run clean && npm run dev:turbo",
     "dev:turbo": "next dev -p 3000 --turbo",
     "dev:clean": "node scripts/clean-dev.js",
     "build": "next build",

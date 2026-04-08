@@ -72,7 +72,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
     <div className="space-y-6">
       {/* Başlık ve Filtreler */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h1 className="section-title mb-6">{t("calendar.title")}</h1>
+        <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 text-center">{t("calendar.title")}</h1>
         
         {/* Filtreler */}
         <div className="flex flex-col md:flex-row gap-4">
@@ -98,7 +98,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
             <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
             <input
               type="date"
-              value={selectedDate}
+              value={selectedDate || new Date().toISOString().split('T')[0]}
               onChange={(e) => setSelectedDate(e.target.value || "")}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 bg-white focus:border-primary-500 focus:ring-primary-500 min-w-[140px]"
             />
