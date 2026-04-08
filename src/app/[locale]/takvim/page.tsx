@@ -13,7 +13,7 @@ export default async function TakvimPage() {
       <div className="min-h-screen bg-slate-50">
         <Header />
         
-        <main className="container mx-auto px-4 py-8">
+        <main className="container mx-auto max-w-6xl px-4 py-8">
           <EventCalendar events={events} />
         </main>
 

@@ -149,7 +149,7 @@ function SanatciIndexContent() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
-      <main className="container mx-auto px-4 py-10">
+      <main className="container mx-auto max-w-6xl px-4 py-10">
         <div className="mb-8 text-center">
           <h1 className="page-title text-4xl md:text-5xl">{t("title")}</h1>
           <p className="body-muted mt-4 text-lg">{t("subtitle")}</p>

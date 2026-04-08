@@ -479,8 +479,8 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
               {parsedProfile.content ? (
                 <div className="flow-root">
                   {leftGallery.length > 0 && (
-                    <div className="w-full md:w-64 md:float-left md:mr-5 mb-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="w-full md:w-96 md:float-left md:mr-5 mb-4">
+                      <div className="grid grid-cols-1 gap-3">
                         {leftGallery.map((item, index) => (
                           <div
                             key={`${item.url}-left-${index}`}
@@ -504,8 +504,8 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                     </div>
                   )}
                   {rightGallery.length > 0 && (
-                    <div className="w-full md:w-64 md:float-right md:ml-5 mb-4">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="w-full md:w-96 md:float-right md:ml-5 mb-4">
+                      <div className="grid grid-cols-1 gap-3">
                         {rightGallery.map((item, index) => (
                           <div
                             key={`${item.url}-right-${index}`}
