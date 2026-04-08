@@ -1,0 +1,42 @@
+import { createServerClient, createBrowserClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { type CookieOptions } from "@supabase/ssr";
+
+// Server-side client (Server Components, Server Actions, Route Handlers)
+export async function createSupabaseServerClient() {
+  const cookieStore = await cookies();
+
+  return createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value, ...options });
+          } catch {
+            // Server component'ta set çağrılamaz, ignore
+          }
+        },
+        remove(name: string, options: CookieOptions) {
+          try {
+            cookieStore.set({ name, value: "", ...options });
+          } catch {
+            // Server component'ta remove çağrılamaz, ignore
+          }
+        },
+      },
+    }
+  );
+}
+
+// Client-side client (Browser Components)
+export function createSupabaseBrowserClient() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}

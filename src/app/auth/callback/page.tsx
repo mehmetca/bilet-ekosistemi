@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase-client";
+import { createSupabaseBrowserClient } from "@/lib/supabase-ssr";
 
 export default function AuthCallbackPage() {
   const searchParams = useSearchParams();
@@ -23,6 +23,8 @@ export default function AuthCallbackPage() {
 
     async function exchangeAndRedirect() {
       try {
+        // Cookie-based Supabase client oluştur
+        const supabase = createSupabaseBrowserClient();
         const { data, error } = await supabase.auth.exchangeCodeForSession(code);
         if (cancelled) return;
 

@@ -18,7 +18,7 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 import { useTranslations } from "next-intl";
 import Header from "@/components/Header";
-import { supabase } from "@/lib/supabase-client";
+import { createSupabaseBrowserClient } from "@/lib/supabase-ssr";
 
 const PASSWORD_EXISTS_PATTERN = /already registered|already exists/i;
 const PASSWORD_VALIDATION_PATTERN = /password|weak|at least \d+ characters/i;
@@ -108,7 +108,8 @@ export default function LoginPage() {
         throw new Error("Giris yaniti gecersiz. access_token/refresh_token eksik.");
       }
 
-      const setSessionPromise = supabase.auth.setSession({
+      const supabaseClient = createSupabaseBrowserClient();
+      const setSessionPromise = supabaseClient.auth.setSession({
         access_token: payload.access_token,
         refresh_token: payload.refresh_token,
       });
@@ -172,7 +173,8 @@ export default function LoginPage() {
 
     setRegLoading(true);
     try {
-      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      const supabaseClient = createSupabaseBrowserClient();
+      const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
         email: regEmail.trim(),
         password: regPassword,
         options: { emailRedirectTo: undefined },
@@ -191,7 +193,7 @@ export default function LoginPage() {
 
       if (signUpData?.session && signUpData.user) {
         try {
-          const { data: { session } } = await supabase.auth.getSession();
+          const { data: { session } } = await supabaseClient.auth.getSession();
           if (session?.access_token) {
             await fetch("/api/profile", {
               method: "POST",
@@ -246,7 +248,9 @@ export default function LoginPage() {
       const next = redirectTo || "/";
       const redirectToUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(next)}`;
 
-      const { data, error: oauthError } = await supabase.auth.signInWithOAuth({
+      // Cookie-based Supabase client oluştur
+      const supabaseClient = createSupabaseBrowserClient();
+      const { data, error: oauthError } = await supabaseClient.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: redirectToUrl },
       });
@@ -286,7 +290,8 @@ export default function LoginPage() {
 
       // Rol kontrolü: admin/controller/organizer → yönetim, diğerleri → ana sayfa
       await new Promise(resolve => setTimeout(resolve, 400));
-      const { data: roleData } = await supabase
+      const supabaseClient = createSupabaseBrowserClient();
+      const { data: roleData } = await supabaseClient
         .from("user_roles")
         .select("role")
         .eq("user_id", data.session.user.id)
