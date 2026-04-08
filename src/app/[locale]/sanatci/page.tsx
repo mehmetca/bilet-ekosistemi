@@ -149,17 +149,17 @@ function SanatciIndexContent() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
-      <main className="container mx-auto max-w-6xl px-4 py-10">
-        <div className="mb-8 text-center">
-          <h1 className="page-title text-4xl md:text-5xl">{t("title")}</h1>
-          <p className="body-muted mt-4 text-lg">{t("subtitle")}</p>
+      <main className="container mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+        <div className="mb-4 sm:mb-6 text-center">
+          <h1 className="page-title text-3xl sm:text-4xl md:text-5xl">{t("title")}</h1>
+          <p className="body-muted mt-2 sm:mt-3 text-base sm:text-lg">{t("subtitle")}</p>
         </div>
 
-        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-          <div className="flex flex-col gap-3">
-            <div className="mx-auto max-w-4xl px-4 py-12">
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
+        <div className="mb-4 sm:mb-6 rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+          <div className="flex flex-col gap-2 sm:gap-2.5">
+            <div className="flex w-full justify-center py-1 sm:py-2">
+              <div className="relative w-full max-w-xl sm:max-w-2xl">
+                <Search className="pointer-events-none absolute left-3 sm:left-4 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-slate-400" />
                 <input
                   type="search"
                   value={searchTerm}
@@ -169,18 +169,22 @@ function SanatciIndexContent() {
                     applyFilters(value, selectedLetter);
                   }}
                   placeholder={locale === "de" ? "Künstlername oder Musikgruppe suchen..." : locale === "en" ? "Search artist name or music band..." : "Sanatçı adı veya müzik grubu ara..."}
-                  className="w-full rounded-lg bg-slate-100 pl-12 pr-4 py-4 text-base text-slate-900 focus:bg-white focus:ring-primary-500 shadow-sm"
+                  className="w-full rounded-lg border border-transparent bg-slate-100 py-3 pl-10 pr-3 text-sm text-slate-900 shadow-sm focus:border-transparent focus:bg-white focus:outline-none focus:ring-0 sm:py-3.5 sm:pl-12 sm:pr-4 sm:text-base"
                 />
               </div>
             </div>
-            <div className="flex flex-nowrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            <div
+              className="flex flex-wrap justify-center gap-1 sm:gap-1.5 md:gap-2 px-0.5 pb-0.5"
+              role="toolbar"
+              aria-label={locale === "de" ? "Buchstabenfilter" : locale === "en" ? "Letter filter" : "Harf filtresi"}
+            >
               <button
                 type="button"
                 onClick={() => {
                   setSelectedLetter("ALL");
                   applyFilters(searchTerm, "ALL");
                 }}
-                className={`h-8 md:h-9 rounded-md px-2 md:px-3 text-xs md:text-sm font-semibold ${
+                className={`h-7 min-h-[1.75rem] shrink-0 rounded-md px-1.5 text-[10px] font-semibold leading-none sm:h-8 sm:min-h-0 sm:px-2.5 sm:text-xs md:h-9 md:px-3 md:text-sm ${
                   selectedLetter === "ALL"
                     ? "bg-primary-600 text-white"
                     : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
@@ -196,7 +200,7 @@ function SanatciIndexContent() {
                     setSelectedLetter(letter);
                     applyFilters(searchTerm, letter);
                   }}
-                  className={`h-8 md:h-9 min-w-8 md:min-w-9 rounded-md px-2 md:px-3 text-xs md:text-sm font-semibold ${
+                  className={`h-7 min-w-[1.35rem] min-h-[1.75rem] shrink-0 rounded-md px-1 text-[10px] font-semibold leading-none sm:h-8 sm:min-w-8 sm:min-h-0 sm:px-2 sm:text-xs md:h-9 md:min-w-9 md:px-2.5 md:text-sm ${
                     selectedLetter === letter
                       ? "bg-primary-600 text-white"
                       : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"

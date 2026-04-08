@@ -18,6 +18,7 @@ function GoogleIcon({ className }: { className?: string }) {
 }
 import { useTranslations } from "next-intl";
 import Header from "@/components/Header";
+/** PKCE + çerez: @supabase/ssr createBrowserClient (SimpleAuth’taki `supabase` ile aynı singleton). */
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
 
 const PASSWORD_EXISTS_PATTERN = /already registered|already exists/i;
@@ -108,8 +109,8 @@ export default function LoginPage() {
         throw new Error("Giris yaniti gecersiz. access_token/refresh_token eksik.");
       }
 
-      const supabaseClient = createSupabaseBrowserClient();
-      const setSessionPromise = supabaseClient.auth.setSession({
+      const sb = createSupabaseBrowserClient();
+      const setSessionPromise = sb.auth.setSession({
         access_token: payload.access_token,
         refresh_token: payload.refresh_token,
       });
@@ -173,8 +174,8 @@ export default function LoginPage() {
 
     setRegLoading(true);
     try {
-      const supabaseClient = createSupabaseBrowserClient();
-      const { data: signUpData, error: signUpError } = await supabaseClient.auth.signUp({
+      const sb = createSupabaseBrowserClient();
+      const { data: signUpData, error: signUpError } = await sb.auth.signUp({
         email: regEmail.trim(),
         password: regPassword,
         options: { emailRedirectTo: undefined },
@@ -193,7 +194,7 @@ export default function LoginPage() {
 
       if (signUpData?.session && signUpData.user) {
         try {
-          const { data: { session } } = await supabaseClient.auth.getSession();
+          const { data: { session } } = await sb.auth.getSession();
           if (session?.access_token) {
             await fetch("/api/profile", {
               method: "POST",
@@ -244,13 +245,13 @@ export default function LoginPage() {
     setError("");
     setRegError("");
 
+    let leavePage = false;
     try {
       const next = redirectTo || "/";
       const redirectToUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(next)}`;
 
-      // Cookie-based Supabase client oluştur
-      const supabaseClient = createSupabaseBrowserClient();
-      const { data, error: oauthError } = await supabaseClient.auth.signInWithOAuth({
+      const sb = createSupabaseBrowserClient();
+      const { data, error: oauthError } = await sb.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: redirectToUrl },
       });
@@ -261,15 +262,19 @@ export default function LoginPage() {
         return;
       }
       if (data?.url) {
-        window.location.href = data.url;
+        leavePage = true;
+        window.location.assign(data.url);
+        return;
       }
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("errorGeneric");
       setError(msg);
       setRegError(msg);
     } finally {
-      setGoogleLoading(false);
-      setRegGoogleLoading(false);
+      if (!leavePage) {
+        setGoogleLoading(false);
+        setRegGoogleLoading(false);
+      }
     }
   }
 
@@ -290,8 +295,8 @@ export default function LoginPage() {
 
       // Rol kontrolü: admin/controller/organizer → yönetim, diğerleri → ana sayfa
       await new Promise(resolve => setTimeout(resolve, 400));
-      const supabaseClient = createSupabaseBrowserClient();
-      const { data: roleData } = await supabaseClient
+      const sb = createSupabaseBrowserClient();
+      const { data: roleData } = await sb
         .from("user_roles")
         .select("role")
         .eq("user_id", data.session.user.id)

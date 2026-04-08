@@ -19,6 +19,11 @@ const nextConfig = {
       // Windows dev: eksik ./vendor-chunks/@supabase.js hatasını önlemek için sunucu bundle'dan çıkar
       "@supabase/supabase-js",
       "@supabase/ssr",
+      // Windows dev: eksik ./vendor-chunks/@formatjs.js — sadece formatjs ailesi (next-intl'i external yapma)
+      "intl-messageformat",
+      "@formatjs/ecma402-abstract",
+      "@formatjs/icu-messageformat-parser",
+      "@formatjs/fast-memoize",
     ],
   },
   async redirects() {

@@ -244,8 +244,12 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   }, []);
 
   async function signOut() {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    setUser(null);
+    setAccessToken(null);
     setUserRole(null);
+    userRef.current = null;
+    userRoleRef.current = null;
   }
 
   async function refreshRole() {

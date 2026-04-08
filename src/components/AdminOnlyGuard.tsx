@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import AuthRedirectingScreen from "@/components/AuthRedirectingScreen";
 
 interface AdminOnlyGuardProps {
   children: React.ReactNode;
@@ -18,9 +19,14 @@ export default function AdminOnlyGuard({ children }: AdminOnlyGuardProps) {
   const router = useRouter();
 
   useEffect(() => {
-    if (!loading && !user) {
-      router.replace("/giris");
-    }
+    if (loading || user) return;
+    void router.replace("/giris");
+    const id = window.setTimeout(() => {
+      if (!window.location.pathname.startsWith("/giris")) {
+        window.location.assign(`${window.location.origin}/giris`);
+      }
+    }, 2000);
+    return () => window.clearTimeout(id);
   }, [user, loading, router]);
 
   if (loading) {
@@ -32,7 +38,7 @@ export default function AdminOnlyGuard({ children }: AdminOnlyGuardProps) {
   }
 
   if (!user) {
-    return null;
+    return <AuthRedirectingScreen />;
   }
 
   if (!isAdmin) {

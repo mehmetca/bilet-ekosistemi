@@ -1,63 +1,40 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createSupabaseBrowserClient } from "./supabase-browser-client";
 
-const isBrowser = typeof window !== "undefined";
-
-const storageAdapter = {
-  getItem: (key: string) => {
-    if (!isBrowser) return null;
-    try {
-      return window.localStorage.getItem(key);
-    } catch {
-      return null;
-    }
-  },
-  setItem: (key: string, value: string) => {
-    if (!isBrowser) return;
-    try {
-      window.localStorage.setItem(key, value);
-    } catch {
-    }
-  },
-  removeItem: (key: string) => {
-    if (!isBrowser) return;
-    try {
-      window.localStorage.removeItem(key);
-    } catch {
-    }
-  },
-};
-
-const customLock = async (_name: string, _acquireTimeout: number, fn: () => Promise<unknown>) => {
-  return fn();
-};
-
-let _client: SupabaseClient | null = null;
+/**
+ * Tarayıcıda: `createSupabaseBrowserClient()` (PKCE + çerez, @supabase/ssr).
+ * `giris/page.tsx` doğrudan aynı modülü import eder; davranış aynı singleton’dır, localStorage kullanılmaz.
+ * Eski localStorage tabanlı ikinci createClient kaldırıldı — aksi halde
+ * "Multiple GoTrueClient instances" ve çıkış/yönlendirme sorunları oluşuyordu.
+ */
+let _serverAnon: SupabaseClient | null = null;
 
 function getSupabaseClient(): SupabaseClient {
-  if (_client) return _client;
+  if (typeof window !== "undefined") {
+    return createSupabaseBrowserClient() as unknown as SupabaseClient;
+  }
+
+  if (_serverAnon) return _serverAnon;
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    throw new Error("supabaseUrl is required. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel Environment Variables.");
+    throw new Error(
+      "supabaseUrl is required. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel Environment Variables."
+    );
   }
-  _client = createClient(url, key, {
+  _serverAnon = createClient(url, key, {
     auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-      debug: false,
-      flowType: "pkce",
-      storage: storageAdapter,
-      // @ts-expect-error custom lock type
-      lock: customLock,
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
     },
     db: { schema: "public" },
-    global: { headers: { "X-Client-Info": "bilet-ekosistemi/1.0.0" } },
+    global: { headers: { "X-Client-Info": "bilet-ekosistemi/ssr-anon" } },
   });
-  return _client;
+  return _serverAnon;
 }
 
-/** Lazy Supabase client: oluşturma ilk kullanımda yapılır (build/runtime'ta env yoksa hata önlenir). */
+/** Lazy proxy: ilk erişimde istemci oluşturulur (build sırasında env yoksa gecikmeli hata). */
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_, prop: string) {
     const target = getSupabaseClient() as unknown as Record<string, unknown>;
