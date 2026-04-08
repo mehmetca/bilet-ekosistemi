@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Search, Ticket, QrCode, Eye, ChevronDown } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import type { Order } from "@/types/database";
@@ -16,6 +18,7 @@ export default function BiletListesiPage() {
     order_seats?: { id?: string; seat_id?: string; section_name?: string; row_label?: string; seat_label?: string; ticket_code?: string }[];
   };
 
+  const router = useRouter();
   const [tickets, setTickets] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -101,7 +104,7 @@ export default function BiletListesiPage() {
   function handleQRScan(code: string) {
     setShowQRScanner(false);
     // Yönlendirme yap
-    window.location.href = `/yonetim/bilet-kontrol?code=${code}`;
+    router.push(`/yonetim/bilet-kontrol?code=${code}`);
   }
 
   // Sadece admin ve controller erişebilir - kontrolü devre dışı bırak
@@ -247,7 +250,7 @@ export default function BiletListesiPage() {
                       {seatCodes.length <= 1 ? (
                         // Tek bilet - direkt kontrol butonu
                         <button
-                          onClick={() => window.location.href = `/yonetim/bilet-kontrol?code=${seatCodes[0]?.ticket_code || ticket.ticket_code}`}
+                          onClick={() => router.push(`/yonetim/bilet-kontrol?code=${seatCodes[0]?.ticket_code || ticket.ticket_code}`)}
                           className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
                           title="Kontrol Et"
                         >
@@ -266,9 +269,9 @@ export default function BiletListesiPage() {
                             <ChevronDown className={`h-3 w-3 transition-transform ${expandedOrder === ticket.id ? 'rotate-180' : ''}`} />
                           </button>
                           {expandedOrder === ticket.id && (
-                            <div className="absolute right-0 top-full mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50">
+                            <div className="absolute right-0 bottom-full mb-1 w-56 bg-white border border-slate-200 rounded-lg shadow-xl z-[60]">
                               {seatCodes.map((seat, idx) => (
-                                <a
+                                <Link
                                   key={idx}
                                   href={`/yonetim/bilet-kontrol?code=${seat.ticket_code || ticket.ticket_code}`}
                                   className="flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-50 border-b last:border-0 last:rounded-b-lg first:rounded-t-lg"
@@ -277,7 +280,7 @@ export default function BiletListesiPage() {
                                   {seat.row_label && (
                                     <span className="text-slate-400">{seat.section_name} · Sıra {seat.row_label}</span>
                                   )}
-                                </a>
+                                </Link>
                               ))}
                             </div>
                           )}

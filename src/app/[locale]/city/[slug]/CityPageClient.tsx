@@ -28,12 +28,29 @@ export default function CityPageClient({ city, initialEvents }: CityPageClientPr
   const cityDesc = localized.description || "";
   const imageUrl = (city.image_url as string) || null;
 
+  const citySlug = (city.slug as string)?.toLowerCase() || "";
+
   const isEventPast = (event: Event) => {
     const eventDateTime = new Date(`${event.date} ${event.time || "00:00"}`);
     return eventDateTime < new Date();
   };
 
-  const upcomingEvents = initialEvents.filter((e) => !isEventPast(e));
+  // Filtreleme: Sadece onaylı (is_approved === true), bu şehre ait olan ve geçmiş olmayan etkinlikler
+  const upcomingEvents = initialEvents.filter((e) => {
+    // Sadece değeri kesinlikle 'true' olanları göster (boolean veya string fark etmez)
+    const isApproved = String((e as any).is_approved) === 'true';
+    const isNotPast = !isEventPast(e);
+    
+    // Şehir eşleşmesi: Adreste "Hannoversche" gibi benzer kelimeleri değil, 
+    // tam kelime olarak şehir adını veya slug'ını arar (Regex word boundary).
+    const loc = (e.location || "").toLowerCase();
+    const targetSlug = citySlug.toLowerCase();
+    const targetName = cityName.toLowerCase();
+    
+    const matchesCity = new RegExp(`\\b${targetSlug}\\b|\\b${targetName}\\b`, 'i').test(loc);
+
+    return isApproved && isNotPast && matchesCity;
+  });
 
   const sortedEvents = useMemo(() => {
     const list = [...upcomingEvents];

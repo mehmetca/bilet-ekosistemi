@@ -41,6 +41,7 @@ export async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {
       .ilike("show_slug", showSlugTrimmed)
       .eq("is_active", true)
       .eq("is_approved", true)
+      .eq("is_draft", false)
       .order("date", { ascending: true })
       .order("time", { ascending: true });
     if (error || !data || data.length < 1) return [];
@@ -63,6 +64,7 @@ export async function getEventBySlug(
       .eq("slug", slugOrIdTrimmed)
       .eq("is_active", true)
       .eq("is_approved", true)
+      .eq("is_draft", false)
       .single();
 
     if (!error && data) return { event: data as Event };
@@ -74,6 +76,7 @@ export async function getEventBySlug(
       .ilike("slug", slugOrIdTrimmed)
       .eq("is_active", true)
       .eq("is_approved", true)
+      .eq("is_draft", false)
       .maybeSingle();
 
     if (!ciError && ciData) return { event: ciData as Event };
@@ -84,6 +87,7 @@ export async function getEventBySlug(
       .eq("id", slugOrIdTrimmed)
       .eq("is_active", true)
       .eq("is_approved", true)
+      .eq("is_draft", false)
       .single();
 
     if (!idError && idData) return { event: idData as Event };
@@ -165,6 +169,8 @@ export async function getEventsForCalendar(): Promise<Event[]> {
       .from("events")
       .select("*")
       .eq("is_active", true)
+      .eq("is_approved", true)
+      .eq("is_draft", false)
       .order("date", { ascending: true });
     if (error) {
       console.error("Events fetch error:", error);

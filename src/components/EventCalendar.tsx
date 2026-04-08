@@ -9,12 +9,14 @@ import { Link } from "@/i18n/navigation";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { useTranslations, useLocale } from "next-intl";
+import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
 import { parseDateInput, toISODateString, formatEventDateDMY, formatEventDateDMYFromDate } from "@/lib/date-utils";
 
 interface EventCalendarProps {
   events: Event[];
 }
 
+// EventCalendar bileşeni
 export default function EventCalendar({ events }: EventCalendarProps) {
   const t = useTranslations();
   const locale = useLocale();
@@ -24,9 +26,11 @@ export default function EventCalendar({ events }: EventCalendarProps) {
   const fallbackImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
 
+  const { isAdmin } = useSimpleAuth(); // isAdmin durumunu al
   // Tarihe göre filtrele
   useEffect(() => {
-    let filtered = events;
+    // Sadece onaylı (is_approved: true) olanları göster, admin ise tümünü göster
+    let filtered = events.filter(event => isAdmin || String((event as any).is_approved) === 'true');
 
     // Kategori filtresi
     if (selectedCategory !== "all") {
@@ -47,8 +51,8 @@ export default function EventCalendar({ events }: EventCalendarProps) {
       }
     }
 
-    setFilteredEvents(filtered);
-  }, [selectedDate, selectedCategory, events]);
+    setFilteredEvents(filtered); // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, selectedCategory, events, isAdmin]);
 
   const now = new Date();
   const getEventDateTime = (event: Event) => new Date(`${event.date}T${event.time || "00:00"}`);

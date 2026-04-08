@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import type { Event } from "@/types/database";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import type { Locale } from "@/lib/i18n-content";
+import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
 import { Music2 } from "lucide-react";
 
 const fallbackImage =
@@ -15,6 +16,7 @@ interface FeaturedEventsProps {
   title?: string;
 }
 
+// FeaturedEvents bileşeni
 export default function FeaturedEvents({ events, locale, title = "Events" }: FeaturedEventsProps) {
   const getStackedDateParts = (rawDate: string) => {
     const datePart = String(rawDate || "").includes("T") ? String(rawDate).split("T")[0] : String(rawDate || "").slice(0, 10);
@@ -30,6 +32,8 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
 
   const featured = [...events]
     .filter((e) => {
+      // Sadece onaylıları filtrele
+      if (String((e as any).is_approved) !== 'true') return false;
       const ord = (e as Event & { homepage_featured_order?: number | null }).homepage_featured_order;
       return ord === 1 || ord === 2;
     })

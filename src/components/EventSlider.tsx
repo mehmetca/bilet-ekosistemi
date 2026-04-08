@@ -9,6 +9,7 @@ import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatPrice } from "@/lib/formatPrice";
 import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
 import type { Locale } from "@/lib/i18n-content";
+import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
 import { useTranslations } from "next-intl";
 
 interface EventSliderProps {
@@ -22,6 +23,7 @@ interface EventSliderProps {
 
 export default function EventSlider({ events, title, locale = "tr", noEventsText = "Yaklaşan etkinlik bulunmamaktadır.", buyTicketText = "Bilet Al", freeText = "Ücretsiz" }: EventSliderProps) {
   const tHome = useTranslations("home");
+  const { isAdmin } = useSimpleAuth(); // isAdmin durumunu al
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const fallbackImage =
@@ -41,6 +43,9 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
     const result: Event[] = [];
 
     for (const event of events) {
+      // Sadece onaylanmış (true) etkinlikleri slider'da göster, admin ise tümünü göster
+      if (!isAdmin && String((event as any).is_approved) !== 'true') continue;
+
       const key = getShowKey(event);
       const count = countByKey.get(key) || 0;
       if (count >= MAX_PER_SHOW) continue;

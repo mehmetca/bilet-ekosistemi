@@ -103,11 +103,13 @@ export default function BiletTurleriPage() {
       
 
       if (editingTicket) {
-        const sold = Math.max(
-          0,
-          Number(editingTicket.quantity || 0) - Number(editingTicket.available || 0)
-        );
-        const available = Math.max(0, Number(ticketData.quantity) - sold);
+        // Calculate current sales based on snapshot
+        const currentQuantity = Number(editingTicket.quantity || 0);
+        const currentAvailable = Number(editingTicket.available || 0);
+        const sold = Math.max(0, currentQuantity - currentAvailable);
+        
+        // New availability is new total minus items already sold
+        const available = Math.max(0, ticketData.quantity - sold);
 
         // Güncelleme
         const { error } = await supabase

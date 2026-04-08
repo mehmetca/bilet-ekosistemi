@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Edit2, Trash2, Calendar, MapPin, Music2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Plus, Edit2, Trash2, Calendar, MapPin, Music2, Check, Undo2 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import type { Event, EventCategory } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
@@ -10,6 +11,7 @@ import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
 export default function AdminEvents() {
   const { isAdmin } = useSimpleAuth();
+  const router = useRouter();
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -34,6 +36,43 @@ export default function AdminEvents() {
     }
   }
 
+  async function handleApprove(id: string) {
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({ is_approved: true })
+        .eq("id", id);
+
+      if (error) throw error;
+      
+      setEvents(events.map(event => 
+        event.id === id ? { ...event, is_approved: true } : event
+      ));
+    } catch (error) {
+      console.error("Etkinlik onaylanamadı:", error);
+      alert("Etkinlik onaylanamadı. Lütfen tekrar deneyin.");
+    }
+  }
+
+  async function handleUndoApprove(id: string) {
+    if (!confirm("Bu etkinliği tekrar taslak durumuna getirmek istediğinizden emin misiniz?")) return;
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({ is_approved: false })
+        .eq("id", id);
+
+      if (error) throw error;
+      
+      setEvents(events.map(event => 
+        event.id === id ? { ...event, is_approved: false } : event
+      ));
+    } catch (error) {
+      console.error("İşlem başarısız:", error);
+      alert("İşlem başarısız oldu. Lütfen tekrar deneyin.");
+    }
+  }
+
   async function handleDelete(id: string) {
     if (!confirm("Bu etkinliği silmek istediğinizden emin misiniz?")) return;
 
@@ -50,7 +89,7 @@ export default function AdminEvents() {
 
   function handleEdit(event: Event) {
     // Ana sayfadaki form ile düzenleme
-    window.location.href = `/?edit=${event.id}`;
+    router.push(`/?edit=${event.id}`);
   }
 
   if (!isAdmin) {
@@ -82,7 +121,7 @@ export default function AdminEvents() {
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-semibold text-slate-900">Etkinlikler</h2>
         <button
-          onClick={() => window.location.href = "/"}
+          onClick={() => router.push("/")}
           className="flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
         >
           <Plus className="h-4 w-4" />
@@ -119,9 +158,16 @@ export default function AdminEvents() {
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <span className="text-xs font-medium text-primary-600">
-                        {CATEGORY_LABELS[event.category]}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-primary-600">
+                          {CATEGORY_LABELS[event.category]}
+                        </span>
+                        {String((event as any).is_approved) !== 'true' && (
+                          <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-full">
+                            TASLAK
+                          </span>
+                        )}
+                      </div>
                       <h3 className="mt-1 text-lg font-semibold text-slate-900">
                         {event.title}
                       </h3>
@@ -149,6 +195,26 @@ export default function AdminEvents() {
                         </span>
                       </div>
                       <div className="flex gap-2">
+                        {String((event as any).is_approved) !== 'true' && (
+                          <button
+                            onClick={() => handleApprove(event.id)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 text-xs font-semibold shadow-sm transition-colors"
+                            title="Onayla"
+                          >
+                            <Check className="h-4 w-4" />
+                            Onayla
+                          </button>
+                        )}
+                        {String((event as any).is_approved) === 'true' && (
+                          <button
+                            onClick={() => handleUndoApprove(event.id)}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-500 text-white hover:bg-amber-600 text-xs font-semibold shadow-sm transition-colors"
+                            title="Taslağa Geri Döndür"
+                          >
+                            <Undo2 className="h-4 w-4" />
+                            Taslağa Çek
+                          </button>
+                        )}
                         <button
                           onClick={() => handleEdit(event)}
                           className="p-2 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50"
