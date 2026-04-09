@@ -37,7 +37,7 @@ Vercel proje ayarlarında **Settings → Environment Variables** bölümüne gid
 | `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key | Evet |
 | `RESEND_API_KEY` | Resend API key (bilet e-postası) | Evet |
 | `TICKET_EMAIL_FROM` | Gönderici e-posta (örn. `Bilet Ekosistemi <noreply@domain.com>`) | Evet |
-| `NEXT_PUBLIC_SITE_URL` | Canlı site adresi (örn. `https://bilet.example.com`) | Önerilir (SEO, e-posta linkleri) |
+| `NEXT_PUBLIC_SITE_URL` | Kanonik site kökü, sonunda `/` yok (örn. `https://bilet.example.com`). **Production’da SEO için zorunlu sayılır** (site haritası, robots, canonical, e-posta linkleri; `www` / apex ile Search Console hostname’i aynı olmalı) | **Production’da evet** |
 | `CRON_SECRET` | Cron endpoint güvenliği (en az 16 karakter; hatırlatma mailleri) | Önerilir |
 | `NEXT_PUBLIC_SENTRY_DSN` | Sentry DSN (hata izleme) | Opsiyonel |
 | `SENTRY_ORG` | Sentry org slug | Sentry kullanıyorsanız |
@@ -75,7 +75,20 @@ Cron’un çalışması için Vercel’de projenin **Cron Jobs** özelliğinin a
 
 ---
 
-## 7. Build’i yerelde deneme
+## 7. Google Search Console ve site haritası
+
+Google, site haritasındaki her URL’nin, haritayı gönderdiğiniz **özellikteki alan adıyla** (host) aynı olmasını ister. Aksi halde “URL’ye izin verilmiyor” benzeri uyarılar oluşur.
+
+1. **Vercel Production** ortamında `NEXT_PUBLIC_SITE_URL` değerini, Search Console’da doğruladığınız adresle **aynı** yapın (ör. `https://eventseat.de` veya `https://www.example.com` — `www` kullanımına karar verip her iki yerde de aynısını kullanın).
+2. Yeni bir **Production deploy** alın; canlıda `https://<alan-adınız>/sitemap.xml` açıp `<loc>` adreslerinin hepsinin bu host’ta olduğunu kontrol edin.
+3. Search Console’da **yalnızca bu kanonik alan adı** özelliğine site haritası ekleyin: `https://<alan-adınız>/sitemap.xml`
+4. **Önizleme** dağıtımları (`*.vercel.app`) için ayrı bir özellik kullanıyorsanız, oraya üretim alan adının site haritasını eklemeyin; önizleme URL’leri üretim özelliğiyle karışmaz.
+
+Kod tarafında `NEXT_PUBLIC_SITE_URL` yoksa üretimde Vercel’in `VERCEL_PROJECT_PRODUCTION_URL` değeri yedek olarak kullanılır; yine de kanonik adres için ortam değişkenini tanımlamanız önerilir.
+
+---
+
+## 8. Build’i yerelde deneme
 
 Canlıya almadan önce yerelde production build alıp test etmek için:
 
@@ -88,7 +101,7 @@ Tarayıcıda `http://localhost:3000` açarak kontrol edin.
 
 ---
 
-## 8. Canlıda değişiklikler yansımıyorsa
+## 9. Canlıda değişiklikler yansımıyorsa
 
 **Kod ile veri farklıdır.** Aşağıdaki noktaları kontrol edin.
 
@@ -124,9 +137,11 @@ Tarayıcıda `http://localhost:3000` açarak kontrol edin.
 
 - [ ] Repo Vercel’e bağlandı
 - [ ] Tüm zorunlu ortam değişkenleri eklendi
+- [ ] **Production** için `NEXT_PUBLIC_SITE_URL` kanonik alan adıyla ayarlandı ve deploy alındı (SEO / site haritası)
 - [ ] İlk deploy başarılı
 - [ ] Supabase RLS ve API’ler canlı URL ile uyumlu (gerekirse Supabase’de site URL’i ekleyin)
 - [ ] Bilet e-postası test edildi (opsiyonel)
 - [ ] Özel domain eklendi (isterseniz)
+- [ ] Google Search Console’da site haritası yalnızca kanonik domain üzerinden eklendi (opsiyonel)
 
 Bu adımlarla site canlıya alınmış olur. Sorun olursa Vercel deploy log’larına ve Supabase log’larına bakın.
