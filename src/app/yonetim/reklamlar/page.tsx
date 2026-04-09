@@ -15,6 +15,9 @@ interface Advertisement {
   placement: string;
   is_active: boolean;
   locale?: string | null;
+  overlay_title?: string | null;
+  overlay_day?: string | null;
+  overlay_month_year?: string | null;
   created_at: string;
 }
 
@@ -33,7 +36,10 @@ export default function ReklamlarPage() {
     link_url: "",
     placement: "news_slider",
     is_active: true,
-    locale: "tr" as "tr" | "de" | "en"
+    locale: "tr" as "tr" | "de" | "en",
+    overlay_title: "",
+    overlay_day: "",
+    overlay_month_year: "",
   });
 
   useEffect(() => {
@@ -86,7 +92,10 @@ export default function ReklamlarPage() {
         link_url: "",
         placement: "news_slider",
         is_active: true,
-        locale: "tr"
+        locale: "tr",
+        overlay_title: "",
+        overlay_day: "",
+        overlay_month_year: "",
       });
       setShowAddForm(false);
       fetchAdvertisements();
@@ -129,7 +138,10 @@ export default function ReklamlarPage() {
         link_url: "",
         placement: "news_slider",
         is_active: true,
-        locale: "tr"
+        locale: "tr",
+        overlay_title: "",
+        overlay_day: "",
+        overlay_month_year: "",
       });
       setShowAddForm(false);
       fetchAdvertisements();
@@ -172,7 +184,10 @@ export default function ReklamlarPage() {
       link_url: ad.link_url,
       placement: ad.placement,
       is_active: ad.is_active,
-      locale: (ad.locale || "tr") as "tr" | "de" | "en"
+      locale: (ad.locale || "tr") as "tr" | "de" | "en",
+      overlay_title: ad.overlay_title || "",
+      overlay_day: ad.overlay_day || "",
+      overlay_month_year: ad.overlay_month_year || "",
     });
     setShowAddForm(true);
   }
@@ -186,7 +201,10 @@ export default function ReklamlarPage() {
       link_url: "",
       placement: "news_slider",
       is_active: true,
-      locale: "tr"
+      locale: "tr",
+      overlay_title: "",
+      overlay_day: "",
+      overlay_month_year: "",
     });
   }
 
@@ -287,6 +305,40 @@ export default function ReklamlarPage() {
                   Reklam Aktif
                 </label>
               </div>
+              {newAd.placement === "main_slider" && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Slider Üst Yazı Başlığı</label>
+                    <input
+                      type="text"
+                      placeholder="HARIKA"
+                      value={newAd.overlay_title}
+                      onChange={(e) => setNewAd({ ...newAd, overlay_title: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tarih Gün</label>
+                    <input
+                      type="text"
+                      placeholder="05"
+                      value={newAd.overlay_day}
+                      onChange={(e) => setNewAd({ ...newAd, overlay_day: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Tarih Ay/Yıl</label>
+                    <input
+                      type="text"
+                      placeholder="Mayıs 2026"
+                      value={newAd.overlay_month_year}
+                      onChange={(e) => setNewAd({ ...newAd, overlay_month_year: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                    />
+                  </div>
+                </>
+              )}
             </div>
             <AdminImageUploadFixed
               value={newAd.image_url}
@@ -377,6 +429,15 @@ export default function ReklamlarPage() {
                                 : ad.placement}
                           </span>
                         </div>
+                        {ad.placement === "main_slider" && (
+                          <div className="text-slate-600">
+                            <span className="font-medium">Slider Üst Yazı:</span>
+                            <span className="ml-1">{ad.overlay_title || "-"}</span>
+                            <span className="mx-2">|</span>
+                            <span>{ad.overlay_day || "-"}</span>
+                            <span className="mx-1">{ad.overlay_month_year || "-"}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                     

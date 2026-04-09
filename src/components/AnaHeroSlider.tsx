@@ -13,6 +13,9 @@ interface Advertisement {
   is_active: boolean;
   sort_order?: number | null;
   locale?: string | null;
+  overlay_title?: string | null;
+  overlay_day?: string | null;
+  overlay_month_year?: string | null;
 }
 
 function isInternalLink(href: string) {
@@ -166,18 +169,37 @@ export default function AnaHeroSlider({ placement = "main_slider" }: { placement
               const order = idx + 1;
               const imgAlt = ad.title || "Slider";
               const group = "ANA-SLIDER";
+              const overlayTitle = ad.overlay_title?.trim() || ad.title?.trim() || "HARIKA";
+              const overlayDay = ad.overlay_day?.trim() || "05";
+              const overlayMonthYear = ad.overlay_month_year?.trim() || "Mayıs 2026";
+              const [overlayMonthRaw = "Mayıs", overlayYearRaw = "2026"] = overlayMonthYear.split(/\s+/);
+              const overlayMonth = overlayMonthRaw;
+              const overlayYear = overlayYearRaw;
 
               const inner = (
                 <div className="w-full flex-shrink-0">
-                  <div className="w-full h-[58vw] min-h-[200px] max-h-[320px] sm:h-[min(72vh,820px)] sm:max-h-none bg-black">
+                  <div className="relative w-full h-[58vw] min-h-[220px] max-h-[360px] sm:h-[48vw] sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px] bg-black">
                     <picture>
                       <img
                         src={ad.image_url}
                         alt={imgAlt}
-                        className="w-full h-full object-cover object-center sm:object-top"
+                        className="w-full h-full object-cover object-top"
                         loading={idx === currentIndex ? "eager" : "lazy"}
                       />
                     </picture>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+                    <div className="absolute left-6 right-4 top-1/2 z-10 -translate-y-1/2 sm:left-10 sm:right-8 md:left-14 md:right-10">
+                      <div className="flex items-center gap-5 sm:gap-8 md:gap-10">
+                        <div className="rounded-2xl border border-white/35 bg-black/30 px-3 py-3 text-center text-white backdrop-blur-sm sm:px-5 sm:py-4 md:px-6 md:py-5">
+                          <div className="text-4xl font-extrabold leading-none sm:text-5xl md:text-6xl">{overlayDay}</div>
+                          <div className="mt-1 text-sm font-semibold leading-tight sm:text-base md:text-lg">{overlayMonth}</div>
+                          <div className="mt-0.5 text-sm font-semibold leading-tight sm:text-base md:text-lg">{overlayYear}</div>
+                        </div>
+                        <h3 className="min-w-0 text-3xl font-extrabold leading-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] sm:text-5xl md:text-6xl lg:text-7xl">
+                          {overlayTitle}
+                        </h3>
+                      </div>
+                    </div>
                   </div>
                 </div>
               );

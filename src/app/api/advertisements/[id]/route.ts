@@ -21,6 +21,28 @@ export async function PUT(
       .maybeSingle();
 
     if (error) {
+      // DB migration uygulanmadiysa overlay alanlarini cikartip tekrar dene.
+      const msg = String(error.message || "");
+      const overlaySchemaMissing =
+        msg.includes("overlay_title") || msg.includes("overlay_day") || msg.includes("overlay_month_year");
+      if (overlaySchemaMissing) {
+        const safeBody = { ...body } as Record<string, unknown>;
+        delete safeBody.overlay_title;
+        delete safeBody.overlay_day;
+        delete safeBody.overlay_month_year;
+
+        const retry = await supabaseAdmin
+          .from("advertisements")
+          .update(safeBody)
+          .eq("id", id)
+          .select()
+          .maybeSingle();
+
+        if (!retry.error && retry.data) {
+          return NextResponse.json(retry.data);
+        }
+      }
+
       return NextResponse.json(
         { error: `Reklam guncellenemedi: ${error.message}` },
         { status: 500 }

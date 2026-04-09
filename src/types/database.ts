@@ -189,6 +189,9 @@ export interface Advertisement {
   placement: string;
   is_active: boolean;
   sort_order?: number;
+  overlay_title?: string | null;
+  overlay_day?: string | null;
+  overlay_month_year?: string | null;
   created_at: string;
   updated_at: string;
 }
