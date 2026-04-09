@@ -143,14 +143,14 @@ export default function AnaHeroSlider({ placement = "main_slider" }: { placement
         onMouseLeave={() => setIsAutoPlay(true)}
       >
         {shownAds.length > 1 && (
-          <div className="absolute left-4 top-1/2 z-[2000] -translate-y-1/2 flex flex-col gap-3 pointer-events-auto">
+          <div className="absolute right-3 top-1/2 z-[2000] -translate-y-1/2 flex flex-col gap-2 pointer-events-auto sm:right-4 md:right-auto md:left-4 md:gap-3">
             {shownAds.map((ad, idx) => (
               <button
                 key={ad.id || idx}
                 type="button"
                 onClick={() => goToIndex(idx)}
                 aria-label={`Slide ${idx + 1}`}
-                className={`h-3.5 w-3.5 rounded-full shadow-md transition-all ${
+                className={`h-2.5 w-2.5 rounded-full shadow-md transition-all sm:h-3 sm:w-3 ${
                   idx === currentIndex ? "bg-primary-600 scale-110" : "bg-white hover:opacity-90"
                 }`}
               />
@@ -183,19 +183,19 @@ export default function AnaHeroSlider({ placement = "main_slider" }: { placement
                       <img
                         src={ad.image_url}
                         alt={imgAlt}
-                        className="w-full h-full object-cover object-top"
+                        className="w-full h-full object-cover object-[72%_top] sm:object-top"
                         loading={idx === currentIndex ? "eager" : "lazy"}
                       />
                     </picture>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
-                    <div className="absolute left-6 right-4 top-1/2 z-10 -translate-y-1/2 sm:left-10 sm:right-8 md:left-14 md:right-10">
-                      <div className="flex items-center gap-5 sm:gap-8 md:gap-10">
-                        <div className="rounded-2xl border border-white/35 bg-black/30 px-3 py-3 text-center text-white backdrop-blur-sm sm:px-5 sm:py-4 md:px-6 md:py-5">
-                          <div className="text-4xl font-extrabold leading-none sm:text-5xl md:text-6xl">{overlayDay}</div>
-                          <div className="mt-1 text-sm font-semibold leading-tight sm:text-base md:text-lg">{overlayMonth}</div>
-                          <div className="mt-0.5 text-sm font-semibold leading-tight sm:text-base md:text-lg">{overlayYear}</div>
+                    <div className="absolute inset-x-3 bottom-3 z-10 sm:inset-x-auto sm:left-10 sm:right-8 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 md:left-14 md:right-10">
+                      <div className="flex items-end gap-3 sm:items-center sm:gap-8 md:gap-10">
+                        <div className="rounded-xl border border-white/35 bg-black/30 px-2.5 py-2 text-center text-white backdrop-blur-sm sm:rounded-2xl sm:px-5 sm:py-4 md:px-6 md:py-5">
+                          <div className="text-3xl font-extrabold leading-none sm:text-5xl md:text-6xl">{overlayDay}</div>
+                          <div className="mt-1 text-xs font-semibold leading-tight sm:text-base md:text-lg">{overlayMonth}</div>
+                          <div className="mt-0.5 text-xs font-semibold leading-tight sm:text-base md:text-lg">{overlayYear}</div>
                         </div>
-                        <h3 className="min-w-0 text-3xl font-extrabold leading-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] sm:text-5xl md:text-6xl lg:text-7xl">
+                        <h3 className="min-w-0 text-2xl font-extrabold leading-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] sm:text-5xl md:text-6xl lg:text-7xl">
                           {overlayTitle}
                         </h3>
                       </div>

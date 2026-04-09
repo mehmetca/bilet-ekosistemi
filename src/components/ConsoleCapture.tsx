@@ -5,13 +5,28 @@ import { isBenignSupabaseRefreshTokenMessage } from "@/lib/supabase-auth-errors"
 
 const MAX_LOGS = 20;
 
+function safeJsonStringify(value: unknown): string {
+  try {
+    const seen = new WeakSet<object>();
+    return JSON.stringify(value, (_key, val) => {
+      if (typeof val === "object" && val !== null) {
+        if (seen.has(val as object)) return "[Circular]";
+        seen.add(val as object);
+      }
+      return val;
+    });
+  } catch {
+    return "[Unserializable]";
+  }
+}
+
 function stringifyConsoleArgs(args: unknown[]): string {
   return args
     .map((a) =>
       typeof a === "object" && a !== null
         ? a instanceof Error
           ? a.message + (a.stack ? "\n" + a.stack : "")
-          : JSON.stringify(a)
+          : safeJsonStringify(a)
         : String(a)
     )
     .join(" ");
