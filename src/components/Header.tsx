@@ -8,6 +8,7 @@ import { useCart } from "@/context/CartContext";
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
+import { stripLocalePrefixes } from "@/lib/i18n-pathname";
 
 const navLinks = [
   { href: "/", labelKey: "nav.events" },
@@ -45,6 +46,8 @@ export default function Header() {
   // Alias for compatibility (fixes "langDropdownRef is not defined" on /sanatci)
   const langDropdownRef = langDropdownDesktopRef;
   const pathname = usePathname();
+  /** Dil değiştiricide çift /de/de/ oluşmasın: pathname tek locale katmanına insin */
+  const pathForLocaleSwitch = stripLocalePrefixes(pathname);
   const t = useTranslations();
   const locale = useLocale();
   const router = useRouter();
@@ -128,7 +131,7 @@ export default function Header() {
                     key={loc}
                     type="button"
                     onClick={() => {
-                      router.replace(pathname, { locale: loc });
+                      router.replace(pathForLocaleSwitch, { locale: loc });
                       setLangDropdownOpen(false);
                     }}
                     className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors ${
@@ -244,7 +247,7 @@ export default function Header() {
                       key={loc}
                       type="button"
                       onClick={() => {
-                        router.replace(pathname, { locale: loc });
+                        router.replace(pathForLocaleSwitch, { locale: loc });
                         setLangDropdownOpen(false);
                         setMobileMenuOpen(false);
                       }}

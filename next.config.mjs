@@ -5,7 +5,8 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["lucide-react"],
+  // next-intl / use-intl: RSC + client sınırında tek webpack grafiği; ayrıca Windows vendor-chunk hatalarını azaltır
+  transpilePackages: ["lucide-react", "next-intl", "use-intl"],
   experimental: {
     instrumentationHook: false,
     // Sentry / OpenTelemetry webpack vendor-chunks (örn. @opentelemetry.js) Windows dev'de
@@ -19,6 +20,7 @@ const nextConfig = {
       // Windows dev: eksik ./vendor-chunks/@supabase.js hatasını önlemek için sunucu bundle'dan çıkar
       "@supabase/supabase-js",
       "@supabase/ssr",
+      // use-intl burada external yapma — __webpack_modules__[id] is not a function hatasına yol açar; transpilePackages kullan
       // Windows dev: eksik ./vendor-chunks/@formatjs.js — sadece formatjs ailesi (next-intl'i external yapma)
       "intl-messageformat",
       "@formatjs/ecma402-abstract",

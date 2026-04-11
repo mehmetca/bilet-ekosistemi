@@ -29,8 +29,8 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Locale: middleware x-next-intl-locale veya path'ten (/tr/, /de/, /en/). Locale-prefix'li sayfalarda
-  // mesajları [locale]/layout.tsx yükler; root'ta sadece locale-prefix olmayan (giris, yonetim) için yükleyelim.
+  // Locale: middleware + path. [locale]/* sayfaları kendi layout’ta NextIntlClientProvider ile güncel mesaj alır;
+  // burada kalan provider özellikle /giris, /yonetim gibi [locale] dışı rotalar içindir.
   let validLocale = "tr" as (typeof LOCALES)[number];
   let messages: Record<string, unknown> = {};
   try {

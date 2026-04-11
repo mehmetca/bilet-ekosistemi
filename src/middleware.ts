@@ -8,6 +8,17 @@ const intlMiddleware = createMiddleware(routing);
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // /de/de, /de/de/, /de/de/sanatci — aynı locale iki kez (dil menüsü / eski link)
+  const dupCollapse = pathname.match(/^\/(tr|de|en)\/(tr|de|en)(\/.*)?$/);
+  if (dupCollapse && dupCollapse[1] === dupCollapse[2]) {
+    const suffix = dupCollapse[3] ?? "";
+    const url = request.nextUrl.clone();
+    url.pathname = `/${dupCollapse[1]}${suffix}`;
+    if (url.pathname !== pathname) {
+      return NextResponse.redirect(url, 308);
+    }
+  }
+
   if (pathname === "/sepet" || pathname === "/sepet/") {
     const url = request.nextUrl.clone();
     url.pathname = `/${routing.defaultLocale}/sepet`;
