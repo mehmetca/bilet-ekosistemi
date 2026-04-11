@@ -403,7 +403,10 @@ function SeatMapSvg({
                 rowStartX = usableRight - rowSeatAreaW;
               }
               const group = sectionGroup(String(section.name || ""));
-              const rowLabelX = group === 2 ? sx + blockW - 3 : sx + 3;
+              const rowLabelGap = Math.max(6, Math.min(12, seatW * 0.6));
+              const rowLabelX = group === 2
+                ? Math.min(sx + blockW - 6, rowStartX + rowSeatAreaW + rowLabelGap)
+                : Math.max(sx + 6, rowStartX - rowLabelGap);
               const rowLabelAnchor = group === 2 ? "end" : "start";
               return (
                 <g key={`row-${section.id}-${row.id}`}>
@@ -603,6 +606,10 @@ function SeatMapWithZoom({
     setScale(1);
     setPan({ x: 0, y: 0 });
   };
+  const maxRowsInSection = Math.max(...sections.map((s) => s.rows.length), 1);
+  const dynamicFrameMinHeight = Math.round(
+    Math.min(820, Math.max(340, 180 + maxRowsInSection * 24 + Math.ceil(sections.length / 2) * 64))
+  );
 
   return (
     <div className="space-y-2">
@@ -715,7 +722,11 @@ function SeatMapWithZoom({
       <div
         ref={containerRef}
         className="overflow-hidden rounded-lg border border-slate-200 bg-white touch-none"
-        style={{ minHeight: 520, maxHeight: "min(78vh, 800px)", cursor: isDragging ? "grabbing" : "grab" }}
+        style={{
+          minHeight: dynamicFrameMinHeight,
+          maxHeight: "min(82vh, 860px)",
+          cursor: isDragging ? "grabbing" : "grab",
+        }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseUp}
@@ -728,7 +739,7 @@ function SeatMapWithZoom({
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
             transformOrigin: "0 0",
             width: "100%",
-            minHeight: 520,
+            minHeight: dynamicFrameMinHeight,
             display: "flex",
             justifyContent: "center",
           }}

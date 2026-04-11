@@ -18,7 +18,8 @@ import {
   Megaphone,
   MapPin,
   Bell,
-  Search
+  Search,
+  LayoutGrid
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
@@ -55,6 +56,12 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       label: "Mekanlar",
       icon: MapPin,
       description: "Salon tasarımı ve mekan bilgileri"
+    },
+    {
+      href: "/yonetim/salon-yapim-wizard",
+      label: "Salon Yapım Wizard",
+      icon: LayoutGrid,
+      description: "Adım adım salon planı oluşturma"
     },
     {
       href: "/yonetim/sehirler",

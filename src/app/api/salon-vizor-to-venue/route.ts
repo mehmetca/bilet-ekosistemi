@@ -17,6 +17,14 @@ export async function POST(request: NextRequest) {
     const venueId = typeof body.venueId === "string" ? body.venueId.trim() : "";
     const planName = typeof body.planName === "string" ? body.planName.trim() : "";
     const plan2Blocks = Array.isArray(body.plan2Blocks) ? body.plan2Blocks as VizorBlock[] : [];
+    const settingsByBlockId =
+      body.settingsByBlockId && typeof body.settingsByBlockId === "object"
+        ? (body.settingsByBlockId as Record<string, {
+            zone?: string;
+            horizontalFlow?: VizorBlock["horizontalFlow"];
+            verticalFlow?: VizorBlock["verticalFlow"];
+          }>)
+        : {};
 
     if (!venueId) return NextResponse.json({ error: "venueId gerekli" }, { status: 400 });
     if (!planName) return NextResponse.json({ error: "planName gerekli" }, { status: 400 });
@@ -27,7 +35,15 @@ export async function POST(request: NextRequest) {
     const { data: venue } = await supabase.from("venues").select("id").eq("id", venueId).single();
     if (!venue) return NextResponse.json({ error: "Mekan bulunamadı" }, { status: 404 });
 
-    const template = vizorPlanToTemplate(plan2Blocks, planName);
+    const template = vizorPlanToTemplate(
+      plan2Blocks.map((b) => ({
+        ...b,
+        zone: settingsByBlockId[b.id]?.zone ?? b.zone,
+        horizontalFlow: settingsByBlockId[b.id]?.horizontalFlow ?? b.horizontalFlow,
+        verticalFlow: settingsByBlockId[b.id]?.verticalFlow ?? b.verticalFlow,
+      })),
+      planName
+    );
     if (!template.sections.length) {
       return NextResponse.json({ error: "Plan geçerli bölüm içermiyor (koridor hariç blok/sıra/segment ekleyin)" }, { status: 400 });
     }

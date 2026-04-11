@@ -151,6 +151,65 @@ export default function Plan2BlockDesigner({ blocks: controlledBlocks, onBlocksC
     );
   };
 
+  const removeRow = (blockId: string, rowId: string) => {
+    setBlocks((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId) return b;
+        if (b.rows.length <= 1) return b;
+        return {
+          ...b,
+          rows: b.rows.filter((r) => r.id !== rowId),
+        };
+      })
+    );
+  };
+
+  const applyRowsPreset = (blockId: string, rowCount: number, seatsPerRow: number) => {
+    const safeRowCount = Math.max(1, Math.min(300, Math.floor(rowCount)));
+    const safeSeatsPerRow = Math.max(1, Math.min(500, Math.floor(seatsPerRow)));
+    setBlocks((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.blockType === "corridor") return b;
+        const nextRows: BlockRow[] = Array.from({ length: safeRowCount }, (_, i) => ({
+          id: crypto.randomUUID(),
+          rowNumber: i + 1,
+          totalSeats: safeSeatsPerRow,
+          segments: [],
+        }));
+        return { ...b, rows: nextRows };
+      })
+    );
+  };
+
+  const applyCategoryToRowRange = (blockId: string, fromRowNumber: number, toRowNumber: number, category: string) => {
+    const lo = Math.max(1, Math.floor(Math.min(fromRowNumber, toRowNumber)));
+    const hi = Math.max(1, Math.floor(Math.max(fromRowNumber, toRowNumber)));
+    const safeCategory = (category || "VIP").trim() || "VIP";
+    setBlocks((prev) =>
+      prev.map((b) => {
+        if (b.id !== blockId || b.blockType === "corridor") return b;
+        return {
+          ...b,
+          rows: b.rows.map((r) =>
+            r.rowNumber >= lo && r.rowNumber <= hi
+              ? {
+                  ...r,
+                  segments: [
+                    {
+                      id: createSegmentId(),
+                      fromSeat: 1,
+                      toSeat: r.totalSeats,
+                      category: safeCategory,
+                    },
+                  ],
+                }
+              : r
+          ),
+        };
+      })
+    );
+  };
+
   const addSegment = (blockId: string, rowId: string) => {
     setBlocks((prev) =>
       prev.map((b) => {
@@ -227,6 +286,9 @@ export default function Plan2BlockDesigner({ blocks: controlledBlocks, onBlocksC
     updateBlock,
     addCorridorAfterBlock,
     addRow,
+    removeRow,
+    applyRowsPreset,
+    applyCategoryToRowRange,
     updateRow,
     addSegment,
     updateSegment,

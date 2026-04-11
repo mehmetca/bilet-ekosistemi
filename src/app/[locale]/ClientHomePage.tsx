@@ -13,6 +13,7 @@ import AnaHeroSlider from "@/components/AnaHeroSlider";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
+import { sortCitiesByUpcomingEventCount } from "@/lib/city-event-sort";
 
 function eventDateISO(event: Event): string {
   const d = String(event.date ?? "");
@@ -65,6 +66,7 @@ interface City {
   name_de?: string | null;
   name_en?: string | null;
   image_url?: string | null;
+  sort_order?: number | null;
 }
 
 interface ClientHomePageProps {
@@ -111,14 +113,34 @@ export default function ClientHomePage({
     const { supabase } = await import("@/lib/supabase-client");
     try {
       const [eventsRes, newsRes, citiesRes] = await Promise.all([
-        supabase.from("events").select("*").eq("is_active", true).eq("is_draft", false).order("created_at", { ascending: false }),
+        supabase
+          .from("events")
+          .select("*, venues(city)")
+          .eq("is_active", true)
+          .eq("is_approved", true)
+          .eq("is_draft", false)
+          .order("created_at", { ascending: false }),
         supabase.from("news").select("*").eq("is_published", true).order("published_at", { ascending: false }).limit(5),
-        supabase.from("cities").select("id, slug, name_tr, name_de, name_en, image_url").eq("is_active", true).order("sort_order", { ascending: true }),
+        supabase
+          .from("cities")
+          .select("id, slug, name_tr, name_de, name_en, image_url, sort_order")
+          .eq("is_active", true)
+          .order("sort_order", { ascending: true }),
       ]);
       if (isMountedRef.current) {
-        if (!eventsRes.error && Array.isArray(eventsRes.data)) setEvents(eventsRes.data);
+        if (!eventsRes.error && Array.isArray(eventsRes.data)) {
+          const raw = eventsRes.data as Array<Record<string, unknown>>;
+          setEvents(
+            raw.map(({ venues: _v, ...rest }) => rest) as unknown as Event[]
+          );
+        }
         if (!newsRes.error && Array.isArray(newsRes.data)) setNews(newsRes.data);
-        if (!citiesRes.error && Array.isArray(citiesRes.data)) setCities(citiesRes.data);
+        if (!citiesRes.error && Array.isArray(citiesRes.data)) {
+          const rawEv = (!eventsRes.error && Array.isArray(eventsRes.data)
+            ? (eventsRes.data as Record<string, unknown>[])
+            : []) as Record<string, unknown>[];
+          setCities(sortCitiesByUpcomingEventCount(citiesRes.data, rawEv));
+        }
       }
     } catch {
       /* ignore */
@@ -335,8 +357,13 @@ export default function ClientHomePage({
         
         {/* Content */}
         <div className="relative z-10 container mx-auto px-4 text-center">
-          <h1 className="text-3xl font-bold sm:text-4xl md:text-6xl mb-6 text-white px-1 break-words hyphens-auto">
-            {locale === "tr" && heroVariant?.hero_title ? heroVariant.hero_title : t("heroTitle")}
+          <h1 className="mb-6 px-1 text-white break-words hyphens-auto">
+            <span className="block text-3xl font-bold sm:text-4xl md:text-6xl">
+              {locale === "tr" && heroVariant?.hero_title ? heroVariant.hero_title : t("heroTitle")}
+            </span>
+            <span className="mt-3 block text-lg font-semibold leading-snug text-white/95 sm:text-xl md:text-2xl">
+              {t("seoH1")}
+            </span>
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-white mb-8 sm:mb-12 max-w-3xl mx-auto px-1">
             {locale === "tr" && heroVariant?.hero_subtitle ? heroVariant.hero_subtitle : t("heroSubtitle")}

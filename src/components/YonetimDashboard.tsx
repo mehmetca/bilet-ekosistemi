@@ -41,6 +41,10 @@ export default function YonetimDashboard() {
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Mekanlar / Salon ayarları</h3>
           <p className="text-sm text-slate-500">Mekanlar ve oturum planı (bölüm, sıra, koltuk)</p>
         </Link>
+        <Link href="/yonetim/salon-yapim-wizard" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
+          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Salon Yapım Wizard</h3>
+          <p className="text-sm text-slate-500">Adım adım salon planı oluşturun</p>
+        </Link>
         <Link href="/yonetim/haberler" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Haberler</h3>
           <p className="text-sm text-slate-500">Haberleri yönetin ve yayınlayın</p>

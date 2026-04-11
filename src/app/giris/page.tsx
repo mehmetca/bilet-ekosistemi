@@ -16,7 +16,7 @@ function GoogleIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Header from "@/components/Header";
 /** PKCE + çerez: @supabase/ssr createBrowserClient (SimpleAuth’taki `supabase` ile aynı singleton). */
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
@@ -36,6 +36,7 @@ type AuthTokenResponse = {
 export default function LoginPage() {
   const t = useTranslations("auth");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirect");
   const [email, setEmail] = useState("");
@@ -238,22 +239,32 @@ export default function LoginPage() {
     }
   }
 
-  async function handleGoogleSignIn(isSignUp = false) {
+  async function handleGoogleSignIn(fromRegistration: boolean) {
     if (googleLoading || regGoogleLoading) return;
-    if (isSignUp) setRegGoogleLoading(true);
+    if (fromRegistration) setRegGoogleLoading(true);
     else setGoogleLoading(true);
     setError("");
     setRegError("");
 
     let leavePage = false;
     try {
-      const next = redirectTo || "/";
+      // ?redirect=/tr/sepet gibi gelirse (ödeme öncesi) sepete dön; yoksa üyelik/giriş sonrası panele
+      const next =
+        redirectTo && redirectTo.startsWith("/") ? redirectTo : `/${locale}/panel`;
       const redirectToUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(next)}`;
 
       const sb = createSupabaseBrowserClient();
+      // Tarayıcıda Google oturumu açıksa OAuth bazen hesap ekranını atlıyor; hesap seçimini göstermek için:
+      // https://developers.google.com/identity/protocols/oauth2/openid-connect#authenticationuriparameters
       const { data, error: oauthError } = await sb.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: redirectToUrl },
+        options: {
+          redirectTo: redirectToUrl,
+          queryParams: {
+            prompt: "select_account",
+            access_type: "offline",
+          },
+        },
       });
 
       if (oauthError) {
@@ -308,7 +319,9 @@ export default function LoginPage() {
 
       if (activeLoginAttemptRef.current !== attemptId) return;
       setLoading(false);
-      window.location.href = hasManagementRole ? "/yonetim" : (redirectTo || "/");
+      const afterLogin =
+        redirectTo && redirectTo.startsWith("/") ? redirectTo : `/${locale}/panel`;
+      window.location.href = hasManagementRole ? "/yonetim" : afterLogin;
       return;
     } catch (err: unknown) {
       if (activeLoginAttemptRef.current !== attemptId) return;

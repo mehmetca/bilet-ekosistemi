@@ -1,9 +1,12 @@
-import { NextIntlClientProvider } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import Footer from "@/components/Footer";
 
+/**
+ * Çeviri bağlamı kök `app/layout.tsx` içindeki tek `NextIntlClientProvider` ile verilir
+ * (çift sarmalayıcı RSC’de "Element type is invalid: undefined" ve dev’de chunk 404/beyaz sayfaya yol açıyordu).
+ */
 export default async function LocaleLayout({
   children,
   params,
@@ -17,11 +20,10 @@ export default async function LocaleLayout({
     notFound();
   }
   setRequestLocale(locale);
-  const messages = (await import(`../../../messages/${locale}.json`)).default;
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <>
       {children}
       <Footer />
-    </NextIntlClientProvider>
+    </>
   );
 }

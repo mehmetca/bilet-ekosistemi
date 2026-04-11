@@ -2,17 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
-import CookieConsent from "@/components/CookieConsent";
 import Providers from "@/components/Providers";
-import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
-import AppErrorBoundary from "@/components/AppErrorBoundary";
-import GlobalErrorHandler from "@/components/GlobalErrorHandler";
-import Heartbeat from "@/components/Heartbeat";
-import ConsoleCapture from "@/components/ConsoleCapture";
-import ScrollResetOnReload from "@/components/ScrollResetOnReload";
 import { NextIntlClientProvider } from "next-intl";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
+import { getSiteUrl } from "@/lib/site-url";
 const inter = Inter({ subsets: ["latin"] });
 const LOCALES = ["tr", "de", "en"] as const;
 
@@ -25,8 +19,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "EventSeat",
-  description: "Etkinlik biletleri ve daha fazlası",
+  metadataBase: new URL(getSiteUrl()),
+  title: { default: "Eventseat", template: "%s | Eventseat" },
+  description: "Theater- und Event-Ticketing",
 };
 
 export default async function RootLayout({
@@ -56,9 +51,13 @@ export default async function RootLayout({
   }
   if (Object.keys(messages).length === 0) {
     try {
-      messages = (await import("../../messages/tr.json")).default;
+      messages = (await import(`../../messages/${validLocale}.json`)).default;
     } catch {
-      messages = { common: { backToHome: "Ana Sayfaya Dön" }, home: { heroTitle: "EventSeat" } };
+      try {
+        messages = (await import("../../messages/tr.json")).default;
+      } catch {
+        messages = { common: { backToHome: "Ana Sayfaya Dön" }, home: { heroTitle: "EventSeat" } };
+      }
     }
   }
   return (
@@ -66,20 +65,11 @@ export default async function RootLayout({
       <head />
       <body className={inter.className}>
         <NextIntlClientProvider locale={validLocale} messages={messages}>
-          <GlobalErrorHandler>
-            <AppErrorBoundary>
-              <SimpleAuthProvider>
-                <Providers>
+          <SimpleAuthProvider>
+            <Providers>
                 {children}
-                <CookieConsent />
-                <ServiceWorkerRegister />
-                <Heartbeat />
-                <ConsoleCapture />
-                <ScrollResetOnReload />
-                </Providers>
-              </SimpleAuthProvider>
-            </AppErrorBoundary>
-          </GlobalErrorHandler>
+            </Providers>
+          </SimpleAuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -544,6 +544,20 @@ function MekanlarContent() {
           <span className="text-primary-600 font-medium text-sm">Planı görüntüle →</span>
         </Link>
 
+        <Link
+          href="/yonetim/salon-yapim-wizard"
+          className="flex items-center gap-4 rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-4 mb-6 hover:border-emerald-300 hover:bg-emerald-50 transition-colors"
+        >
+          <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
+            <LayoutGrid className="h-6 w-6 text-emerald-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-semibold text-slate-900">Yeni Salon Yapım Wizard</h3>
+            <p className="text-sm text-slate-600">Mevcut araca dokunmadan adım adım salon planı oluşturun, uzakta şekli görün, yakınlaşınca koltuk seçin.</p>
+          </div>
+          <span className="text-emerald-700 font-medium text-sm">Wizardı aç →</span>
+        </Link>
+
         {showForm && (
           <div className="mt-8">
             <div className="bg-white rounded-xl max-w-2xl w-full p-6 relative">

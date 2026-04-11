@@ -10,6 +10,8 @@ import {
   getEventTickets,
   getOrganizerDisplayName,
 } from "@/lib/events-server";
+import { getSiteUrl } from "@/lib/site-url";
+import { routing } from "@/i18n/routing";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -18,25 +20,37 @@ interface PageProps {
   params: Promise<{ locale?: string; id: string }>;
 }
 
-function getSiteUrl(): string {
-  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
-  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  return "http://localhost:3000";
+function eventPathFromId(
+  id: string,
+  showEvents: { slug?: string | null; id?: string }[],
+  singleEvent: Event | undefined
+): string {
+  const tail = showEvents.length >= 2 ? id : (singleEvent?.slug || singleEvent?.id || id);
+  return `/etkinlik/${tail}`;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { id } = await params;
+  const { id, locale: locParam } = await params;
+  const locale = locParam && routing.locales.includes(locParam as "tr" | "de" | "en") ? locParam : routing.defaultLocale;
   const showEvents = await getEventsByShowSlug(id);
   const slugResult = await getEventBySlug(id);
   const event = showEvents[0] || slugResult?.event;
   if (!event) return { title: "Etkinlik Bulunamadı" };
 
-  const title = `${event.title} | EventSeat`;
+  const title = `${event.title} | Eventseat`;
   const description =
     event.description?.replace(/<[^>]*>/g, "").slice(0, 160) ||
     `${event.title} - ${event.date} ${event.time || ""} ${event.venue || ""}. Bilet alın.`;
   const imageUrl = event.image_url || undefined;
-  const url = `${getSiteUrl()}/etkinlik/${showEvents.length >= 2 ? id : (event.slug || event.id)}`;
+  const base = getSiteUrl();
+  const path = eventPathFromId(id, showEvents, event);
+  const canonical = `${base}/${locale}${path}`;
+  const languages: Record<string, string> = {};
+  for (const l of routing.locales) {
+    languages[l] = `${base}/${l}${path}`;
+  }
+  languages["x-default"] = `${base}/${routing.defaultLocale}${path}`;
+  const ogLocale = locale === "de" ? "de_DE" : locale === "en" ? "en_US" : "tr_TR";
 
   return {
     title,
@@ -44,9 +58,9 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     openGraph: {
       title,
       description,
-      url,
-      siteName: "EventSeat",
-      locale: "tr_TR",
+      url: canonical,
+      siteName: "Eventseat",
+      locale: ogLocale,
       type: "website",
       images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630, alt: event.title }] : undefined,
     },
@@ -56,11 +70,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       images: imageUrl ? [imageUrl] : undefined,
     },
-    alternates: { canonical: url },
+    alternates: { canonical, languages },
   };
 }
 
-function buildEventStructuredData(event: Event, venue: Venue | null) {
+function buildEventStructuredData(event: Event, venue: Venue | null, locale: string, eventPath: string) {
   const eventDate = new Date(`${event.date} ${event.time || "20:00"}`);
   const startDate = Number.isFinite(eventDate.getTime())
     ? eventDate.toISOString()
@@ -87,7 +101,7 @@ function buildEventStructuredData(event: Event, venue: Venue | null) {
     image: event.image_url,
     offers: {
       "@type": "Offer",
-      url: `${getSiteUrl()}/etkinlik/${event.slug || event.id}`,
+      url: `${getSiteUrl()}/${locale}${eventPath}`,
       price: event.price_from || 0,
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
@@ -129,7 +143,8 @@ export default async function EventDetailPage({ params }: PageProps) {
     lookedUpOrganizer ||
     null;
 
-  const structuredData = buildEventStructuredData(event, venue);
+  const eventPath = eventPathFromId(id, [], event);
+  const structuredData = buildEventStructuredData(event, venue, locale, eventPath);
 
   return (
     <>

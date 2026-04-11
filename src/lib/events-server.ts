@@ -3,6 +3,7 @@
  * Etkinlik detay, şehir, takvim ve show_slug sorguları tek yerden.
  */
 import { createServerSupabase } from "@/lib/supabase-server";
+import { eventMatchesCityRow, getMatchTerms } from "@/lib/city-event-sort";
 import type { Event, Ticket, Venue } from "@/types/database";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -183,57 +184,6 @@ export async function getEventsForCalendar(): Promise<Event[]> {
   }
 }
 
-function normalizeForMatch(s: string): string {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/ı/g, "i")
-    .replace(/İ/g, "i")
-    .replace(/ğ/g, "g")
-    .replace(/ü/g, "u")
-    .replace(/ş/g, "s")
-    .replace(/ö/g, "o")
-    .replace(/ç/g, "c");
-}
-
-function getMatchTerms(
-  slug: string,
-  city?: { name_tr?: string | null; name_de?: string | null; name_en?: string | null } | null
-): string[] {
-  const slugLower = slug.toLowerCase().trim();
-  const parts = slugLower.split(/-+/).filter(Boolean);
-  const arr: string[] = [slugLower];
-  parts.forEach((p) => {
-    if (p && arr.indexOf(p) === -1) arr.push(p);
-  });
-  if (city) {
-    [city.name_tr, city.name_de, city.name_en].filter(Boolean).forEach((n) => {
-      if (n) {
-        const t = n.toLowerCase().trim();
-        if (t && arr.indexOf(t) === -1) arr.push(t);
-      }
-    });
-  }
-  return arr;
-}
-
-function matchesCity(loc: string, vc: string, matchTerms: string[]): boolean {
-  const locNorm = normalizeForMatch(loc);
-  const vcNorm = normalizeForMatch(vc);
-  return matchTerms.some((term) => {
-    if (!term) return false;
-    const termNorm = normalizeForMatch(term);
-    return (
-      loc === term ||
-      vc === term ||
-      locNorm === termNorm ||
-      vcNorm === termNorm ||
-      locNorm.includes(termNorm) ||
-      vcNorm.includes(termNorm)
-    );
-  });
-}
-
 /** Şehir slug ve opsiyonel şehir bilgisiyle eşleşen etkinlikler */
 export async function getEventsForCity(
   citySlug: string,
@@ -261,18 +211,17 @@ export async function getEventsForCity(
     console.log("[DEBUG getEventsForCity] Total events fetched:", eventsData?.length || 0);
 
     const filtered = eventsData.filter((e: Record<string, unknown>) => {
-      const loc = ((e.location as string) || "").toLowerCase().trim();
-      const cityField = ((e.city as string) || "").toLowerCase().trim();
-      const v = e.venues;
-      let venueCity = "";
-      if (v != null) {
-        if (Array.isArray(v)) venueCity = (v[0] as { city?: string })?.city || "";
-        else venueCity = (v as { city?: string }).city || "";
-      }
-      const vc = venueCity.toLowerCase().trim();
-      const match = matchesCity(loc, vc, matchTerms) || 
-             matchesCity(cityField, vc, matchTerms);
+      const match = eventMatchesCityRow(e, citySlug, city);
       if (match) {
+        const loc = ((e.location as string) || "").toLowerCase().trim();
+        const cityField = ((e.city as string) || "").toLowerCase().trim();
+        const v = e.venues;
+        let venueCity = "";
+        if (v != null) {
+          if (Array.isArray(v)) venueCity = (v[0] as { city?: string })?.city || "";
+          else venueCity = (v as { city?: string }).city || "";
+        }
+        const vc = venueCity.toLowerCase().trim();
         console.log("[DEBUG getEventsForCity] Matched event:", e.title, "city:", cityField, "location:", loc, "venueCity:", vc);
       }
       return match;

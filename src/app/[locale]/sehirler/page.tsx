@@ -1,4 +1,5 @@
 import { createServerSupabase } from "@/lib/supabase-server";
+import { sortCitiesByUpcomingEventCount } from "@/lib/city-event-sort";
 import Header from "@/components/Header";
 import CitiesGrid from "./CitiesGrid";
 import type { Metadata } from "next";
@@ -9,14 +10,24 @@ export const revalidate = 0;
 
 async function getCities() {
   const supabase = createServerSupabase();
-  const { data, error } = await supabase
-    .from("cities")
-    .select("id, slug, name_tr, name_de, name_en, image_url")
-    .eq("is_active", true)
-    .order("sort_order", { ascending: true })
-    .order("slug", { ascending: true });
-  if (error) return [];
-  return data || [];
+  const [citiesRes, eventsRes] = await Promise.all([
+    supabase
+      .from("cities")
+      .select("id, slug, name_tr, name_de, name_en, image_url, sort_order")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("slug", { ascending: true }),
+    supabase
+      .from("events")
+      .select("*, venues(city)")
+      .eq("is_active", true)
+      .eq("is_approved", true)
+      .eq("is_draft", false),
+  ]);
+  if (citiesRes.error) return [];
+  const rawEvents = (eventsRes.data || []) as Record<string, unknown>[];
+  const cities = citiesRes.data || [];
+  return sortCitiesByUpcomingEventCount(cities, rawEvents);
 }
 
 export async function generateMetadata(): Promise<Metadata> {

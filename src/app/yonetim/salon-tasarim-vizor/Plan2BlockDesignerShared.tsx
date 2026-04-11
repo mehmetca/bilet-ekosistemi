@@ -55,6 +55,10 @@ export const CATEGORY_OPTIONS = [
   "Kategori 4",
   "Kategori 5",
   "Kategori 6",
+  "Kategori 7",
+  "Kategori 8",
+  "Kategori 9",
+  "Kategori 10",
 ];
 
 function getCategoryColor(cat: string): string {

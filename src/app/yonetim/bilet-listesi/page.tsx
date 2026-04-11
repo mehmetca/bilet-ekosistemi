@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Search, Ticket, QrCode, Eye, ChevronDown } from "lucide-react";
@@ -24,6 +25,124 @@ export default function BiletListesiPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  /** Portal menü: konum + taşmada maxHeight (kaydırma çubuğu gizli) */
+  const [orderMenuLayout, setOrderMenuLayout] = useState<{
+    top: number;
+    left: number;
+    maxHeight?: number;
+  } | null>(null);
+  const orderMenuButtonRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
+  const orderMenuPanelRef = useRef<HTMLDivElement | null>(null);
+
+  const MENU_WIDTH_PX = 224; // w-56
+
+  const closeOrderMenu = useCallback(() => {
+    setExpandedOrder(null);
+    setOrderMenuLayout(null);
+  }, []);
+
+  const expandedMenuSeatCount = useMemo(() => {
+    if (!expandedOrder) return 0;
+    const o = tickets.find((t) => t.id === expandedOrder);
+    if (!o) return 0;
+    if (o.order_seats && o.order_seats.length > 0) return o.order_seats.length;
+    return 1;
+  }, [expandedOrder, tickets]);
+
+  const updateOrderMenuLayout = useCallback(() => {
+    const id = expandedOrder;
+    if (!id) return;
+    const btn = orderMenuButtonRefs.current.get(id);
+    const panel = orderMenuPanelRef.current;
+    if (!btn || !panel) return;
+
+    const r = btn.getBoundingClientRect();
+    const left = Math.min(
+      Math.max(8, r.right - MENU_WIDTH_PX),
+      window.innerWidth - MENU_WIDTH_PX - 8
+    );
+
+    const margin = 8;
+    const gap = 6;
+    const vh = window.innerHeight - 2 * margin;
+    const naturalH = panel.scrollHeight;
+
+    const spaceBelow = window.innerHeight - r.bottom - margin;
+    const spaceAbove = r.top - margin;
+
+    let top: number;
+    let maxHeight: number | undefined;
+
+    if (naturalH + gap <= spaceBelow) {
+      top = r.bottom + gap;
+    } else if (naturalH + gap <= spaceAbove) {
+      top = r.top - naturalH - gap;
+    } else if (naturalH <= vh) {
+      top = margin;
+    } else {
+      top = margin;
+      maxHeight = vh;
+    }
+
+    setOrderMenuLayout({ top, left, maxHeight });
+  }, [expandedOrder]);
+
+  const getInitialMenuLayout = useCallback((orderId: string) => {
+    const btn = orderMenuButtonRefs.current.get(orderId);
+    if (!btn) return null;
+    const r = btn.getBoundingClientRect();
+    const left = Math.min(
+      Math.max(8, r.right - MENU_WIDTH_PX),
+      window.innerWidth - MENU_WIDTH_PX - 8
+    );
+    return { top: r.bottom + 6, left };
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!expandedOrder) return;
+    updateOrderMenuLayout();
+  }, [expandedOrder, expandedMenuSeatCount, updateOrderMenuLayout]);
+
+  useLayoutEffect(() => {
+    if (!expandedOrder) return;
+    const onResize = () => updateOrderMenuLayout();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [expandedOrder, updateOrderMenuLayout]);
+
+  useEffect(() => {
+    if (!expandedOrder) return;
+    const onScroll = () => closeOrderMenu();
+    window.addEventListener("scroll", onScroll, true);
+    return () => window.removeEventListener("scroll", onScroll, true);
+  }, [expandedOrder, closeOrderMenu]);
+
+  /** Tam ekran overlay yok: kaydırma çubuğuna tıklanınca kapanmayı önlemek için */
+  useEffect(() => {
+    if (!expandedOrder) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (orderMenuPanelRef.current?.contains(t)) return;
+      const btn = orderMenuButtonRefs.current.get(expandedOrder);
+      if (btn?.contains(t)) return;
+      closeOrderMenu();
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [expandedOrder, closeOrderMenu]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeOrderMenu();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [closeOrderMenu]);
+
+  useEffect(() => {
+    if (!expandedOrder) return;
+    if (!tickets.some((t) => t.id === expandedOrder)) closeOrderMenu();
+  }, [expandedOrder, tickets, closeOrderMenu]);
 
   useEffect(() => {
     fetchTickets();
@@ -131,6 +250,14 @@ export default function BiletListesiPage() {
       </div>
     );
   }
+
+  const menuOrder = expandedOrder ? tickets.find((t) => t.id === expandedOrder) : undefined;
+  const menuSeatCodes =
+    menuOrder && menuOrder.order_seats && menuOrder.order_seats.length > 0
+      ? menuOrder.order_seats
+      : menuOrder
+        ? [{ ticket_code: menuOrder.ticket_code }]
+        : [];
 
   return (
     <AdminOnlyGuard>
@@ -258,32 +385,34 @@ export default function BiletListesiPage() {
                           Kontrol
                         </button>
                       ) : (
-                        // Çoklu bilet - absolute dropdown menü (önceki satırların üzerine)
                         <div className="relative">
                           <button
-                            onClick={() => setExpandedOrder(expandedOrder === ticket.id ? null : ticket.id || null)}
+                            type="button"
+                            ref={(el) => {
+                              const id = ticket.id;
+                              if (!id) return;
+                              if (el) orderMenuButtonRefs.current.set(id, el);
+                              else orderMenuButtonRefs.current.delete(id);
+                            }}
+                            onClick={() => {
+                              const id = ticket.id;
+                              if (!id) return;
+                              if (expandedOrder === id) {
+                                closeOrderMenu();
+                                return;
+                              }
+                              setExpandedOrder(id);
+                              const initial = getInitialMenuLayout(id);
+                              if (initial) setOrderMenuLayout(initial);
+                            }}
                             className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
                           >
                             <Eye className="h-3 w-3" />
                             Kontrol
-                            <ChevronDown className={`h-3 w-3 transition-transform ${expandedOrder === ticket.id ? 'rotate-180' : ''}`} />
+                            <ChevronDown
+                              className={`h-3 w-3 transition-transform ${expandedOrder === ticket.id ? "rotate-180" : ""}`}
+                            />
                           </button>
-                          {expandedOrder === ticket.id && (
-                            <div className="absolute right-0 bottom-full mb-1 w-56 bg-white border border-slate-200 rounded-lg shadow-xl z-[60]">
-                              {seatCodes.map((seat, idx) => (
-                                <Link
-                                  key={idx}
-                                  href={`/yonetim/bilet-kontrol?code=${seat.ticket_code || ticket.ticket_code}`}
-                                  className="flex items-center justify-between px-3 py-2 text-xs hover:bg-slate-50 border-b last:border-0 last:rounded-b-lg first:rounded-t-lg"
-                                >
-                                  <span className="font-mono text-slate-700">{seat.ticket_code || ticket.ticket_code}</span>
-                                  {seat.row_label && (
-                                    <span className="text-slate-400">{seat.section_name} · Sıra {seat.row_label}</span>
-                                  )}
-                                </Link>
-                              ))}
-                            </div>
-                          )}
                         </div>
                       )}
                     </td>
@@ -317,6 +446,46 @@ export default function BiletListesiPage() {
             onClose={() => setShowQRScanner(false)}
           />
         )}
+
+        {typeof document !== "undefined" &&
+          expandedOrder &&
+          orderMenuLayout &&
+          menuSeatCodes.length > 0 &&
+          createPortal(
+            <div
+              ref={orderMenuPanelRef}
+              className={`fixed z-[500] w-56 rounded-lg border border-slate-200 bg-white py-1 shadow-xl ${
+                orderMenuLayout.maxHeight != null ? "overflow-y-auto scrollbar-hide" : "overflow-visible"
+              }`}
+              style={{
+                top: orderMenuLayout.top,
+                left: orderMenuLayout.left,
+                ...(orderMenuLayout.maxHeight != null
+                  ? { maxHeight: orderMenuLayout.maxHeight }
+                  : {}),
+              }}
+              role="menu"
+            >
+              {menuSeatCodes.map((seat, idx) => (
+                <Link
+                  key={idx}
+                  href={`/yonetim/bilet-kontrol?code=${seat.ticket_code || menuOrder?.ticket_code}`}
+                  className="flex items-center justify-between gap-2 px-3 py-2.5 text-xs hover:bg-slate-50 border-b border-slate-100 last:border-0"
+                  onClick={closeOrderMenu}
+                >
+                  <span className="font-mono text-slate-800 break-all">
+                    {seat.ticket_code || menuOrder?.ticket_code}
+                  </span>
+                  {seat.row_label ? (
+                    <span className="shrink-0 text-slate-400">
+                      {seat.section_name} · Sıra {seat.row_label}
+                    </span>
+                  ) : null}
+                </Link>
+              ))}
+            </div>,
+            document.body
+          )}
       </div>
     </div>
     </AdminOnlyGuard>

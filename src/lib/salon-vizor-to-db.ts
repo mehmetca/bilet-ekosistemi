@@ -17,7 +17,35 @@ export interface VizorBlock {
   id: string;
   name: string;
   blockType?: string;
+  zone?: string;
+  horizontalFlow?: "ltr" | "rtl";
+  verticalFlow?: "topToBottom" | "bottomToTop";
   rows: VizorBlockRow[];
+}
+
+function buildSeatLabels(
+  lo: number,
+  hi: number,
+  horizontalFlow: VizorBlock["horizontalFlow"],
+  verticalFlow: VizorBlock["verticalFlow"],
+  blockType: VizorBlock["blockType"]
+): string[] {
+  const total = hi - lo + 1;
+  if (total <= 0) return [];
+
+  const isVertical = blockType === "leftVertical" || blockType === "rightVertical";
+  if (isVertical) {
+    if (verticalFlow === "bottomToTop") {
+      return Array.from({ length: total }, (_, i) => String(hi - i));
+    }
+    return Array.from({ length: total }, (_, i) => String(lo + i));
+  }
+
+  if (horizontalFlow === "rtl") {
+    return Array.from({ length: total }, (_, i) => String(hi - i));
+  }
+
+  return Array.from({ length: total }, (_, i) => String(lo + i));
 }
 
 /**
@@ -52,7 +80,13 @@ export function vizorPlanToTemplate(plan2Blocks: VizorBlock[], planName: string)
         const to = Math.max(1, Math.min(row.totalSeats, Math.floor(seg.toSeat ?? 1)));
         const lo = Math.min(from, to);
         const hi = Math.max(from, to);
-        const seatLabels = Array.from({ length: hi - lo + 1 }, (_, i) => String(lo + i));
+        const seatLabels = buildSeatLabels(
+          lo,
+          hi,
+          block.horizontalFlow,
+          block.verticalFlow,
+          block.blockType
+        );
         entry.section.rows.push({
           row_label: String(row.rowNumber),
           sort_order: entry.section.rows.length,

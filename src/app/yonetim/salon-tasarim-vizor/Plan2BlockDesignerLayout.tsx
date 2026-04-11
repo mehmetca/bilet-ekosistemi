@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   type Block,
   type BlockRow,
@@ -20,6 +20,9 @@ export type Plan2LayoutProps = {
   updateBlock: (id: string, p: Partial<Pick<Block, "name" | "blockType">>) => void;
   addCorridorAfterBlock: (id: string) => void;
   addRow: (id: string) => void;
+  removeRow: (id: string, rowId: string) => void;
+  applyRowsPreset: (id: string, rowCount: number, seatsPerRow: number) => void;
+  applyCategoryToRowRange: (id: string, fromRowNumber: number, toRowNumber: number, category: string) => void;
   updateRow: (id: string, rowId: string, p: Partial<BlockRow>) => void;
   addSegment: (blockId: string, rowId: string) => void;
   updateSegment: (blockId: string, rowId: string, segId: string, p: Partial<SeatSegment>) => void;
@@ -36,6 +39,9 @@ export function Plan2Layout(props: Plan2LayoutProps) {
     updateBlock,
     addCorridorAfterBlock,
     addRow,
+    removeRow,
+    applyRowsPreset,
+    applyCategoryToRowRange,
     updateRow,
     addSegment,
     updateSegment,
@@ -43,6 +49,8 @@ export function Plan2Layout(props: Plan2LayoutProps) {
     removeBlock,
     addBlock,
   } = props;
+  const [presetByBlockId, setPresetByBlockId] = useState<Record<string, { rowCount: number; seatsPerRow: number }>>({});
+  const [rowCategoryByBlockId, setRowCategoryByBlockId] = useState<Record<string, { fromRow: number; toRow: number; category: string }>>({});
 
   return (
     <div className="rounded-xl border border-slate-300 bg-white p-4 mt-8 space-y-4">
@@ -116,6 +124,145 @@ export function Plan2Layout(props: Plan2LayoutProps) {
                 </p>
               ) : (
                 <div>
+                  <div className="mb-3 rounded-md border border-indigo-200 bg-indigo-50 p-2">
+                    <p className="mb-2 text-xs font-medium text-indigo-900">Hızlı sıra oluştur</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label className="text-xs text-slate-700">
+                        Sıra sayısı
+                        <input
+                          type="number"
+                          min={1}
+                          value={presetByBlockId[block.id]?.rowCount ?? block.rows.length}
+                          onChange={(e) => {
+                            const rowCount = Math.max(1, parseInt(e.target.value || "1", 10));
+                            setPresetByBlockId((prev) => ({
+                              ...prev,
+                              [block.id]: {
+                                rowCount,
+                                seatsPerRow: prev[block.id]?.seatsPerRow ?? block.rows[0]?.totalSeats ?? 20,
+                              },
+                            }));
+                          }}
+                          className="ml-2 w-20 rounded border border-slate-300 px-2 py-1 text-xs"
+                        />
+                      </label>
+                      <label className="text-xs text-slate-700">
+                        Her sırada koltuk
+                        <input
+                          type="number"
+                          min={1}
+                          value={presetByBlockId[block.id]?.seatsPerRow ?? block.rows[0]?.totalSeats ?? 20}
+                          onChange={(e) => {
+                            const seatsPerRow = Math.max(1, parseInt(e.target.value || "1", 10));
+                            setPresetByBlockId((prev) => ({
+                              ...prev,
+                              [block.id]: {
+                                rowCount: prev[block.id]?.rowCount ?? block.rows.length,
+                                seatsPerRow,
+                              },
+                            }));
+                          }}
+                          className="ml-2 w-24 rounded border border-slate-300 px-2 py-1 text-xs"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          applyRowsPreset(
+                            block.id,
+                            presetByBlockId[block.id]?.rowCount ?? block.rows.length,
+                            presetByBlockId[block.id]?.seatsPerRow ?? block.rows[0]?.totalSeats ?? 20
+                          )
+                        }
+                        className="rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"
+                      >
+                        Uygula (mevcut sıraları yeniler)
+                      </button>
+                    </div>
+                  </div>
+                  <div className="mb-3 rounded-md border border-amber-200 bg-amber-50 p-2">
+                    <p className="mb-2 text-xs font-medium text-amber-900">Sıra aralığına kategori ata</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <label className="text-xs text-slate-700">
+                        Başlangıç sıra
+                        <input
+                          type="number"
+                          min={1}
+                          value={rowCategoryByBlockId[block.id]?.fromRow ?? 1}
+                          onChange={(e) => {
+                            const fromRow = Math.max(1, parseInt(e.target.value || "1", 10));
+                            setRowCategoryByBlockId((prev) => ({
+                              ...prev,
+                              [block.id]: {
+                                fromRow,
+                                toRow: prev[block.id]?.toRow ?? Math.max(1, block.rows.length),
+                                category: prev[block.id]?.category ?? "VIP",
+                              },
+                            }));
+                          }}
+                          className="ml-2 w-20 rounded border border-slate-300 px-2 py-1 text-xs"
+                        />
+                      </label>
+                      <label className="text-xs text-slate-700">
+                        Bitiş sıra
+                        <input
+                          type="number"
+                          min={1}
+                          value={rowCategoryByBlockId[block.id]?.toRow ?? Math.max(1, block.rows.length)}
+                          onChange={(e) => {
+                            const toRow = Math.max(1, parseInt(e.target.value || "1", 10));
+                            setRowCategoryByBlockId((prev) => ({
+                              ...prev,
+                              [block.id]: {
+                                fromRow: prev[block.id]?.fromRow ?? 1,
+                                toRow,
+                                category: prev[block.id]?.category ?? "VIP",
+                              },
+                            }));
+                          }}
+                          className="ml-2 w-20 rounded border border-slate-300 px-2 py-1 text-xs"
+                        />
+                      </label>
+                      <label className="text-xs text-slate-700">
+                        Kategori
+                        <select
+                          value={rowCategoryByBlockId[block.id]?.category ?? "VIP"}
+                          onChange={(e) => {
+                            const category = e.target.value;
+                            setRowCategoryByBlockId((prev) => ({
+                              ...prev,
+                              [block.id]: {
+                                fromRow: prev[block.id]?.fromRow ?? 1,
+                                toRow: prev[block.id]?.toRow ?? Math.max(1, block.rows.length),
+                                category,
+                              },
+                            }));
+                          }}
+                          className="ml-2 rounded border border-slate-300 px-2 py-1 text-xs"
+                        >
+                          {CATEGORY_OPTIONS.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          applyCategoryToRowRange(
+                            block.id,
+                            rowCategoryByBlockId[block.id]?.fromRow ?? 1,
+                            rowCategoryByBlockId[block.id]?.toRow ?? Math.max(1, block.rows.length),
+                            rowCategoryByBlockId[block.id]?.category ?? "VIP"
+                          )
+                        }
+                        className="rounded bg-amber-600 px-2 py-1 text-xs font-medium text-white hover:bg-amber-700"
+                      >
+                        Uygula (seçilen sıralara)
+                      </button>
+                    </div>
+                  </div>
                   <div className="space-y-3 pl-2 border-l-2 border-slate-200">
                     {block.rows.map((row) => (
                       <div
@@ -159,6 +306,15 @@ export function Plan2Layout(props: Plan2LayoutProps) {
                             className="ml-auto px-2 py-1 text-xs rounded bg-primary-600 text-white hover:bg-primary-700"
                           >
                             + Segment ekle (koridor)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeRow(block.id, row.id)}
+                            disabled={block.rows.length <= 1}
+                            className="px-2 py-1 text-xs rounded border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            title={block.rows.length <= 1 ? "Blokta en az 1 sıra kalmalı" : "Bu sırayı sil"}
+                          >
+                            Sırayı sil
                           </button>
                         </div>
 
