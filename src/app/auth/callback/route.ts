@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { authCookieDomainFromHost } from "@/lib/auth-cookie-domain";
 
 export const dynamic = "force-dynamic";
 
@@ -29,11 +30,21 @@ export async function GET(request: NextRequest) {
   if (!next.startsWith("/")) next = "/";
 
   const cookieStore = cookies();
-
+  const cookieDomain = authCookieDomainFromHost(request.headers.get("host"));
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      ...(cookieDomain
+        ? {
+            cookieOptions: {
+              domain: cookieDomain,
+              path: "/",
+              sameSite: "lax" as const,
+              secure: process.env.NODE_ENV === "production",
+            },
+          }
+        : {}),
       cookies: {
         getAll() {
           return cookieStore.getAll();

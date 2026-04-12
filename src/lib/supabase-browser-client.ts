@@ -1,5 +1,6 @@
 import { createBrowserClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { authCookieDomainFromHost } from "@/lib/auth-cookie-domain";
 
 /**
  * Tarayıcıda tek Supabase + tek GoTrue örneği.
@@ -13,10 +14,21 @@ export function createSupabaseBrowserClient(): SupabaseClient {
     throw new Error("createSupabaseBrowserClient is browser-only");
   }
   if (!browserSingleton) {
+    const domain = authCookieDomainFromHost(window.location.hostname);
     browserSingleton = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        ...(domain
+          ? {
+              cookieOptions: {
+                domain,
+                path: "/",
+                sameSite: "lax" as const,
+                secure: window.location.protocol === "https:",
+              },
+            }
+          : {}),
         auth: {
           flowType: "pkce",
           detectSessionInUrl: true,
