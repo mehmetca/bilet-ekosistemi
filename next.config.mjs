@@ -36,6 +36,10 @@ const nextConfig = {
       { source: "/tr/bilgilendirme", destination: "/tr/bilgilendirme/sss", permanent: false },
       { source: "/de/bilgilendirme", destination: "/de/bilgilendirme/sss", permanent: false },
       { source: "/en/bilgilendirme", destination: "/en/bilgilendirme/sss", permanent: false },
+      // Şifre sıfırlama sayfası locale öneki olmadan (/sifre-yenile); /tr/... ile gelenleri düzelt
+      { source: "/tr/sifre-yenile", destination: "/sifre-yenile", permanent: true },
+      { source: "/de/sifre-yenile", destination: "/sifre-yenile", permanent: true },
+      { source: "/en/sifre-yenile", destination: "/sifre-yenile", permanent: true },
     ];
   },
   async headers() {
