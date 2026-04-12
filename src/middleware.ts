@@ -8,6 +8,23 @@ const intlMiddleware = createMiddleware(routing);
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // OAuth: redirect_to reddedilince Site URL + ?code=&state= bazen / veya /tr üzerine düşer; /auth/callback'e al.
+  // `state` olmadan yönlendirme yok (/kontrol?code=, şifre sıfırlama vb. ile karışmasın).
+  const oauthCode = request.nextUrl.searchParams.get("code");
+  const oauthState = request.nextUrl.searchParams.get("state");
+  if (
+    oauthCode &&
+    oauthState &&
+    !pathname.startsWith("/auth/callback") &&
+    !pathname.startsWith("/api") &&
+    !pathname.startsWith("/kontrol") &&
+    !pathname.startsWith("/sifre-yenile")
+  ) {
+    const fixed = request.nextUrl.clone();
+    fixed.pathname = "/auth/callback";
+    return NextResponse.redirect(fixed);
+  }
+
   // /de/de, /de/de/, /de/de/sanatci — aynı locale iki kez (dil menüsü / eski link)
   const dupCollapse = pathname.match(/^\/(tr|de|en)\/(tr|de|en)(\/.*)?$/);
   if (dupCollapse && dupCollapse[1] === dupCollapse[2]) {

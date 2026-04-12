@@ -251,7 +251,13 @@ export default function LoginPage() {
       // ?redirect=/tr/sepet gibi gelirse (ödeme öncesi) sepete dön; yoksa üyelik/giriş sonrası panele
       const next =
         redirectTo && redirectTo.startsWith("/") ? redirectTo : `/${locale}/panel`;
-      const redirectToUrl = `${typeof window !== "undefined" ? window.location.origin : ""}/auth/callback?next=${encodeURIComponent(next)}`;
+      if (typeof window === "undefined" || !window.location.origin) {
+        setError(t("errorGeneric"));
+        return;
+      }
+      const oauthCallback = new URL("/auth/callback", window.location.origin);
+      oauthCallback.searchParams.set("next", next);
+      const redirectToUrl = oauthCallback.toString();
 
       const sb = createSupabaseBrowserClient();
       // Tarayıcıda Google oturumu açıksa OAuth bazen hesap ekranını atlıyor; hesap seçimini göstermek için:
