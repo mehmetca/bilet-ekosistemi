@@ -63,17 +63,9 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const forwardedHost = request.headers.get("x-forwarded-host");
-  const isLocal = process.env.NODE_ENV === "development";
-
-  let redirectUrl: URL;
-  if (isLocal) {
-    redirectUrl = new URL(finalPath, url.origin);
-  } else if (forwardedHost) {
-    redirectUrl = new URL(`https://${forwardedHost}${finalPath}`);
-  } else {
-    redirectUrl = new URL(finalPath, url.origin);
-  }
-
+  // OAuth callback bu deployment’a gelen gerçek host üzerinden gelir (ör. kurdevents.com).
+  // Üretimde `x-forwarded-host` bazen Vercel’in primary domain’ine (eventseat.de) sabitlenebiliyor;
+  // o zaman kullanıcı yanlışlıkla ana siteye atılıyordu. İstek URL’sinin origin’i her zaman doğru host’tur.
+  const redirectUrl = new URL(finalPath, request.nextUrl.origin);
   return NextResponse.redirect(redirectUrl);
 }
