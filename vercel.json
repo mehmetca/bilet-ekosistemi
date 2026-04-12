@@ -1,4 +1,12 @@
 {
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "eventseat.de" }],
+      "destination": "https://www.eventseat.de/$1",
+      "permanent": true
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/send-reminders",
