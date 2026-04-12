@@ -73,6 +73,17 @@ export default function LoginPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (searchParams.get("error") !== "oauth") return;
+    setError(t("errorOAuthCallback"));
+    if (typeof window !== "undefined") {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("error");
+      const qs = u.searchParams.toString();
+      window.history.replaceState({}, "", qs ? `${u.pathname}?${qs}` : u.pathname);
+    }
+  }, [searchParams, t]);
+
   async function signInWithTimeout(credentials: { email: string; password: string }, timeoutMs = 15000) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

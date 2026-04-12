@@ -56,6 +56,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    console.error("[auth/callback] exchangeCodeForSession:", error.message);
     const login = new URL("/giris", origin);
     login.searchParams.set("error", "oauth");
     return NextResponse.redirect(login);

@@ -40,6 +40,7 @@
     "successOrganizerApplied": "Your organiser application has been received! After approval you will be able to add events. You will be notified by email.",
     "errorInvalidCredentials": "Email or password incorrect. If email confirmation is required, click the confirmation link in the registration email.",
     "errorLoginFailed": "Login failed. Please try again.",
+    "errorOAuthCallback": "Google sign-in could not be completed (code invalid or expired). Start and finish sign-in on the same site; try a private window or clear cookies.",
     "or": "or",
     "loginWithGoogle": "Sign in with Google",
     "signUpWithGoogle": "Sign up with Google",
