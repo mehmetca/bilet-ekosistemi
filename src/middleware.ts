@@ -8,17 +8,17 @@ const intlMiddleware = createMiddleware(routing);
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // OAuth: redirect_to reddedilince Site URL + ?code=&state= bazen / veya /tr üzerine düşer; /auth/callback'e al.
-  // `state` olmadan yönlendirme yok (/kontrol?code=, şifre sıfırlama vb. ile karışmasın).
+  // OAuth: Site URL köküne veya /tr|/de|/en köküne ?code= (ve bazen ?state=) düşerse /auth/callback'e al.
+  // Supabase yanıtında yalnızca `code` olabiliyor; `state` şartı kaldırıldı.
+  // Sadece locale kök path'lerde tetiklenir (/kontrol?code=, /tr/etkinlik?... ile karışmaz).
   const oauthCode = request.nextUrl.searchParams.get("code");
-  const oauthState = request.nextUrl.searchParams.get("state");
+  const isLocaleRoot =
+    pathname === "/" || /^\/(tr|de|en)\/?$/.test(pathname);
   if (
     oauthCode &&
-    oauthState &&
+    isLocaleRoot &&
     !pathname.startsWith("/auth/callback") &&
-    !pathname.startsWith("/api") &&
-    !pathname.startsWith("/kontrol") &&
-    !pathname.startsWith("/sifre-yenile")
+    !pathname.startsWith("/api")
   ) {
     const fixed = request.nextUrl.clone();
     fixed.pathname = "/auth/callback";
