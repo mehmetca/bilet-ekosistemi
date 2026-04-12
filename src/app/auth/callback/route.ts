@@ -4,6 +4,19 @@ import { createServerClient } from "@supabase/ssr";
 
 export const dynamic = "force-dynamic";
 
+/** OAuth sonrası redirect için güvenilir origin (Vercel’de nextUrl bazen deployment URL’si verebiliyor). */
+function getCallbackOrigin(request: NextRequest): string {
+  const host = request.headers.get("host");
+  const forwardedProto = request.headers.get("x-forwarded-proto");
+  const proto =
+    forwardedProto ||
+    (request.nextUrl.protocol === "https:" ? "https" : "http");
+  if (host) {
+    return `${proto}://${host}`;
+  }
+  return request.nextUrl.origin;
+}
+
 /**
  * PKCE code exchange on the server reads the verifier from the Cookie header
  * (set before redirect to Google). Client-only exchange can fail with hydration /
@@ -34,14 +47,16 @@ export async function GET(request: NextRequest) {
     }
   );
 
+  const origin = getCallbackOrigin(request);
+
   if (!code) {
-    return NextResponse.redirect(new URL("/giris", url.origin));
+    return NextResponse.redirect(new URL("/giris", origin));
   }
 
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
-    const login = new URL("/giris", url.origin);
+    const login = new URL("/giris", origin);
     login.searchParams.set("error", "oauth");
     return NextResponse.redirect(login);
   }
@@ -64,8 +79,6 @@ export async function GET(request: NextRequest) {
   }
 
   // OAuth callback bu deployment’a gelen gerçek host üzerinden gelir (ör. kurdevents.com).
-  // Üretimde `x-forwarded-host` bazen Vercel’in primary domain’ine (eventseat.de) sabitlenebiliyor;
-  // o zaman kullanıcı yanlışlıkla ana siteye atılıyordu. İstek URL’sinin origin’i her zaman doğru host’tur.
-  const redirectUrl = new URL(finalPath, request.nextUrl.origin);
+  const redirectUrl = new URL(finalPath, origin);
   return NextResponse.redirect(redirectUrl);
 }
