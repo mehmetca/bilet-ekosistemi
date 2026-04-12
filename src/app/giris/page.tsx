@@ -271,6 +271,9 @@ export default function LoginPage() {
       const redirectToUrl = oauthCallback.toString();
 
       const sb = createSupabaseBrowserClient();
+      // PKCE çerez/storage hazır olsun; ilk tıklamada bazen exchange başarısız oluyordu.
+      await sb.auth.getSession();
+
       // Tarayıcıda Google oturumu açıksa OAuth bazen hesap ekranını atlıyor; hesap seçimini göstermek için:
       // https://developers.google.com/identity/protocols/oauth2/openid-connect#authenticationuriparameters
       const { data, error: oauthError } = await sb.auth.signInWithOAuth({

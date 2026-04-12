@@ -40,7 +40,7 @@
     "successOrganizerApplied": "Organizatör başvurunuz alındı! Yönetici onayından sonra etkinlik ekleyebileceksiniz. E-posta ile bilgilendirileceksiniz.",
     "errorInvalidCredentials": "E-posta veya şifre hatalı. E-posta onayı gerekiyorsa, kayıt sonrası gelen onay linkine tıklayıp tekrar deneyin.",
     "errorLoginFailed": "Giriş yapılamadı. Lütfen tekrar deneyin.",
-    "errorOAuthCallback": "Google ile giriş tamamlanamadı (oturum kodu geçersiz veya süresi doldu). Girişi açtığınız adresle aynı sitede tekrar deneyin; gizli pencerede veya çerezleri temizleyerek yeniden deneyin.",
+    "errorOAuthCallback": "Google ile giriş tamamlanamadı (oturum kodu geçersiz veya süresi doldu). Aynı sekmede bir kez daha «Google ile giriş»e basmayı deneyin. Devam ederse gizli pencere veya çerez temizliği; girişe her zaman tek bir adresle (ör. kurdevents.de veya www) başlayın.",
     "or": "veya",
     "loginWithGoogle": "Google ile giriş yap",
     "signUpWithGoogle": "Google ile üye ol",
