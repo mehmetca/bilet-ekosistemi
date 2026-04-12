@@ -3,7 +3,7 @@
 /**
  * Şifre sıfırlama (unuttum): E-posta ile link gönderilir, link tıklanınca bu sayfada yeni şifre belirlenir.
  * Supabase Dashboard → Authentication → URL Configuration → Redirect URLs listesine
- * https://your-domain.com/sifre-yenile ve http://localhost:3000/sifre-yenile ekleyin.
+ * https://your-domain.com/tr/sifre-yenile (veya /sifre-yenile; middleware locale ekler) ve localhost ekleyin.
  */
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
