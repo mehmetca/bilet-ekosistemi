@@ -3,17 +3,35 @@
 import { Suspense, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
+import { routing } from "@/i18n/routing";
 
 /**
  * OAuth PKCE: kod değişimi tarayıcıda yapılır — sunucu route'unda çerez/PKCE eşleşmemesi
  * (özellikle çoklu domain) nedeniyle exchangeCodeForSession bazen başarısız oluyordu.
+ *
+ * `next` query bazen (Site URL / domain geçişi) kaybolur; o zaman ana sayfa yerine panele düş.
  */
+function resolveOAuthNext(raw: string | null): { path: string; adminFromHome: boolean } {
+  const loc = routing.defaultLocale;
+  const defaultPanel = `/${loc}/panel`;
+  if (!raw || raw === "/") {
+    return { path: defaultPanel, adminFromHome: true };
+  }
+  if (!raw.startsWith("/")) {
+    return { path: defaultPanel, adminFromHome: true };
+  }
+  if (raw === `/${loc}` || raw === `/${loc}/`) {
+    return { path: defaultPanel, adminFromHome: true };
+  }
+  return { path: raw, adminFromHome: false };
+}
+
 function AuthCallbackInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
-  let next = searchParams.get("next") ?? "/";
-  if (!next.startsWith("/")) next = "/";
+  const rawNext = searchParams.get("next");
+  const { path: next, adminFromHome } = resolveOAuthNext(rawNext);
   const ran = useRef(false);
 
   useEffect(() => {
@@ -43,7 +61,7 @@ function AuthCallbackInner() {
           const role = roleData?.role as string | undefined;
           const hasManagementRole =
             role === "admin" || role === "controller" || role === "organizer";
-          if (hasManagementRole && next === "/") {
+          if (hasManagementRole && adminFromHome) {
             finalPath = "/yonetim";
           }
         }
@@ -75,7 +93,7 @@ function AuthCallbackInner() {
     return () => {
       cancelled = true;
     };
-  }, [code, next, router]);
+  }, [code, next, adminFromHome, router]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 text-slate-600">
