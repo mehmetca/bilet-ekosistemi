@@ -30,6 +30,7 @@ type AuthTokenResponse = {
   access_token?: string;
   refresh_token?: string;
   user?: { email?: string };
+  error?: string;
   error_description?: string;
   msg?: string;
 };
@@ -110,7 +111,14 @@ export default function LoginPage() {
 
       const payload = (await response.json()) as AuthTokenResponse;
       if (!response.ok) {
-        const rawMsg = payload.error_description || payload.msg || "Giris istegi basarisiz oldu.";
+        const rawMsg =
+          payload.error_description ||
+          payload.msg ||
+          payload.error ||
+          "Giris istegi basarisiz oldu.";
+        if (/rate limit|too many requests/i.test(String(rawMsg))) {
+          throw new Error(t("errorRateLimited"));
+        }
         // "Invalid login credentials" = yanlış şifre VEYA e-posta henüz onaylanmamış
         if (/invalid login credentials|invalid credentials/i.test(rawMsg)) {
           throw new Error(t("errorInvalidCredentials"));

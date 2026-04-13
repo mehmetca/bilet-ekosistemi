@@ -14,6 +14,14 @@ import Header from "@/components/Header";
 
 type Step = "email" | "sending" | "sent" | "set_password" | "updating" | "done";
 
+function formatAuthUserMessage(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (/rate limit|too many requests/i.test(msg)) {
+    return "Çok sık şifre sıfırlama isteği gönderildi. Lütfen birkaç dakika bekleyip tekrar deneyin.";
+  }
+  return msg;
+}
+
 export default function SifreYenilePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,7 +97,7 @@ export default function SifreYenilePage() {
       setStep("sent");
     } catch (err) {
       setStep("email");
-      setError(err instanceof Error ? err.message : "E-posta gönderilemedi. Lütfen tekrar deneyin.");
+      setError(formatAuthUserMessage(err) || "E-posta gönderilemedi. Lütfen tekrar deneyin.");
     }
   }
 
@@ -116,7 +124,7 @@ export default function SifreYenilePage() {
       setTimeout(() => router.push("/giris?message=sifre-guncellendi"), 2000);
     } catch (err) {
       setStep("set_password");
-      setError(err instanceof Error ? err.message : "Şifre güncellenemedi.");
+      setError(formatAuthUserMessage(err) || "Şifre güncellenemedi.");
     }
   }
 

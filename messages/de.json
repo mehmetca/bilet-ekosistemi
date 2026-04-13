@@ -42,6 +42,7 @@
     "successOrganizerApplied": "Ihre Veranstalter-Bewerbung wurde erhalten! Nach Genehmigung können Sie Veranstaltungen hinzufügen. Sie werden per E-Mail benachrichtigt.",
     "errorInvalidCredentials": "E-Mail oder Passwort falsch. Falls eine E-Mail-Bestätigung erforderlich ist, klicken Sie auf den Bestätigungslink in der Registrierungs-E-Mail.",
     "errorLoginFailed": "Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.",
+    "errorRateLimited": "Zu viele Anmelde- oder Passwort-Reset-Anfragen. Bitte einige Minuten warten und erneut versuchen.",
     "errorOAuthCallback": "Anmeldung mit Google konnte nicht abgeschlossen werden (Code ungültig oder abgelaufen). Versuchen Sie es erneut mit dem Google-Button auf derselben Seite. Ansonsten privates Fenster oder Cookies leeren; Anmeldung immer über eine einheitliche Adresse (z. B. kurdevents.de oder www).",
     "or": "oder",
     "loginWithGoogle": "Mit Google anmelden",
