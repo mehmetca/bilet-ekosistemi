@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 import { useLocale, useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabase-client";
 import { parseArtistBio } from "@/lib/artistProfile";
-import { getLocalizedArtist } from "@/lib/i18n-content";
+import { getLocalizedArtist, type Locale } from "@/lib/i18n-content";
 import type { Artist } from "@/types/database";
 import { Search } from "lucide-react";
 
@@ -71,7 +71,7 @@ function getLineClampClass(lines: number): string {
 function SanatciIndexContent() {
   const t = useTranslations("artists");
   const tCommon = useTranslations("common");
-  const locale = useLocale();
+  const locale = useLocale() as Locale;
   const router = useRouter();
   const searchParams = useSearchParams();
   const [artists, setArtists] = useState<Artist[]>([]);
