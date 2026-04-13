@@ -5,7 +5,9 @@
     "share": "Paylaş",
     "shareNews": "Haberi Paylaş",
     "linkCopied": "Link kopyalandı!",
-    "close": "Kapat"
+    "close": "Kapat",
+    "previous": "Önceki",
+    "next": "Sonraki"
   },
   "newsDetail": {
     "newsNotFound": "Haber Bulunamadı",
@@ -382,6 +384,8 @@
     "title": "Sanatçılar",
     "subtitle": "Tüm sanatçı biyografileri ve görselleri",
     "filterAll": "Tümü",
+    "searchPlaceholder": "Sanatçı adı veya müzik grubu ara...",
+    "letterFilterToolbar": "Harf filtresi",
     "loading": "Yükleniyor...",
     "noArtists": "Henüz sanatçı kaydı yok.",
     "noPhoto": "Fotoğraf yok",

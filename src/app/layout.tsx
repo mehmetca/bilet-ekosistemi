@@ -8,7 +8,7 @@ import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { getSiteUrl } from "@/lib/site-url";
 const inter = Inter({ subsets: ["latin"] });
-const LOCALES = ["tr", "de", "en"] as const;
+const LOCALES = ["tr", "de", "en", "ku", "ckb"] as const;
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,7 @@ export default async function RootLayout({
     const headersList = await headers();
     let locale = (headersList.get("x-next-intl-locale") || headersList.get("X-NEXT-INTL-LOCALE") || routing.defaultLocale) as string;
     const pathname = headersList.get("x-pathname") || "";
-    const pathLocale = pathname.match(/^\/(tr|de|en)(?:\/|$)/)?.[1];
+    const pathLocale = pathname.match(/^\/(tr|de|en|ku|ckb)(?:\/|$)/)?.[1];
     if (pathLocale && LOCALES.includes(pathLocale as (typeof LOCALES)[number])) {
       locale = pathLocale;
     }

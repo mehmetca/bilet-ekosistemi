@@ -18,7 +18,21 @@ const navLinks = [
   { href: "/sanatci", labelKey: "nav.artists" },
 ];
 
-const LOCALE_LABELS: Record<string, string> = { tr: "Türkçe", de: "Deutsch", en: "English" };
+const SUPPORTED_LOCALES = ["tr", "de", "en", "ku", "ckb"] as const;
+const LOCALE_LABELS: Record<string, string> = {
+  tr: "Türkçe",
+  de: "Deutsch",
+  en: "English",
+  ku: "Kurmanci",
+  ckb: "Soranî",
+};
+const LOCALE_FLAG_URLS: Record<string, string> = {
+  tr: "https://flagcdn.com/w20/tr.png",
+  de: "https://flagcdn.com/w20/de.png",
+  en: "https://flagcdn.com/w20/gb.png",
+  ku: "https://upload.wikimedia.org/wikipedia/commons/3/35/Flag_of_Kurdistan.svg",
+  ckb: "https://upload.wikimedia.org/wikipedia/commons/3/35/Flag_of_Kurdistan.svg",
+};
 
 export default function Header() {
   const { user, isAdmin, isController, isOrganizer } = useSimpleAuth();
@@ -126,7 +140,7 @@ export default function Header() {
             </button>
             {langDropdownOpen && (
               <div className="absolute right-0 top-full mt-1 py-1 min-w-[140px] bg-white rounded-lg border border-slate-200 shadow-lg z-50">
-                {(["tr", "de", "en"] as const).map((loc) => (
+                {SUPPORTED_LOCALES.map((loc) => (
                   <button
                     key={loc}
                     type="button"
@@ -140,7 +154,12 @@ export default function Header() {
                         : "text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <span className="font-medium">{loc.toUpperCase()}</span>
+                    <img
+                      src={LOCALE_FLAG_URLS[loc]}
+                      alt={`${LOCALE_LABELS[loc]} flag`}
+                      className="h-4 w-5 rounded-[2px] object-cover"
+                      loading="lazy"
+                    />
                     <span className="text-slate-500">–</span>
                     <span>{LOCALE_LABELS[loc]}</span>
                   </button>
@@ -242,7 +261,7 @@ export default function Header() {
               </button>
               {langDropdownOpen && (
                 <div className="mt-1 py-1 bg-white rounded-lg border border-slate-200 shadow-lg">
-                  {(["tr", "de", "en"] as const).map((loc) => (
+                  {SUPPORTED_LOCALES.map((loc) => (
                     <button
                       key={loc}
                       type="button"
@@ -255,7 +274,12 @@ export default function Header() {
                         locale === loc ? "bg-primary-50 text-primary-700 font-medium" : "hover:bg-slate-50"
                       }`}
                     >
-                      <span className="font-medium">{loc.toUpperCase()}</span>
+                      <img
+                        src={LOCALE_FLAG_URLS[loc]}
+                        alt={`${LOCALE_LABELS[loc]} flag`}
+                        className="h-4 w-5 rounded-[2px] object-cover"
+                        loading="lazy"
+                      />
                       <span className="text-slate-500">–</span>
                       <span>{LOCALE_LABELS[loc]}</span>
                     </button>

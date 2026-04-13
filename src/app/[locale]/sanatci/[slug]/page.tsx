@@ -43,7 +43,7 @@ function getYouTubeEmbedUrl(url?: string): string | null {
 
 export default function ArtistPage({ params }: { params: { slug: string } }) {
   const resolvedParams = params;
-  const locale = useLocale() as "tr" | "de" | "en";
+  const locale = useLocale() as "tr" | "de" | "en" | "ku" | "ckb";
   const t = useTranslations("artists");
   const tCommon = useTranslations("common");
   const tHome = useTranslations("home");
@@ -345,7 +345,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
               type="button"
               onClick={goGalleryPrev}
               className="absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 hover:bg-black/70 p-2 text-white transition-colors"
-              aria-label="Önceki"
+              aria-label={tCommon("previous")}
             >
               &lt;
             </button>
@@ -354,7 +354,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
               type="button"
               onClick={goGalleryNext}
               className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-black/50 hover:bg-black/70 p-2 text-white transition-colors"
-              aria-label="Sonraki"
+              aria-label={tCommon("next")}
             >
               &gt;
             </button>

@@ -41,53 +41,58 @@ function AuthCallbackInner() {
     let cancelled = false;
 
     (async () => {
-      if (!code) {
-        router.replace("/giris");
-        return;
-      }
-
-      const sb = createSupabaseBrowserClient();
-
-      const finish = async (userId: string) => {
-        let finalPath = next;
-        if (userId) {
-          const { data: roleData } = await sb
-            .from("user_roles")
-            .select("role")
-            .eq("user_id", userId)
-            .limit(1)
-            .maybeSingle();
-          if (cancelled) return;
-          const role = roleData?.role as string | undefined;
-          const hasManagementRole =
-            role === "admin" || role === "controller" || role === "organizer";
-          if (hasManagementRole && adminFromHome) {
-            finalPath = "/yonetim";
-          }
+      try {
+        if (!code) {
+          router.replace("/giris");
+          return;
         }
-        router.replace(finalPath);
-      };
 
-      const { data, error } = await sb.auth.exchangeCodeForSession(code);
+        const sb = createSupabaseBrowserClient();
 
-      if (cancelled) return;
+        const finish = async (userId: string) => {
+          let finalPath = next;
+          if (userId) {
+            const { data: roleData } = await sb
+              .from("user_roles")
+              .select("role")
+              .eq("user_id", userId)
+              .limit(1)
+              .maybeSingle();
+            if (cancelled) return;
+            const role = roleData?.role as string | undefined;
+            const hasManagementRole =
+              role === "admin" || role === "controller" || role === "organizer";
+            if (hasManagementRole && adminFromHome) {
+              finalPath = "/yonetim";
+            }
+          }
+          router.replace(finalPath);
+        };
 
-      if (!error && data.session?.user) {
-        await finish(data.session.user.id);
-        return;
+        const { data, error } = await sb.auth.exchangeCodeForSession(code);
+
+        if (cancelled) return;
+
+        if (!error && data.session?.user) {
+          await finish(data.session.user.id);
+          return;
+        }
+
+        if (error) {
+          console.error("[auth/callback] exchangeCodeForSession:", error.message);
+        }
+
+        const { data: sessionData } = await sb.auth.getSession();
+        if (sessionData.session?.user) {
+          await finish(sessionData.session.user.id);
+          return;
+        }
+
+        router.replace("/giris?error=oauth");
+      } catch (e) {
+        console.error("[auth/callback] unexpected:", e);
+        if (!cancelled) router.replace("/giris?error=oauth");
       }
-
-      if (error) {
-        console.error("[auth/callback] exchangeCodeForSession:", error.message);
-      }
-
-      const { data: sessionData } = await sb.auth.getSession();
-      if (sessionData.session?.user) {
-        await finish(sessionData.session.user.id);
-        return;
-      }
-
-      router.replace("/giris?error=oauth");
     })();
 
     return () => {

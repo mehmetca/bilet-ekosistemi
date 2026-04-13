@@ -5,15 +5,38 @@ import { withSupabaseAuth } from "@/utils/supabase/middleware";
 
 const intlMiddleware = createMiddleware(routing);
 
+/** www ↔ apex: OAuth PKCE doğrulayıcısı origin’e bağlı; kanonik host’a 308 ile hizala. */
+function redirectToCanonicalSiteHost(request: NextRequest): NextResponse | null {
+  const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!raw) return null;
+  let canonical: URL;
+  try {
+    canonical = new URL(raw.startsWith("http") ? raw : `https://${raw}`);
+  } catch {
+    return null;
+  }
+  const reqHost = request.nextUrl.hostname.toLowerCase();
+  const canonHost = canonical.hostname.toLowerCase();
+  if (!canonHost || reqHost === canonHost) return null;
+  if (reqHost.endsWith(".vercel.app") || canonHost.endsWith(".vercel.app")) return null;
+  if (reqHost === "localhost" || reqHost === "127.0.0.1") return null;
+
+  const dest = new URL(request.nextUrl.pathname + request.nextUrl.search, canonical.origin);
+  return NextResponse.redirect(dest, 308);
+}
+
 export async function middleware(request: NextRequest) {
+  const canonical = redirectToCanonicalSiteHost(request);
+  if (canonical) return canonical;
+
   const pathname = request.nextUrl.pathname;
 
-  // OAuth: Site URL köküne veya /tr|/de|/en köküne ?code= (ve bazen ?state=) düşerse /auth/callback'e al.
+  // OAuth: Site URL köküne veya locale köküne ?code= (ve bazen ?state=) düşerse /auth/callback'e al.
   // Supabase yanıtında yalnızca `code` olabiliyor; `state` şartı kaldırıldı.
   // Sadece locale kök path'lerde tetiklenir (/kontrol?code=, /tr/etkinlik?... ile karışmaz).
   const oauthCode = request.nextUrl.searchParams.get("code");
   const isLocaleRoot =
-    pathname === "/" || /^\/(tr|de|en)\/?$/.test(pathname);
+    pathname === "/" || /^\/(tr|de|en|ku|ckb)\/?$/.test(pathname);
   if (
     oauthCode &&
     isLocaleRoot &&
@@ -26,7 +49,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // /de/de, /de/de/, /de/de/sanatci — aynı locale iki kez (dil menüsü / eski link)
-  const dupCollapse = pathname.match(/^\/(tr|de|en)\/(tr|de|en)(\/.*)?$/);
+  const dupCollapse = pathname.match(/^\/(tr|de|en|ku|ckb)\/(tr|de|en|ku|ckb)(\/.*)?$/);
   if (dupCollapse && dupCollapse[1] === dupCollapse[2]) {
     const suffix = dupCollapse[3] ?? "";
     const url = request.nextUrl.clone();
@@ -72,7 +95,7 @@ export async function middleware(request: NextRequest) {
     return withSupabaseAuth(request, res);
   }
 
-  const match = pathname.match(/^\/(tr|de|en)(?:\/|$)/);
+  const match = pathname.match(/^\/(tr|de|en|ku|ckb)(?:\/|$)/);
   const locale = match ? match[1] : routing.defaultLocale;
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-next-intl-locale", locale);

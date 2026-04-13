@@ -5,7 +5,9 @@
     "share": "Teilen",
     "shareNews": "Nachricht teilen",
     "linkCopied": "Link kopiert!",
-    "close": "Schließen"
+    "close": "Schließen",
+    "previous": "Vorherige",
+    "next": "Nächste"
   },
   "newsDetail": {
     "newsNotFound": "Nachricht nicht gefunden",
@@ -382,6 +384,8 @@
     "title": "Künstlerinnen und Künstler",
     "subtitle": "Alle Künstlerbiografien und Bilder",
     "filterAll": "Alle",
+    "searchPlaceholder": "Künstlername oder Musikgruppe suchen...",
+    "letterFilterToolbar": "Buchstabenfilter",
     "loading": "Wird geladen...",
     "noArtists": "Noch keine Künstler eingetragen.",
     "noPhoto": "Kein Foto",

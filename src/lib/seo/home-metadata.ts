@@ -28,6 +28,16 @@ const HOME_SEO: Record<AppLocale, HomeSeo> = {
     description: "Biletleri online satın, koltuk planını yönetin ve etkinliklerinizi daha kolay organize edin.",
     openGraphLocale: "tr_TR",
   },
+  ku: {
+    title: "Eventseat – Platforma Bilêtê ji bo Şano û Bûyeran",
+    description: "Bilêtan online bifiroşe, plana cihan birêve bibe û bûyerên xwe bi hêsanî organîze bike.",
+    openGraphLocale: "ku_TR",
+  },
+  ckb: {
+    title: "Eventseat – پلاتفۆرمی بلیت بۆ شانۆ و بۆنەکان",
+    description: "بلیت بە ئۆنلاین بفرۆشە، پلانی کورسی بەڕێوەببە و بۆنەکانت بە ئاسانی ڕێکبخە.",
+    openGraphLocale: "ckb_IQ",
+  },
 };
 
 function languageAlternates(base: string, pathSuffix: string) {

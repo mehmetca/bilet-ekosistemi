@@ -5,7 +5,9 @@
     "share": "Share",
     "shareNews": "Share News",
     "linkCopied": "Link copied!",
-    "close": "Close"
+    "close": "Close",
+    "previous": "Previous",
+    "next": "Next"
   },
   "newsDetail": {
     "newsNotFound": "News Not Found",
@@ -382,6 +384,8 @@
     "title": "Artists",
     "subtitle": "All artist biographies and images",
     "filterAll": "All",
+    "searchPlaceholder": "Search artist name or music band...",
+    "letterFilterToolbar": "Letter filter",
     "loading": "Loading...",
     "noArtists": "No artists registered yet.",
     "noPhoto": "No photo",

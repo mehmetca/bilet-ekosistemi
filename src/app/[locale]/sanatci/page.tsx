@@ -70,7 +70,8 @@ function getLineClampClass(lines: number): string {
 
 function SanatciIndexContent() {
   const t = useTranslations("artists");
-  const locale = useLocale() as "tr" | "de" | "en";
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [artists, setArtists] = useState<Artist[]>([]);
@@ -168,7 +169,7 @@ function SanatciIndexContent() {
                     setSearchTerm(value);
                     applyFilters(value, selectedLetter);
                   }}
-                  placeholder={locale === "de" ? "Künstlername oder Musikgruppe suchen..." : locale === "en" ? "Search artist name or music band..." : "Sanatçı adı veya müzik grubu ara..."}
+                  placeholder={t("searchPlaceholder")}
                   className="w-full rounded-lg border border-transparent bg-slate-100 py-3 pl-10 pr-3 text-sm text-slate-900 shadow-sm focus:border-transparent focus:bg-white focus:outline-none focus:ring-0 sm:py-3.5 sm:pl-12 sm:pr-4 sm:text-base"
                 />
               </div>
@@ -176,7 +177,7 @@ function SanatciIndexContent() {
             <div
               className="flex flex-wrap justify-center gap-1 sm:gap-1.5 md:gap-2 px-0.5 pb-0.5"
               role="toolbar"
-              aria-label={locale === "de" ? "Buchstabenfilter" : locale === "en" ? "Letter filter" : "Harf filtresi"}
+              aria-label={t("letterFilterToolbar")}
             >
               <button
                 type="button"
@@ -269,7 +270,7 @@ function SanatciIndexContent() {
                   disabled={currentPage === 1}
                   className="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-slate-300 disabled:cursor-not-allowed shadow-sm"
                 >
-                  ← {locale === "de" ? "Vorherige" : locale === "en" ? "Previous" : "Önceki"}
+                  ← {tCommon("previous")}
                 </button>
                 
                 <div className="flex items-center gap-1">
@@ -293,7 +294,7 @@ function SanatciIndexContent() {
                   disabled={currentPage === totalPages}
                   className="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-slate-300 disabled:cursor-not-allowed shadow-sm"
                 >
-                  {locale === "de" ? "Nächste" : locale === "en" ? "Next" : "Sonraki"} →
+                  {tCommon("next")} →
                 </button>
               </div>
             )}

@@ -39,3 +39,21 @@ export function getSiteUrl(): string {
 
   return "http://localhost:3000";
 }
+
+/**
+ * Tarayıcıda OAuth `redirectTo` kökü: `NEXT_PUBLIC_SITE_URL` tanımlıysa onu kullanır (www / apex
+ * ile PKCE localStorage uyumsuzluğunu önler). Yoksa `window.location.origin`.
+ */
+export function getPublicSiteOrigin(): string {
+  if (typeof window === "undefined") return "http://localhost:3000";
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (fromEnv) {
+    try {
+      const u = new URL(fromEnv.startsWith("http") ? fromEnv : `https://${fromEnv}`);
+      return u.origin;
+    } catch {
+      /* ignore */
+    }
+  }
+  return window.location.origin;
+}

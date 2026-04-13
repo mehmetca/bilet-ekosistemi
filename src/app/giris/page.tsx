@@ -20,6 +20,7 @@ import { useLocale, useTranslations } from "next-intl";
 import Header from "@/components/Header";
 /** PKCE + çerez: @supabase/ssr createBrowserClient (SimpleAuth’taki `supabase` ile aynı singleton). */
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
+import { getPublicSiteOrigin } from "@/lib/site-url";
 
 const PASSWORD_EXISTS_PATTERN = /already registered|already exists/i;
 const PASSWORD_VALIDATION_PATTERN = /password|weak|at least \d+ characters/i;
@@ -266,7 +267,7 @@ export default function LoginPage() {
         setError(t("errorGeneric"));
         return;
       }
-      const oauthCallback = new URL("/auth/callback", window.location.origin);
+      const oauthCallback = new URL("/auth/callback", getPublicSiteOrigin());
       oauthCallback.searchParams.set("next", next);
       const redirectToUrl = oauthCallback.toString();
 

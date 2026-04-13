@@ -113,9 +113,14 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const [titleTr, setTitleTr] = useState("");
   const [titleDe, setTitleDe] = useState("");
   const [titleEn, setTitleEn] = useState("");
+  const [titleKu, setTitleKu] = useState("");
+  const [titleCkb, setTitleCkb] = useState("");
+  const [translatingCkb, setTranslatingCkb] = useState(false);
   const [descriptionTr, setDescriptionTr] = useState("");
   const [descriptionDe, setDescriptionDe] = useState("");
   const [descriptionEn, setDescriptionEn] = useState("");
+  const [descriptionCkb, setDescriptionCkb] = useState("");
+  const [translatingDescriptionCkb, setTranslatingDescriptionCkb] = useState(false);
   const [category, setCategory] = useState<EventCategory>("konser");
   const [imageUrl, setImageUrl] = useState("");
   const [organizerDisplayName, setOrganizerDisplayName] = useState("");
@@ -226,9 +231,12 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setTitleTr((ev.title_tr as string) || (ev.title as string) || "");
       setTitleDe((ev.title_de as string) || "");
       setTitleEn((ev.title_en as string) || "");
+      setTitleKu((ev.title_ku as string) || "");
+      setTitleCkb((ev.title_ckb as string) || "");
       setDescriptionTr(parsedTr.content || "");
       setDescriptionDe(parsedDe.content || "");
       setDescriptionEn(parsedEn.content || "");
+      setDescriptionCkb((ev.description_ckb as string) || "");
       setCategory((ev.category as EventCategory) || "konser");
       setImageUrl((ev.image_url as string) || "");
       setOrganizerDisplayName((ev.organizer_display_name as string) || "");
@@ -466,6 +474,66 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const canProceedStep3 =
     hasExternalTicketLink || tickets.some((t) => t.quantity > 0);
 
+  async function handleAutoTranslateSorani() {
+    const sourceText = titleKu.trim() || titleTr.trim();
+    if (!sourceText) {
+      alert("Önce Etkinlik adı (TR) veya Etkinlik adı (KU) alanını doldurun.");
+      return;
+    }
+    try {
+      setTranslatingCkb(true);
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: sourceText,
+          source: titleKu.trim() ? "ku" : "tr",
+          target: "ckb",
+        }),
+      });
+      const payload = (await res.json()) as { translatedText?: string; error?: string };
+      if (!res.ok || !payload.translatedText) {
+        throw new Error(payload.error || "Çeviri servisinde hata oluştu.");
+      }
+      setTitleCkb(payload.translatedText);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Bilinmeyen hata";
+      alert(`Sorani çevirisi başarısız: ${msg}`);
+    } finally {
+      setTranslatingCkb(false);
+    }
+  }
+
+  async function handleAutoTranslateDescriptionSorani() {
+    const sourceText = descriptionTr.trim();
+    if (!sourceText) {
+      alert("Önce Kısa açıklama (TR) alanını doldurun.");
+      return;
+    }
+    try {
+      setTranslatingDescriptionCkb(true);
+      const res = await fetch("/api/translate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: sourceText,
+          source: "tr",
+          target: "ckb",
+        }),
+      });
+      const payload = (await res.json()) as { translatedText?: string; error?: string };
+      if (!res.ok || !payload.translatedText) {
+        throw new Error(payload.error || "Çeviri servisinde hata oluştu.");
+      }
+      setDescriptionCkb(payload.translatedText);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : "Bilinmeyen hata";
+      alert(`Sorani açıklama çevirisi başarısız: ${msg}`);
+    } finally {
+      setTranslatingDescriptionCkb(false);
+    }
+  }
+
   function addTicket() {
     const preset = BILET_TURU_SECENEKLERI[0];
     setTickets((prev) => [
@@ -572,6 +640,9 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       const descEn = descriptionEn.trim()
         ? buildEventDescription(descriptionEn.trim(), ticketUrl.trim() || undefined)
         : null;
+      const descCkb = descriptionCkb.trim()
+        ? buildEventDescription(descriptionCkb.trim(), ticketUrl.trim() || undefined)
+        : null;
       const organizerName =
         organizerDisplayName.trim() || currentUserOrganizerName || null;
 
@@ -600,9 +671,12 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         title_tr: titleTrVal || null,
         title_de: titleDe.trim() || null,
         title_en: titleEn.trim() || null,
+        title_ku: titleKu.trim() || null,
+        title_ckb: titleCkb.trim() || null,
         description_tr: descTr || null,
         description_de: descDe,
         description_en: descEn,
+        description_ckb: descCkb,
         venue_tr: venueTrVal || null,
         venue_de: null,
         venue_en: null,
@@ -836,7 +910,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (DE)</label>
                   <input type="text" value={titleDe} onChange={(e) => setTitleDe(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
@@ -845,6 +919,30 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (EN)</label>
                   <input type="text" value={titleEn} onChange={(e) => setTitleEn(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (KU)</label>
+                  <input type="text" value={titleKu} onChange={(e) => setTitleKu(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="block text-sm font-medium text-slate-700">Etkinlik adı (CKB - Sorani)</label>
+                  <button
+                    type="button"
+                    onClick={handleAutoTranslateSorani}
+                    disabled={translatingCkb}
+                    className="rounded-md border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
+                  >
+                    {translatingCkb ? "Çevriliyor..." : "Sorani'ye otomatik çevir"}
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={titleCkb}
+                  onChange={(e) => setTitleCkb(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                />
+                <p className="mt-1 text-xs text-slate-500">Çeviri kaynağı: önce KU, boşsa TR.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Kısa açıklama (TR)</label>
@@ -859,6 +957,25 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (EN)</label>
                   <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
+              </div>
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <label className="block text-sm font-medium text-slate-700">Açıklama (CKB - Sorani)</label>
+                  <button
+                    type="button"
+                    onClick={handleAutoTranslateDescriptionSorani}
+                    disabled={translatingDescriptionCkb}
+                    className="rounded-md border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
+                  >
+                    {translatingDescriptionCkb ? "Çevriliyor..." : "Sorani'ye otomatik çevir"}
+                  </button>
+                </div>
+                <textarea
+                  value={descriptionCkb}
+                  onChange={(e) => setDescriptionCkb(e.target.value)}
+                  rows={2}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Kategori *</label>

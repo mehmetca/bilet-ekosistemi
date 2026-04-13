@@ -31,9 +31,12 @@ export interface Event {
   title_tr?: string | null;
   title_de?: string | null;
   title_en?: string | null;
+  title_ku?: string | null;
+  title_ckb?: string | null;
   description_tr?: string | null;
   description_de?: string | null;
   description_en?: string | null;
+  description_ckb?: string | null;
   venue_tr?: string | null;
   venue_de?: string | null;
   venue_en?: string | null;

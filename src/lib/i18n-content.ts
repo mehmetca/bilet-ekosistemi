@@ -2,7 +2,7 @@
  * Veritabanından gelen çok dilli içeriği locale'e göre seçer.
  * Fallback: _tr -> _de -> _en -> orijinal alan
  */
-export type Locale = "tr" | "de" | "en";
+export type Locale = "tr" | "de" | "en" | "ku" | "ckb";
 
 export function getLocalizedText(
   data: Record<string, unknown> | null | undefined,
@@ -19,6 +19,10 @@ export function getLocalizedText(
   if (fallbackDe != null && String(fallbackDe).trim() !== "") return String(fallbackDe);
   const fallbackEn = data[`${field}_en`];
   if (fallbackEn != null && String(fallbackEn).trim() !== "") return String(fallbackEn);
+  const fallbackKu = data[`${field}_ku`];
+  if (fallbackKu != null && String(fallbackKu).trim() !== "") return String(fallbackKu);
+  const fallbackCkb = data[`${field}_ckb`];
+  if (fallbackCkb != null && String(fallbackCkb).trim() !== "") return String(fallbackCkb);
   const original = data[field];
   return original != null ? String(original) : "";
 }
