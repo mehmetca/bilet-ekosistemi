@@ -1,10 +1,27 @@
 /**
  * Kanonik site kökü (SEO: canonical, sitemap, Open Graph, robots).
- * Üretimde mutlaka `NEXT_PUBLIC_SITE_URL=https://alanadiniz.com` (Search Console ile aynı host) ayarlayın.
+ * Üretimde mutlaka `NEXT_PUBLIC_SITE_URL=https://eventseat.de` (Search Console ile aynı host) ayarlayın.
  */
+
+/** Eski alan adı; env veya Vercel URL hâlâ burayı gösterse bile kanonik çıktı eventseat.de olur. */
+const LEGACY_PUBLIC_HOSTS = new Set(["kurdevents.com", "www.kurdevents.com"]);
+
+const CANONICAL_PUBLIC_ORIGIN = "https://eventseat.de";
 
 function stripTrailingSlash(url: string): string {
   return url.trim().replace(/\/$/, "");
+}
+
+/** kurdevents → eventseat.de (sitemap / robots / metadata tutarlılığı). */
+function normalizePublicOrigin(url: string): string {
+  const s = stripTrailingSlash(url);
+  try {
+    const u = new URL(/^https?:\/\//i.test(s) ? s : `https://${s}`);
+    if (LEGACY_PUBLIC_HOSTS.has(u.hostname.toLowerCase())) return CANONICAL_PUBLIC_ORIGIN;
+  } catch {
+    /* ignore */
+  }
+  return s;
 }
 
 /** Vercel env'den gelen host veya tam URL → https kökü */
@@ -24,12 +41,12 @@ function httpsOriginFromHostOrUrl(value: string): string {
 
 export function getSiteUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (fromEnv) return stripTrailingSlash(fromEnv);
+  if (fromEnv) return normalizePublicOrigin(fromEnv);
 
   // Üretim: Vercel atadığı production hostname (çoğu zaman özel alan adı). NEXT_PUBLIC_SITE_URL yoksa yedek.
   if (process.env.VERCEL_ENV === "production") {
     const prodHost = process.env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
-    if (prodHost) return httpsOriginFromHostOrUrl(prodHost);
+    if (prodHost) return normalizePublicOrigin(httpsOriginFromHostOrUrl(prodHost));
   }
 
   // Önizleme / geliştirme dağıtımı: geçerli deployment URL'si

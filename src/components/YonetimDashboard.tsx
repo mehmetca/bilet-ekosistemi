@@ -81,9 +81,9 @@ export default function YonetimDashboard() {
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Bilet Listesi</h3>
           <p className="text-sm text-slate-500">Satılan biletler</p>
         </Link>
-        <Link href="/yonetim/reklamlar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Reklamlar</h3>
-          <p className="text-sm text-slate-500">Reklam yönetimi</p>
+        <Link href="/yonetim/slider-yonetimi" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
+          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Slider</h3>
+          <p className="text-sm text-slate-500">Ana ve haber slider</p>
         </Link>
         <Link href="/yonetim/sanatcilar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Sanatçılar</h3>
@@ -114,8 +114,8 @@ export default function YonetimDashboard() {
           <Link href="/yonetim/sanatcilar" className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
             <span className="text-lg">+</span> Yeni Sanatçı
           </Link>
-          <Link href="/yonetim/reklamlar?yeni=true" className="inline-flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
-            <span className="text-lg">+</span> Yeni Reklam
+          <Link href="/yonetim/slider-yonetimi?yeni=true" className="inline-flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
+            <span className="text-lg">+</span> Yeni slider kartı
           </Link>
         </div>
       </div>

@@ -43,7 +43,7 @@
     "errorInvalidCredentials": "Email or password incorrect. If email confirmation is required, click the confirmation link in the registration email.",
     "errorLoginFailed": "Login failed. Please try again.",
     "errorRateLimited": "Too many sign-in or password-reset requests. Please wait a few minutes and try again.",
-    "errorOAuthCallback": "Google sign-in could not be completed (code invalid or expired). Try clicking Google sign-in again on the same page. If it persists, use a private window or clear cookies; always start from one consistent URL (e.g. kurdevents.de or www).",
+    "errorOAuthCallback": "Google sign-in could not be completed (code invalid or expired). Try clicking Google sign-in again on the same page. If it persists, use a private window or clear cookies; always start from one consistent URL (e.g. eventseat.de or www).",
     "or": "or",
     "loginWithGoogle": "Sign in with Google",
     "signUpWithGoogle": "Sign up with Google",

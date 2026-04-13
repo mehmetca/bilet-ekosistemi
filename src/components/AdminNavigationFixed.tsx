@@ -70,10 +70,10 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       description: "Das ist los in deiner Stadt!"
     },
     {
-      href: "/yonetim/reklamlar",
-      label: "Reklamlar",
+      href: "/yonetim/slider-yonetimi",
+      label: "Slider",
       icon: Megaphone,
-      description: "Reklam yönetimi"
+      description: "Ana ve haber slider görselleri"
     },
     {
       href: "/yonetim/sanatcilar",

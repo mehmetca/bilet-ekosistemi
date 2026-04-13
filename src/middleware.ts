@@ -31,6 +31,18 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  // Eski yönetim URL'leri → slider-yonetimi (reklam engelleyici / kısa ömürlü path uyumu)
+  if (pathname === "/yonetim/reklamlar" || pathname.startsWith("/yonetim/reklamlar/")) {
+    const u = request.nextUrl.clone();
+    u.pathname = pathname.replace(/^\/yonetim\/reklamlar/, "/yonetim/slider-yonetimi");
+    return NextResponse.redirect(u, 308);
+  }
+  if (pathname === "/yonetim/banner-yonetimi" || pathname.startsWith("/yonetim/banner-yonetimi/")) {
+    const u = request.nextUrl.clone();
+    u.pathname = pathname.replace(/^\/yonetim\/banner-yonetimi/, "/yonetim/slider-yonetimi");
+    return NextResponse.redirect(u, 308);
+  }
+
   // OAuth: Site URL köküne veya locale köküne ?code= (ve bazen ?state=) düşerse /auth/callback'e al.
   // Supabase yanıtında yalnızca `code` olabiliyor; `state` şartı kaldırıldı.
   // Sadece locale kök path'lerde tetiklenir (/kontrol?code=, /tr/etkinlik?... ile karışmaz).

@@ -43,7 +43,7 @@
     "errorInvalidCredentials": "E-posta veya şifre hatalı. E-posta onayı gerekiyorsa, kayıt sonrası gelen onay linkine tıklayıp tekrar deneyin.",
     "errorLoginFailed": "Giriş yapılamadı. Lütfen tekrar deneyin.",
     "errorRateLimited": "Çok sık giriş veya şifre sıfırlama isteği gönderildi. Lütfen birkaç dakika bekleyip tekrar deneyin.",
-    "errorOAuthCallback": "Google ile giriş tamamlanamadı (oturum kodu geçersiz veya süresi doldu). Aynı sekmede bir kez daha «Google ile giriş»e basmayı deneyin. Devam ederse gizli pencere veya çerez temizliği; girişe her zaman tek bir adresle (ör. kurdevents.de veya www) başlayın.",
+    "errorOAuthCallback": "Google ile giriş tamamlanamadı (oturum kodu geçersiz veya süresi doldu). Aynı sekmede bir kez daha «Google ile giriş»e basmayı deneyin. Devam ederse gizli pencere veya çerez temizliği; girişe her zaman tek bir adresle (ör. eventseat.de veya www) başlayın.",
     "or": "veya",
     "loginWithGoogle": "Google ile giriş yap",
     "signUpWithGoogle": "Google ile üye ol",

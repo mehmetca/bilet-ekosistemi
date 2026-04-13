@@ -8,7 +8,7 @@ const targetDir = path.join(
   "chunks",
   "app",
   "yonetim",
-  "reklamlar"
+  "slider-yonetimi"
 );
 
 const legacyChunkNames = [
