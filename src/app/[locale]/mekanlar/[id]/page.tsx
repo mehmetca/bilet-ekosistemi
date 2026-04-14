@@ -8,6 +8,8 @@ import { getLocalizedVenue } from "@/lib/i18n-content";
 import { MapPin, Users, Car, DoorOpen, HelpCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 
+const SHARED_VENUE_HERO_URL = "/images/venue-shared-hero.png";
+
 interface VenueFaqItem {
   soru: string;
   cevap: string;
@@ -57,7 +59,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
     return getLocalizedVenue(venueRaw, locale);
   }, [venueRaw, locale]);
 
-  const coverUrl = useMemo(() => {
+  const legacyHeroUrl = useMemo(() => {
     if (!venueRaw) return "";
     return (
       (venueRaw.image_url_1 as string | null) ||
@@ -80,9 +82,12 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
       venueRaw.image_url_5 as string | null,
       venueRaw.seating_layout_image_url as string | null,
     ].filter(Boolean) as string[];
-    // "Tam galeri": kapak dahil, benzersiz liste.
-    return Array.from(new Set([coverUrl, ...items].filter(Boolean)));
-  }, [venueRaw, coverUrl]);
+    const uniqueItems = Array.from(new Set(items));
+    if (!legacyHeroUrl) return uniqueItems;
+    return [legacyHeroUrl, ...uniqueItems.filter((url) => url !== legacyHeroUrl)];
+  }, [venueRaw, legacyHeroUrl]);
+
+  const coverUrl = gallery[0] || "";
 
   function openGalleryModal(index: number) {
     if (index < 0 || index >= gallery.length) return;
@@ -212,8 +217,8 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
 
       <div className="relative">
         <div className="h-44 sm:h-56 md:h-72 bg-black">
-          {coverUrl ? (
-            <img src={coverUrl} alt={`${venueName} kapak`} className="h-full w-full object-cover object-top" />
+          {SHARED_VENUE_HERO_URL ? (
+            <img src={SHARED_VENUE_HERO_URL} alt={`${venueName} hero`} className="h-full w-full object-cover object-top" />
           ) : (
             <div className="h-full w-full bg-slate-200" />
           )}
