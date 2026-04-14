@@ -226,6 +226,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       const parsedTr = parseEventDescription((ev.description as string) ?? null);
       const parsedDe = parseEventDescription((ev.description_de as string) ?? null);
       const parsedEn = parseEventDescription((ev.description_en as string) ?? null);
+      const parsedCkb = parseEventDescription((ev.description_ckb as string) ?? null);
 
       setEditingEventId(editId);
       setTitleTr((ev.title_tr as string) || (ev.title as string) || "");
@@ -236,7 +237,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setDescriptionTr(parsedTr.content || "");
       setDescriptionDe(parsedDe.content || "");
       setDescriptionEn(parsedEn.content || "");
-      setDescriptionCkb((ev.description_ckb as string) || "");
+      setDescriptionCkb(parsedCkb.content || "");
       setCategory((ev.category as EventCategory) || "konser");
       setImageUrl((ev.image_url as string) || "");
       setOrganizerDisplayName((ev.organizer_display_name as string) || "");
@@ -245,7 +246,13 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setPriceFromInput(typeof ev.price_from === "number" ? ev.price_from : "");
       const cpf = Number(ev.checkout_processing_fee);
       setCheckoutProcessingFeeInput(Number.isFinite(cpf) && cpf > 0 ? cpf : "");
-      setTicketUrl(parsedTr.externalTicketUrl || "");
+      setTicketUrl(
+        parsedTr.externalTicketUrl ||
+          parsedDe.externalTicketUrl ||
+          parsedEn.externalTicketUrl ||
+          parsedCkb.externalTicketUrl ||
+          ""
+      );
       setDate((ev.date as string) || "");
       setTime(String(ev.time || "").slice(0, 5));
       setSelectedVenueId((ev.venue_id as string) || "");
@@ -460,7 +467,6 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const venueDisplayName = selectedVenueId ? selectedVenue?.name ?? "" : venueManualName;
   const displayCity = selectedVenueId ? (selectedVenue?.city ?? eventCity) : eventCity;
   const displayAddress = selectedVenueId ? (selectedVenue?.address ?? eventAddress) : eventAddress;
-  const venueDisplayLocation = [displayCity, displayAddress].filter(Boolean).join(", ") || venueDisplayName;
 
   const derivedFromTickets =
     tickets.length > 0
@@ -632,7 +638,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       const venueTrVal = selectedVenue?.name ?? venueManualName.trim();
       const cityVal = (selectedVenueId ? selectedVenue?.city ?? eventCity : eventCity).trim();
       const addressVal = (selectedVenueId ? selectedVenue?.address ?? eventAddress : eventAddress).trim();
-      const locationVal = [cityVal, addressVal].filter(Boolean).join(", ") || venueTrVal;
+      const locationVal = [addressVal, cityVal].filter(Boolean).join(", ") || venueTrVal;
       const descTr = buildEventDescription(descriptionTr.trim(), ticketUrl.trim() || undefined);
       const descDe = descriptionDe.trim()
         ? buildEventDescription(descriptionDe.trim(), ticketUrl.trim() || undefined)
@@ -640,9 +646,8 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       const descEn = descriptionEn.trim()
         ? buildEventDescription(descriptionEn.trim(), ticketUrl.trim() || undefined)
         : null;
-      const descCkb = descriptionCkb.trim()
-        ? buildEventDescription(descriptionCkb.trim(), ticketUrl.trim() || undefined)
-        : null;
+      /** CKB alanında harici URL gömme; sitede URL `description` / `description_tr` üzerinden okunur. */
+      const descCkb = descriptionCkb.trim() || null;
       const organizerName =
         organizerDisplayName.trim() || currentUserOrganizerName || null;
 
@@ -1096,13 +1101,13 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                     <input type="text" value={venueManualName} onChange={(e) => setVenueManualName(e.target.value)} placeholder="Mekan adı" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
+                    <input type="text" value={eventAddress} onChange={(e) => setEventAddress(e.target.value)} placeholder="Cadde, sokak, bina no vb." className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Şehir *</label>
                     <input type="text" value={eventCity} onChange={(e) => setEventCity(e.target.value)} placeholder="Örn: İstanbul, Essen" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                     <p className="mt-1 text-xs text-slate-500">Filtrelemede kısa gösterilir.</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
-                    <input type="text" value={eventAddress} onChange={(e) => setEventAddress(e.target.value)} placeholder="Cadde, sokak, bina no vb." className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                   </div>
                 </>
               )}
@@ -1139,12 +1144,12 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
               {selectedVenueId && (
                 <>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Şehir</label>
-                    <input type="text" value={displayCity} onChange={(e) => setEventCity(e.target.value)} placeholder="Şehir" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-                  </div>
-                  <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
                     <input type="text" value={displayAddress} onChange={(e) => setEventAddress(e.target.value)} placeholder="Adres" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Şehir</label>
+                    <input type="text" value={displayCity} onChange={(e) => setEventCity(e.target.value)} placeholder="Şehir" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                   </div>
                 </>
               )}
@@ -1432,7 +1437,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                       </div>
                       <div className="flex items-center gap-2 text-sm text-slate-600">
                         <MapPin className="h-4 w-4 flex-shrink-0" />
-                        {venueDisplayName || "—"}, {venueDisplayLocation || "—"}
+                        {[venueDisplayName, displayAddress, displayCity].map((s) => (s || "").trim()).filter(Boolean).join(", ") || "—"}
                       </div>
                       {(organizerDisplayName || currentUserOrganizerName) && (
                         <div className="flex items-center gap-2 text-sm text-primary-600"><Building2 className="h-4 w-4 flex-shrink-0" /> {organizerDisplayName || currentUserOrganizerName}</div>
@@ -1483,12 +1488,12 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 <input type="text" value={newVenueName} onChange={(e) => setNewVenueName(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Örn: Zorlu PSM" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Şehir</label>
-                <input type="text" value={newVenueCity} onChange={(e) => setNewVenueCity(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="İstanbul" />
-              </div>
-              <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Adres</label>
                 <input type="text" value={newVenueAddress} onChange={(e) => setNewVenueAddress(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="Opsiyonel" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Şehir</label>
+                <input type="text" value={newVenueCity} onChange={(e) => setNewVenueCity(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2" placeholder="İstanbul" />
               </div>
             </div>
             <div className="flex gap-3 mt-6">

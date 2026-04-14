@@ -7,6 +7,7 @@ import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
 import { parseEventDescription } from "@/lib/eventMeta";
+import { formatEventVenueAddressCityLine } from "@/lib/event-venue-display";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
@@ -785,7 +786,18 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const hasSeatingPlan = !!(event as Event & { seating_plan_id?: string }).seating_plan_id;
   const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
   const parsedDescription = useMemo(() => parseEventDescription(localized.description || event.description), [localized.description, event.description]);
-  const externalTicketUrl = parsedDescription.externalTicketUrl || (event as Event & { ticket_url?: string }).ticket_url || "";
+  const externalTicketUrl = useMemo(() => {
+    const fromLocalized = parsedDescription.externalTicketUrl;
+    if (fromLocalized) return fromLocalized;
+    const ev = event as Event & { description_tr?: string | null };
+    const fromTr = parseEventDescription(ev.description_tr || event.description || "").externalTicketUrl;
+    if (fromTr) return fromTr;
+    return (event as Event & { ticket_url?: string }).ticket_url || "";
+  }, [parsedDescription.externalTicketUrl, event]);
+  const whereLine = useMemo(
+    () => formatEventVenueAddressCityLine(event, localized.venue || event.venue || ""),
+    [event, localized.venue]
+  );
   const isExternalOnlyEvent = Boolean(externalTicketUrl) && availableTickets.length === 0;
   const [selectedTicketType, setSelectedTicketType] = useState<string>(
     availableTickets[0]?.id || ""
@@ -1409,14 +1421,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   <Clock className="h-4 w-4" />
                   {event.time}
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
-                  <MapPin className="h-4 w-4" />
-                  {localized.venue || event.venue}
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
-                  <MapPin className="h-4 w-4" />
-                  {event.location || localized.venue || event.venue}
-                </span>
+                {whereLine ? (
+                  <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
+                    <MapPin className="h-4 w-4" />
+                    {whereLine}
+                  </span>
+                ) : null}
                 {organizerDisplayName && (
                   <span className="inline-flex items-center gap-2 rounded-md bg-primary-50 px-3 py-1.5 text-primary-700">
                     <Building2 className="h-4 w-4" />
@@ -2261,17 +2271,41 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <p className="text-sm font-medium text-slate-800">{localized.venue || event.venue}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {locale === "de" ? "Standort" : locale === "en" ? "Location" : "Konum"}
-                      </p>
-                      <p className="text-sm font-medium text-slate-800">
-                        {event.location || localized.venue || event.venue}
-                      </p>
+                  {(event.address ?? "").trim() !== "" && (
+                    <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          {locale === "de" ? "Adresse" : locale === "en" ? "Address" : "Adres"}
+                        </p>
+                        <p className="text-sm font-medium text-slate-800">{(event.address ?? "").trim()}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  {(event.city ?? "").trim() !== "" && (
+                    <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          {locale === "de" ? "Stadt" : locale === "en" ? "City" : "Şehir"}
+                        </p>
+                        <p className="text-sm font-medium text-slate-800">{(event.city ?? "").trim()}</p>
+                      </div>
+                    </div>
+                  )}
+                  {(event.address ?? "").trim() === "" &&
+                    (event.city ?? "").trim() === "" &&
+                    (event.location ?? "").trim() !== "" && (
+                      <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                            {locale === "de" ? "Standort" : locale === "en" ? "Location" : "Konum"}
+                          </p>
+                          <p className="text-sm font-medium text-slate-800">{(event.location ?? "").trim()}</p>
+                        </div>
+                      </div>
+                    )}
                   {organizerDisplayName && (
                     <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
                       <Users className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />

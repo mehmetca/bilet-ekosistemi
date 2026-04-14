@@ -10,6 +10,7 @@ import type { Event } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { parseEventDescription } from "@/lib/eventMeta";
+import { formatEventVenueAddressCityLine } from "@/lib/event-venue-display";
 import { formatEventLongDateTime } from "@/lib/date-utils";
 
 interface ShowDetailClientProps {
@@ -20,11 +21,9 @@ interface ShowDetailClientProps {
 }
 
 function buildEventAddressLine(event: Event, venueDisplay: string): string {
-  const venue = venueDisplay.trim();
-  const addr = (event.address ?? "").trim();
-  const loc = (event.location ?? "").trim();
-  const ordered = [venue, addr, loc].filter(Boolean);
-  return [...new Set(ordered)].join(" · ");
+  const line = formatEventVenueAddressCityLine(event, venueDisplay);
+  if (line) return line;
+  return (event.location ?? "").trim();
 }
 
 function getEventCityLabel(event: Event): string {
