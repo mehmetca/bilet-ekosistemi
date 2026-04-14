@@ -110,6 +110,19 @@ type VenueFormState = typeof EMPTY_VENUE & {
 
 type LibraryImage = { url: string; path: string; name: string };
 
+function normalizeRichText(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed === "<p><br></p>") return null;
+  return trimmed;
+}
+
+function toPlainText(html: string | null | undefined): string {
+  if (!html) return "";
+  return html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
 function getGalleryFromForm(form: VenueFormState): string[] {
   return [form.image_url_2, form.image_url_3, form.image_url_4, form.image_url_5]
     .map((x) => (x || "").trim())
@@ -398,17 +411,23 @@ function MekanlarContent() {
         address: form.address_tr?.trim() || form.address.trim() || null,
         city: form.city_tr?.trim() || form.city.trim() || null,
         capacity: form.capacity != null && form.capacity > 0 ? form.capacity : null,
-        seating_layout_description: form.seating_layout_description_tr?.trim() || form.seating_layout_description.trim() || null,
+        seating_layout_description:
+          normalizeRichText(form.seating_layout_description_tr) ||
+          normalizeRichText(form.seating_layout_description),
         seating_layout_image_url: form.seating_layout_image_url?.trim() || null,
         image_url_1: form.image_url_1?.trim() || null,
         image_url_2: form.image_url_2?.trim() || null,
         image_url_3: form.image_url_3?.trim() || null,
         image_url_4: form.image_url_4?.trim() || null,
         image_url_5: form.image_url_5?.trim() || null,
-        entrance_info: form.entrance_info_tr?.trim() || form.entrance_info.trim() || null,
+        entrance_info:
+          normalizeRichText(form.entrance_info_tr) ||
+          normalizeRichText(form.entrance_info),
         transport_info: form.transport_info_tr?.trim() || form.transport_info.trim() || null,
         map_embed_url: form.map_embed_url?.trim() || null,
-        rules: form.rules_tr?.trim() || form.rules.trim() || null,
+        rules:
+          normalizeRichText(form.rules_tr) ||
+          normalizeRichText(form.rules),
         faq: faqFiltered,
         name_tr: form.name_tr?.trim() || null,
         name_de: form.name_de?.trim() || null,
@@ -419,18 +438,18 @@ function MekanlarContent() {
         city_tr: form.city_tr?.trim() || null,
         city_de: form.city_de?.trim() || null,
         city_en: form.city_en?.trim() || null,
-        seating_layout_description_tr: form.seating_layout_description_tr?.trim() || null,
-        seating_layout_description_de: form.seating_layout_description_de?.trim() || null,
-        seating_layout_description_en: form.seating_layout_description_en?.trim() || null,
-        entrance_info_tr: form.entrance_info_tr?.trim() || null,
-        entrance_info_de: form.entrance_info_de?.trim() || null,
-        entrance_info_en: form.entrance_info_en?.trim() || null,
+        seating_layout_description_tr: normalizeRichText(form.seating_layout_description_tr),
+        seating_layout_description_de: normalizeRichText(form.seating_layout_description_de),
+        seating_layout_description_en: normalizeRichText(form.seating_layout_description_en),
+        entrance_info_tr: normalizeRichText(form.entrance_info_tr),
+        entrance_info_de: normalizeRichText(form.entrance_info_de),
+        entrance_info_en: normalizeRichText(form.entrance_info_en),
         transport_info_tr: form.transport_info_tr?.trim() || null,
         transport_info_de: form.transport_info_de?.trim() || null,
         transport_info_en: form.transport_info_en?.trim() || null,
-        rules_tr: form.rules_tr?.trim() || null,
-        rules_de: form.rules_de?.trim() || null,
-        rules_en: form.rules_en?.trim() || null,
+        rules_tr: normalizeRichText(form.rules_tr),
+        rules_de: normalizeRichText(form.rules_de),
+        rules_en: normalizeRichText(form.rules_en),
       };
 
       if (editingVenue) {
@@ -693,32 +712,31 @@ function MekanlarContent() {
                   <div className="space-y-2">
                     <div>
                       <span className="text-xs text-slate-500">TR</span>
-                      <textarea
-                        rows={2}
-                        placeholder="Örn: 3 kademe, orkestra + balkon"
-                        value={form.seating_layout_description_tr || form.seating_layout_description}
-                        onChange={(e) =>
-                          setForm((p) => ({ ...p, seating_layout_description_tr: e.target.value, seating_layout_description: e.target.value }))
+                      <RichTextEditor
+                        value={form.seating_layout_description_tr || form.seating_layout_description || ""}
+                        onChange={(v) =>
+                          setForm((p) => ({ ...p, seating_layout_description_tr: v, seating_layout_description: v }))
                         }
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                        placeholder="Örn: 3 kademe, orkestra + balkon"
+                        minHeight="90px"
                       />
                     </div>
                     <div>
                       <span className="text-xs text-slate-500">DE</span>
-                      <textarea
-                        rows={2}
-                        value={form.seating_layout_description_de}
-                        onChange={(e) => setForm((p) => ({ ...p, seating_layout_description_de: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      <RichTextEditor
+                        value={form.seating_layout_description_de || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, seating_layout_description_de: v }))}
+                        placeholder="Sitzplan-Beschreibung..."
+                        minHeight="90px"
                       />
                     </div>
                     <div>
                       <span className="text-xs text-slate-500">EN</span>
-                      <textarea
-                        rows={2}
-                        value={form.seating_layout_description_en}
-                        onChange={(e) => setForm((p) => ({ ...p, seating_layout_description_en: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      <RichTextEditor
+                        value={form.seating_layout_description_en || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, seating_layout_description_en: v }))}
+                        placeholder="Seating layout description..."
+                        minHeight="90px"
                       />
                     </div>
                   </div>
@@ -872,30 +890,29 @@ function MekanlarContent() {
                   <div className="space-y-2">
                     <div>
                       <span className="text-xs text-slate-500">TR</span>
-                      <textarea
-                        rows={2}
-                        placeholder="Giriş kapıları, nereden girilir"
-                        value={form.entrance_info_tr || form.entrance_info}
-                        onChange={(e) => setForm((p) => ({ ...p, entrance_info_tr: e.target.value, entrance_info: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      <RichTextEditor
+                        value={form.entrance_info_tr || form.entrance_info || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, entrance_info_tr: v, entrance_info: v }))}
+                        placeholder="Giris kapilari, nereden girilir"
+                        minHeight="90px"
                       />
                     </div>
                     <div>
                       <span className="text-xs text-slate-500">DE</span>
-                      <textarea
-                        rows={2}
-                        value={form.entrance_info_de}
-                        onChange={(e) => setForm((p) => ({ ...p, entrance_info_de: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      <RichTextEditor
+                        value={form.entrance_info_de || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, entrance_info_de: v }))}
+                        placeholder="Eingangsinfos..."
+                        minHeight="90px"
                       />
                     </div>
                     <div>
                       <span className="text-xs text-slate-500">EN</span>
-                      <textarea
-                        rows={2}
-                        value={form.entrance_info_en}
-                        onChange={(e) => setForm((p) => ({ ...p, entrance_info_en: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      <RichTextEditor
+                        value={form.entrance_info_en || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, entrance_info_en: v }))}
+                        placeholder="Entrance info..."
+                        minHeight="90px"
                       />
                     </div>
                   </div>
@@ -960,30 +977,29 @@ function MekanlarContent() {
                   <div className="space-y-2">
                     <div>
                       <span className="text-xs text-slate-500">TR</span>
-                      <textarea
-                        rows={2}
-                        placeholder="Yaş sınırı, yasaklar vb."
-                        value={form.rules_tr || form.rules}
-                        onChange={(e) => setForm((p) => ({ ...p, rules_tr: e.target.value, rules: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      <RichTextEditor
+                        value={form.rules_tr || form.rules || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, rules_tr: v, rules: v }))}
+                        placeholder="Yas siniri, yasaklar vb."
+                        minHeight="90px"
                       />
                     </div>
                     <div>
                       <span className="text-xs text-slate-500">DE</span>
-                      <textarea
-                        rows={2}
-                        value={form.rules_de}
-                        onChange={(e) => setForm((p) => ({ ...p, rules_de: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      <RichTextEditor
+                        value={form.rules_de || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, rules_de: v }))}
+                        placeholder="Einlassregeln..."
+                        minHeight="90px"
                       />
                     </div>
                     <div>
                       <span className="text-xs text-slate-500">EN</span>
-                      <textarea
-                        rows={2}
-                        value={form.rules_en}
-                        onChange={(e) => setForm((p) => ({ ...p, rules_en: e.target.value }))}
-                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm mt-0.5"
+                      <RichTextEditor
+                        value={form.rules_en || ""}
+                        onChange={(v) => setForm((p) => ({ ...p, rules_en: v }))}
+                        placeholder="Venue rules..."
+                        minHeight="90px"
                       />
                     </div>
                   </div>
@@ -1123,7 +1139,7 @@ function MekanlarContent() {
                         )}
                         {venue.seating_layout_description && (
                           <p className="mt-2 text-sm text-slate-600 line-clamp-2">
-                            {venue.seating_layout_description}
+                            {toPlainText(venue.seating_layout_description)}
                           </p>
                         )}
                         {venueThumbs.length > 0 && (

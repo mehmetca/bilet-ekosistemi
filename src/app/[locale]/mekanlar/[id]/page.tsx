@@ -237,7 +237,12 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
         {/* Ayrıntılar */}
         <div className="grid gap-6 xl:grid-cols-[1fr_340px] xl:items-start">
           <div className="space-y-4">
-            {seatingDesc && <p className="text-slate-700">{seatingDesc}</p>}
+            {seatingDesc && (
+              <div
+                className="text-slate-700 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-2"
+                dangerouslySetInnerHTML={{ __html: seatingDesc }}
+              />
+            )}
 
             {transportInfo && (
               <div className="rounded-xl border border-slate-200 bg-white p-5">
@@ -254,14 +259,20 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
             {entranceInfo && (
               <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <h3 className="text-sm font-semibold text-slate-800">{t("entrance")}</h3>
-                <p className="mt-2 text-slate-700">{entranceInfo}</p>
+                <div
+                  className="mt-2 text-slate-700 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-2"
+                  dangerouslySetInnerHTML={{ __html: entranceInfo }}
+                />
               </div>
             )}
 
             {rules && (
               <div className="rounded-xl border border-slate-200 bg-white p-5">
                 <h3 className="text-sm font-semibold text-slate-800">{t("salonRules")}</h3>
-                <p className="mt-2 text-slate-700">{rules}</p>
+                <div
+                  className="mt-2 text-slate-700 prose prose-sm max-w-none [&_p]:my-1 [&_ul]:my-2"
+                  dangerouslySetInnerHTML={{ __html: rules }}
+                />
               </div>
             )}
 

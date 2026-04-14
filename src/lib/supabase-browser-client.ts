@@ -31,7 +31,9 @@ export function createSupabaseBrowserClient(): SupabaseClient {
           : {}),
         auth: {
           flowType: "pkce",
-          detectSessionInUrl: true,
+          // /auth/callback ve /sifre-yenile açıkça exchangeCodeForSession kullanıyor.
+          // true iken istemci de URL'deki kodu işleyebilir → çift tüketim, "geçersiz kod" / OAuth hatası.
+          detectSessionInUrl: false,
           persistSession: true,
           autoRefreshToken: true,
         },

@@ -26,15 +26,6 @@ const PASSWORD_EXISTS_PATTERN = /already registered|already exists/i;
 const PASSWORD_VALIDATION_PATTERN = /password|weak|at least \d+ characters/i;
 
 
-type AuthTokenResponse = {
-  access_token?: string;
-  refresh_token?: string;
-  user?: { email?: string };
-  error?: string;
-  error_description?: string;
-  msg?: string;
-};
-
 export default function LoginPage() {
   const t = useTranslations("auth");
   const tCommon = useTranslations("common");
@@ -87,69 +78,28 @@ export default function LoginPage() {
   }, [searchParams, t]);
 
   async function signInWithTimeout(credentials: { email: string; password: string }, timeoutMs = 15000) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error("Supabase ayarlari eksik. NEXT_PUBLIC_SUPABASE_URL / KEY kontrol edin.");
+    const sb = createSupabaseBrowserClient();
+    const signInPromise = sb.auth.signInWithPassword(credentials);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Giriş isteği zaman aşımına uğradı. Lütfen tekrar deneyin.")), timeoutMs)
+    );
+    const { data, error } = await Promise.race([signInPromise, timeoutPromise]);
+    if (error) {
+      const rawMsg = error.message || String(error);
+      if (/rate limit|too many requests/i.test(rawMsg)) {
+        throw new Error(t("errorRateLimited"));
+      }
+      if (/invalid login credentials|invalid credentials/i.test(rawMsg)) {
+        throw new Error(t("errorInvalidCredentials"));
+      }
+      throw new Error(rawMsg);
     }
-
-    const controller = new AbortController();
-    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await fetch(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: supabaseKey,
-          Authorization: `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify(credentials),
-        signal: controller.signal,
-      });
-
-      const payload = (await response.json()) as AuthTokenResponse;
-      if (!response.ok) {
-        const rawMsg =
-          payload.error_description ||
-          payload.msg ||
-          payload.error ||
-          "Giris istegi basarisiz oldu.";
-        if (/rate limit|too many requests/i.test(String(rawMsg))) {
-          throw new Error(t("errorRateLimited"));
-        }
-        // "Invalid login credentials" = yanlış şifre VEYA e-posta henüz onaylanmamış
-        if (/invalid login credentials|invalid credentials/i.test(rawMsg)) {
-          throw new Error(t("errorInvalidCredentials"));
-        }
-        throw new Error(rawMsg);
-      }
-
-      if (!payload.access_token || !payload.refresh_token) {
-        throw new Error("Giris yaniti gecersiz. access_token/refresh_token eksik.");
-      }
-
-      const sb = createSupabaseBrowserClient();
-      const setSessionPromise = sb.auth.setSession({
-        access_token: payload.access_token,
-        refresh_token: payload.refresh_token,
-      });
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Oturum kurulumu zaman aşımına uğradı.")), 12000)
-      );
-      const { data, error } = await Promise.race([setSessionPromise, timeoutPromise]);
-      if (error) throw error;
-
-      return data;
-    } catch (error) {
-      if (error instanceof DOMException && error.name === "AbortError") {
-        throw new Error("Giriş isteği zaman aşımına uğradı. Lütfen tekrar deneyin.");
-      }
-      throw error;
-    } finally {
-      window.clearTimeout(timeoutId);
+    if (!data?.session) {
+      throw new Error("Giris istegi basarisiz oldu.");
     }
+    // Çerezlerin middleware ile uyumlu yazılması için kısa bekleme (yarış azaltır)
+    await sb.auth.getSession();
+    return data;
   }
 
   function validateRegisterPassword(pwd: string): string | null {
