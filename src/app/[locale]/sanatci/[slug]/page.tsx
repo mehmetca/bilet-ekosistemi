@@ -139,6 +139,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
           .from("events")
           .select("*")
           .eq("is_active", true)
+          .eq("is_draft", false)
           .gte("date", today)
           .order("date", { ascending: true })
           .limit(30);
