@@ -81,7 +81,7 @@ export default function LoginPage() {
     const sb = createSupabaseBrowserClient();
     const signInPromise = sb.auth.signInWithPassword(credentials);
     const timeoutPromise = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Giriş isteği zaman aşımına uğradı. Lütfen tekrar deneyin.")), timeoutMs)
+      setTimeout(() => reject(new Error(t("errorLoginTimeout"))), timeoutMs)
     );
     const { data, error } = await Promise.race([signInPromise, timeoutPromise]);
     if (error) {
@@ -94,18 +94,16 @@ export default function LoginPage() {
       }
       throw new Error(rawMsg);
     }
-    if (!data?.session) {
-      throw new Error("Giris istegi basarisiz oldu.");
-    }
+    if (!data?.session) throw new Error(t("errorLoginNoSession"));
     // Çerezlerin middleware ile uyumlu yazılması için kısa bekleme (yarış azaltır)
     await sb.auth.getSession();
     return data;
   }
 
   function validateRegisterPassword(pwd: string): string | null {
-    if (pwd.length < 8 || pwd.length > 24) return "Şifre 8–24 karakter uzunluğunda olmalıdır.";
-    if (!/[a-z]/.test(pwd)) return "Şifre en az bir küçük harf (a-z) içermelidir.";
-    if (!/[A-Z]/.test(pwd)) return "Şifre en az bir büyük harf (A-Z) içermelidir.";
+    if (pwd.length < 8 || pwd.length > 24) return t("errorPasswordLength");
+    if (!/[a-z]/.test(pwd)) return t("errorPasswordLowercase");
+    if (!/[A-Z]/.test(pwd)) return t("errorPasswordUppercase");
     return null;
   }
 
@@ -118,11 +116,11 @@ export default function LoginPage() {
     const firstName = regFirstName.trim();
     const lastName = regLastName.trim();
     if (!firstName) {
-      setRegError("Ad zorunludur.");
+      setRegError(t("errorFirstNameRequired"));
       return;
     }
     if (!lastName) {
-      setRegError("Soyad zorunludur.");
+      setRegError(t("errorLastNameRequired"));
       return;
     }
     const pwdErr = validateRegisterPassword(regPassword);
@@ -131,15 +129,15 @@ export default function LoginPage() {
       return;
     }
     if (regPassword !== regPasswordConfirm) {
-      setRegError("Şifreler eşleşmiyor.");
+      setRegError(t("errorPasswordMismatch"));
       return;
     }
     if (!agreeTerms) {
-      setRegError("Üyelik sözleşmesini kabul etmeniz gerekiyor.");
+      setRegError(t("errorTermsRequired"));
       return;
     }
     if (!agreePrivacy) {
-      setRegError("Gizlilik ve veri koruma aydınlatma metnini kabul etmeniz gerekiyor.");
+      setRegError(t("errorPrivacyRequired"));
       return;
     }
 
@@ -281,7 +279,7 @@ export default function LoginPage() {
         email,
         password,
       });
-      if (!data?.session?.user) throw new Error("Oturum acilamadi.");
+      if (!data?.session?.user) throw new Error(t("errorSessionOpenFailed"));
 
       // Rol kontrolü: admin/controller/organizer → yönetim, diğerleri → ana sayfa
       await new Promise(resolve => setTimeout(resolve, 400));
@@ -475,7 +473,7 @@ export default function LoginPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="reg-firstname" className="block text-sm font-medium text-slate-700 mb-2">
-                      Ad *
+                      {t("regFirstNameLabel")} *
                     </label>
                     <input
                       id="reg-firstname"
@@ -483,13 +481,13 @@ export default function LoginPage() {
                       value={regFirstName}
                       onChange={(e) => setRegFirstName(e.target.value)}
                       required
-                      placeholder="Adınız"
+                      placeholder={t("regFirstNamePlaceholder")}
                       className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                   </div>
                   <div>
                     <label htmlFor="reg-lastname" className="block text-sm font-medium text-slate-700 mb-2">
-                      Soyad *
+                      {t("regLastNameLabel")} *
                     </label>
                     <input
                       id="reg-lastname"
@@ -497,7 +495,7 @@ export default function LoginPage() {
                       value={regLastName}
                       onChange={(e) => setRegLastName(e.target.value)}
                       required
-                      placeholder="Soyadınız"
+                      placeholder={t("regLastNamePlaceholder")}
                       className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                   </div>
@@ -505,7 +503,7 @@ export default function LoginPage() {
 
                 <div>
                   <label htmlFor="reg-anrede" className="block text-sm font-medium text-slate-700 mb-2">
-                    Cinsiyet (isteğe bağlı)
+                    {t("regGenderLabel")}
                   </label>
                   <select
                     id="reg-anrede"
@@ -513,23 +511,23 @@ export default function LoginPage() {
                     onChange={(e) => setRegAnrede(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   >
-                    <option value="">Belirtmek istemiyorum</option>
-                    <option value="Herr">Erkek</option>
-                    <option value="Frau">Kadın</option>
-                    <option value="divers">Divers</option>
+                    <option value="">{t("regGenderUnspecified")}</option>
+                    <option value="Herr">{t("regGenderMale")}</option>
+                    <option value="Frau">{t("regGenderFemale")}</option>
+                    <option value="divers">{t("regGenderDiverse")}</option>
                   </select>
                 </div>
 
                 <div>
                   <label htmlFor="reg-phone" className="block text-sm font-medium text-slate-700 mb-2">
-                    Telefon (isteğe bağlı)
+                    {t("regPhoneLabel")}
                   </label>
                   <input
                     id="reg-phone"
                     type="tel"
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
-                    placeholder="Örn. +49 123 456789"
+                    placeholder={t("regPhonePlaceholder")}
                     className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
@@ -537,27 +535,27 @@ export default function LoginPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="reg-country" className="block text-sm font-medium text-slate-700 mb-2">
-                      Ülke (isteğe bağlı)
+                      {t("regCountryLabel")}
                     </label>
                     <input
                       id="reg-country"
                       type="text"
                       value={regCountry}
                       onChange={(e) => setRegCountry(e.target.value)}
-                      placeholder="Örn. Almanya, Türkiye"
+                      placeholder={t("regCountryPlaceholder")}
                       className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                   </div>
                   <div>
                     <label htmlFor="reg-city" className="block text-sm font-medium text-slate-700 mb-2">
-                      Şehir (isteğe bağlı)
+                      {t("regCityLabel")}
                     </label>
                     <input
                       id="reg-city"
                       type="text"
                       value={regCity}
                       onChange={(e) => setRegCity(e.target.value)}
-                      placeholder="Şehir"
+                      placeholder={t("regCityPlaceholder")}
                       className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     />
                   </div>
@@ -588,18 +586,18 @@ export default function LoginPage() {
                     </button>
                   </div>
                   <p className="mt-2 text-xs text-slate-600">
-                    Şu koşulları sağlayan bir şifre oluşturun:
+                    {t("regPasswordRulesTitle")}
                   </p>
                   <ul className="mt-1 text-xs text-slate-500 list-disc list-inside space-y-0.5">
-                    <li>Parolanızda kişisel bilgilerinizi (adınız, doğum tarihiniz, adresiniz) kullanmayın.</li>
-                    <li>Küçük harf (a-z) ve büyük harf (A-Z) içermelidir.</li>
-                    <li>8–24 karakter uzunluğunda olmalıdır.</li>
+                    <li>{t("regPasswordRuleNoPersonalInfo")}</li>
+                    <li>{t("regPasswordRuleUpperLower")}</li>
+                    <li>{t("regPasswordRuleLength")}</li>
                   </ul>
                 </div>
 
                 <div>
                   <label htmlFor="reg-password-confirm" className="block text-sm font-medium text-slate-700 mb-2">
-                    Şifre Tekrar *
+                    {t("regPasswordConfirmLabel")} *
                   </label>
                   <input
                     id="reg-password-confirm"
@@ -609,7 +607,7 @@ export default function LoginPage() {
                     required
                     minLength={8}
                     maxLength={24}
-                    placeholder="Şifrenizi tekrar girin"
+                    placeholder={t("regPasswordConfirmPlaceholder")}
                     className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   />
                 </div>
@@ -623,7 +621,7 @@ export default function LoginPage() {
                       className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                     />
                     <span className="text-sm text-slate-700">
-                      <Link href="/bilgilendirme/kullanim-kosullari" className="text-primary-600 hover:underline">Üyelik sözleşmesini</Link> okudum ve kabul ediyorum. *
+                      <Link href="/bilgilendirme/kullanim-kosullari" className="text-primary-600 hover:underline">{t("regTermsLinkText")}</Link> {t("regTermsSuffix")}
                     </span>
                   </label>
                   <label className="flex items-start gap-3 cursor-pointer">
@@ -634,7 +632,7 @@ export default function LoginPage() {
                       className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                     />
                     <span className="text-sm text-slate-700">
-                      Üyelik işlemlerine yönelik <Link href="/bilgilendirme/cerez-politikasi" className="text-primary-600 hover:underline">aydınlatma metnini</Link> (veri koruma / DSGVO) okudum ve anladım. *
+                      {t("regPrivacyPrefix")} <Link href="/bilgilendirme/cerez-politikasi" className="text-primary-600 hover:underline">{t("regPrivacyLinkText")}</Link> {t("regPrivacySuffix")}
                     </span>
                   </label>
                   <label className="flex items-start gap-3 cursor-pointer">
@@ -645,7 +643,7 @@ export default function LoginPage() {
                       className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
                     />
                     <span className="text-sm text-slate-700">
-                      Ticari elektronik ileti gönderimine ilişkin aydınlatma metnini okudum; tarafıma reklam amaçlı e-posta gönderilmesini kabul ediyorum. (İsteğe bağlı)
+                      {t("regMarketingConsent")}
                     </span>
                   </label>
                 </div>
@@ -663,13 +661,13 @@ export default function LoginPage() {
                 )}
 
                 <p className="text-sm text-slate-600 text-center">
-                  Üyeliğiniz var mı?{" "}
+                  {t("hasAccount")}{" "}
                   <button
                     type="button"
                     onClick={() => document.getElementById("giris-form")?.scrollIntoView({ behavior: "smooth" })}
                     className="text-primary-600 hover:text-primary-700 font-medium"
                   >
-                    Giriş Yap
+                    {t("loginCta")}
                   </button>
                 </p>
 
