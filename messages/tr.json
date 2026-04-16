@@ -187,6 +187,7 @@
     "title": "Mekanlar ve Salonlar",
     "subtitle": "Etkinlik mekanlarımız, oturma düzenleri, ulaşım ve giriş bilgileri.",
     "noVenues": "Henüz mekan eklenmemiş",
+    "notFound": "Mekan bulunamadı.",
     "other": "Diğer",
     "capacity": "Kapasite",
     "persons": "kişi",

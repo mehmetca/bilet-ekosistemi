@@ -227,6 +227,7 @@
     "title": "Venues and Halls",
     "subtitle": "Our event venues, seating layouts, transport and entrance information.",
     "noVenues": "No venues added yet",
+    "notFound": "Venue not found.",
     "other": "Other",
     "capacity": "Capacity",
     "persons": "persons",

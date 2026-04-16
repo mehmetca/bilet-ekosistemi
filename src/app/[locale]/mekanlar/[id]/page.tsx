@@ -141,7 +141,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
     return (
       <div className="min-h-screen bg-[#f5f6f8]">
         <Header />
-        <div className="mx-auto max-w-5xl px-4 py-16 text-center text-slate-600">Mekan bulunamadı.</div>
+        <div className="mx-auto max-w-5xl px-4 py-16 text-center text-slate-600">{t("notFound")}</div>
       </div>
     );
   }
@@ -168,7 +168,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
           className="fixed inset-0 z-[1000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
           role="dialog"
           aria-modal="true"
-          aria-label="Galeri"
+          aria-label={t("gallery")}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) closeGalleryModal();
           }}
@@ -180,7 +180,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
             <div className="w-full h-[80vh] overflow-hidden rounded-xl border border-white/20 bg-transparent">
               <img
                 src={gallery[galleryModalIndex]}
-                alt={`${localized.name || (venueRaw?.id as string) || "Venue"} fotoğraf`}
+                alt={`${localized.name || (venueRaw?.id as string) || "Venue"} ${t("photo")}`}
                 className="w-full h-full object-cover object-top"
               />
             </div>
@@ -189,7 +189,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
               type="button"
               onClick={goGalleryPrev}
               className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 hover:bg-black/80 p-3 text-white transition-colors shadow-sm border border-white/15"
-              aria-label="Önceki"
+              aria-label={tCommon("previous")}
             >
               &lt;
             </button>
@@ -198,7 +198,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
               type="button"
               onClick={goGalleryNext}
               className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-black/55 hover:bg-black/80 p-3 text-white transition-colors shadow-sm border border-white/15"
-              aria-label="Sonraki"
+              aria-label={tCommon("next")}
             >
               &gt;
             </button>
@@ -364,7 +364,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
                 >
                   <img
                     src={src}
-                    alt={`${localized.name || "Venue"} fotoğraf ${idx + 1}`}
+                    alt={`${localized.name || "Venue"} ${t("photo")} ${idx + 1}`}
                     className="w-full h-44 sm:h-56 md:h-64 lg:h-72 object-cover object-top"
                   />
                 </button>

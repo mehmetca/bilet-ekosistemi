@@ -31,6 +31,27 @@ interface Venue {
   map_embed_url: string | null;
   rules: string | null;
   faq: VenueFaqItem[];
+  name_tr?: string | null;
+  name_de?: string | null;
+  name_en?: string | null;
+  address_tr?: string | null;
+  address_de?: string | null;
+  address_en?: string | null;
+  city_tr?: string | null;
+  city_de?: string | null;
+  city_en?: string | null;
+  seating_layout_description_tr?: string | null;
+  seating_layout_description_de?: string | null;
+  seating_layout_description_en?: string | null;
+  entrance_info_tr?: string | null;
+  entrance_info_de?: string | null;
+  entrance_info_en?: string | null;
+  transport_info_tr?: string | null;
+  transport_info_de?: string | null;
+  transport_info_en?: string | null;
+  rules_tr?: string | null;
+  rules_de?: string | null;
+  rules_en?: string | null;
 }
 
 export default function MekanlarPage() {
@@ -57,6 +78,7 @@ export default function MekanlarPage() {
 
       setVenues(
         (data || []).map((row) => ({
+          ...row,
           id: row.id,
           name: row.name,
           address: row.address || null,
@@ -87,7 +109,10 @@ export default function MekanlarPage() {
 
   const allCities = useMemo(() => {
     const set = new Set<string>();
-    for (const v of venues) set.add(v.city || "__other__");
+    for (const v of venues) {
+      const localized = getLocalizedVenue(v as unknown as Record<string, unknown>, locale);
+      set.add(localized.city || v.city || "__other__");
+    }
 
     const others = set.has("__other__") ? ["__other__"] : [];
     const primary = Array.from(set).filter((c) => c !== "__other__").sort((a, b) => a.localeCompare(b, locale));
@@ -99,7 +124,10 @@ export default function MekanlarPage() {
     let list = venues;
 
     if (selectedCity !== "__all__") {
-      list = list.filter((v) => (v.city || "__other__") === selectedCity);
+      list = list.filter((v) => {
+        const localized = getLocalizedVenue(v as unknown as Record<string, unknown>, locale);
+        return (localized.city || v.city || "__other__") === selectedCity;
+      });
     }
 
     if (q) {
@@ -127,12 +155,13 @@ export default function MekanlarPage() {
 
   const venuesByCity = useMemo(() => {
     return filteredVenues.reduce<Record<string, Venue[]>>((acc, v) => {
-      const city = v.city || "__other__";
+      const localized = getLocalizedVenue(v as unknown as Record<string, unknown>, locale);
+      const city = localized.city || v.city || "__other__";
       if (!acc[city]) acc[city] = [];
       acc[city].push(v);
       return acc;
     }, {});
-  }, [filteredVenues]);
+  }, [filteredVenues, locale]);
 
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
