@@ -5,6 +5,49 @@ import { withSupabaseAuth } from "@/utils/supabase/middleware";
 
 const intlMiddleware = createMiddleware(routing);
 
+const APP_LOCALES = routing.locales as readonly string[];
+
+function isAppLocale(v: string | undefined | null): v is (typeof routing.locales)[number] {
+  return !!v && APP_LOCALES.includes(v);
+}
+
+/** Locale önekli olmayan /giris, /sepet vb. için hedef dil: ?redirect=/de/... → de; yoksa NEXT_LOCALE; yoksa Accept-Language; son çare defaultLocale. */
+function resolveUnprefixedPathLocale(request: NextRequest): string {
+  const redirect = request.nextUrl.searchParams.get("redirect");
+  if (redirect) {
+    const m = redirect.match(/^\/(tr|de|en|ku|ckb)(?:\/|$)/);
+    if (m && isAppLocale(m[1])) return m[1];
+  }
+  const cookieLocale = request.cookies.get("NEXT_LOCALE")?.value;
+  if (isAppLocale(cookieLocale)) return cookieLocale;
+
+  const header = request.headers.get("accept-language");
+  if (header) {
+    const scored: { primary: string; q: number }[] = [];
+    for (const segment of header.split(",")) {
+      const [tagPart, ...params] = segment.trim().split(";");
+      const raw = tagPart.trim().toLowerCase();
+      if (!raw) continue;
+      let q = 1;
+      for (const p of params) {
+        const [k, val] = p.trim().split("=");
+        if (k === "q" && val) {
+          const n = parseFloat(val);
+          if (!Number.isNaN(n)) q = n;
+        }
+      }
+      const primary = raw.split("-")[0];
+      scored.push({ primary, q });
+    }
+    scored.sort((a, b) => b.q - a.q);
+    for (const { primary } of scored) {
+      if (isAppLocale(primary)) return primary;
+    }
+  }
+
+  return routing.defaultLocale;
+}
+
 /** www ↔ apex: OAuth PKCE doğrulayıcısı origin’e bağlı; kanonik host’a 308 ile hizala. */
 function redirectToCanonicalSiteHost(request: NextRequest): NextResponse | null {
   const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -73,20 +116,32 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === "/sepet" || pathname === "/sepet/") {
     const url = request.nextUrl.clone();
-    url.pathname = `/${routing.defaultLocale}/sepet`;
+    url.pathname = `/${resolveUnprefixedPathLocale(request)}/sepet`;
     return withSupabaseAuth(request, NextResponse.redirect(url));
   }
 
   if (pathname === "/organizator-basvuru" || pathname === "/organizator-basvuru/") {
     const url = request.nextUrl.clone();
-    url.pathname = `/${routing.defaultLocale}/organizator-basvuru`;
+    url.pathname = `/${resolveUnprefixedPathLocale(request)}/organizator-basvuru`;
     return withSupabaseAuth(request, NextResponse.redirect(url));
   }
 
   if (pathname === "/bilgilerim" || pathname === "/bilgilerim/") {
     const url = request.nextUrl.clone();
-    url.pathname = `/${routing.defaultLocale}/bilgilerim`;
+    url.pathname = `/${resolveUnprefixedPathLocale(request)}/bilgilerim`;
     return withSupabaseAuth(request, NextResponse.redirect(url));
+  }
+
+  // Kök /giris ve /sifre-yenile [locale] ile aynı bileşeni kullanıyor; locale path tek kanonik olsun (intl + layout).
+  if (pathname === "/giris" || pathname === "/giris/") {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${resolveUnprefixedPathLocale(request)}/giris`;
+    return withSupabaseAuth(request, NextResponse.redirect(url, 308));
+  }
+  if (pathname === "/sifre-yenile" || pathname === "/sifre-yenile/") {
+    const url = request.nextUrl.clone();
+    url.pathname = `/${resolveUnprefixedPathLocale(request)}/sifre-yenile`;
+    return withSupabaseAuth(request, NextResponse.redirect(url, 308));
   }
 
   // OAuth PKCE: do not run getUser() here — it can refresh/clear storage before route.ts exchanges the code.

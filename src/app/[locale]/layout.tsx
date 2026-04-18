@@ -1,7 +1,7 @@
-import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
+import { ClientIntlBridge } from "@/components/ClientIntlBridge";
 import Footer from "@/components/Footer";
 
 /**
@@ -24,9 +24,9 @@ export default async function LocaleLayout({
   const messages = await getMessages();
 
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <ClientIntlBridge locale={locale} messages={messages as Record<string, unknown>}>
       {children}
       <Footer />
-    </NextIntlClientProvider>
+    </ClientIntlBridge>
   );
 }

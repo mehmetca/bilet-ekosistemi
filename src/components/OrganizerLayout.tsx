@@ -17,8 +17,20 @@ import {
   MapPin,
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
-import { supabase } from "@/lib/supabase-client";
 import Footer from "@/components/Footer";
+
+async function fetchProfileDisplayName(userId: string, email: string | undefined) {
+  const { supabase } = await import("@/lib/supabase-client");
+  const { data: profile } = await supabase
+    .from("user_profiles")
+    .select("first_name, last_name")
+    .eq("id", userId)
+    .maybeSingle();
+  const name = profile
+    ? [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim()
+    : "";
+  return name || email?.split("@")[0] || "Organizatör";
+}
 
 const ORGANIZER_MENU = [
   { href: "/yonetim", label: "Dashboard", icon: LayoutDashboard },
@@ -53,21 +65,18 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (!user?.id) return;
+    let cancelled = false;
     (async () => {
       try {
-        const { data: profile } = await supabase
-          .from("user_profiles")
-          .select("first_name, last_name")
-          .eq("id", user.id)
-          .maybeSingle();
-        const name = profile
-          ? [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim()
-          : "";
-        setDisplayName(name || user.email?.split("@")[0] || "Organizatör");
+        const label = await fetchProfileDisplayName(user.id, user.email);
+        if (!cancelled) setDisplayName(label);
       } catch {
-        setDisplayName(user.email?.split("@")[0] || "Organizatör");
+        if (!cancelled) setDisplayName(user.email?.split("@")[0] || "Organizatör");
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [user?.id, user?.email]);
 
   const isActive = (path: string) => pathname === path || (path !== "/yonetim" && pathname?.startsWith(path));

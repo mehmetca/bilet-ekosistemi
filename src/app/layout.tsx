@@ -1,12 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
+import { ClientIntlBridge } from "@/components/ClientIntlBridge";
 import Providers from "@/components/Providers";
-import { NextIntlClientProvider } from "next-intl";
+import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { getSiteUrl } from "@/lib/site-url";
+
 const inter = Inter({ subsets: ["latin"] });
 const LOCALES = ["tr", "de", "en", "ku", "ckb"] as const;
 
@@ -29,20 +30,18 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Locale: middleware + path. [locale]/* sayfaları kendi layout’ta NextIntlClientProvider ile güncel mesaj alır;
-  // burada kalan provider özellikle /giris, /yonetim gibi [locale] dışı rotalar içindir.
   let validLocale = "tr" as (typeof LOCALES)[number];
   let messages: Record<string, unknown> = {};
+  let pathname = "";
   try {
     const headersList = await headers();
     let locale = (headersList.get("x-next-intl-locale") || headersList.get("X-NEXT-INTL-LOCALE") || routing.defaultLocale) as string;
-    const pathname = headersList.get("x-pathname") || "";
+    pathname = headersList.get("x-pathname") || "";
     const pathLocale = pathname.match(/^\/(tr|de|en|ku|ckb)(?:\/|$)/)?.[1];
     if (pathLocale && LOCALES.includes(pathLocale as (typeof LOCALES)[number])) {
       locale = pathLocale;
     }
     validLocale = LOCALES.includes(locale as (typeof LOCALES)[number]) ? (locale as (typeof LOCALES)[number]) : routing.defaultLocale;
-    // Locale-prefix'li route'larda mesajları [locale]/layout yükleyeceği için burada yükleme (çift yükleme önlenir)
     if (!pathLocale) {
       messages = (await import(`../../messages/${validLocale}.json`)).default;
     }
@@ -60,17 +59,25 @@ export default async function RootLayout({
       }
     }
   }
+
+  /** /tr, /de, … altındaki sayfalar kendi [locale]/layout ClientIntlBridge ile sarılır; kökte tekrar sarmalamak RSC’de 500 üretebiliyor. */
+  const isLocalePrefixedRoute = /^\/(tr|de|en|ku|ckb)(\/|$)/.test(pathname);
+
+  const inner = <Providers>{children}</Providers>;
+
   return (
     <html lang={validLocale}>
       <head />
       <body className={inter.className}>
-        <NextIntlClientProvider locale={validLocale} messages={messages}>
-          <SimpleAuthProvider>
-            <Providers>
-                {children}
-            </Providers>
-          </SimpleAuthProvider>
-        </NextIntlClientProvider>
+        <SimpleAuthProvider>
+          {isLocalePrefixedRoute ? (
+            inner
+          ) : (
+            <ClientIntlBridge locale={validLocale} messages={messages}>
+              {inner}
+            </ClientIntlBridge>
+          )}
+        </SimpleAuthProvider>
       </body>
     </html>
   );

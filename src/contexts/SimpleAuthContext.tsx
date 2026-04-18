@@ -1,8 +1,15 @@
 "use client";
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { supabase } from "@/lib/supabase-client";
-import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
+
+type SupabaseClientModule = typeof import("@/lib/supabase-client");
+let supabaseModulePromise: Promise<SupabaseClientModule> | null = null;
+
+async function getSupabase(): Promise<SupabaseClient> {
+  if (!supabaseModulePromise) supabaseModulePromise = import("@/lib/supabase-client");
+  return (await supabaseModulePromise).supabase as unknown as SupabaseClient;
+}
 
 interface SimpleAuthType {
   user: User | null;
@@ -28,6 +35,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   const userRoleRef = useRef<"admin" | "controller" | "organizer" | null>(null);
   const roleFetchInFlightForRef = useRef<string | null>(null);
   const lastAuthEventRef = useRef<{ key: string; at: number } | null>(null);
+  const authSubscriptionRef = useRef<{ unsubscribe?: () => void } | undefined>(undefined);
 
   const isAdmin = userRole === "admin";
   const isController = userRole === "controller";
@@ -43,6 +51,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
     try {
       roleFetchInFlightForRef.current = userId;
+      const supabase = await getSupabase();
       const { data, error } = await supabase
         .from("user_roles")
         .select("role")
@@ -56,7 +65,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
         return null;
       }
 
-      const role = (data && data.length > 0) ? (data[0].role as "admin" | "controller" | "organizer") : null;
+      const role = data && data.length > 0 ? (data[0].role as "admin" | "controller" | "organizer") : null;
       setUserRole(role);
       userRoleRef.current = role;
       return role;
@@ -83,23 +92,35 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       }
     }, 8000);
 
-    const checkAuth = async () => {
-      try {
-        let data: { session: { user?: unknown; access_token?: string } | null };
-        let error: { message?: string } | null;
+    (async () => {
+      const supabase = await getSupabase();
+      if (!mounted) return;
+
+      const checkAuth = async () => {
         try {
-          const result = await supabase.auth.getSession();
-          data = result.data;
-          error = result.error;
-        } catch (supabaseErr: unknown) {
-          const msg = (supabaseErr as { message?: string })?.message ?? "";
-          const isRefreshTokenError = /refresh.?token|Invalid Refresh Token/i.test(msg);
-          if (isRefreshTokenError) {
-            try {
-              await supabase.auth.signOut({ scope: "local" });
-            } catch (_) {
-              /* clear local session only */
+          let data: { session: { user?: unknown; access_token?: string } | null };
+          let error: { message?: string } | null;
+          try {
+            const result = await supabase.auth.getSession();
+            data = result.data;
+            error = result.error;
+          } catch (supabaseErr: unknown) {
+            const msg = (supabaseErr as { message?: string })?.message ?? "";
+            const isRefreshTokenError = /refresh.?token|Invalid Refresh Token/i.test(msg);
+            if (isRefreshTokenError) {
+              try {
+                await supabase.auth.signOut({ scope: "local" });
+              } catch (_) {
+                /* clear local session only */
+              }
+              if (mounted) {
+                setUser(null);
+                setUserRole(null);
+                setLoading(false);
+              }
+              return;
             }
+            console.error("Supabase auth init error:", supabaseErr);
             if (mounted) {
               setUser(null);
               setUserRole(null);
@@ -107,75 +128,63 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             }
             return;
           }
-          console.error("Supabase auth init error:", supabaseErr);
+          if (error) {
+            const msg = error?.message ?? "";
+            const isRefreshTokenError = /refresh.?token|Invalid Refresh Token/i.test(msg);
+            if (isRefreshTokenError) {
+              try {
+                await supabase.auth.signOut({ scope: "local" });
+              } catch (_) {
+                /* clear local session only */
+              }
+              if (mounted) {
+                setUser(null);
+                setUserRole(null);
+                setLoading(false);
+              }
+              return;
+            }
+            console.error("Auth getSession error:", error);
+            if (mounted) setLoading(false);
+            return;
+          }
+
+          const session = data?.session;
+
           if (mounted) {
-            setUser(null);
-            setUserRole(null);
+            if (session?.user) {
+              const u = session.user as User;
+              setUser(u);
+              userRef.current = u;
+              try {
+                await Promise.race([
+                  fetchUserRole(u.id, true),
+                  new Promise<void>((_, reject) => setTimeout(() => reject(new Error("Role fetch timeout")), 5000)),
+                ]);
+              } catch (roleErr) {
+                console.warn("Role fetch error (continuing):", roleErr);
+              }
+            } else {
+              setUser(null);
+              setAccessToken(null);
+              setUserRole(null);
+              userRef.current = null;
+              userRoleRef.current = null;
+            }
+          }
+        } catch (error) {
+          console.error("Auth check error:", error);
+        } finally {
+          if (mounted) {
             setLoading(false);
           }
-          return;
         }
-        if (error) {
-          const msg = error?.message ?? "";
-          const isRefreshTokenError = /refresh.?token|Invalid Refresh Token/i.test(msg);
-          if (isRefreshTokenError) {
-            try {
-              await supabase.auth.signOut({ scope: "local" });
-            } catch (_) {
-              /* clear local session only */
-            }
-            if (mounted) {
-              setUser(null);
-              setUserRole(null);
-              setLoading(false);
-            }
-            return;
-          }
-          console.error("Auth getSession error:", error);
-          if (mounted) setLoading(false);
-          return;
-        }
+      };
 
-        const session = data?.session;
-        
-        if (mounted) {
-          if (session?.user) {
-            const u = session.user as User;
-            setUser(u);
-            userRef.current = u;
-            try {
-              await Promise.race([
-                fetchUserRole(u.id, true),
-                new Promise<void>((_, reject) =>
-                  setTimeout(() => reject(new Error("Role fetch timeout")), 5000)
-                ),
-              ]);
-            } catch (roleErr) {
-              console.warn("Role fetch error (continuing):", roleErr);
-            }
-          } else {
-            setUser(null);
-            setAccessToken(null);
-            setUserRole(null);
-            userRef.current = null;
-            userRoleRef.current = null;
-          }
-        }
-      } catch (error) {
-        console.error("Auth check error:", error);
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
+      checkAuth();
 
-    checkAuth();
-
-    let subscription: { unsubscribe?: () => void } | undefined;
-    try {
-      const { data: subData } = supabase.auth.onAuthStateChange(
-        (event, session) => {
+      try {
+        const { data: subData } = supabase.auth.onAuthStateChange((event, session) => {
           try {
             if (!mounted) return;
 
@@ -197,14 +206,20 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
               userRef.current = null;
               userRoleRef.current = null;
               setLoading(false);
-            } else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED" || event === "INITIAL_SESSION") {
+            } else if (
+              event === "SIGNED_IN" ||
+              event === "TOKEN_REFRESHED" ||
+              event === "USER_UPDATED" ||
+              event === "INITIAL_SESSION"
+            ) {
               if (session?.user) {
                 const userChanged = userRef.current?.id !== session.user.id;
                 setUser(session.user);
                 setAccessToken(session.access_token ?? null);
                 userRef.current = session.user;
 
-                const needRole = event === "SIGNED_IN" || event === "USER_UPDATED" || userChanged || event === "INITIAL_SESSION";
+                const needRole =
+                  event === "SIGNED_IN" || event === "USER_UPDATED" || userChanged || event === "INITIAL_SESSION";
                 if (needRole) {
                   const userId = session.user.id;
                   const force = userChanged || event !== "TOKEN_REFRESHED";
@@ -229,21 +244,23 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             console.error("Auth state change handler error:", err);
             if (mounted) setLoading(false);
           }
-        }
-      );
-      subscription = subData?.subscription;
-    } catch (subErr) {
-      console.error("Auth subscription error:", subErr);
-    }
+        });
+        if (mounted) authSubscriptionRef.current = subData?.subscription;
+      } catch (subErr) {
+        console.error("Auth subscription error:", subErr);
+      }
+    })();
 
     return () => {
       mounted = false;
       window.clearTimeout(loadingTimeout);
-      subscription?.unsubscribe?.();
+      authSubscriptionRef.current?.unsubscribe?.();
+      authSubscriptionRef.current = undefined;
     };
   }, []);
 
   async function signOut() {
+    const supabase = await getSupabase();
     await supabase.auth.signOut({ scope: "local" }).catch(() => {});
     setUser(null);
     setAccessToken(null);
@@ -270,11 +287,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     refreshRole,
   };
 
-  return (
-    <SimpleAuthContext.Provider value={value}>
-      {children}
-    </SimpleAuthContext.Provider>
-  );
+  return <SimpleAuthContext.Provider value={value}>{children}</SimpleAuthContext.Provider>;
 }
 
 export function useSimpleAuth() {

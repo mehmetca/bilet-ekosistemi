@@ -66,9 +66,9 @@ const nextConfig = {
   // Vercel build'in lint uyarılarından düşmemesi için (lint yerelde npm run lint ile çalıştırılabilir)
   eslint: { ignoreDuringBuilds: true },
   webpack: (config, { isServer }) => {
+    config.resolve = config.resolve || {};
     // Webpack dev cache stays on (avoids HMR ./9085.js missing on Windows). Use npm run dev:fresh if stuck.
     // react-konva / Konva: optional Node `canvas` modülü — Next derlemesinde yok say.
-    config.resolve = config.resolve || {};
     config.resolve.fallback = {
       ...config.resolve.fallback,
       canvas: false,
