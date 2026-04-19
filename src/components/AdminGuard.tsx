@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import AuthRedirectingScreen from "@/components/AuthRedirectingScreen";
+import { routing } from "@/i18n/routing";
 
 interface AdminGuardProps {
   children: React.ReactNode;
@@ -16,10 +17,10 @@ export default function AdminGuard({ children }: AdminGuardProps) {
 
   useEffect(() => {
     if (loading || user) return;
-    void router.replace("/giris");
+    void router.replace(`/${routing.defaultLocale}/giris`);
     const id = window.setTimeout(() => {
       if (!window.location.pathname.startsWith("/giris")) {
-        window.location.assign(`${window.location.origin}/giris`);
+        window.location.assign(`${window.location.origin}/${routing.defaultLocale}/giris`);
       }
     }, 2000);
     return () => window.clearTimeout(id);

@@ -19,7 +19,17 @@ export function ClientIntlBridge({
   children: ReactNode;
 }) {
   return (
-    <NextIntlClientProvider locale={locale} messages={messages}>
+    <NextIntlClientProvider
+      locale={locale}
+      messages={messages}
+      onError={(err) => {
+        if ((err as { code?: string }).code === "MISSING_MESSAGE") return;
+        console.error(err);
+      }}
+      getMessageFallback={({ namespace, key }) =>
+        [namespace, key].filter(Boolean).join(".") || String(key)
+      }
+    >
       {children}
     </NextIntlClientProvider>
   );

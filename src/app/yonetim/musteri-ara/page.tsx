@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, User, Ticket, Calendar, Mail, Phone } from "lucide-react";
+import { Search as SearchIcon, User, Ticket, Calendar, Mail, Phone } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { supabase } from "@/lib/supabase-client";
 
@@ -93,7 +93,7 @@ export default function MusteriAraPage() {
           <form onSubmit={handleSearch} className="mb-8">
             <div className="flex gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   value={kundennummer}

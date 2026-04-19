@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search as SearchIcon } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { supabase } from "@/lib/supabase-client";
@@ -80,7 +80,7 @@ export default function EtkinlikUyarilariPage() {
 
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+            <SearchIcon className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchTerm}

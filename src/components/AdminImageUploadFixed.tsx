@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, X, Image as ImageIcon, Search, Grid2X2 } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Search as SearchIcon, Grid2x2 } from "lucide-react";
 import { getAccessTokenForApi } from "@/lib/supabase-auth-token";
 
 interface AdminImageUploadProps {
@@ -170,7 +170,7 @@ export default function AdminImageUploadFixed({
           <div className="w-full max-w-4xl rounded-2xl border border-white/20 bg-white shadow-xl overflow-hidden">
             <div className="p-4 border-b border-slate-200 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <Grid2X2 className="h-4 w-4 text-primary-600" />
+                <Grid2x2 className="h-4 w-4 text-primary-600" />
                 <h3 className="font-semibold text-slate-900 text-sm">Galeriden seç</h3>
                 <span className="text-xs text-slate-500">({folder})</span>
               </div>
@@ -186,7 +186,7 @@ export default function AdminImageUploadFixed({
 
             <div className="p-4 space-y-4">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   value={libraryQuery}
                   onChange={(e) => setLibraryQuery(e.target.value)}
@@ -292,7 +292,7 @@ export default function AdminImageUploadFixed({
           onClick={() => setLibraryOpen(true)}
           className="flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700"
         >
-          <Grid2X2 className="h-4 w-4" />
+          <Grid2x2 className="h-4 w-4" />
           Galeriden seç
         </button>
       </div>

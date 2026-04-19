@@ -2,7 +2,7 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import type { News, Event } from "@/types/database";
 import HaberDetayClient from "./client";
 import { getTranslations } from "next-intl/server";
-import { Link } from "@/i18n/navigation";
+import Link from "next/link";
 
 async function getNews(id: string): Promise<News | null> {
   try {
@@ -91,7 +91,7 @@ export default async function HaberDetayPage({ params }: { params: Promise<{ loc
           <h1 className="text-2xl font-bold text-slate-900 mb-4">{tNews("newsNotFound")}</h1>
           <p className="text-slate-600 mb-6">{tNews("newsNotFoundDesc")}</p>
           <Link
-            href="/"
+            href={`/${locale}`}
             className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
           >
             {tCommon("backToHome")}

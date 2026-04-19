@@ -5,7 +5,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabase-client";
 import type { Artist, Event } from "@/types/database";
 import { Music2, Share2, Heart, ExternalLink, Calendar, MapPin } from "lucide-react";
-import MDEditor from "@uiw/react-md-editor";
+import MarkdownPreview from "@uiw/react-markdown-preview";
+import "@uiw/react-markdown-preview/markdown.css";
 import { parseArtistBio } from "@/lib/artistProfile";
 import { getLocalizedArtist, getLocalizedEvent } from "@/lib/i18n-content";
 import { formatPrice } from "@/lib/formatPrice";
@@ -530,7 +531,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
                     </div>
                   )}
                   <div data-color-mode="light">
-                    <MDEditor.Markdown source={parsedProfile.content} />
+                    <MarkdownPreview source={parsedProfile.content} />
                   </div>
                 </div>
               ) : (

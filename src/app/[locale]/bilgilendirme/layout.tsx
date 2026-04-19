@@ -19,6 +19,9 @@ const MENU_ITEMS = [
 const B2B_MENU_ITEM = { href: "/bilgilendirme/b2b", labelKey: "footer.b2b", icon: Building2 };
 const ORGANIZATOR_DESTEK_ITEM = { href: "/bilgilendirme/organizator-destek", labelKey: "footer.organizerSupport", icon: Users };
 
+const B2BMenuIcon = B2B_MENU_ITEM.icon;
+const OrganizatorDestekIcon = ORGANIZATOR_DESTEK_ITEM.icon;
+
 export default function BilgilendirmeLayout({
   children,
 }: {
@@ -80,7 +83,7 @@ export default function BilgilendirmeLayout({
                           : "text-slate-700 hover:bg-slate-100"
                       }`}
                     >
-                      <ORGANIZATOR_DESTEK_ITEM.icon className="h-4 w-4 shrink-0" />
+                      <OrganizatorDestekIcon className="h-4 w-4 shrink-0" />
                       {t(ORGANIZATOR_DESTEK_ITEM.labelKey)}
                     </Link>
                   </li>
@@ -93,7 +96,7 @@ export default function BilgilendirmeLayout({
                           : "text-slate-700 hover:bg-slate-100"
                       }`}
                     >
-                      <B2B_MENU_ITEM.icon className="h-4 w-4 shrink-0" />
+                      <B2BMenuIcon className="h-4 w-4 shrink-0" />
                       {t(B2B_MENU_ITEM.labelKey)}
                     </Link>
                   </li>

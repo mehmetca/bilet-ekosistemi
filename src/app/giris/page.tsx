@@ -3,8 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import NextLink from "next/link";
-import { Link } from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { Eye, EyeOff, LogIn, ArrowLeft, UserPlus } from "lucide-react";
+import { Link } from "@/i18n/navigation";
+import Header from "@/components/Header";
+/** PKCE + çerez: @supabase/ssr createBrowserClient (SimpleAuth’taki `supabase` ile aynı singleton). */
+import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
+import { getPublicSiteOrigin } from "@/lib/site-url";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -16,11 +21,6 @@ function GoogleIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-import { useLocale, useTranslations } from "next-intl";
-import Header from "@/components/Header";
-/** PKCE + çerez: @supabase/ssr createBrowserClient (SimpleAuth’taki `supabase` ile aynı singleton). */
-import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
-import { getPublicSiteOrigin } from "@/lib/site-url";
 
 const PASSWORD_EXISTS_PATTERN = /already registered|already exists/i;
 const PASSWORD_VALIDATION_PATTERN = /password|weak|at least \d+ characters/i;
@@ -344,6 +344,7 @@ export default function LoginPage() {
                 <input
                   id="email"
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -360,6 +361,7 @@ export default function LoginPage() {
                   <input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -462,6 +464,7 @@ export default function LoginPage() {
                   <input
                     id="reg-email"
                     type="email"
+                    autoComplete="email"
                     value={regEmail}
                     onChange={(e) => setRegEmail(e.target.value)}
                     required
@@ -478,6 +481,7 @@ export default function LoginPage() {
                     <input
                       id="reg-firstname"
                       type="text"
+                      autoComplete="given-name"
                       value={regFirstName}
                       onChange={(e) => setRegFirstName(e.target.value)}
                       required
@@ -492,6 +496,7 @@ export default function LoginPage() {
                     <input
                       id="reg-lastname"
                       type="text"
+                      autoComplete="family-name"
                       value={regLastName}
                       onChange={(e) => setRegLastName(e.target.value)}
                       required
@@ -507,6 +512,7 @@ export default function LoginPage() {
                   </label>
                   <select
                     id="reg-anrede"
+                    autoComplete="honorific-prefix"
                     value={regAnrede}
                     onChange={(e) => setRegAnrede(e.target.value)}
                     className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
@@ -525,6 +531,7 @@ export default function LoginPage() {
                   <input
                     id="reg-phone"
                     type="tel"
+                    autoComplete="tel"
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
                     placeholder={t("regPhonePlaceholder")}
@@ -540,6 +547,7 @@ export default function LoginPage() {
                     <input
                       id="reg-country"
                       type="text"
+                      autoComplete="country-name"
                       value={regCountry}
                       onChange={(e) => setRegCountry(e.target.value)}
                       placeholder={t("regCountryPlaceholder")}
@@ -553,6 +561,7 @@ export default function LoginPage() {
                     <input
                       id="reg-city"
                       type="text"
+                      autoComplete="address-level2"
                       value={regCity}
                       onChange={(e) => setRegCity(e.target.value)}
                       placeholder={t("regCityPlaceholder")}
@@ -569,6 +578,7 @@ export default function LoginPage() {
                     <input
                       id="reg-password"
                       type={regShowPassword ? "text" : "password"}
+                      autoComplete="new-password"
                       value={regPassword}
                       onChange={(e) => setRegPassword(e.target.value)}
                       required
@@ -602,6 +612,7 @@ export default function LoginPage() {
                   <input
                     id="reg-password-confirm"
                     type={regShowPassword ? "text" : "password"}
+                    autoComplete="new-password"
                     value={regPasswordConfirm}
                     onChange={(e) => setRegPasswordConfirm(e.target.value)}
                     required

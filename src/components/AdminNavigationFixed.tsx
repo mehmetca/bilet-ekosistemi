@@ -3,13 +3,13 @@
 import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { X } from "lucide-react";
-import { 
-  Calendar, 
-  Ticket, 
-  Users, 
-  Settings, 
-  Shield, 
+import {
+  X,
+  Calendar,
+  Ticket,
+  Users,
+  Settings,
+  Shield,
   CreditCard,
   BarChart3,
   FlaskConical,
@@ -18,8 +18,8 @@ import {
   Megaphone,
   MapPin,
   Bell,
-  Search,
-  LayoutGrid
+  Search as SearchIcon,
+  LayoutGrid,
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
@@ -108,7 +108,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
     {
       href: "/yonetim/musteri-ara",
       label: "Müşteri Ara",
-      icon: Search,
+      icon: SearchIcon,
       description: "Kundennummer ile müşteri bilgisi"
     },
     {

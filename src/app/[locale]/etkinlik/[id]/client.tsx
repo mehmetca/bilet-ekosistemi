@@ -2,7 +2,30 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { Calendar, MapPin, Clock, Ticket, Share2, Heart, ChevronRight, ChevronLeft, Star, Users, Car, DoorOpen, HelpCircle, ChevronDown, ChevronUp, Bell, Building2, Armchair, LayoutGrid, X, Search } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Clock,
+  Ticket,
+  Share2,
+  Heart,
+  ChevronRight,
+  ChevronLeft,
+  Star,
+  Users,
+  Car,
+  DoorOpen,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
+  Bell,
+  Building2,
+  Armchair,
+  LayoutGrid,
+  X,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
@@ -11,7 +34,7 @@ import { formatEventVenueAddressCityLine } from "@/lib/event-venue-display";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
-import Link from "next/link";
+import { Link } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/lib/supabase-client";
@@ -694,10 +717,7 @@ function SeatMapWithZoom({
           aria-label="Yakınlaştır"
           title="Yakınlaştır"
         >
-          <span className="relative inline-flex h-5 w-5 items-center justify-center">
-            <Search className="h-5 w-5" />
-            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold leading-none">+</span>
-          </span>
+          <ZoomIn className="h-5 w-5" aria-hidden />
         </button>
         <button
           type="button"
@@ -706,10 +726,7 @@ function SeatMapWithZoom({
           aria-label="Uzaklaştır"
           title="Uzaklaştır"
         >
-          <span className="relative inline-flex h-5 w-5 items-center justify-center">
-            <Search className="h-5 w-5" />
-            <span className="absolute inset-0 flex items-center justify-center text-[10px] font-bold leading-none">−</span>
-          </span>
+          <ZoomOut className="h-5 w-5" aria-hidden />
         </button>
         <button
           type="button"
@@ -2025,7 +2042,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               </p>
                               <div className="flex flex-col gap-2">
                                 <Link
-                                  href={`/${locale}/sepet`}
+                                  href="/sepet"
                                   className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                                 >
                                   {tCheckout("goToCheckout")}
@@ -2214,7 +2231,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </button>
                 {totalItems > 0 && (
                   <Link
-                    href={`/${locale}/sepet`}
+                    href="/sepet"
                     className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"
                   >
                     {tCheckout("goToCheckout")} ({totalItems})
@@ -2327,7 +2344,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t("venueInfo")}</h2>
                   <Link
-                    href={`/${locale}/mekanlar`}
+                    href="/mekanlar"
                     className="text-sm font-medium text-primary-600 hover:text-primary-700"
                   >
                     {t("allVenues")} →

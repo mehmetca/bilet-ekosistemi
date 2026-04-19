@@ -5,7 +5,7 @@ import { Link } from "@/i18n/navigation";
 import Header from "@/components/Header";
 import { useTranslations, useLocale } from "next-intl";
 import { getLocalizedVenue } from "@/lib/i18n-content";
-import { MapPin, Search, Users } from "lucide-react";
+import { MapPin, Search as SearchIcon, Users } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 
 interface VenueFaqItem {
@@ -182,7 +182,7 @@ export default function MekanlarPage() {
                 {t("searchPlaceholder")}
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                 <input
                   id="venue-search"
                   value={search}
@@ -222,7 +222,7 @@ export default function MekanlarPage() {
           </div>
         ) : filteredVenues.length === 0 ? (
           <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
-            <Search className="mx-auto h-16 w-16 text-slate-300" />
+            <SearchIcon className="mx-auto h-16 w-16 text-slate-300" />
             <p className="mt-4 text-lg font-medium">{t("noMatchingVenues")}</p>
           </div>
         ) : (

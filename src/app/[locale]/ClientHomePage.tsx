@@ -2,7 +2,18 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "@/i18n/navigation";
-import { Calendar, MapPin, Music2, Search, CheckCircle, Shield, Clock, Database, ChevronRight, ChevronLeft } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Music2,
+  Search as SearchIcon,
+  CheckCircle,
+  Shield,
+  Clock,
+  Database,
+  ChevronRight,
+  ChevronLeft,
+} from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import HeroBackgroundSlider from "@/components/HeroBackgroundSlider";
@@ -373,7 +384,7 @@ export default function ClientHomePage({
           <div className="max-w-2xl mx-auto mb-12 sm:mb-16 px-0">
             <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 bg-white rounded-2xl p-2 shadow-2xl">
               <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 sm:left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                <SearchIcon className="absolute left-3 sm:left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 <input
                   type="search"
                   placeholder={t("searchPlaceholder")}
@@ -540,7 +551,7 @@ export default function ClientHomePage({
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 type="search"
                 value={searchTerm}

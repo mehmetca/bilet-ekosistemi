@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } fr
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search, Ticket, QrCode, Eye, ChevronDown } from "lucide-react";
+import { Search as SearchIcon, Ticket, QrCode, Eye, ChevronDown } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import type { Order } from "@/types/database";
 import QRScanner from "@/components/QRScanner";
@@ -281,7 +281,7 @@ export default function BiletListesiPage() {
         {/* Arama */}
         <div className="bg-white rounded-xl border border-slate-200 p-5 mb-5">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchTerm}

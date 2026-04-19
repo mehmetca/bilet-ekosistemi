@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase-client";
 import { parseArtistBio } from "@/lib/artistProfile";
 import { getLocalizedArtist, type Locale } from "@/lib/i18n-content";
 import type { Artist } from "@/types/database";
-import { Search } from "lucide-react";
+import { Search as SearchIcon } from "lucide-react";
 
 const PAGE_SIZE = 21;
 const LETTERS = [
@@ -160,7 +160,7 @@ function SanatciIndexContent() {
           <div className="flex flex-col gap-2 sm:gap-2.5">
             <div className="flex w-full justify-center py-1 sm:py-2">
               <div className="relative w-full max-w-xl sm:max-w-2xl">
-                <Search className="pointer-events-none absolute left-3 sm:left-4 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-slate-400" />
+                <SearchIcon className="pointer-events-none absolute left-3 sm:left-4 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-slate-400" />
                 <input
                   type="search"
                   value={searchTerm}

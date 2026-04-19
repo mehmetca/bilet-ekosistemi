@@ -9,7 +9,6 @@ import {
   UserCheck,
   ChevronRight,
 } from "lucide-react";
-import { supabase } from "@/lib/supabase-client";
 import { formatPrice } from "@/lib/formatPrice";
 import type { EventCurrency } from "@/types/database";
 
@@ -68,6 +67,7 @@ export default function OrganizerDashboard() {
     let cancelled = false;
     (async () => {
       try {
+        const { supabase } = await import("@/lib/supabase-client");
         const { data: { session } } = await supabase.auth.getSession();
         const headers: HeadersInit = { "Content-Type": "application/json" };
         if (session?.access_token) {
@@ -80,8 +80,20 @@ export default function OrganizerDashboard() {
           setError((err as { error?: string }).error || "Veriler yüklenemedi");
           return;
         }
-        const json = (await res.json()) as DashboardData;
-        setData(json);
+        const json = (await res.json()) as Partial<DashboardData>;
+        if (
+          !json ||
+          !json.stats ||
+          typeof json.stats.todayRevenue !== "number" ||
+          !Array.isArray(json.daily_sales) ||
+          !Array.isArray(json.ticket_distribution) ||
+          !Array.isArray(json.upcoming_events) ||
+          !Array.isArray(json.recent_orders)
+        ) {
+          if (!cancelled) setError("Panel verisi eksik veya geçersiz.");
+          return;
+        }
+        setData(json as DashboardData);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : "Hata");
       } finally {
@@ -196,21 +208,22 @@ export default function OrganizerDashboard() {
               <div
                 className="w-32 h-32 rounded-full flex-shrink-0"
                 style={{
-                  background: `conic-gradient(${ticket_distribution
-                    .map(
-                      (_, i) =>
-                        `${CHART_COLORS[i % CHART_COLORS.length]} ${(ticket_distribution
-                          .slice(0, i)
-                          .reduce((s, x) => s + x.value, 0) /
-                          totalDist) *
-                          360}deg`
-                    )
-                    .join(", ")})`,
+                  background: (() => {
+                    let acc = 0;
+                    const stops = ticket_distribution.map((t, i) => {
+                      const start = (acc / totalDist) * 360;
+                      acc += t.value;
+                      const end = (acc / totalDist) * 360;
+                      const c = CHART_COLORS[i % CHART_COLORS.length];
+                      return `${c} ${start}deg ${end}deg`;
+                    });
+                    return `conic-gradient(${stops.join(", ")})`;
+                  })(),
                 }}
               />
               <div className="space-y-2">
                 {ticket_distribution.map((t, i) => (
-                  <div key={t.name} className="flex items-center gap-2">
+                  <div key={`${t.name}-${i}`} className="flex items-center gap-2">
                     <span
                       className="w-3 h-3 rounded-full flex-shrink-0"
                       style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
