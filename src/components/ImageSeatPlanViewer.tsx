@@ -68,6 +68,7 @@ export default function ImageSeatPlanViewer({
   /** object-contain ile çizilen görsel genişliği (px) — koltuk dairesi ölçeği */
   const [drawnImgWPx, setDrawnImgWPx] = useState(0);
   const [scale, setScale] = useState(0.9);
+  const scaleRef = useRef(0.9);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
@@ -103,6 +104,48 @@ export default function ImageSeatPlanViewer({
   }, [imageAspectRatio, recalcImageFit, imageUrl]);
 
   useEffect(() => {
+    scaleRef.current = scale;
+  }, [scale]);
+
+  /** İki parmak yakınlaştırma: passive:false ile sayfa kaydırmasını engellemek için native dinleyici */
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let pinch: { startDist: number; startScale: number } | null = null;
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        const [a, b] = [e.touches[0], e.touches[1]];
+        const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        pinch = { startDist: Math.max(1, d), startScale: scaleRef.current };
+        setIsDragging(false);
+      }
+    };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinch) {
+        const [a, b] = [e.touches[0], e.touches[1]];
+        const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+        const ratio = d / pinch.startDist;
+        const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, pinch.startScale * ratio));
+        setScale(next);
+        e.preventDefault();
+      }
+    };
+    const clearPinch = (e: TouchEvent) => {
+      if (e.touches.length < 2) pinch = null;
+    };
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", clearPinch);
+    el.addEventListener("touchcancel", clearPinch);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", clearPinch);
+      el.removeEventListener("touchcancel", clearPinch);
+    };
+  }, []);
+
+  useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
@@ -114,22 +157,42 @@ export default function ImageSeatPlanViewer({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    didMove.current = false;
-    dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
-    setIsDragging(true);
-  }, [pan]);
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      didMove.current = false;
+      dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+      setIsDragging(true);
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+    },
+    [pan]
+  );
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging) return;
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove.current = true;
-    setPan({ x: dragStart.current.panX + dx, y: dragStart.current.panY + dy });
-  }, [isDragging]);
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isDragging) return;
+      const dx = e.clientX - dragStart.current.x;
+      const dy = e.clientY - dragStart.current.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove.current = true;
+      setPan({ x: dragStart.current.panX + dx, y: dragStart.current.panY + dy });
+    },
+    [isDragging]
+  );
 
-  const handleMouseUp = useCallback(() => setIsDragging(false), []);
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(false);
+    try {
+      if (e.currentTarget.hasPointerCapture?.(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   const handleSeatClick = useCallback((seatId: string) => {
     if (didMove.current) return;
@@ -266,18 +329,18 @@ export default function ImageSeatPlanViewer({
         >
           Sıfırla
         </button>
-        <span className="text-xs text-slate-500">
-          Zoom: tekerlek · Gezdirme: boş alandan sürükleyin · Koltuk: açık renkli noktalara tıklayın (satılmış: koyu)
+        <span className="text-xs text-slate-500 max-sm:block sm:inline">
+          Masaüstü: tekerlek + sürükle · Telefon: iki parmakla yakınlaştır / uzaklaştır, bir parmakla kaydır · Koltuklara dokunun
         </span>
       </div>
       <div
         ref={containerRef}
-        className="overflow-hidden rounded-lg border border-slate-200 bg-white touch-none relative"
-        style={{ minHeight: 520, maxHeight: "min(82vh, 920px)", cursor: isDragging ? "grabbing" : "grab" }}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseUp}
-        onMouseUp={handleMouseUp}
+        className="overflow-hidden rounded-lg border border-slate-200 bg-white touch-none relative select-none"
+        style={{ minHeight: 520, maxHeight: "min(82vh, 920px)", cursor: isDragging ? "grabbing" : "grab", touchAction: "none" }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         role="application"
         aria-label="Salon planı görseli; koltuklara tıklayarak seçin"
       >

@@ -362,17 +362,56 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
-  const updateItemAvailable = useCallback((ticketId: string, available: number) => {
-    const safeAvailable = Math.max(0, available);
-    setItems((prev) =>
-      prev.map((i) => {
-        if (i.ticketId !== ticketId) return i;
-        const newQty = Math.min(i.quantity, safeAvailable);
-        if (newQty <= 0) return null;
-        return { ...i, available: safeAvailable, quantity: newQty };
-      }).filter((i): i is CartItem => i !== null)
-    );
-  }, []);
+  const updateItemAvailable = useCallback(
+    (ticketId: string, available: number) => {
+      const safeAvailable = Math.max(0, available);
+      let toRelease: CartItem[] = [];
+      setItems((prev) => {
+        toRelease = [];
+        return prev
+          .map((i) => {
+            if (i.ticketId !== ticketId) return i;
+            const seatIds = i.seatIds;
+            if (seatIds && seatIds.length > 0) {
+              const cap = Math.min(seatIds.length, safeAvailable);
+              if (cap <= 0) {
+                toRelease.push({ ...i, seatIds: [...seatIds], quantity: seatIds.length });
+                return null;
+              }
+              if (cap < seatIds.length) {
+                const released = seatIds.slice(cap);
+                toRelease.push({
+                  ...i,
+                  seatIds: released,
+                  quantity: released.length,
+                });
+                const kept = seatIds.slice(0, cap);
+                const caps =
+                  i.seatCaptions && i.seatCaptions.length === seatIds.length
+                    ? i.seatCaptions.slice(0, cap)
+                    : undefined;
+                return {
+                  ...i,
+                  available: safeAvailable,
+                  quantity: cap,
+                  seatIds: kept,
+                  seatCaptions: caps,
+                };
+              }
+              return { ...i, available: safeAvailable, quantity: seatIds.length };
+            }
+            const newQty = Math.min(i.quantity, safeAvailable);
+            if (newQty <= 0) return null;
+            return { ...i, available: safeAvailable, quantity: newQty };
+          })
+          .filter((i): i is CartItem => i !== null);
+      });
+      if (toRelease.length > 0) {
+        void releaseSeatHoldsForItems(toRelease);
+      }
+    },
+    [releaseSeatHoldsForItems]
+  );
 
   const totalItems = items.reduce((sum, i) => sum + i.quantity, 0);
   const totalPrice = items.reduce((sum, i) => sum + i.price * i.quantity, 0);

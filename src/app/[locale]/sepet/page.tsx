@@ -255,7 +255,12 @@ export default function CheckoutPage() {
       for (const item of items) {
         const formData = new FormData();
         formData.append("ticket_id", item.ticketId);
-        formData.append("quantity", String(item.quantity));
+        const seatIdsAligned =
+          item.seatIds && item.seatIds.length > 0
+            ? item.seatIds.slice(0, Math.min(item.seatIds.length, item.quantity))
+            : [];
+        const purchaseQty = seatIdsAligned.length > 0 ? seatIdsAligned.length : item.quantity;
+        formData.append("quantity", String(purchaseQty));
         formData.append("buyer_name", finalName);
         formData.append("buyer_email", finalEmail);
         if (buyerAddress.trim()) formData.append("buyer_address", buyerAddress.trim());
@@ -267,8 +272,8 @@ export default function CheckoutPage() {
           "physical_delivery",
           shouldApplyShippingForThisItem ? physicalDeliveryForCheckout : "none"
         );
-        if (item.seatIds && item.seatIds.length > 0) {
-          formData.append("seat_ids", JSON.stringify(item.seatIds));
+        if (seatIdsAligned.length > 0) {
+          formData.append("seat_ids", JSON.stringify(seatIdsAligned));
           if (seatHoldSessionId) {
             formData.append("seat_hold_session_id", seatHoldSessionId);
           }
@@ -300,9 +305,9 @@ export default function CheckoutPage() {
             emailSent: data.emailSent !== false,
             orderDetails: {
               buyerName: finalName,
-              quantity: item.quantity,
+              quantity: purchaseQty,
               ticketType: item.ticketName,
-              price: typeof od?.price === "number" ? od.price : item.price * item.quantity,
+              price: typeof od?.price === "number" ? od.price : item.price * purchaseQty,
               seatDetails: od?.seatDetails,
             },
           });
@@ -653,7 +658,9 @@ export default function CheckoutPage() {
                   <div className="flex flex-col items-end gap-2">
                     <div className="flex items-center gap-2">
                       {item.seatIds && item.seatIds.length > 0 ? (
-                        <span className="text-sm font-semibold text-slate-700">{item.quantity} {item.quantity === 1 ? "koltuk" : "koltuk"}</span>
+                        <span className="text-sm font-semibold text-slate-700">
+                          {item.seatIds.length} {item.seatIds.length === 1 ? "koltuk" : "koltuk"}
+                        </span>
                       ) : (
                         <>
                           <button
@@ -676,7 +683,11 @@ export default function CheckoutPage() {
                       )}
                     </div>
                     <p className="text-lg font-bold text-primary-700">
-                      {formatPrice(item.price * item.quantity, item.currency as import("@/types/database").EventCurrency | undefined)}
+                      {formatPrice(
+                        item.price *
+                          (item.seatIds && item.seatIds.length > 0 ? item.seatIds.length : item.quantity),
+                        item.currency as import("@/types/database").EventCurrency | undefined
+                      )}
                     </p>
                     <button
                       type="button"
