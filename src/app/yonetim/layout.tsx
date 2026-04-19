@@ -2,6 +2,7 @@ import YonetimClientLayout from "./YonetimClientLayout";
 import { ClientIntlBridge } from "@/components/ClientIntlBridge";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
+import { loadMessagesWithEnFallback } from "@/i18n/load-messages";
 
 export const dynamic = "force-dynamic";
 
@@ -34,7 +35,7 @@ export default async function YonetimLayout({
       ? (locale as (typeof LOCALES)[number])
       : routing.defaultLocale;
     if (!pathLocale) {
-      messages = (await import(`../../../messages/${validLocale}.json`)).default;
+      messages = await loadMessagesWithEnFallback(validLocale);
     }
   } catch (e) {
     console.error("YonetimLayout locale/messages load error:", e);
@@ -42,10 +43,10 @@ export default async function YonetimLayout({
 
   if (Object.keys(messages).length === 0) {
     try {
-      messages = (await import(`../../../messages/${validLocale}.json`)).default;
+      messages = await loadMessagesWithEnFallback(validLocale);
     } catch {
       try {
-        messages = (await import("../../../messages/tr.json")).default;
+        messages = (await import("../../../messages/en.json")).default;
       } catch {
         messages = { common: { backToHome: "Ana Sayfaya Dön" }, home: { heroTitle: "EventSeat" } };
       }

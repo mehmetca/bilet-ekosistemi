@@ -115,7 +115,7 @@
     "errorRateLimited": "Zêde gelek daxwazên têketinê an şîfreya nû hatine şandin. Ji kerema xwe çend deqîqe bisekinin û dîsa biceribînin.",
     "errorOAuthCallback": "Têketina bi Google re pêk nehat (koda danişînê nederbasdar e an dema wê qediya). Di heman tabê de carekê din li «bi Google têkeve» bitikînin. Heke berdewam bike, pencereya nepenî an paqijkirina cookie biceribînin; her dem bi yek navnîşanê (mînak eventseat.de an www) dest pê bikin.",
     "or": "an",
-    "loginWithGoogle": "Bi Google têkeve",
+    "loginWithGoogle": "Bi Googleê têkeve",
     "signUpWithGoogle": "Bi Google tomar bibe",
     "regEmailPlaceholder": "nimune@email.com",
     "regPasswordPlaceholder": "Herî kêm 6 karakter",

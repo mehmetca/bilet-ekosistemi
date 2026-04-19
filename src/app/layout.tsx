@@ -6,6 +6,7 @@ import Providers from "@/components/Providers";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
+import { loadMessagesWithEnFallback } from "@/i18n/load-messages";
 import { getSiteUrl } from "@/lib/site-url";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -43,17 +44,17 @@ export default async function RootLayout({
     }
     validLocale = LOCALES.includes(locale as (typeof LOCALES)[number]) ? (locale as (typeof LOCALES)[number]) : routing.defaultLocale;
     if (!pathLocale) {
-      messages = (await import(`../../messages/${validLocale}.json`)).default;
+      messages = await loadMessagesWithEnFallback(validLocale);
     }
   } catch (e) {
     console.error("RootLayout locale/messages load error:", e);
   }
   if (Object.keys(messages).length === 0) {
     try {
-      messages = (await import(`../../messages/${validLocale}.json`)).default;
+      messages = await loadMessagesWithEnFallback(validLocale);
     } catch {
       try {
-        messages = (await import("../../messages/tr.json")).default;
+        messages = (await import("../../messages/en.json")).default;
       } catch {
         messages = { common: { backToHome: "Ana Sayfaya Dön" }, home: { heroTitle: "EventSeat" } };
       }

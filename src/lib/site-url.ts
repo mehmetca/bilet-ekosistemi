@@ -58,8 +58,8 @@ export function getSiteUrl(): string {
 }
 
 /**
- * Tarayıcıda OAuth `redirectTo` kökü: `NEXT_PUBLIC_SITE_URL` tanımlıysa onu kullanır (www / apex
- * ile PKCE localStorage uyumsuzluğunu önler). Yoksa `window.location.origin`.
+ * Tarayıcıda genel “site kökü” (eski davranış): env varsa o origin, yoksa `window.location.origin`.
+ * OAuth için tercihen {@link getOAuthRedirectOrigin} kullanın.
  */
 export function getPublicSiteOrigin(): string {
   if (typeof window === "undefined") return "http://localhost:3000";
@@ -72,5 +72,48 @@ export function getPublicSiteOrigin(): string {
       /* ignore */
     }
   }
+  return window.location.origin;
+}
+
+/** Üretim kanonik: Supabase Redirect URL’leri ile uyum (www). */
+const EVENTSEAT_WWW_ORIGIN = "https://www.eventseat.de";
+
+/**
+ * Google OAuth `signInWithOAuth({ options: { redirectTo } })` için kök URL.
+ * Supabase Dashboard → Authentication → URL Configuration → Redirect URLs içinde
+ * **aynı host** (örn. `https://www.eventseat.de/auth/callback`) tanımlı olmalı.
+ *
+ * Öncelik:
+ * 1. `NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN` — tam origin (örn. `https://www.eventseat.de`)
+ * 2. `NEXT_PUBLIC_SITE_URL` — `eventseat.de` (apex) ise OAuth için **www**’ye çevrilir; zaten `www` ise olduğu gibi
+ * 3. `window.location.origin` (localhost / önizleme)
+ */
+export function getOAuthRedirectOrigin(): string {
+  if (typeof window === "undefined") return "http://localhost:3000";
+
+  const explicit = process.env.NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN?.trim();
+  if (explicit) {
+    try {
+      const u = new URL(explicit.startsWith("http") ? explicit : `https://${explicit}`);
+      return u.origin;
+    } catch {
+      /* fall through */
+    }
+  }
+
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (fromEnv) {
+    try {
+      const u = new URL(fromEnv.startsWith("http") ? fromEnv : `https://${fromEnv}`);
+      const host = u.hostname.toLowerCase();
+      if (host === "eventseat.de") {
+        return EVENTSEAT_WWW_ORIGIN;
+      }
+      return u.origin;
+    } catch {
+      /* fall through */
+    }
+  }
+
   return window.location.origin;
 }

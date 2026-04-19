@@ -9,7 +9,7 @@ import { Link } from "@/i18n/navigation";
 import Header from "@/components/Header";
 /** PKCE + çerez: @supabase/ssr createBrowserClient (SimpleAuth’taki `supabase` ile aynı singleton). */
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
-import { getPublicSiteOrigin } from "@/lib/site-url";
+import { getOAuthRedirectOrigin } from "@/lib/site-url";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -223,7 +223,7 @@ export default function LoginPage() {
         setError(t("errorGeneric"));
         return;
       }
-      const oauthCallback = new URL("/auth/callback", getPublicSiteOrigin());
+      const oauthCallback = new URL("/auth/callback", getOAuthRedirectOrigin());
       oauthCallback.searchParams.set("next", next);
       const redirectToUrl = oauthCallback.toString();
 
