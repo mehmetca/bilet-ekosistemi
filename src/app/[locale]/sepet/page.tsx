@@ -41,7 +41,7 @@ export default function CheckoutPage() {
   const tEvent = useTranslations("eventDetail");
   const locale = useLocale() as "tr" | "de" | "en";
   const router = useRouter();
-  const { user, loading: authLoading } = useSimpleAuth();
+  const { user, loading: authLoading, accessToken: authAccessToken } = useSimpleAuth();
 
   const {
     items,
@@ -241,14 +241,18 @@ export default function CheckoutPage() {
     const orderResults: typeof results = [];
 
     try {
-      let { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token && user) {
-        await supabase.auth.refreshSession();
-        const r = await supabase.auth.getSession();
-        session = r.data.session;
+      let token = authAccessToken;
+      if (!token) {
+        let { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token && user) {
+          await supabase.auth.refreshSession();
+          const r = await supabase.auth.getSession();
+          session = r.data.session;
+        }
+        token = session?.access_token ?? null;
       }
       const headers: Record<string, string> = {};
-      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+      if (token) headers.Authorization = `Bearer ${token}`;
 
       const feeChargedForEventId = new Set<string>();
       let shippingApplied = false;
@@ -263,6 +267,7 @@ export default function CheckoutPage() {
         formData.append("quantity", String(purchaseQty));
         formData.append("buyer_name", finalName);
         formData.append("buyer_email", finalEmail);
+        if (user?.id) formData.append("client_user_id", user.id);
         if (buyerAddress.trim()) formData.append("buyer_address", buyerAddress.trim());
         if (buyerPlz.trim()) formData.append("buyer_plz", buyerPlz.trim());
         if (buyerCity.trim()) formData.append("buyer_city", buyerCity.trim());

@@ -1,20 +1,19 @@
 "use client";
 
 import NextLink from "next/link";
-import { Link } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Ticket } from "lucide-react";
 
 const menuLinks = [
-  { href: "/bilgilendirme", labelKey: "footer.information", useNextLink: false },
-  { href: "/bilgilendirme/sss", labelKey: "footer.faq", useNextLink: false },
-  { href: "/bilgilendirme/b2b", labelKey: "footer.b2b", useNextLink: false },
-  { href: "/bilgilendirme/organizator-destek", labelKey: "footer.organizerSupport", useNextLink: false },
-  { href: "/organizator-basvuru", labelKey: "nav.organizerApplication", useNextLink: false },
-  { href: "/bilgilendirme/impressum", labelKey: "footer.impressum", useNextLink: false },
-  { href: "/bilgilendirme/cerez-politikasi", labelKey: "footer.cookiePolicy", useNextLink: false },
-  { href: "/bilgilendirme/mesafeli-satis-sozlesmesi", labelKey: "footer.distanceSales", useNextLink: false },
-  { href: "/bilgilendirme/kullanim-kosullari", labelKey: "footer.terms", useNextLink: false },
+  { href: "/bilgilendirme", labelKey: "footer.information" },
+  { href: "/bilgilendirme/sss", labelKey: "footer.faq" },
+  { href: "/bilgilendirme/b2b", labelKey: "footer.b2b" },
+  { href: "/bilgilendirme/organizator-destek", labelKey: "footer.organizerSupport" },
+  { href: "/organizator-basvuru", labelKey: "nav.organizerApplication" },
+  { href: "/bilgilendirme/impressum", labelKey: "footer.impressum" },
+  { href: "/bilgilendirme/cerez-politikasi", labelKey: "footer.cookiePolicy" },
+  { href: "/bilgilendirme/mesafeli-satis-sozlesmesi", labelKey: "footer.distanceSales" },
+  { href: "/bilgilendirme/kullanim-kosullari", labelKey: "footer.terms" },
 ];
 
 const policyLinks = [
@@ -24,89 +23,91 @@ const policyLinks = [
   { href: "/#canli-stok", labelKey: "footer.liveStock" },
 ];
 
+/** localePrefix: always — /tr/... ; kök + hash: /tr#id */
+function hrefWithLocale(locale: string, href: string): string {
+  if (href.startsWith("/#")) {
+    return `/${locale}#${href.slice(2)}`;
+  }
+  if (href === "/") return `/${locale}`;
+  return `/${locale}${href}`;
+}
+
 export default function Footer() {
   const t = useTranslations();
+  const locale = useLocale();
+
   return (
     <footer className="border-t border-slate-200 bg-white py-10">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_2fr] gap-8 md:gap-6">
-          {/* Bölüm 1: Logo + Site adı + Tagline */}
           <div className="flex flex-col items-center md:items-start">
-            <Link href="/" className="flex items-center gap-2 font-bold text-xl text-primary-600 mb-2">
+            <NextLink
+              href={hrefWithLocale(locale, "/")}
+              className="flex items-center gap-2 font-bold text-xl text-primary-600 mb-2"
+            >
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white shrink-0">
-                <Ticket className="h-5 w-5" />
+                <Ticket className="h-5 w-5" aria-hidden />
               </div>
               <span>{t("footer.siteName")}</span>
-            </Link>
+            </NextLink>
             <p className="text-sm text-slate-600 text-center md:text-left max-w-[220px]">
               {t("footer.tagline")}
             </p>
           </div>
 
-          {/* Bölüm 2: Menüler */}
           <div className="flex flex-col items-center md:items-start">
             <h3 className="font-semibold text-slate-900 mb-3 text-sm uppercase tracking-wider">
               {t("footer.menu")}
             </h3>
             <nav className="flex flex-col gap-2">
-              {menuLinks.map(({ href, labelKey, useNextLink }) =>
-                useNextLink ? (
-                  <NextLink
-                    key={href}
-                    href={href}
-                    className="text-slate-600 hover:text-primary-600 text-sm transition-colors"
-                  >
-                    {t(labelKey)}
-                  </NextLink>
-                ) : (
-                  <Link
-                    key={href}
-                    href={href}
-                    className="text-slate-600 hover:text-primary-600 text-sm transition-colors"
-                  >
-                    {t(labelKey)}
-                  </Link>
-                )
-              )}
+              {menuLinks.map(({ href, labelKey }) => (
+                <NextLink
+                  key={href}
+                  href={hrefWithLocale(locale, href)}
+                  className="text-slate-600 hover:text-primary-600 text-sm transition-colors"
+                >
+                  {t(labelKey)}
+                </NextLink>
+              ))}
             </nav>
           </div>
 
-          {/* Bölüm 3: Politika linkleri (üstte) + açıklama metinleri */}
           <div className="flex flex-col items-center md:items-start">
-            {/* Güvenli Ödeme, İade Politikası vb. linkler - yazıların üstünde */}
             <div className="flex flex-wrap gap-4 text-sm mb-4">
               {policyLinks.map(({ href, labelKey }) => (
-                <Link
+                <NextLink
                   key={href}
-                  href={href}
+                  href={hrefWithLocale(locale, href)}
                   className="text-slate-600 hover:text-primary-600 font-medium"
                 >
                   {t(labelKey)}
-                </Link>
+                </NextLink>
               ))}
             </div>
             <div className="space-y-4 text-xs text-slate-500 max-w-md">
               <section id="guvenli-odeme">
-                <strong className="text-slate-700">{t("footer.securePayment")}:</strong> {t("footer.securePaymentDesc")}
+                <strong className="text-slate-700">{t("footer.securePayment")}:</strong>{" "}
+                {t("footer.securePaymentDesc")}
               </section>
               <section id="iade-politikasi">
-                <strong className="text-slate-700">{t("footer.refundPolicy")}:</strong> {t("footer.refundPolicyDesc")}
+                <strong className="text-slate-700">{t("footer.refundPolicy")}:</strong>{" "}
+                {t("footer.refundPolicyDesc")}
               </section>
               <section id="gonderim-politikasi">
-                <strong className="text-slate-700">{t("footer.shippingPolicy")}:</strong> {t("footer.shippingPolicyDesc")}
+                <strong className="text-slate-700">{t("footer.shippingPolicy")}:</strong>{" "}
+                {t("footer.shippingPolicyDesc")}
               </section>
               <section id="canli-stok">
-                <strong className="text-slate-700">{t("footer.liveStock")}:</strong> {t("footer.liveStockDesc")}
+                <strong className="text-slate-700">{t("footer.liveStock")}:</strong>{" "}
+                {t("footer.liveStockDesc")}
               </section>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Tam sayfa çizgi - boydan boya */}
       <div className="border-t border-slate-200 mt-8" />
 
-      {/* Copyright en altta */}
       <div className="container mx-auto px-4 py-4">
         <p className="text-sm text-slate-600 font-medium text-center">{t("footer.copyright")}</p>
       </div>

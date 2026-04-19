@@ -6,8 +6,9 @@ import { Printer, Download } from "lucide-react";
 import type { EventCurrency } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 import { formatEventDateDMY } from "@/lib/date-utils";
+import type { SeatDetail } from "@/types/seat-detail";
 
-export type SeatDetail = { section_name: string; row_label: string; seat_label: string; ticket_code?: string };
+export type { SeatDetail };
 
 interface TicketPrintProps {
   ticketCode: string;
@@ -43,6 +44,7 @@ export default function TicketPrint({
   /** Her koltuk için ayrı bilet kodu olduğunda code -> QR data URL */
   const [qrCodesMap, setQrCodesMap] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [downloading, setDownloading] = useState(false);
 
   const getCodeForSeat = (seat: SeatDetail | null) =>
     seat?.ticket_code ?? ticketCode;
@@ -251,8 +253,6 @@ export default function TicketPrint({
     };
     setTimeout(printWhenReady, 300);
   };
-
-  const [downloading, setDownloading] = useState(false);
 
   const handleDownload = async () => {
     const origin = typeof window !== "undefined" ? window.location.origin : "";

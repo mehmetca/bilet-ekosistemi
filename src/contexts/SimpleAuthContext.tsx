@@ -155,6 +155,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             if (session?.user) {
               const u = session.user as User;
               setUser(u);
+              setAccessToken(session.access_token ?? null);
               userRef.current = u;
               try {
                 await Promise.race([

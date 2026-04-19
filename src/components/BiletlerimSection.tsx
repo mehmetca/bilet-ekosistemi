@@ -1,35 +1,30 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "@/i18n/navigation";
-import { useTranslations } from "next-intl";
-import { Ticket, ArrowRight, Calendar, Printer, Trash2 } from "lucide-react";
+import NextLink from "next/link";
+import { useLocale, useTranslations } from "next-intl";
+import { Ticket as TicketIcon, ArrowRight, Calendar } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
-import TicketPrint from "@/components/TicketPrint";
-import type { EventCurrency } from "@/types/database";
+import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import type { User } from "@supabase/supabase-js";
-import type { SeatDetail } from "@/components/TicketPrint";
+import BiletlerimOrderList from "@/components/BiletlerimOrderList";
+import type { BiletlerimOrderRow } from "@/components/BiletlerimOrderList";
 
-type OrderRow = {
-  id: string;
-  event_id: string;
-  ticket_id: string | null;
-  quantity: number;
-  total_price: number;
-  status: string;
-  created_at: string;
-  ticket_code?: string;
-  buyer_name?: string;
-  events?: { title?: string; date?: string; time?: string; venue?: string; location?: string; currency?: string } | null;
-  tickets?: { name?: string; type?: string; price?: number } | null;
-  seatDetails?: SeatDetail[];
-};
+type OrderRow = BiletlerimOrderRow;
 
 interface BiletlerimSectionProps {
   user: User | null;
 }
 
+/** PostgREST bazen FK ilişkisini tek nesne yerine tek elemanlı dizi döndürür. */
+function normalizeRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? value[0] ?? null : value;
+}
+
 export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
+  const { accessToken: authAccessToken } = useSimpleAuth();
+  const locale = useLocale();
   const t = useTranslations("panel");
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +37,13 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
     setLoading(true);
     setError(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      let token = authAccessToken;
+      if (!token) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        token = session?.access_token ?? null;
+      }
       if (!token) {
         setError("Oturum bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.");
         setLoading(false);
@@ -63,15 +63,28 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
         setLoading(false);
         return;
       }
-      const data = (await res.json()) as OrderRow[];
-      setOrders(Array.isArray(data) ? data : []);
+      const raw = (await res.json()) as unknown;
+      if (!Array.isArray(raw)) {
+        setError("Siparişler yüklenemedi");
+        setLoading(false);
+        return;
+      }
+      const data: OrderRow[] = raw.map((row) => {
+        const o = row as OrderRow;
+        return {
+          ...o,
+          events: normalizeRelation(o.events),
+          tickets: normalizeRelation(o.tickets),
+        };
+      });
+      setOrders(data);
     } catch (e) {
       console.error("Biletlerim fetch error:", e);
       setError("Siparişler yüklenemedi");
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, authAccessToken]);
 
   useEffect(() => {
     if (user) fetchOrders();
@@ -82,8 +95,13 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
     if (!window.confirm(t("deleteTicketConfirm"))) return;
     setDeletingId(orderId);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      let token = authAccessToken;
+      if (!token) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        token = session?.access_token ?? null;
+      }
       if (!token) return;
       const res = await fetch(`/api/user/orders/${String(orderId)}`, {
         method: "DELETE",
@@ -103,12 +121,16 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
     }
   }
 
+  function handleTogglePrint(orderId: string) {
+    setPrintOrderId((prev) => (prev === orderId ? null : orderId));
+  }
+
   if (!user) return null;
 
   return (
     <section className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
       <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-        <Ticket className="h-5 w-5" />
+        <TicketIcon className="h-5 w-5" aria-hidden />
         {t("myTickets")}
       </h2>
       {loading ? (
@@ -126,7 +148,7 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
         </div>
       ) : orders.length === 0 ? (
         <div className="text-center py-8">
-          <Calendar className="h-12 w-12 text-slate-300 mx-auto mb-3" />
+          <Calendar className="h-12 w-12 text-slate-300 mx-auto mb-3" aria-hidden />
           <p className="text-slate-600 font-medium">{t("noTickets")}</p>
           <p className="text-sm text-slate-500 mt-1">{t("noTicketsDesc")}</p>
           <div className="mt-4 flex flex-wrap justify-center gap-3">
@@ -137,99 +159,23 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
             >
               Yenile
             </button>
-            <Link
-              href="/"
+            <NextLink
+              href={`/${locale}`}
               className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
             >
               {t("browseEvents")}
-              <ArrowRight className="h-4 w-4" />
-            </Link>
+              <ArrowRight className="h-4 w-4" aria-hidden />
+            </NextLink>
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
-          {orders.map((order) => (
-            <div
-              key={order.id}
-              className="rounded-lg border border-slate-100 overflow-hidden hover:bg-slate-50"
-            >
-              <div className="grid grid-cols-1 md:grid-cols-[minmax(280px,1fr)_auto] gap-4 p-4 items-center">
-                <div className="min-w-0">
-                  <p className="font-medium text-slate-900">
-                    {order.events?.title || "—"}
-                  </p>
-                  <p className="text-sm text-slate-500 mt-0.5">
-                    {order.events?.date && order.events?.time
-                      ? `${order.events.date} ${order.events.time}`
-                      : order.events?.date || "—"}
-                    {order.events?.venue && ` • ${order.events.venue}`}
-                  </p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3 text-sm">
-                  <span className="text-slate-600">
-                    {order.tickets?.name || order.tickets?.type || "Bilet"} × {order.quantity}
-                  </span>
-                  <span className="font-medium text-slate-900">
-                    €{Number(order.total_price).toFixed(2)}
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded text-xs font-medium ${
-                      order.status === "completed"
-                        ? "bg-green-100 text-green-800"
-                        : order.status === "cancelled"
-                        ? "bg-red-100 text-red-800"
-                        : "bg-amber-100 text-amber-800"
-                    }`}
-                  >
-                    {order.status === "completed"
-                      ? t("completed")
-                      : order.status === "cancelled"
-                      ? t("cancelled")
-                      : t("pending")}
-                  </span>
-                  {order.status === "completed" && order.ticket_code && (
-                    <button
-                      type="button"
-                      onClick={() => setPrintOrderId(printOrderId === order.id ? null : order.id)}
-                      className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
-                    >
-                      <Printer className="h-4 w-4" />
-                      {t("printTicket")}
-                    </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(order.id)}
-                    disabled={deletingId === order.id}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50"
-                    title={t("deleteTicket")}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    {t("deleteTicket")}
-                  </button>
-                </div>
-              </div>
-              {printOrderId === order.id && order.ticket_code && order.status === "completed" && (
-                <div className="border-t border-slate-100 bg-slate-50 p-4">
-                  <TicketPrint
-                    ticketCode={order.ticket_code}
-                    eventTitle={order.events?.title || "—"}
-                    eventDate={order.events?.date || ""}
-                    eventTime={order.events?.time || ""}
-                    venue={order.events?.venue || "—"}
-                    location={order.events?.location || "—"}
-                    buyerName={order.buyer_name || "—"}
-                    quantity={order.quantity}
-                    ticketType={order.tickets?.name || order.tickets?.type || "Bilet"}
-                    price={order.total_price}
-                    currency={(order.events?.currency as EventCurrency) || "EUR"}
-                    seatDetails={order.seatDetails}
-                  />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        <BiletlerimOrderList
+          orders={orders}
+          printOrderId={printOrderId}
+          onTogglePrint={handleTogglePrint}
+          onDelete={handleDelete}
+          deletingId={deletingId}
+        />
       )}
     </section>
   );

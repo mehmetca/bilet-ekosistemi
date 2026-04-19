@@ -2,17 +2,23 @@
 
 import { useState, useEffect } from "react";
 import type { Order } from "@/types/database";
-import { CreditCard, Search as SearchIcon, Filter, Download } from "lucide-react";
+import { Search as SearchIcon, Filter, Download, Link2 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { supabase } from "@/lib/supabase-client";
 
+function authHeaders(accessToken: string): Record<string, string> {
+  return { Authorization: `Bearer ${accessToken}` };
+}
+
 export default function SiparislerPage() {
-  const { isAdmin, loading: authLoading } = useSimpleAuth();
+  const { isAdmin, loading: authLoading, accessToken } = useSimpleAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [backfillLoading, setBackfillLoading] = useState(false);
+  const [backfillMessage, setBackfillMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -52,6 +58,39 @@ export default function SiparislerPage() {
     }
   }
 
+  async function runBackfillOrdersUserId() {
+    if (!accessToken) {
+      alert("Oturum bulunamadı. Sayfayı yenileyip tekrar deneyin.");
+      return;
+    }
+    setBackfillLoading(true);
+    setBackfillMessage(null);
+    try {
+      const res = await fetch("/api/admin/backfill-orders-user-id", {
+        method: "POST",
+        headers: authHeaders(accessToken),
+      });
+      const body = (await res.json().catch(() => ({}))) as {
+        updated?: number;
+        message?: string;
+        error?: string;
+        detail?: string;
+      };
+      if (!res.ok) {
+        setBackfillMessage(
+          body.detail || body.error || "İşlem başarısız."
+        );
+        return;
+      }
+      setBackfillMessage(body.message || `${body.updated ?? 0} kayıt güncellendi.`);
+      await fetchOrders();
+    } catch (e) {
+      setBackfillMessage(e instanceof Error ? e.message : "Bağlantı hatası.");
+    } finally {
+      setBackfillLoading(false);
+    }
+  }
+
   const filteredOrders = orders.filter(order => 
     (order as any).events?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (order as any).tickets?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -77,6 +116,29 @@ export default function SiparislerPage() {
         <p className="text-slate-600 mb-8">
           Tüm sipariş kayıtlarını görüntüleyin ve yönetin.
         </p>
+
+        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4 mb-6 text-sm text-amber-950">
+          <p className="font-medium mb-1">Kullanıcı panelinde sipariş görünmüyorsa</p>
+          <p className="text-amber-900/90 mb-3">
+            Eski alımlarda hesap bağlantısı eksik kalmış olabilir. Aşağıdaki düğme, alıcı e-postası ile
+            kayıtlı hesap e-postası aynı olan siparişleri otomatik bağlar. Güvenlidir; yalnızca e-posta
+            tam eşleşirse işlem yapılır.
+          </p>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              disabled={backfillLoading || !accessToken}
+              onClick={() => void runBackfillOrdersUserId()}
+              className="inline-flex items-center gap-2 rounded-lg border border-amber-300 bg-white px-3 py-2 text-sm font-medium text-amber-950 hover:bg-amber-100 disabled:opacity-50"
+            >
+              <Link2 className="h-4 w-4" />
+              {backfillLoading ? "İşleniyor…" : "Siparişleri hesaplara bağla"}
+            </button>
+            {backfillMessage && (
+              <span className="text-amber-900">{backfillMessage}</span>
+            )}
+          </div>
+        </div>
 
         {/* Filtreler */}
         <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">

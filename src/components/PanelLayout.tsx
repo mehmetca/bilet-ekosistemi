@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import NextLink from "next/link";
 import { usePathname } from "next/navigation";
-import { Link as I18nLink } from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
-import { useTranslations } from "next-intl";
 import { Ticket, User, LogOut, Menu, X, ChevronLeft } from "lucide-react";
 
 interface PanelLayoutProps {
@@ -15,8 +15,14 @@ interface PanelLayoutProps {
 const SIDEBAR_WIDTH = 260;
 const CONTENT_MAX_WIDTH = "max-w-5xl"; // 1024px – Biletinial gibi geniş içerik alanı
 
+function hrefWithLocale(locale: string, path: string): string {
+  if (path === "/") return `/${locale}`;
+  return `/${locale}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 export default function PanelLayout({ children }: PanelLayoutProps) {
   const pathname = usePathname();
+  const locale = useLocale();
   const t = useTranslations("panel");
   const tCommon = useTranslations("common");
   const { user, signOut } = useSimpleAuth();
@@ -70,9 +76,9 @@ export default function PanelLayout({ children }: PanelLayoutProps) {
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
-              <I18nLink
+              <NextLink
                 key={item.href}
-                href={item.href}
+                href={hrefWithLocale(locale, item.href)}
                 onClick={() => setSidebarOpen(false)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   item.active
@@ -82,21 +88,21 @@ export default function PanelLayout({ children }: PanelLayoutProps) {
               >
                 <Icon className="h-4 w-4 flex-shrink-0" />
                 {item.label}
-              </I18nLink>
+              </NextLink>
             );
           })}
         </div>
       </nav>
 
       <div className="flex-shrink-0 p-4 border-t border-slate-200 space-y-1">
-        <I18nLink
-          href="/"
+        <NextLink
+          href={hrefWithLocale(locale, "/")}
           onClick={() => setSidebarOpen(false)}
           className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
         >
           <ChevronLeft className="h-4 w-4 flex-shrink-0" />
           {tCommon("backToHome")}
-        </I18nLink>
+        </NextLink>
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2.5 w-full text-left text-sm text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -142,10 +148,13 @@ export default function PanelLayout({ children }: PanelLayoutProps) {
           >
             <Menu className="h-5 w-5" />
           </button>
-          <I18nLink href="/" className="text-slate-600 hover:text-primary-600 text-sm inline-flex items-center gap-1">
+          <NextLink
+            href={hrefWithLocale(locale, "/")}
+            className="text-slate-600 hover:text-primary-600 text-sm inline-flex items-center gap-1"
+          >
             <ChevronLeft className="h-4 w-4" />
             {tCommon("backToHome")}
-          </I18nLink>
+          </NextLink>
         </header>
         <main className="flex-1 overflow-auto p-4 md:pl-5 md:pr-6 md:pt-6 md:pb-8">
           <div className={`${CONTENT_MAX_WIDTH} w-full`}>

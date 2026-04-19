@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,120 @@ type OrderRow = {
   seatDetails?: SeatDetail[];
 };
 
+/** PostgREST şemasında orders→tickets FK yoksa gömülü `tickets(...)` tüm sorguyu düşürür; yönetim /api/orders gibi ticket ayrı çekilir. */
+const SELECT_FIELDS = `
+  id, event_id, ticket_id, quantity, total_price, status, created_at,
+  ticket_code, buyer_name,
+  events (title, date, time, venue, location, currency)
+`;
+
+/** RPC yerine doğrudan sorgu: muhasebe /api/orders ile aynı tabloyu kullanır; e-posta için user_id + ilike + eq birleşimi. */
+async function fetchOrdersForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  email: string | null | undefined
+): Promise<OrderRow[]> {
+  const emailTrim = (email || "").trim();
+  // PostgrestFilterBuilder thenable; Promise.all ile await (TS için ayrı tipleme gerekmez)
+  const queryPromises = [
+    supabase
+      .from("orders")
+      .select(SELECT_FIELDS)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false }),
+    ...(emailTrim
+      ? [
+          supabase
+            .from("orders")
+            .select(SELECT_FIELDS)
+            .is("user_id", null)
+            .ilike("buyer_email", emailTrim)
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("orders")
+            .select(SELECT_FIELDS)
+            .is("user_id", null)
+            .eq("buyer_email", emailTrim)
+            .order("created_at", { ascending: false }),
+        ]
+      : []),
+  ];
+
+  const results = await Promise.all(queryPromises);
+  const seen = new Set<string>();
+  const merged: OrderRow[] = [];
+  for (const r of results) {
+    if (r.error) {
+      console.error("user orders query (satır atlanıyor):", r.error.message);
+      continue;
+    }
+    for (const row of r.data || []) {
+      const o = row as OrderRow;
+      if (o.id && !seen.has(o.id)) {
+        seen.add(o.id);
+        merged.push(o);
+      }
+    }
+  }
+
+  merged.sort((a, b) => {
+    const aT = new Date(a.created_at || 0).getTime();
+    const bT = new Date(b.created_at || 0).getTime();
+    return bT - aT;
+  });
+
+  const ticketIds = Array.from(
+    new Set(merged.map((o) => o.ticket_id).filter((id): id is string => !!id))
+  );
+  let ticketMap = new Map<string, { name?: string; type?: string; price?: number }>();
+  if (ticketIds.length > 0) {
+    const { data: ticketRows, error: ticketErr } = await supabase
+      .from("tickets")
+      .select("id, name, type, price")
+      .in("id", ticketIds);
+    if (ticketErr) {
+      console.error("user orders tickets lookup:", ticketErr.message);
+    } else if (ticketRows) {
+      ticketMap = new Map(
+        ticketRows.map((row) => [
+          row.id,
+          { name: row.name, type: row.type, price: row.price },
+        ])
+      );
+    }
+  }
+  for (const o of merged) {
+    o.tickets = o.ticket_id ? ticketMap.get(o.ticket_id) ?? null : null;
+  }
+
+  const ids = merged.map((o) => o.id).filter(Boolean);
+  if (ids.length > 0) {
+    const { data: seatsRows, error: seatsErr } = await supabase
+      .from("order_seats")
+      .select("order_id, section_name, row_label, seat_label, ticket_code")
+      .in("order_id", ids);
+    if (seatsErr) {
+      console.error("user orders order_seats:", seatsErr.message);
+    }
+    const seatsByOrder = new Map<string, SeatDetail[]>();
+    for (const row of seatsRows || []) {
+      const list = seatsByOrder.get(row.order_id) || [];
+      list.push({
+        section_name: row.section_name ?? "",
+        row_label: row.row_label ?? "",
+        seat_label: row.seat_label ?? "",
+        ticket_code: row.ticket_code ?? undefined,
+      });
+      seatsByOrder.set(row.order_id, list);
+    }
+    for (const o of merged) {
+      o.seatDetails = seatsByOrder.get(o.id) || undefined;
+    }
+  }
+
+  return merged;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
@@ -28,127 +143,14 @@ export async function GET(request: NextRequest) {
     if (!token) {
       return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
     }
-    const { data: { user } } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser(token);
     if (!user) {
       return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
     }
 
-    // Veritabanı fonksiyonu ile siparişleri al (user_id + buyer_email eşleşmesi)
-    console.log("[DEBUG] Fetching orders for user:", user.id, "email:", user.email);
-    const { data: rows, error } = await supabase.rpc("get_user_orders", {
-      p_user_id: user.id,
-      p_email: user.email || "",
-    });
-
-    console.log("[DEBUG] get_user_orders result:", { rowsCount: rows?.length || 0, error: error?.message || null });
-
-    if (error) {
-      console.error("[DEBUG] get_user_orders error:", error);
-      // Fallback: eski yöntem
-      const selectFields = `
-        id, event_id, ticket_id, quantity, total_price, status, created_at,
-        ticket_code, buyer_name,
-        events (title, date, time, venue, location, currency),
-        tickets (name, type, price)
-      `;
-      const [byUserId, byEmail] = await Promise.all([
-        supabase.from("orders").select(selectFields).eq("user_id", user.id).order("created_at", { ascending: false }),
-        user.email
-          ? supabase.from("orders").select(selectFields).ilike("buyer_email", user.email).order("created_at", { ascending: false })
-          : { data: [] as unknown[] },
-      ]);
-      const seen = new Set<string>();
-      const merged: unknown[] = [];
-      for (const o of [...(byUserId.data || []), ...(byEmail.data || [])]) {
-        const id = (o as { id?: string }).id;
-        if (id && !seen.has(id)) {
-          seen.add(id);
-          merged.push(o);
-        }
-      }
-      merged.sort((a, b) => {
-        const aT = new Date((a as { created_at?: string }).created_at || 0).getTime();
-        const bT = new Date((b as { created_at?: string }).created_at || 0).getTime();
-        return bT - aT;
-      });
-      // Fallback: koltuk bilgilerini order_seats ile zenginleştir
-      const fallbackIds = merged.map((o) => (o as { id?: string }).id).filter(Boolean) as string[];
-      console.log("[DEBUG] Fallback query returned:", merged.length, "orders, fallbackIds:", fallbackIds.length);
-      if (fallbackIds.length > 0) {
-        const { data: seatsRows } = await supabase
-          .from("order_seats")
-          .select("order_id, section_name, row_label, seat_label, ticket_code")
-          .in("order_id", fallbackIds);
-        const seatsByOrder = new Map<string, SeatDetail[]>();
-        for (const row of seatsRows || []) {
-          const list = seatsByOrder.get(row.order_id) || [];
-          list.push({
-            section_name: row.section_name ?? "",
-            row_label: row.row_label ?? "",
-            seat_label: row.seat_label ?? "",
-            ticket_code: row.ticket_code ?? undefined,
-          });
-          seatsByOrder.set(row.order_id, list);
-        }
-        for (const o of merged) {
-          const id = (o as { id?: string }).id;
-          if (id) (o as Record<string, unknown>).seatDetails = seatsByOrder.get(id) || [];
-        }
-      }
-      return NextResponse.json(merged);
-    }
-
-    // Fonksiyon düz dizi döndürüyor (events/tickets join değil) - frontend formatına çevir
-    console.log("[DEBUG] Processing", rows?.length || 0, "orders from RPC");
-    const orders: OrderRow[] = (rows || []).map((r: Record<string, unknown>) => ({
-      id: r.id,
-      event_id: r.event_id,
-      ticket_id: r.ticket_id,
-      quantity: r.quantity,
-      total_price: r.total_price,
-      status: r.status,
-      created_at: r.created_at,
-      ticket_code: r.ticket_code,
-      buyer_name: r.buyer_name,
-      events: {
-        title: r.event_title,
-        date: r.event_date,
-        time: r.event_time,
-        venue: r.event_venue,
-        location: r.event_location,
-        currency: r.event_currency,
-      },
-      tickets: {
-        name: r.ticket_name || r.ticket_name_type,
-        type: r.ticket_name_type,
-        price: r.ticket_price,
-      },
-    }));
-
-    // Koltuk bilgilerini order_seats üzerinden ekle
-    const orderIds = orders.map((o) => o.id);
-    if (orderIds.length > 0) {
-      const { data: seatsRows } = await supabase
-        .from("order_seats")
-        .select("order_id, section_name, row_label, seat_label, ticket_code")
-        .in("order_id", orderIds);
-      const seatsByOrder = new Map<string, SeatDetail[]>();
-      for (const row of seatsRows || []) {
-        const list = seatsByOrder.get(row.order_id) || [];
-        list.push({
-          section_name: row.section_name ?? "",
-          row_label: row.row_label ?? "",
-          seat_label: row.seat_label ?? "",
-          ticket_code: row.ticket_code ?? undefined,
-        });
-        seatsByOrder.set(row.order_id, list);
-      }
-      for (const order of orders) {
-        order.seatDetails = seatsByOrder.get(order.id) || undefined;
-      }
-    }
-
-    console.log("[DEBUG] Returning", orders.length, "orders to frontend");
+    const orders = await fetchOrdersForUser(supabase, user.id, user.email);
     return NextResponse.json(orders);
   } catch (err) {
     console.error("user orders API error:", err);

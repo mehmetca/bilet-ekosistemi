@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 import bwipjs from "bwip-js";
 import { PDFDocument, PDFPage, StandardFonts, degrees, rgb } from "pdf-lib";
 import { parsePhysicalDelivery, shippingFeeForPhysicalDelivery } from "@/lib/checkout-shipping";
+import { createSupabaseServerClient } from "@/lib/supabase-ssr";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -876,10 +877,38 @@ export async function POST(request: NextRequest) {
 
     const authHeader = request.headers.get("authorization");
     const token = authHeader?.replace("Bearer ", "");
+    const claimedClientUserId = ((formData.get("client_user_id") as string) || "").trim() || null;
     let userId: string | null = null;
     if (token) {
       const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) userId = user.id;
+      if (user) {
+        userId = user.id;
+        if (claimedClientUserId && claimedClientUserId !== user.id) {
+          return NextResponse.json(
+            { success: false, message: "Oturum ile hesap bilgisi uyuşmuyor. Sayfayı yenileyip tekrar deneyin." },
+            { status: 403 }
+          );
+        }
+      }
+    }
+    // İstemci Authorization göndermese bile tarayıcı çerez oturumu varsa siparişi hesaba bağla
+    if (!userId) {
+      try {
+        const serverAuth = await createSupabaseServerClient();
+        const { data: { session } } = await serverAuth.auth.getSession();
+        const u = session?.user;
+        if (u?.id) {
+          userId = u.id;
+          if (claimedClientUserId && claimedClientUserId !== u.id) {
+            return NextResponse.json(
+              { success: false, message: "Oturum ile hesap bilgisi uyuşmuyor. Sayfayı yenileyip tekrar deneyin." },
+              { status: 403 }
+            );
+          }
+        }
+      } catch {
+        /* çerez oturumu okunamadı */
+      }
     }
 
     // Get ticket details
