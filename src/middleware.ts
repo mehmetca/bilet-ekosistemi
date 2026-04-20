@@ -48,6 +48,18 @@ function resolveUnprefixedPathLocale(request: NextRequest): string {
   return routing.defaultLocale;
 }
 
+/**
+ * eventseat.de ↔ www.eventseat.de aynı üretim sitesi (vercel.json apex’i www’ye alır).
+ * NEXT_PUBLIC_SITE_URL tek tarafta (apex) kalırsa middleware’in www → apex 308’i ile
+ * Vercel’in apex → www yönlendirmesi sonsuz döngü üretir; bu yüzden çifti eşdeğer sayıyoruz.
+ */
+const EVENTSEAT_PROD_HOST_EQUIV = new Set(["eventseat.de", "www.eventseat.de"]);
+
+function hostsAreEquivalentForCanonical(reqHost: string, canonHost: string): boolean {
+  if (reqHost === canonHost) return true;
+  return EVENTSEAT_PROD_HOST_EQUIV.has(reqHost) && EVENTSEAT_PROD_HOST_EQUIV.has(canonHost);
+}
+
 /** www ↔ apex: OAuth PKCE doğrulayıcısı origin’e bağlı; kanonik host’a 308 ile hizala. */
 function redirectToCanonicalSiteHost(request: NextRequest): NextResponse | null {
   const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -60,7 +72,7 @@ function redirectToCanonicalSiteHost(request: NextRequest): NextResponse | null 
   }
   const reqHost = request.nextUrl.hostname.toLowerCase();
   const canonHost = canonical.hostname.toLowerCase();
-  if (!canonHost || reqHost === canonHost) return null;
+  if (!canonHost || hostsAreEquivalentForCanonical(reqHost, canonHost)) return null;
   if (reqHost.endsWith(".vercel.app") || canonHost.endsWith(".vercel.app")) return null;
   if (reqHost === "localhost" || reqHost === "127.0.0.1") return null;
 

@@ -1,6 +1,8 @@
 /**
  * Kanonik site kökü (SEO: canonical, sitemap, Open Graph, robots).
- * Üretimde mutlaka `NEXT_PUBLIC_SITE_URL=https://eventseat.de` (Search Console ile aynı host) ayarlayın.
+ * Üretimde `NEXT_PUBLIC_SITE_URL` tek bir kök olmalı; Search Console’daki mülk host’u ile uyumlu olsun
+ * (örn. `https://www.eventseat.de` veya `https://eventseat.de`).
+ * Apex ↔ www için middleware artık döngü yapmaz; yine de GSC mülkünüz hangi host ise env’i ona yazın.
  */
 
 /** Eski alan adı; env veya Vercel URL hâlâ burayı gösterse bile kanonik çıktı eventseat.de olur. */
