@@ -34,6 +34,12 @@ const LOCALE_FLAG_URLS: Record<string, string> = {
   ckb: "https://upload.wikimedia.org/wikipedia/commons/3/35/Flag_of_Kurdistan.svg",
 };
 
+function withLocalePrefix(pathname: string, targetLocale: string): string {
+  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  if (normalizedPath === "/") return `/${targetLocale}`;
+  return `/${targetLocale}${normalizedPath}`;
+}
+
 export default function Header() {
   const { user, isAdmin, isController, isOrganizer } = useSimpleAuth();
   const { totalItems, reservationExpiresAt } = useCart();
@@ -145,7 +151,7 @@ export default function Header() {
                     key={loc}
                     type="button"
                     onClick={() => {
-                      router.replace(pathForLocaleSwitch, { locale: loc });
+                      router.replace(withLocalePrefix(pathForLocaleSwitch, loc));
                       setLangDropdownOpen(false);
                     }}
                     className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors ${
@@ -266,7 +272,7 @@ export default function Header() {
                       key={loc}
                       type="button"
                       onClick={() => {
-                        router.replace(pathForLocaleSwitch, { locale: loc });
+                        router.replace(withLocalePrefix(pathForLocaleSwitch, loc));
                         setLangDropdownOpen(false);
                         setMobileMenuOpen(false);
                       }}

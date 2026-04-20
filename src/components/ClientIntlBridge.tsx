@@ -26,7 +26,7 @@ export function ClientIntlBridge({
   return (
     <NextIntlClientProvider
       locale={locale}
-      messages={messages}
+      messages={messages as never}
       timeZone={defaultTimeZone}
       onError={(err) => {
         const code = (err as { code?: string }).code;
