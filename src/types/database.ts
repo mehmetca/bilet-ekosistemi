@@ -19,7 +19,7 @@ export interface Event {
   category: EventCategory;
   is_active: boolean;
   slug?: string;
-  /** Tur/gösteri gruplaması - aynı show_slug'a sahip etkinlikler tek sayfada (Biletinial tarzı) */
+  /** Tur/gösteri gruplaması - aynı show_slug'a sahip etkinlikler tek sayfada */
   show_slug?: string | null;
   ticket_url?: string | null;
   created_at: string;

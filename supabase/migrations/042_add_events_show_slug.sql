@@ -1,4 +1,4 @@
--- Tur/gösteri gruplaması için show_slug (Biletinial tarzı sayfa)
+-- Tur/gösteri gruplaması için show_slug (tek gösteri sayfası)
 ALTER TABLE public.events
   ADD COLUMN IF NOT EXISTS show_slug TEXT;
 

@@ -337,7 +337,7 @@ export default function CheckoutPage() {
     }
   }
 
-  // Giriş yapmamış kullanıcı: 3 sn sonra giriş sayfasına yönlendir (Eventim tarzı)
+  // Giriş yapmamış kullanıcı: 3 sn sonra giriş sayfasına yönlendir (EventSeat akışı)
   useEffect(() => {
     if (authLoading || items.length === 0 || results.length > 0 || user) return;
     const timer = setTimeout(() => router.replace(`/giris?redirect=/${locale}/sepet`), 3000);
@@ -372,7 +372,7 @@ export default function CheckoutPage() {
       <Header />
 
       <div className="mx-auto max-w-6xl px-4 py-8">
-        {/* Progress steps - Eventim style */}
+        {/* Progress steps – ödeme adımları */}
         {!showExpiredFullPage ? (
         <div className="mb-10 flex items-center justify-center gap-2 sm:gap-4">
           <button

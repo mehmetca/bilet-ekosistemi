@@ -19,6 +19,6 @@ ALTER TABLE public.events DROP CONSTRAINT IF EXISTS events_currency_check;
 ALTER TABLE public.events ADD CONSTRAINT events_currency_check 
   CHECK (currency IN ('EUR', 'TL', 'USD'));
 
--- 3. Tur/gösteri gruplaması (Biletinial tarzı)
+-- 3. Tur/gösteri gruplaması
 ALTER TABLE public.events ADD COLUMN IF NOT EXISTS show_slug TEXT;
 CREATE INDEX IF NOT EXISTS idx_events_show_slug ON public.events(show_slug) WHERE show_slug IS NOT NULL;

@@ -1,4 +1,4 @@
--- Wolfgang-Marguerre-Saal (Konzerthaus Stadthalle Heidelberg) oturum planı – Eventim ile aynı yapı, örnek olarak.
+-- Wolfgang-Marguerre-Saal (Konzerthaus Stadthalle Heidelberg) örnek oturum planı.
 -- Parkett Block A/B/C, Empore links / Mitte / rechts; sıra ve koltuk sayıları gerçekçi (~960 koltuk).
 -- Ön koşul: Migration 070 (seating_plans, sections, rows, seats) ve 071 (ticket_type_label) uygulanmış olmalı.
 -- Çalıştırma: Supabase Dashboard → SQL Editor → bu dosyanın içeriğini yapıştırıp Run.
@@ -30,7 +30,7 @@ VALUES (
   true
 );
 
--- 3) Bölümler (sections) – Eventim tarzı: Parkett A/B/C, Empore links/Mitte/rechts
+-- 3) Bölümler (sections) – Parkett A/B/C, Empore links/Mitte/rechts
 INSERT INTO public.seating_plan_sections (id, seating_plan_id, name, sort_order, ticket_type_label)
 VALUES
   ('33333333-3333-4333-8333-333333333301', '22222222-2222-4222-8222-222222222222', 'Parkett Block A', 1, 'Kategori 1'),

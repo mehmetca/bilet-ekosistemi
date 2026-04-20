@@ -538,7 +538,7 @@ export default function ClientHomePage({
         )}
       </section>
 
-      {/* Öne çıkan etkinlikler (pickaseat tarzı - 2 etkinlik yan yana) */}
+      {/* Öne çıkan etkinlikler (EventSeat – 2 etkinlik yan yana) */}
       <FeaturedEvents
         events={events}
         locale={locale as "tr" | "de" | "en"}

@@ -1,4 +1,4 @@
--- Eventim tarzı: Satılan koltukları kaydet – hangi siparişte hangi koltuk satıldı.
+-- Satılan koltukları kaydet – hangi siparişte hangi koltuk satıldı.
 -- Böylece salon planında "dolu" koltuklar gösterilir ve tekrar satılmaz.
 
 CREATE TABLE IF NOT EXISTS public.order_seats (

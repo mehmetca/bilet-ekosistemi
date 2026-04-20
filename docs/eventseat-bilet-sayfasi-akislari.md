@@ -1,20 +1,20 @@
-# Eventim Tarzı Etkinlik / Bilet Sayfası – Özellik Özeti
+# EventSeat – Etkinlik / Bilet sayfası: iki ana akış (özellik özeti)
 
-Eventim.de etkinlik sayfalarında iki ana bilet alma yöntemi vardır. Bizim sitede de bu iki seçenek sunulacak:
+EventSeat tarzı etkinlik sayfalarında yaygın olarak iki ana bilet alma yöntemi sunulur. Bizim sitede de bu iki seçenek hedeflenir:
 
 ---
 
 ## 1. İki ana seçenek
 
-### A) Fiyat belirleme (Best seat booking / Bestplatzbuchung)
+### A) Fiyat kategorisine göre bilet (best available / kategori seçimi)
 
 - Müşteri **sadece fiyat kategorisini** seçer (örn. Kategori 1, Kategori 2, İndirimli).
 - Sistem **otomatik olarak** o kategorideki “en iyi” uygun yeri atar (organizatörün tanımladığı önceliğe göre).
 - **Bizde zaten var:** Bilet türü + fiyat + adet seçimi. Bu akış buna karşılık gelir; sadece “fiyat kategorisi seç, adet gir” şeklinde netleştirilebilir.
 
-### B) Bilet yeri seçme (Free seat selection / Sitzplatzwahl)
+### B) Yer seçerek bilet (koltuk haritası / oturum planı)
 
-- Müşteri **salon planından (saalplan / seating plan)** kendi koltuğunu/yerini seçer.
+- Müşteri **salon planından (seating plan)** kendi koltuğunu/yerini seçer.
 - İnteraktif bir **koltuk haritası** üzerinden blok → sıra → koltuk seçimi yapılır.
 - **Bizde yapılacak:** Venue’lere oturum planı eklenip, etkinlik sayfasında “Yer seç” ile bu plan açılacak ve seçilen koltuklar sepete eklenecek.
 
@@ -65,7 +65,7 @@ Eventim.de etkinlik sayfalarında iki ana bilet alma yöntemi vardır. Bizim sit
 
 - **Fiyat kategorisi** (örn. Kategori 1, VIP, Parket) → **section** veya **alan** ile eşleşmeli.
 - Her section’a bir **bilet türü / fiyat** atanır (etkinlik bazında veya plan bazında).
-- “Fiyat belirleme” akışında müşteri bu kategorilerden birini seçer; “bilet yeri seçme” akışında tıkladığı koltuk hangi section’daysa o fiyat uygulanır.
+- “Fiyat kategorisine göre” akışında müşteri bu kategorilerden birini seçer; “yer seçerek” akışında tıkladığı koltuk hangi section’daysa o fiyat uygulanır.
 
 ### 2.3 Gerçek zamanlı kullanılabilirlik
 
@@ -102,7 +102,7 @@ Eventim.de etkinlik sayfalarında iki ana bilet alma yöntemi vardır. Bizim sit
 
 ---
 
-## 3. Sayfa akışı (Eventim benzeri)
+## 3. Sayfa akışı (EventSeat tarzı)
 
 1. **Etkinlik sayfası açılır.**
 2. **Üstte iki seçenek:**
@@ -129,4 +129,4 @@ Eventim.de etkinlik sayfalarında iki ana bilet alma yöntemi vardır. Bizim sit
 4. **Faz 4 – Müşteri tarafı “yer seç”**  
    - Plan görüntüleme, koltuk seçimi, sepete ekleme, stok rezervasyonu.
 
-Bu doküman, Eventim tarzı “fiyat belirleme” ve “bilet yeri seçme” ayrımını ve bilet yeri seçme için gerekenleri tanımlar. İstersen bir sonraki adımda sadece Faz 1 (iki seçeneğin UI’da ayrılması) için somut bileşen/sayfa değişikliklerini yazabilirim.
+Bu doküman, EventSeat tarzı “fiyat kategorisine göre” ve “yer seçerek” ayrımını ve bilet yeri seçme için gerekenleri tanımlar. İstersen bir sonraki adımda sadece Faz 1 (iki seçeneğin UI’da ayrılması) için somut bileşen/sayfa değişikliklerini yazabilirim.

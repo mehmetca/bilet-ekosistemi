@@ -203,7 +203,7 @@ function getTicketForRow(
 /** Sepette veya anlık seçimde: plan üzerinde fosforlu yeşil (satılmadıkça). */
 const HELD_SEAT_FLUO = "#39ff14";
 
-/** Eventim tarzı şematik salon planı: bölümleri yan yana, sahne altta, koltuklar tıklanabilir. Satılmış koltuklar dolu gösterilir, tıklanamaz. */
+/** EventSeat şematik salon planı: bölümleri yan yana, sahne altta, koltuklar tıklanabilir. Satılmış koltuklar dolu gösterilir, tıklanamaz. */
 function SeatMapSvg({
   sections,
   heldSeatIds,
@@ -530,7 +530,7 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.25;
 
-/** Eventim tarzı: salon planını büyük alan içinde zoom/pan ile kullanılabilir yapar. Satılmış koltuklar dolu gösterilir. */
+/** EventSeat: salon planını büyük alan içinde zoom/pan ile kullanılabilir yapar. Satılmış koltuklar dolu gösterilir. */
 function SeatMapWithZoom({
   sections,
   heldSeatIds,
@@ -848,7 +848,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
   /** Satılmış koltuklar (completed siparişlerdeki order_seats) – salon planında dolu gösterilir, seçilemez */
   const [soldSeatIds, setSoldSeatIds] = useState<Set<string>>(new Set());
-  /** Eventim tarzı: "list" = liste görünümü, "map" = salon planı (şematik) */
+  /** EventSeat: "list" = liste görünümü, "map" = salon planı (şematik) */
   const [seatMapView, setSeatMapView] = useState<"list" | "map">("map");
   const [selectedSeatCategory, setSelectedSeatCategory] = useState<string>("all");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -2240,7 +2240,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               </div>}
             </div>
 
-            {/* Etkinlik Hakkında - Eventim tarzı, daha düzenli içerik + sağ özet panel */}
+            {/* Etkinlik Hakkında – düzenli içerik + sağ özet panel */}
             <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
               <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
                 <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
@@ -2338,7 +2338,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               </aside>
             </div>
 
-            {/* Mekan Bilgisi - Eventim benzeri toplu düzen */}
+            {/* Mekan Bilgisi – tek blokta düzen */}
             {venue && (
               <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">

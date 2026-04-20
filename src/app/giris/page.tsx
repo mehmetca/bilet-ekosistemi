@@ -40,7 +40,7 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const activeLoginAttemptRef = useRef(0);
 
-  // Üye ol (bilet alıcı) state – Biletinial tarzı
+  // Üye ol (bilet alıcı) state – EventSeat akışı
   const [regEmail, setRegEmail] = useState("");
   const [regFirstName, setRegFirstName] = useState("");
   const [regLastName, setRegLastName] = useState("");

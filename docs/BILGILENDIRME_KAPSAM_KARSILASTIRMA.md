@@ -1,12 +1,12 @@
-# Pickaseat vs Bilet Ekosistemi – Politika & Bilgilendirme Karşılaştırması
+# Bilgilendirme sayfaları – kapsam karşılaştırması (referans)
 
-Bu belge, Pickaseat’ın kurumsal/bilgilendirme sayfaları ile Bilet Ekosistemi’ndeki karşılıklarını eşleştirir; eksik veya güçlendirilmesi gereken alanları listeler.
+Bu belge, tipik kurumsal/bilgilendirme sayfaları (referans olarak çok satıcılı bilet sitelerinde görülen yapı) ile Bilet Ekosistemi’ndeki karşılıkları eşleştirir; eksik veya güçlendirilmesi gereken alanları listeler.
 
 ---
 
-## Pickaseat’ta olanlar → Bizde karşılığı
+## Referans yapı → Bizde karşılığı
 
-| Pickaseat | Bilet Ekosistemi | Durum |
+| Referans (örnek) | Bilet Ekosistemi | Durum |
 |-----------|------------------|--------|
 | **Impressum** | `/bilgilendirme/impressum` (İletişim Bilgileri) | ✅ Var |
 | **Privacy Notice / Privacy Policy** | `/bilgilendirme/veri-bilgisi` + `/bilgilendirme/cerez-politikasi` | ✅ Var |
@@ -29,11 +29,11 @@ Bu belge, Pickaseat’ın kurumsal/bilgilendirme sayfaları ile Bilet Ekosistemi
 ## Eksik veya değiştirilmesi gerekenler – Öneriler
 
 ### 1. **Online Ödeme Koşulları (Online Payment Terms)**  
-- **Eksik:** Pickaseat’ta ayrı bir sayfa; sizde bilgi mesafeli satış ve veri sayfalarına dağılmış.  
+- **Eksik:** Bazı sitelerde ayrı bir sayfa; sizde bilgi mesafeli satış ve veri sayfalarına dağılmış.  
 - **Öneri:** İsterseniz `/bilgilendirme/online-odeme-kosullari` gibi tek bir sayfa açıp ödeme yöntemleri, güvenlik, 3D Secure, iade ödemeleri vb. tek yerde toplanabilir. Yoksa mevcut metinlerde “Ödeme” bölümünü biraz genişletmek de yeterli olabilir.
 
 ### 2. **Müşteri Hizmetleri / İletişim (Customer service)**  
-- **Eksik:** Pickaseat’ta “Call Center” gibi tek bir müşteri hizmetleri sayfası var; sizde iletişim sadece Impressum ve diğer sayfalarda.  
+- **Eksik:** Bazı sitelerde tek bir müşteri hizmetleri sayfası var; sizde iletişim sadece Impressum ve diğer sayfalarda.  
 - **Öneri:** `/bilgilendirme/iletisim` veya `/bilgilendirme/musteri-hizmetleri` sayfası eklenebilir: çalışma saatleri, e-posta, form, “Bilet nasıl alınır / iade / kayıp bilet” kısa linkleri. İsterseniz Impressum’u “İletişim & Müşteri Hizmetleri” başlığıyla genişletmek de mümkün.
 
 ### 3. **Hakkımızda (About Us)**  
@@ -42,7 +42,7 @@ Bu belge, Pickaseat’ın kurumsal/bilgilendirme sayfaları ile Bilet Ekosistemi
 
 ### 4. **İptal / İade / Değişim – Tek sayfa**  
 - **Mevcut:** SSS’te ve footer’da var; dağınık.  
-- **Öneri:** Zorunlu değil; ancak “İade ve İptal Politikası” tek sayfada toplanırsa (link: footer’daki “İade Politikası”) hem Pickaseat’taki “Cancellation, Return and Exchange” ile tam eşleşir hem de kullanıcı tek yerden okur.
+- **Öneri:** Zorunlu değil; ancak “İade ve İptal Politikası” tek sayfada toplanırsa (link: footer’daki “İade Politikası”) hem referans yapıdaki “Cancellation, Return and Exchange” ile tam eşleşir hem de kullanıcı tek yerden okur.
 
 ### 5. **Yazım / ifade kontrolü**  
 - **Öneri:** Tüm bilgilendirme sayfalarında (özellikle Impressum, Mesafeli satış, Kullanım koşulları, Çerez, Veri bilgisi):  
@@ -67,4 +67,4 @@ Bu belge, Pickaseat’ın kurumsal/bilgilendirme sayfaları ile Bilet Ekosistemi
 | İade/iptal (tek sayfa) | Kısmen (footer + SSS) | İsteğe bağlı: tek “İade ve İptal” sayfası. |
 | Integrated Management System | ❌ | Küçük platform için gerek yok. |
 
-**Sonuç:** Yasal ve bilgilendirme açısından temel sayfalar (Impressum, gizlilik, çerez, kullanım koşulları, mesafeli satış, SSS, iletişim, iade/bilet kaybı) sitede mevcut. Pickaseat’a tam yaklaşmak için en mantıklı ekler: **Online ödeme koşullarının** netleştirilmesi (ayrı sayfa veya mevcut sayfalarda), isteğe bağlı **Müşteri hizmetleri** ve **Hakkımızda** sayfalarıdır.
+**Sonuç:** Yasal ve bilgilendirme açısından temel sayfalar (Impressum, gizlilik, çerez, kullanım koşulları, mesafeli satış, SSS, iletişim, iade/bilet kaybı) sitede mevcut. Referans seviyesine yaklaşmak için en mantıklı ekler: **Online ödeme koşullarının** netleştirilmesi (ayrı sayfa veya mevcut sayfalarda), isteğe bağlı **Müşteri hizmetleri** ve **Hakkımızda** sayfalarıdır.

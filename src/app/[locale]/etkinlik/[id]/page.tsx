@@ -112,7 +112,7 @@ function buildEventStructuredData(event: Event, venue: Venue | null, locale: str
 export default async function EventDetailPage({ params }: PageProps) {
   const { locale = "tr", id } = await params;
 
-  // Biletinial tarzı: show_slug ile gruplanmış tur/gösteri sayfası (1+ etkinlik; tek etkinlikte de sayfa görünsün)
+  // show_slug ile gruplanmış tur/gösteri sayfası (1+ etkinlik; tek etkinlikte de sayfa görünsün)
   const showEvents = await getEventsByShowSlug(id);
   if (showEvents.length >= 1) {
     const firstEvent = showEvents[0] as { created_by_user_id?: string; organizer_display_name?: string | null };

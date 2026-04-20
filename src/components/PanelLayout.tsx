@@ -11,9 +11,9 @@ interface PanelLayoutProps {
   children: React.ReactNode;
 }
 
-/** Biletinial tarzı profil alanı: sabit yan menü genişliği (260px) + içerik alanı geniş (Biletinial MySubscriptions gibi). */
+/** Kullanıcı paneli: sabit yan menü (260px) + geniş içerik alanı. */
 const SIDEBAR_WIDTH = 260;
-const CONTENT_MAX_WIDTH = "max-w-5xl"; // 1024px – Biletinial gibi geniş içerik alanı
+const CONTENT_MAX_WIDTH = "max-w-5xl"; // 1024px – geniş içerik alanı
 
 function hrefWithLocale(locale: string, path: string): string {
   if (path === "/") return `/${locale}`;

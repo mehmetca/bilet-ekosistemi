@@ -1,4 +1,4 @@
--- Organizatörlerin etkinliklerde görünecek isimleri (Biletinial tarzı "Organizasyon Erdal Kaya")
+-- Organizatörlerin etkinliklerde görünecek isimleri
 -- 1. organizer_requests'a organization_display_name ekle
 ALTER TABLE public.organizer_requests
   ADD COLUMN IF NOT EXISTS organization_display_name TEXT;

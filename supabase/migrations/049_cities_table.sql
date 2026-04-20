@@ -1,4 +1,4 @@
--- Şehir sayfaları (Eventim tarzı "Das ist los in deiner Stadt!")
+-- Şehir sayfaları (şehir bazlı etkinlik listesi)
 -- Her şehir: slug, çok dilli ad/açıklama, hero görsel
 CREATE TABLE IF NOT EXISTS public.cities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

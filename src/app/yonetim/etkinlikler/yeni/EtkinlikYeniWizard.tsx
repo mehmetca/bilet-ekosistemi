@@ -129,7 +129,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   /** Sipariş özeti: etkinlik başına bir kez; boş veya 0 = gösterilmez */
   const [checkoutProcessingFeeInput, setCheckoutProcessingFeeInput] = useState<number | "">("");
   const [ticketUrl, setTicketUrl] = useState("");
-  /** Tur/gösteri gruplaması için show_slug (Biletinial tarzı tek sayfa) */
+  /** Tur/gösteri gruplaması için show_slug (tek gösteri sayfası) */
   const [showSlugId, setShowSlugId] = useState("");
 
   const [date, setDate] = useState("");

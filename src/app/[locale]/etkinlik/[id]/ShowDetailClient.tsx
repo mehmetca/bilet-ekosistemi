@@ -113,7 +113,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
     <div className="min-h-screen bg-[#f5f6f8]">
       <Header />
 
-      {/* Hero - Biletinial tarzı */}
+      {/* Hero – etkinlik özeti */}
       <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto w-full max-w-7xl px-4 py-8">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
@@ -159,7 +159,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
         </div>
       </div>
 
-      {/* Şehir seçimi ve seanslar - Biletinial tarzı */}
+      {/* Şehir seçimi ve seanslar */}
       <div className="mx-auto w-full max-w-7xl px-4 py-10">
         {hasExternalTickets && (
           <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">

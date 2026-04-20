@@ -125,7 +125,7 @@ export function parseEventYmd(raw: string | null | undefined): { y: number; m: n
 }
 
 /**
- * Etkinlik kartı (Biletinial tarzı): kısa ay, gün, uzun satır (gün ay yıl günadı, saat).
+ * Etkinlik kartı: kısa ay, gün, uzun satır (gün ay yıl günadı, saat).
  */
 export function formatEventLongDateTime(
   dateStr: string | null | undefined,
@@ -166,7 +166,7 @@ export function formatEventLongDateTime(
   };
 }
 
-/** Sepet / özet: Eventim tarzı — hafta günü, gg.aa.yyyy, saat (yerel). */
+/** Sepet / özet: hafta günü, gg.aa.yyyy, saat (yerel). */
 export function formatCartEventWhen(
   locale: "tr" | "de" | "en",
   dateStr: string | undefined,
