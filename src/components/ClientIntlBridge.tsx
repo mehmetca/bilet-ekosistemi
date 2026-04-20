@@ -18,12 +18,19 @@ export function ClientIntlBridge({
   messages: Record<string, unknown>;
   children: ReactNode;
 }) {
+  const defaultTimeZone =
+    locale === "de" ? "Europe/Berlin" :
+    locale === "en" ? "Europe/London" :
+    "Europe/Istanbul";
+
   return (
     <NextIntlClientProvider
       locale={locale}
       messages={messages}
+      timeZone={defaultTimeZone}
       onError={(err) => {
-        if ((err as { code?: string }).code === "MISSING_MESSAGE") return;
+        const code = (err as { code?: string }).code;
+        if (code === "MISSING_MESSAGE" || code === "ENVIRONMENT_FALLBACK") return;
         console.error(err);
       }}
       getMessageFallback={({ namespace, key }) =>

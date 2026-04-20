@@ -180,8 +180,8 @@ export default function ClientHomePage({
         if (!data || typeof data !== "object") return;
         const v = {
           variant: data.variant || "A",
-          hero_title: data.hero_title || "Hayalinizdaki Etkinliğe Bilet Bulun",
-          hero_subtitle: data.hero_subtitle || "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.",
+          hero_title: data.hero_title || "Hayalinizdeki Etkinliğe Bilet Bulun",
+          hero_subtitle: data.hero_subtitle || "Güvenli ödeme ile kolayca bilet alın.",
           cta_text: data.cta_text || "Ara",
         };
         setHeroVariant(v);
@@ -194,8 +194,8 @@ export default function ClientHomePage({
       .catch(() => {
         setHeroVariant({
           variant: "A",
-          hero_title: "Hayalinizdaki Etkinliğe Bilet Bulun",
-          hero_subtitle: "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.",
+          hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
+          hero_subtitle: "Güvenli ödeme ile kolayca bilet alın.",
           cta_text: "Ara",
         });
       });

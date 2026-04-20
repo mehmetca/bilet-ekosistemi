@@ -55,9 +55,7 @@ export default function SearchSection({ events, onFilteredEventsChange }: Search
         <h1 className="text-4xl font-bold md:text-5xl">
           Hayalinizdeki Etkinliğe Bilet Bulun
         </h1>
-        <p className="mt-4 text-lg text-primary-100">
-          Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.
-        </p>
+        <p className="mt-4 text-lg text-primary-100">Güvenli ödeme ile kolayca bilet alın.</p>
         
         <div className="mx-auto mt-8 max-w-4xl space-y-4">
           <div className="flex gap-2">

@@ -16,9 +16,8 @@ export async function GET() {
     if (expErr || !experiments?.length) {
       return NextResponse.json({
         variant: null,
-        hero_title: "Hayalinizdaki Etkinliğe Bilet Bulun",
-        hero_subtitle:
-          "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.",
+        hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
+        hero_subtitle: "Güvenli ödeme ile kolayca bilet alın.",
         cta_text: "Ara",
       });
     }
@@ -33,9 +32,8 @@ export async function GET() {
     if (varErr || !variants?.length) {
       return NextResponse.json({
         variant: "A",
-        hero_title: "Hayalinizdaki Etkinliğe Bilet Bulun",
-        hero_subtitle:
-          "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.",
+        hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
+        hero_subtitle: "Güvenli ödeme ile kolayca bilet alın.",
         cta_text: "Ara",
       });
     }
@@ -54,19 +52,16 @@ export async function GET() {
     return NextResponse.json({
       variant: chosen.variant_key,
       variant_id: chosen.id,
-      hero_title: chosen.hero_title || "Hayalinizdaki Etkinliğe Bilet Bulun",
-      hero_subtitle:
-        chosen.hero_subtitle ||
-        "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.",
+      hero_title: chosen.hero_title || "Hayalinizdeki Etkinliğe Bilet Bulun",
+      hero_subtitle: chosen.hero_subtitle || "Güvenli ödeme ile kolayca bilet alın.",
       cta_text: chosen.cta_text || "Ara",
     });
   } catch (e) {
     console.error("AB variant fetch error:", e);
     return NextResponse.json({
       variant: "A",
-      hero_title: "Hayalinizdaki Etkinliğe Bilet Bulun",
-      hero_subtitle:
-        "Konser, tiyatro, stand-up ve daha fazlası. Güvenli ödeme ile kolayca bilet alın.",
+      hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
+      hero_subtitle: "Güvenli ödeme ile kolayca bilet alın.",
       cta_text: "Ara",
     });
   }
