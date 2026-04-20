@@ -298,7 +298,9 @@ export default function LoginPage() {
       setLoading(false);
       const afterLogin =
         redirectTo && redirectTo.startsWith("/") ? redirectTo : `/${locale}/panel`;
-      window.location.href = hasManagementRole ? "/yonetim" : afterLogin;
+      const managementTarget =
+        redirectTo && redirectTo.startsWith("/") ? redirectTo : "/yonetim";
+      window.location.href = hasManagementRole ? managementTarget : afterLogin;
       return;
     } catch (err: unknown) {
       if (activeLoginAttemptRef.current !== attemptId) return;

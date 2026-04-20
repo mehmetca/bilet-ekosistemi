@@ -322,7 +322,7 @@ async function buildQrCodeDataUrl(payload: TicketMailPayload) {
     ticketOrigin = "https://www.eventseat.de";
   }
 
-  const qrData = `${ticketOrigin}/kontrol?code=${encodeURIComponent(payload.ticketCode)}`;
+  const qrData = `${ticketOrigin}/yonetim/bilet-kontrol?code=${encodeURIComponent(payload.ticketCode)}`;
 
   return QRCode.toDataURL(qrData, {
     width: 220,

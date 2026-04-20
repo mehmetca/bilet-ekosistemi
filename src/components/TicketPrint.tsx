@@ -72,7 +72,7 @@ export default function TicketPrint({
         if (codesToGenerate.length === 1) {
           // QR içeriği: sitemiz URL'i – cep kamerasıyla okutulunca bu sayfa açılır
           const qrData = origin
-            ? `${origin}/kontrol?code=${encodeURIComponent(ticketCode)}`
+            ? `${origin}/yonetim/bilet-kontrol?code=${encodeURIComponent(ticketCode)}`
             : ticketCode;
           const url = await QRCode.toDataURL(qrData, {
             width: 130,
@@ -85,7 +85,7 @@ export default function TicketPrint({
           const map: Record<string, string> = {};
           for (const code of codesToGenerate) {
             const qrData = origin
-              ? `${origin}/kontrol?code=${encodeURIComponent(code)}`
+              ? `${origin}/yonetim/bilet-kontrol?code=${encodeURIComponent(code)}`
               : code;
             map[code] = await QRCode.toDataURL(qrData, {
               width: 130,

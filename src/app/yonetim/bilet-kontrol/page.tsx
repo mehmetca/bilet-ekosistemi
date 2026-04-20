@@ -9,7 +9,7 @@ import MultiTicketScanner from "@/components/MultiTicketScanner";
 import { supabase } from "@/lib/supabase-client";
 
 export default function BiletKontrolPage() {
-  const { isAdmin, isController, isOrganizer } = useSimpleAuth();
+  const { user, loading: authLoading, isAdmin, isController, isOrganizer } = useSimpleAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [ticketCode, setTicketCode] = useState("");
@@ -32,6 +32,16 @@ export default function BiletKontrolPage() {
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (authLoading) return;
+    if (user) return;
+
+    const currentPathWithSearch = `${window.location.pathname}${window.location.search || ""}`;
+    const loginUrl = `/giris?redirect=${encodeURIComponent(currentPathWithSearch)}`;
+    window.location.replace(loginUrl);
+  }, [authLoading, user]);
 
   async function handleSubmit(formData: FormData) {
     setLoading(true);
@@ -91,6 +101,26 @@ export default function BiletKontrolPage() {
     } finally {
       setCheckinLoading(false);
     }
+  }
+
+  if (authLoading) {
+    return (
+      <div className="p-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-600">
+          Oturum kontrol ediliyor...
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="p-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-slate-600">
+          Giriş sayfasına yönlendiriliyor...
+        </div>
+      </div>
+    );
   }
 
   // Admin, kontrolör veya organizatör erişebilir (organizatör sadece kendi etkinliklerinin biletleri)
