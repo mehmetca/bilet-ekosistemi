@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@supabase/supabase-js";
+import { extractTicketCode } from "@/lib/ticket-code";
 
 export type CheckResult =
   | {
@@ -42,7 +43,7 @@ function createAdminSupabase() {
 export async function checkTicket(input: string | FormData): Promise<CheckResult> {
   const rawCode =
     typeof input === "string" ? input : String(input.get("ticket_code") || "");
-  const ticketCode = rawCode.trim().toUpperCase();
+  const ticketCode = extractTicketCode(rawCode);
   const supabase = createAdminSupabase();
   
   try {

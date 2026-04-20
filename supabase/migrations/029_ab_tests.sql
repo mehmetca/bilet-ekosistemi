@@ -54,8 +54,8 @@ INSERT INTO public.ab_experiments (id, name, is_active) VALUES
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.ab_variants (experiment_id, variant_key, hero_title, hero_subtitle, cta_text, weight) VALUES
-  ('a0000000-0000-0000-0000-000000000001'::uuid, 'A', 'Hayalinizdeki Etkinliğe Bilet Bulun', 'Güvenli ödeme ile kolayca bilet alın.', 'Ara', 50),
-  ('a0000000-0000-0000-0000-000000000001'::uuid, 'B', 'Bilet Bul, Anında Al', 'Yüzlerce etkinlik, güvenilir biletleme ve tek tıkla satın alma.', 'Etkinlikleri Keşfet', 50)
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'A', 'Hayalinizdeki Etkinliğe Bilet Bulun', E'Konser, tiyatro, stand-up ve daha fazlası.\nGüvenli ödeme ile kolayca bilet alın.', 'Ara', 50),
+  ('a0000000-0000-0000-0000-000000000001'::uuid, 'B', 'Bilet Bul, Anında Al', E'Konser, tiyatro, stand-up ve daha fazlası.\nGüvenli ödeme ile kolayca bilet alın.', 'Etkinlikleri Keşfet', 50)
 ON CONFLICT (experiment_id, variant_key) DO UPDATE SET
   hero_title = EXCLUDED.hero_title,
   hero_subtitle = EXCLUDED.hero_subtitle,

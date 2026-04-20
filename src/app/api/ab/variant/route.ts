@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 
 export const dynamic = "force-dynamic";
+const HERO_SUBTITLE_TEXT = "Konser, tiyatro, stand-up ve daha fazlası.\nGüvenli ödeme ile kolayca bilet alın.";
 
 export async function GET() {
   try {
@@ -17,7 +18,7 @@ export async function GET() {
       return NextResponse.json({
         variant: null,
         hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
-        hero_subtitle: "Güvenli ödeme ile kolayca bilet alın.",
+        hero_subtitle: HERO_SUBTITLE_TEXT,
         cta_text: "Ara",
       });
     }
@@ -33,7 +34,7 @@ export async function GET() {
       return NextResponse.json({
         variant: "A",
         hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
-        hero_subtitle: "Güvenli ödeme ile kolayca bilet alın.",
+        hero_subtitle: HERO_SUBTITLE_TEXT,
         cta_text: "Ara",
       });
     }
@@ -53,7 +54,7 @@ export async function GET() {
       variant: chosen.variant_key,
       variant_id: chosen.id,
       hero_title: chosen.hero_title || "Hayalinizdeki Etkinliğe Bilet Bulun",
-      hero_subtitle: chosen.hero_subtitle || "Güvenli ödeme ile kolayca bilet alın.",
+      hero_subtitle: HERO_SUBTITLE_TEXT,
       cta_text: chosen.cta_text || "Ara",
     });
   } catch (e) {
@@ -61,7 +62,7 @@ export async function GET() {
     return NextResponse.json({
       variant: "A",
       hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
-      hero_subtitle: "Güvenli ödeme ile kolayca bilet alın.",
+      hero_subtitle: HERO_SUBTITLE_TEXT,
       cta_text: "Ara",
     });
   }

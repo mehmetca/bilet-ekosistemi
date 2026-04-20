@@ -8,6 +8,7 @@ import bwipjs from "bwip-js";
 import { PDFDocument, PDFPage, StandardFonts, degrees, rgb } from "pdf-lib";
 import { parsePhysicalDelivery, shippingFeeForPhysicalDelivery } from "@/lib/checkout-shipping";
 import { createSupabaseServerClient } from "@/lib/supabase-ssr";
+import { getSiteUrl } from "@/lib/site-url";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -307,15 +308,21 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
 }
 
 async function buildQrCodeDataUrl(payload: TicketMailPayload) {
-  const qrData = JSON.stringify({
-    code: payload.ticketCode,
-    event: payload.eventTitle,
-    date: payload.eventDate,
-    time: payload.eventTime,
-    venue: payload.venue,
-    buyer: payload.buyerName,
-    quantity: payload.quantity,
-  });
+  const baseOrigin = getSiteUrl();
+  let ticketOrigin = baseOrigin;
+  try {
+    const originUrl = new URL(baseOrigin);
+    // Apex host bazı cihazlarda sorunlu yönlenebildiği için doğrudan www kullan.
+    if (originUrl.hostname.toLowerCase() === "eventseat.de") {
+      ticketOrigin = "https://www.eventseat.de";
+    } else {
+      ticketOrigin = originUrl.origin;
+    }
+  } catch {
+    ticketOrigin = "https://www.eventseat.de";
+  }
+
+  const qrData = `${ticketOrigin}/kontrol?code=${encodeURIComponent(payload.ticketCode)}`;
 
   return QRCode.toDataURL(qrData, {
     width: 220,

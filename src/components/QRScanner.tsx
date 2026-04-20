@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Html5Qrcode } from "html5-qrcode";
 import { Camera, X, AlertCircle } from "lucide-react";
 import { feedbackService } from "@/lib/feedbackService";
+import { extractTicketCode } from "@/lib/ticket-code";
 
 interface QRScannerProps {
   onScan: (code: string) => void;
@@ -91,27 +92,8 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
           config,
           (decodedText) => {
             feedbackService.playSuccess();
-            let code = decodedText.trim();
-            // Sitemiz QR’ı: /kontrol?code=BLT-XXX – URL’den code çıkar
-            if (code.startsWith("http") && code.includes("code=")) {
-              try {
-                const u = new URL(code);
-                const fromUrl = u.searchParams.get("code");
-                if (fromUrl) code = fromUrl;
-              } catch {
-                /* keep code as-is */
-              }
-            } else {
-              try {
-                const parsed = JSON.parse(code);
-                if (parsed && typeof parsed.code === "string") {
-                  code = parsed.code;
-                }
-              } catch {
-                /* plain text or barcode ticket code */
-              }
-            }
-            onScanRef.current(code.toUpperCase());
+            const code = extractTicketCode(decodedText);
+            onScanRef.current(code);
             if (!continuous) {
               // Tarama biter bitmez scanner'ı güvenli şekilde durdur.
               stopAndClearScanner().finally(() => {

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { requireRole } from "@/lib/api-auth";
+import { extractTicketCode } from "@/lib/ticket-code";
 
 /**
  * Check-in API: Bilet girişini işaretler (orders.checked_at).
@@ -17,10 +18,10 @@ export async function POST(request: NextRequest) {
     const contentType = request.headers.get("content-type") || "";
     if (contentType.includes("application/json")) {
       const body = await request.json();
-      ticketCode = (body?.ticket_code ?? "").trim().toUpperCase();
+      ticketCode = extractTicketCode(String(body?.ticket_code ?? ""));
     } else {
       const formData = await request.formData();
-      ticketCode = String(formData.get("ticket_code") ?? "").trim().toUpperCase();
+      ticketCode = extractTicketCode(String(formData.get("ticket_code") ?? ""));
     }
 
     if (!ticketCode) {
