@@ -32,7 +32,7 @@ import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { formatEventVenueAddressCityLine } from "@/lib/event-venue-display";
 import { formatPrice } from "@/lib/formatPrice";
-import { getLocalizedEvent } from "@/lib/i18n-content";
+import { getLocalizedEvent, type Locale } from "@/lib/i18n-content";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
 import { Link } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
@@ -80,7 +80,7 @@ interface EventDetailClientProps {
   tickets: EventTicket[];
   venue?: Venue | null;
   organizerDisplayName?: string | null;
-  locale?: "tr" | "de" | "en";
+  locale?: Locale;
   /** Etkinlik henüz onaylanmadı (organizatör önizlemesi); bilet satışı kapalı */
   isUnapproved?: boolean;
 }
@@ -561,7 +561,7 @@ function SeatMapWithZoom({
   availableTickets: TicketLike[];
   selectedSeatCategory: string;
   onSelectSeatCategory: (value: string) => void;
-  locale: "tr" | "de" | "en";
+  locale: Locale;
   currency: Event["currency"];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -793,7 +793,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const t = useTranslations("eventDetail");
   const tCheckout = useTranslations("checkout");
   const tCat = useTranslations("categories");
-  const locale = (useLocale() as "tr" | "de" | "en") || localeProp;
+  const locale = ((useLocale() as Locale) || localeProp) as Locale;
   const searchParams = useSearchParams();
   const showSeatGridDebug = searchParams.get("seatDebug") === "1";
   const { addItem, removeSeatItem, totalItems, items: cartItems } = useCart();
