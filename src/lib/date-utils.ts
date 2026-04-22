@@ -124,13 +124,15 @@ export function parseEventYmd(raw: string | null | undefined): { y: number; m: n
   return { y: parseInt(m[1], 10), m: parseInt(m[2], 10), d: parseInt(m[3], 10) };
 }
 
+type SupportedUiLocale = "tr" | "de" | "en" | "ku" | "ckb";
+
 /**
  * Etkinlik kartı: kısa ay, gün, uzun satır (gün ay yıl günadı, saat).
  */
 export function formatEventLongDateTime(
   dateStr: string | null | undefined,
   timeStr: string | null | undefined,
-  locale: "tr" | "de" | "en"
+  locale: SupportedUiLocale
 ): { monthShort: string; dayNum: string; lineLong: string } {
   const ymd = parseEventYmd(dateStr);
   const time = String(timeStr ?? "").trim() || "20:00";
@@ -168,7 +170,7 @@ export function formatEventLongDateTime(
 
 /** Sepet / özet: hafta günü, gg.aa.yyyy, saat (yerel). */
 export function formatCartEventWhen(
-  locale: "tr" | "de" | "en",
+  locale: SupportedUiLocale,
   dateStr: string | undefined,
   timeStr: string | undefined
 ): string {
