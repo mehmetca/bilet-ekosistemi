@@ -12,6 +12,7 @@ import {
 } from "@/lib/events-server";
 import { getSiteUrl } from "@/lib/site-url";
 import { routing } from "@/i18n/routing";
+import type { Locale } from "@/lib/i18n-content";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -31,7 +32,7 @@ function eventPathFromId(
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id, locale: locParam } = await params;
-  const locale = locParam && routing.locales.includes(locParam as "tr" | "de" | "en") ? locParam : routing.defaultLocale;
+  const locale = locParam && routing.locales.includes(locParam as Locale) ? locParam : routing.defaultLocale;
   const showEvents = await getEventsByShowSlug(id);
   const slugResult = await getEventBySlug(id);
   const event = showEvents[0] || slugResult?.event;
@@ -124,7 +125,7 @@ export default async function EventDetailPage({ params }: PageProps) {
         events={showEvents}
         showSlug={id}
         organizerDisplayName={organizerDisplayName}
-        locale={locale as "tr" | "de" | "en"}
+        locale={locale as Locale}
       />
     );
   }
@@ -157,7 +158,7 @@ export default async function EventDetailPage({ params }: PageProps) {
         tickets={tickets}
         venue={venue}
         organizerDisplayName={organizerDisplayName}
-        locale={locale as "tr" | "de" | "en"}
+        locale={locale as Locale}
         isUnapproved={isUnapproved}
       />
     </>

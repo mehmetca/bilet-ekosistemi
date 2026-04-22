@@ -8,7 +8,7 @@ import Header from "@/components/Header";
 import { Link } from "@/i18n/navigation";
 import type { Event } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
-import { getLocalizedEvent } from "@/lib/i18n-content";
+import { getLocalizedEvent, getLocalizedText, type Locale } from "@/lib/i18n-content";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { formatEventVenueAddressCityLine } from "@/lib/event-venue-display";
 import { formatEventLongDateTime } from "@/lib/date-utils";
@@ -17,7 +17,7 @@ interface ShowDetailClientProps {
   events: Event[];
   showSlug: string;
   organizerDisplayName?: string | null;
-  locale?: "tr" | "de" | "en";
+  locale?: Locale;
 }
 
 function buildEventAddressLine(event: Event, venueDisplay: string): string {
@@ -52,20 +52,34 @@ function isPastEventDate(event: Event): boolean {
   return dt < new Date();
 }
 
+function pickBestLocalizedShowText(events: Event[], field: "title" | "description" | "venue", locale: Locale): string {
+  for (const event of events) {
+    const value = getLocalizedText(event as unknown as Record<string, unknown>, field, locale);
+    if (value && value.trim()) return value;
+  }
+  return "";
+}
+
 export default function ShowDetailClient({ events, showSlug, organizerDisplayName = null, locale: localeProp = "tr" }: ShowDetailClientProps) {
   const t = useTranslations("eventDetail");
   const tShow = useTranslations("showDetail");
   const tCat = useTranslations("categories");
-  const locale = (useLocale() as "tr" | "de" | "en") || localeProp;
+  const locale = ((useLocale() as Locale) || localeProp) as Locale;
 
   const firstEvent = events[0];
-  const localized = getLocalizedEvent(firstEvent as unknown as Record<string, unknown>, locale);
+  const localized = {
+    ...getLocalizedEvent(firstEvent as unknown as Record<string, unknown>, locale),
+    title: pickBestLocalizedShowText(events, "title", locale) || getLocalizedEvent(firstEvent as unknown as Record<string, unknown>, locale).title,
+    description:
+      pickBestLocalizedShowText(events, "description", locale) ||
+      getLocalizedEvent(firstEvent as unknown as Record<string, unknown>, locale).description,
+  };
   const parsedDescription = parseEventDescription(localized.description || firstEvent.description);
 
   const hasExternalTickets = useMemo(() => {
     return events.some((e) => {
       const parsed = parseEventDescription(
-        getLocalizedEvent(e as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").description || e.description
+        getLocalizedEvent(e as unknown as Record<string, unknown>, locale).description || e.description
       );
       return Boolean(parsed.externalTicketUrl || (e as Event & { ticket_url?: string }).ticket_url);
     });
@@ -212,7 +226,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                       showTitle={localized.title || firstEvent.title}
                       events={cityEvents}
                       organizerDisplayName={organizerDisplayName}
-                      locale={locale as "tr" | "de" | "en"}
+                      locale={locale}
                       t={t}
                       tShow={tShow}
                     />
@@ -224,7 +238,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                   showTitle={localized.title || firstEvent.title}
                   events={displayEvents}
                   organizerDisplayName={organizerDisplayName}
-                  locale={locale as "tr" | "de" | "en"}
+                  locale={locale}
                   t={t}
                   tShow={tShow}
                 />
@@ -259,7 +273,7 @@ function CityEventsSection({
   showTitle: string;
   events: Event[];
   organizerDisplayName?: string | null;
-  locale: "tr" | "de" | "en";
+  locale: Locale;
   t: (key: string, values?: Record<string, string | number>) => string;
   tShow: (key: string, values?: Record<string, string>) => string;
 }) {
