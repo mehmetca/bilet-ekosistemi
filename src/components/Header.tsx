@@ -5,7 +5,7 @@ import NextLink from "next/link";
 import { Ticket, User, LogIn, Menu, X, Globe, ChevronDown, ShoppingCart, Clock } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { useCart } from "@/context/CartContext";
-import { Link, usePathname, useRouter } from "@/i18n/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { stripLocalePrefixes } from "@/lib/i18n-pathname";
@@ -38,6 +38,10 @@ function withLocalePrefix(pathname: string, targetLocale: string): string {
   const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
   if (normalizedPath === "/") return `/${targetLocale}`;
   return `/${targetLocale}${normalizedPath}`;
+}
+
+function navHref(locale: string, href: string): string {
+  return withLocalePrefix(href, locale);
 }
 
 export default function Header() {
@@ -92,24 +96,24 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
       <div className="container mx-auto flex h-14 sm:h-16 items-center px-3 sm:px-4">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg sm:text-xl text-primary-600 shrink-0">
+        <NextLink href={navHref(locale, "/")} className="flex items-center gap-2 font-bold text-lg sm:text-xl text-primary-600 shrink-0">
           <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary-600 text-white shrink-0">
             <Ticket className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <span className="hidden sm:inline">EventSeat</span>
           <span className="sm:hidden">EventSeat</span>
-        </Link>
+        </NextLink>
 
         {/* Masaüstü menü - ortada: nav + sepet + dil */}
         <nav className="hidden md:flex flex-1 justify-center items-center gap-6">
           {navLinks.map(({ href, labelKey }) => (
-            <Link
+            <NextLink
               key={href}
-              href={href}
+              href={navHref(locale, href)}
               className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
             >
               {t(labelKey)}
-            </Link>
+            </NextLink>
           ))}
           <div className="flex items-center gap-2">
             {cartReserveSecLeft > 0 && (
@@ -186,13 +190,13 @@ export default function Header() {
                 {t("nav.management")}
               </NextLink>
             ) : (
-              <Link
-                href="/panel"
+              <NextLink
+                href={navHref(locale, "/panel")}
                 className="flex items-center gap-2 text-slate-600 hover:text-primary-600 font-medium transition-colors"
               >
                 <User className="h-4 w-4" />
                 {t("nav.myInfo")}
-              </Link>
+              </NextLink>
             )
           ) : (
             <NextLink
@@ -238,14 +242,14 @@ export default function Header() {
             role="navigation"
           >
             {navLinks.map(({ href, labelKey }) => (
-              <Link
+              <NextLink
                 key={href}
-                href={href}
+                href={navHref(locale, href)}
                 onClick={() => setMobileMenuOpen(false)}
                 className="block rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
               >
                 {t(labelKey)}
-              </Link>
+              </NextLink>
             ))}
             <NextLink
               href={`/${locale}/sepet`}
@@ -304,14 +308,14 @@ export default function Header() {
                   {t("nav.management")}
                 </NextLink>
               ) : (
-                <Link
-                  href="/panel"
+                <NextLink
+                  href={navHref(locale, "/panel")}
                   onClick={() => setMobileMenuOpen(false)}
                   className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
                 >
                   <User className="h-4 w-4" />
                   {t("nav.myInfo")}
-                </Link>
+                </NextLink>
               )
             ) : (
               <NextLink
