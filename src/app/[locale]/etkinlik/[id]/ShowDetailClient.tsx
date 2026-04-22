@@ -34,7 +34,7 @@ function getEventCityLabel(event: Event): string {
   return loc.split(",")[0]?.trim() || loc;
 }
 
-function formatCityTicketsTitle(showTitle: string, city: string, locale: "tr" | "de" | "en"): string {
+function formatCityTicketsTitle(showTitle: string, city: string, locale: Locale): string {
   const cleanTitle = (showTitle || "").split(",")[0]?.trim() || showTitle;
   if (locale !== "tr") return `${cleanTitle} ${city}`.trim();
 
