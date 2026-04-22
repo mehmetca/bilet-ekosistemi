@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link } from "@/i18n/navigation";
 import { Eye, EyeOff, ArrowLeft, Calendar, FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useLocale } from "next-intl";
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase-client";
 
@@ -13,6 +14,7 @@ const PASSWORD_VALIDATION_PATTERN = /password|weak|at least \d+ characters/i;
 export default function OrganizerApplicationPage() {
   const t = useTranslations("auth");
   const tApp = useTranslations("organizerApplication");
+  const locale = useLocale();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -115,7 +117,7 @@ export default function OrganizerApplicationPage() {
       <Header />
       <main className="container mx-auto px-4 py-8 max-w-2xl">
         <Link
-          href="/giris"
+          href={`/${locale}/giris`}
           className="inline-flex items-center gap-2 text-slate-600 hover:text-primary-600 text-sm font-medium mb-6"
         >
           <ArrowLeft className="h-4 w-4" />

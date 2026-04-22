@@ -225,6 +225,7 @@ export default function LoginPage() {
       }
       const oauthCallback = new URL("/auth/callback", getOAuthRedirectOrigin());
       oauthCallback.searchParams.set("next", next);
+      oauthCallback.searchParams.set("locale", locale);
       const redirectToUrl = oauthCallback.toString();
 
       const sb = createSupabaseBrowserClient();

@@ -200,7 +200,7 @@ export default function Header() {
             )
           ) : (
             <NextLink
-              href="/giris"
+              href={navHref(locale, "/giris")}
               className="flex items-center gap-2 text-slate-600 hover:text-primary-600 font-medium transition-colors"
             >
               <LogIn className="h-4 w-4" />
@@ -319,7 +319,7 @@ export default function Header() {
               )
             ) : (
               <NextLink
-                href="/giris"
+                href={navHref(locale, "/giris")}
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
               >

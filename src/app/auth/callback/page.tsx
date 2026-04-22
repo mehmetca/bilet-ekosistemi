@@ -11,19 +11,35 @@ import { routing } from "@/i18n/routing";
  *
  * `next` query bazen (Site URL / domain geçişi) kaybolur; o zaman ana sayfa yerine panele düş.
  */
-function resolveOAuthNext(raw: string | null): { path: string; adminFromHome: boolean } {
-  const loc = routing.defaultLocale;
+function isAppLocale(value: string | null): value is (typeof routing.locales)[number] {
+  return !!value && routing.locales.includes(value as (typeof routing.locales)[number]);
+}
+
+function localeFromPath(path: string | null): (typeof routing.locales)[number] | null {
+  if (!path || !path.startsWith("/")) return null;
+  const seg = path.split("/").filter(Boolean)[0] || null;
+  return isAppLocale(seg) ? seg : null;
+}
+
+function resolveOAuthNext(
+  raw: string | null,
+  rawLocale: string | null
+): { path: string; adminFromHome: boolean; locale: (typeof routing.locales)[number] } {
+  const loc =
+    (isAppLocale(rawLocale) ? rawLocale : null) ??
+    localeFromPath(raw) ??
+    routing.defaultLocale;
   const defaultPanel = `/${loc}/panel`;
   if (!raw || raw === "/") {
-    return { path: defaultPanel, adminFromHome: true };
+    return { path: defaultPanel, adminFromHome: true, locale: loc };
   }
   if (!raw.startsWith("/")) {
-    return { path: defaultPanel, adminFromHome: true };
+    return { path: defaultPanel, adminFromHome: true, locale: loc };
   }
   if (raw === `/${loc}` || raw === `/${loc}/`) {
-    return { path: defaultPanel, adminFromHome: true };
+    return { path: defaultPanel, adminFromHome: true, locale: loc };
   }
-  return { path: raw, adminFromHome: false };
+  return { path: raw, adminFromHome: false, locale: loc };
 }
 
 function AuthCallbackInner() {
@@ -31,7 +47,8 @@ function AuthCallbackInner() {
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
   const rawNext = searchParams.get("next");
-  const { path: next, adminFromHome } = resolveOAuthNext(rawNext);
+  const rawLocale = searchParams.get("locale");
+  const { path: next, adminFromHome, locale } = resolveOAuthNext(rawNext, rawLocale);
   const ran = useRef(false);
 
   useEffect(() => {
@@ -43,7 +60,7 @@ function AuthCallbackInner() {
     (async () => {
       try {
         if (!code) {
-          router.replace("/giris");
+          router.replace(`/${locale}/giris`);
           return;
         }
 
@@ -88,10 +105,10 @@ function AuthCallbackInner() {
           return;
         }
 
-        router.replace("/giris?error=oauth");
+        router.replace(`/${locale}/giris?error=oauth`);
       } catch (e) {
         console.error("[auth/callback] unexpected:", e);
-        if (!cancelled) router.replace("/giris?error=oauth");
+        if (!cancelled) router.replace(`/${locale}/giris?error=oauth`);
       }
     })();
 

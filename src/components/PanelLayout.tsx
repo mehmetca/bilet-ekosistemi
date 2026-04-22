@@ -49,7 +49,7 @@ export default function PanelLayout({ children }: PanelLayoutProps) {
 
   async function handleLogout() {
     await signOut();
-    window.location.href = "/";
+    window.location.href = hrefWithLocale(locale, "/");
   }
 
   const sidebarContent = (
