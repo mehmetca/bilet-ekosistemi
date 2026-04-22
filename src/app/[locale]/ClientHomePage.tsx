@@ -676,7 +676,7 @@ export default function ClientHomePage({
                       : 'bg-white border-slate-200'
                   }`}
                 >
-                  <Link href={`/etkinlik/${(event as Event & { show_slug?: string }).show_slug || event.id}`}>
+                  <Link href={`/${locale}/etkinlik/${(event as Event & { show_slug?: string }).show_slug || event.id}`}>
                     <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden cursor-pointer relative">
                       {event.image_url ? (
                         <img
