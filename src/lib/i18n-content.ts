@@ -4,25 +4,28 @@
  */
 export type Locale = "tr" | "de" | "en" | "ku" | "ckb";
 
+const FALLBACK_ORDER: Record<Locale, Locale[]> = {
+  tr: ["tr", "de", "en", "ku", "ckb"],
+  de: ["de", "en", "tr", "ku", "ckb"],
+  en: ["en", "de", "tr", "ku", "ckb"],
+  ku: ["ku", "tr", "de", "en", "ckb"],
+  ckb: ["ckb", "ku", "tr", "de", "en"],
+};
+
 export function getLocalizedText(
   data: Record<string, unknown> | null | undefined,
   field: string,
   locale: Locale
 ): string {
   if (!data) return "";
-  const loc = locale as string;
-  const localized = data[`${field}_${loc}`];
-  if (localized != null && String(localized).trim() !== "") return String(localized);
-  const fallbackTr = data[`${field}_tr`];
-  if (fallbackTr != null && String(fallbackTr).trim() !== "") return String(fallbackTr);
-  const fallbackDe = data[`${field}_de`];
-  if (fallbackDe != null && String(fallbackDe).trim() !== "") return String(fallbackDe);
-  const fallbackEn = data[`${field}_en`];
-  if (fallbackEn != null && String(fallbackEn).trim() !== "") return String(fallbackEn);
-  const fallbackKu = data[`${field}_ku`];
-  if (fallbackKu != null && String(fallbackKu).trim() !== "") return String(fallbackKu);
-  const fallbackCkb = data[`${field}_ckb`];
-  if (fallbackCkb != null && String(fallbackCkb).trim() !== "") return String(fallbackCkb);
+
+  for (const candidateLocale of FALLBACK_ORDER[locale]) {
+    const candidate = data[`${field}_${candidateLocale}`];
+    if (candidate != null && String(candidate).trim() !== "") {
+      return String(candidate);
+    }
+  }
+
   const original = data[field];
   return original != null ? String(original) : "";
 }
