@@ -75,29 +75,54 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-function buildEventStructuredData(event: Event, venue: Venue | null, locale: string, eventPath: string) {
+function buildEventStructuredData(
+  event: Event,
+  venue: Venue | null,
+  locale: string,
+  eventPath: string,
+  organizerDisplayName?: string | null
+) {
   const eventDate = new Date(`${event.date} ${event.time || "20:00"}`);
   const startDate = Number.isFinite(eventDate.getTime())
     ? eventDate.toISOString()
     : `${String(event.date || "1970-01-01").trim()}T12:00:00.000Z`;
+  const endDate = Number.isFinite(eventDate.getTime())
+    ? new Date(eventDate.getTime() + 2 * 60 * 60 * 1000).toISOString()
+    : `${String(event.date || "1970-01-01").trim()}T14:00:00.000Z`;
+  const organizerName =
+    organizerDisplayName?.trim() ||
+    event.organizer_display_name?.trim() ||
+    "Eventseat";
+  const locationAddress = venue?.address?.trim() || event.address?.trim() || event.location?.trim() || undefined;
+  const locationCity = venue?.city?.trim() || event.city?.trim() || event.location?.trim() || undefined;
+
   return {
     "@context": "https://schema.org",
     "@type": "Event",
     name: event.title,
     description: event.description?.replace(/<[^>]*>/g, "").slice(0, 500) || event.title,
     startDate,
+    endDate,
     eventStatus: "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    organizer: {
+      "@type": "Organization",
+      name: organizerName,
+      url: getSiteUrl(),
+    },
+    performer: {
+      "@type": "PerformingGroup",
+      name: organizerName,
+    },
     location: {
       "@type": "Place",
       name: event.venue || venue?.name || "Mekan",
-      address: venue?.address
-        ? {
-            "@type": "PostalAddress",
-            streetAddress: venue.address,
-            addressLocality: venue.city || undefined,
-          }
-        : undefined,
+      address: {
+        "@type": "PostalAddress",
+        streetAddress: locationAddress,
+        addressLocality: locationCity,
+        addressCountry: "DE",
+      },
     },
     image: event.image_url,
     offers: {
@@ -106,6 +131,7 @@ function buildEventStructuredData(event: Event, venue: Venue | null, locale: str
       price: event.price_from || 0,
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
+      validFrom: event.created_at || startDate,
     },
   };
 }
@@ -145,7 +171,7 @@ export default async function EventDetailPage({ params }: PageProps) {
     null;
 
   const eventPath = eventPathFromId(id, [], event);
-  const structuredData = buildEventStructuredData(event, venue, locale, eventPath);
+  const structuredData = buildEventStructuredData(event, venue, locale, eventPath, organizerDisplayName);
 
   return (
     <>
