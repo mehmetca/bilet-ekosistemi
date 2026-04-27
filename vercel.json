@@ -3,7 +3,7 @@
     {
       "source": "/(.*)",
       "has": [{ "type": "host", "value": "eventseat.de" }],
-      "destination": "https://www.eventseat.de/$1",
+      "destination": "https://kurdevents.com/$1",
       "permanent": true
     }
   ],
