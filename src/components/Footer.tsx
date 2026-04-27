@@ -3,6 +3,9 @@
 import NextLink from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Ticket } from "lucide-react";
+import Image from "next/image";
+import { Instagram, Facebook, Twitter, Youtube } from "lucide-react";
+
 
 const menuLinks = [
   { href: "/bilgilendirme", labelKey: "footer.information" },
@@ -41,16 +44,21 @@ export default function Footer() {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_2fr] gap-8 md:gap-6">
           <div className="flex flex-col items-center md:items-start">
-            <NextLink
-              href={hrefWithLocale(locale, "/")}
-              className="flex items-center gap-2 font-bold text-xl text-primary-600 mb-2"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-600 text-white shrink-0">
-                <Ticket className="h-5 w-5" aria-hidden />
-              </div>
-              <span>{t("footer.siteName")}</span>
-            </NextLink>
-            <p className="text-sm text-slate-600 text-center md:text-left max-w-[220px]">
+           
+<NextLink
+  href={hrefWithLocale(locale, "/")}
+  className="flex items-center gap-2 mb-2"
+>
+  <Image
+    src="/images/kurdevent-logo.png"
+    alt="Kurdevent Logo"
+    width={300}
+    height={90}
+    priority
+  />
+</NextLink>
+
+           <p className="text-sm text-slate-600 text-center md:text-left max-w-[220px]">
               {t("footer.tagline")}
             </p>
           </div>
@@ -107,6 +115,47 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-slate-200 mt-8" />
+
+
+<div className="flex items-center justify-center gap-4 mt-6">
+  <a
+    href="https://instagram.com/kurdeventofficial"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-slate-600 hover:text-primary-600 transition-colors"
+  >
+    <Instagram className="h-5 w-5" />
+  </a>
+
+  <a
+    href="https://www.facebook.com/KurdEventOfficial"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-slate-600 hover:text-primary-600 transition-colors"
+  >
+    <Facebook className="h-5 w-5" />
+  </a>
+
+  <a
+    href="https://twitter.com/Kurd_Event"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-slate-600 hover:text-primary-600 transition-colors"
+  >
+    <Twitter className="h-5 w-5" />
+  </a>
+
+  <a
+   href="https://youtube.com/@kurdevent"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-slate-600 hover:text-primary-600 transition-colors"
+  >
+    <Youtube className="h-5 w-5" />
+  </a>
+</div>
+
+
 
       <div className="container mx-auto px-4 py-4">
         <p className="text-sm text-slate-600 font-medium text-center">{t("footer.copyright")}</p>

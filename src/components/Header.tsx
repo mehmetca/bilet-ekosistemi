@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { stripLocalePrefixes } from "@/lib/i18n-pathname";
+import Image from "next/image";
 
 const navLinks = [
   { href: "/", labelKey: "nav.events" },
@@ -96,15 +97,24 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
       <div className="container mx-auto flex h-14 sm:h-16 items-center px-3 sm:px-4">
-        <NextLink href={navHref(locale, "/")} className="flex items-center gap-2 font-bold text-lg sm:text-xl text-primary-600 shrink-0">
-          <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-primary-600 text-white shrink-0">
-            <Ticket className="h-4 w-4 sm:h-5 sm:w-5" />
-          </div>
-          <span className="hidden sm:inline">EventSeat</span>
-          <span className="sm:hidden">EventSeat</span>
-        </NextLink>
 
-        {/* Masaüstü menü - ortada: nav + sepet + dil */}
+<NextLink
+  href={navHref(locale, "/")}
+  className="flex items-center gap-2 shrink-0"
+>
+  <Image
+    src="/images/kurdevent-logo.png"
+    alt="Kurdevent Logo"
+    width={160}
+    height={50}
+    priority
+  />
+</NextLink>
+
+
+
+
+               {/* Masaüstü menü - ortada: nav + sepet + dil */}
         <nav className="hidden md:flex flex-1 justify-center items-center gap-6">
           {navLinks.map(({ href, labelKey }) => (
             <NextLink
