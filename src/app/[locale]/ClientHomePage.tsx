@@ -261,7 +261,13 @@ export default function ClientHomePage({
     return bDate - aDate;
   });
 
-  const upcomingEvents = sortedEvents.filter((event) => !isEventPast(event));
+  const todayIso = getLocalISODateString(new Date());
+  // "Yaklaşan" listede gün içindeki saat farklarından kaynaklı yanlış "bitti" elemesini önlemek için
+  // ana filtreyi gün bazlı yapıyoruz; kart içi durum etiketi yine saat bazlı hesaplanır.
+  const upcomingEvents = sortedEvents.filter((event) => {
+    const day = eventDateISO(event);
+    return day >= todayIso;
+  });
   // Şehir listesi: tekrarsız, virgülden önceki kısım + büyük/küçük harf farkı birleştirilir (örn. 3x Berlin → 1)
   const cityOptions = (() => {
     const byKey = new Map<string, string>();
@@ -343,6 +349,11 @@ export default function ClientHomePage({
       return true;
     });
   })();
+  const hasActiveFilters =
+    searchTerm.trim().length > 0 ||
+    selectedCity !== "all" ||
+    selectedCategory !== "all" ||
+    isDateFilterActive;
 
   // Etkinlik durumunu kontrol et
   const getEventStatus = (event: Event) => {
@@ -657,8 +668,10 @@ export default function ClientHomePage({
                   </ol>
                 </div>
               </>
-            ) : (
+            ) : hasActiveFilters ? (
               <p className="text-lg font-medium">{t("noEventsForFilter")}</p>
+            ) : (
+              <p className="text-lg font-medium">{t("noEventsSlider")}</p>
             )}
           </div>
         ) : (

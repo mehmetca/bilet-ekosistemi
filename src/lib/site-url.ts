@@ -1,20 +1,20 @@
 /**
  * Kanonik site kökü (SEO: canonical, sitemap, Open Graph, robots).
  * Üretimde `NEXT_PUBLIC_SITE_URL` tek bir kök olmalı; Search Console’daki mülk host’u ile uyumlu olsun
- * (örn. `https://www.eventseat.de` veya `https://eventseat.de`).
+ * (örn. `https://www.kurdevents.com` veya `https://kurdevents.com`).
  * Apex ↔ www için middleware artık döngü yapmaz; yine de GSC mülkünüz hangi host ise env’i ona yazın.
  */
 
-/** Eski alan adı; env veya Vercel URL hâlâ burayı gösterse bile kanonik çıktı eventseat.de olur. */
-const LEGACY_PUBLIC_HOSTS = new Set(["kurdevents.com", "www.kurdevents.com"]);
+/** Eski alan adları; env veya Vercel URL hâlâ burayı gösterse bile kanonik çıktı kurdevents.com olur. */
+const LEGACY_PUBLIC_HOSTS = new Set(["eventseat.de", "www.eventseat.de"]);
 
-const CANONICAL_PUBLIC_ORIGIN = "https://eventseat.de";
+const CANONICAL_PUBLIC_ORIGIN = "https://kurdevents.com";
 
 function stripTrailingSlash(url: string): string {
   return url.trim().replace(/\/$/, "");
 }
 
-/** kurdevents → eventseat.de (sitemap / robots / metadata tutarlılığı). */
+/** eventseat → kurdevents.com (sitemap / robots / metadata tutarlılığı). */
 function normalizePublicOrigin(url: string): string {
   const s = stripTrailingSlash(url);
   try {
@@ -77,8 +77,8 @@ export function getPublicSiteOrigin(): string {
   return window.location.origin;
 }
 
-/** Üretim kanonik: Supabase Redirect URL’leri ile uyum (www). */
-const EVENTSEAT_WWW_ORIGIN = "https://www.eventseat.de";
+/** Üretim kanonik: Supabase Redirect URL’leri ile uyum. */
+const KURDEVENTS_CANONICAL_ORIGIN = "https://kurdevents.com";
 
 /**
  * Google OAuth `signInWithOAuth({ options: { redirectTo } })` için kök URL.
@@ -87,7 +87,7 @@ const EVENTSEAT_WWW_ORIGIN = "https://www.eventseat.de";
  *
  * Öncelik:
  * 1. `NEXT_PUBLIC_OAUTH_REDIRECT_ORIGIN` — tam origin (örn. `https://www.eventseat.de`)
- * 2. `NEXT_PUBLIC_SITE_URL` — `eventseat.de` (apex) ise OAuth için **www**’ye çevrilir; zaten `www` ise olduğu gibi
+ * 2. `NEXT_PUBLIC_SITE_URL` — eski host gelirse OAuth için `kurdevents.com` kanoniğine çevrilir
  * 3. `window.location.origin` (localhost / önizleme)
  */
 export function getOAuthRedirectOrigin(): string {
@@ -108,8 +108,8 @@ export function getOAuthRedirectOrigin(): string {
     try {
       const u = new URL(fromEnv.startsWith("http") ? fromEnv : `https://${fromEnv}`);
       const host = u.hostname.toLowerCase();
-      if (host === "eventseat.de") {
-        return EVENTSEAT_WWW_ORIGIN;
+      if (host === "eventseat.de" || host === "www.eventseat.de") {
+        return KURDEVENTS_CANONICAL_ORIGIN;
       }
       return u.origin;
     } catch {

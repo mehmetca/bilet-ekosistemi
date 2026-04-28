@@ -22,7 +22,7 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: { default: "Eventseat", template: "%s | Eventseat" },
+  title: { default: "KurdEvents", template: "%s | KurdEvents" },
   description: "Theater- und Event-Ticketing",
 };
 

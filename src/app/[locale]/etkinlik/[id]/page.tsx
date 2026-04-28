@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const event = showEvents[0] || slugResult?.event;
   if (!event) return { title: "Etkinlik Bulunamadı" };
 
-  const title = `${event.title} | Eventseat`;
+  const title = `${event.title} | KurdEvents`;
   const description =
     event.description?.replace(/<[^>]*>/g, "").slice(0, 160) ||
     `${event.title} - ${event.date} ${event.time || ""} ${event.venue || ""}. Bilet alın.`;
@@ -60,7 +60,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title,
       description,
       url: canonical,
-      siteName: "Eventseat",
+      siteName: "KurdEvents",
       locale: ogLocale,
       type: "website",
       images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630, alt: event.title }] : undefined,
@@ -92,7 +92,7 @@ function buildEventStructuredData(
   const organizerName =
     organizerDisplayName?.trim() ||
     event.organizer_display_name?.trim() ||
-    "Eventseat";
+    "KurdEvents";
   const locationAddress = venue?.address?.trim() || event.address?.trim() || event.location?.trim() || undefined;
   const locationCity = venue?.city?.trim() || event.city?.trim() || event.location?.trim() || undefined;
 

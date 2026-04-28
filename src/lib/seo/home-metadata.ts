@@ -13,28 +13,28 @@ type HomeSeo = {
 
 const HOME_SEO: Record<AppLocale, HomeSeo> = {
   de: {
-    title: "Eventseat – Ticketplattform für Theater & Events",
+    title: "KurdEvents – Ticketplattform für Theater & Events",
     description:
       "Online Tickets verkaufen, Sitzplätze verwalten und Events einfacher organisieren.",
     openGraphLocale: "de_DE",
   },
   en: {
-    title: "Eventseat – Ticketing Platform for Theaters & Events",
+    title: "KurdEvents – Ticketing Platform for Theaters & Events",
     description: "Sell tickets online, manage seating, and run events more efficiently.",
     openGraphLocale: "en_US",
   },
   tr: {
-      title: "Eventseat - Tüm etkinlikler için bilet platformu",
+      title: "KurdEvents - Tum etkinlikler icin bilet platformu",
     description: "Biletleri online satın, koltuk planını yönetin ve etkinliklerinizi daha kolay organize edin.",
     openGraphLocale: "tr_TR",
   },
   ku: {
-    title: "Eventseat – Platforma Bilêtê ji bo Şano û Bûyeran",
+    title: "KurdEvents – Platforma Bilêtê ji bo Şano û Bûyeran",
     description: "Bilêtan online bifiroşe, plana cihan birêve bibe û bûyerên xwe bi hêsanî organîze bike.",
     openGraphLocale: "ku_TR",
   },
   ckb: {
-    title: "Eventseat – پلاتفۆرمی بلیت بۆ شانۆ و بۆنەکان",
+    title: "KurdEvents – پلاتفۆرمی بلیت بۆ شانۆ و بۆنەکان",
     description: "بلیت بە ئۆنلاین بفرۆشە، پلانی کورسی بەڕێوەببە و بۆنەکانت بە ئاسانی ڕێکبخە.",
     openGraphLocale: "ckb_IQ",
   },
@@ -67,7 +67,7 @@ export function buildHomeMetadata(locale: string): Metadata {
       title,
       description,
       url: canonical,
-      siteName: "Eventseat",
+      siteName: "KurdEvents",
       locale: openGraphLocale,
       type: "website",
       alternateLocale: LOCALES.filter((l) => l !== loc),
