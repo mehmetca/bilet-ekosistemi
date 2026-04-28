@@ -17,13 +17,20 @@ type CameraDevice = {
   label: string;
 };
 
+type CameraChoice = {
+  id: string;
+  label: "Arka Kamera" | "Ön Kamera";
+};
+
 export default function QRScanner({ onScan, onClose, continuous = false }: QRScannerProps) {
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(true);
+  const [isArmed, setIsArmed] = useState(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
   const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
+  const [cameraChoices, setCameraChoices] = useState<CameraChoice[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
 
   async function stopAndClearScanner() {
@@ -45,13 +52,13 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
     feedbackService.playScanStart();
 
     const elementId = "qr-reader";
-    // Cep: geniş ve kısa kutu barkod okumayı kolaylaştırır; masaüstü kare QR için uygun
+    // Mobilde okuma kutusunu büyüt (uzaktan/rahat hizalama için).
     const isNarrow = typeof window !== "undefined" && window.innerWidth < 500;
     const config = {
       fps: 10,
       qrbox: isNarrow
-        ? { width: 260, height: 100 }
-        : { width: 250, height: 250 },
+        ? { width: 320, height: 180 }
+        : { width: 340, height: 240 },
       aspectRatio: 1.0,
     };
 
@@ -66,7 +73,21 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
 
         if (!mounted) return;
 
-        setAvailableCameras(cameras as CameraDevice[]);
+        const camList = cameras as CameraDevice[];
+        setAvailableCameras(camList);
+
+        const backCam = camList.find((c) =>
+          /back|rear|environment|hinten|ruck|r\u00fcck|arka/i.test(c.label || "")
+        );
+        const frontCam = camList.find((c) =>
+          /front|user|vorder|on|selfie|on kamera/i.test(c.label || "")
+        );
+        const choices: CameraChoice[] = [];
+        if (backCam) choices.push({ id: backCam.id, label: "Arka Kamera" });
+        if (frontCam && frontCam.id !== backCam?.id) choices.push({ id: frontCam.id, label: "Ön Kamera" });
+        if (choices.length === 0 && camList[0]) choices.push({ id: camList[0].id, label: "Arka Kamera" });
+        if (choices.length === 1 && camList[1] && camList[1].id !== choices[0].id) choices.push({ id: camList[1].id, label: "Ön Kamera" });
+        setCameraChoices(choices);
 
         const scanner = new Html5Qrcode(elementId);
         scannerRef.current = scanner;
@@ -91,7 +112,9 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
           cameraId,
           config,
           (decodedText) => {
+            if (!isArmed) return;
             feedbackService.playSuccess();
+            setIsArmed(false);
             const code = extractTicketCode(decodedText);
             onScanRef.current(code);
             if (!continuous) {
@@ -140,11 +163,11 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
       mounted = false;
       void stopAndClearScanner();
     };
-  }, [continuous, onClose, selectedCameraId]);
+  }, [continuous, onClose, selectedCameraId, isArmed]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl max-w-md w-full p-6">
+      <div className="bg-white rounded-xl max-w-lg w-full p-6">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-lg font-semibold text-slate-900">QR Kod Tara</h3>
           <button
@@ -170,9 +193,9 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
         <div className="space-y-4">
           <div
             className="relative bg-slate-100 rounded-lg overflow-hidden"
-            style={{ minHeight: 300 }}
+            style={{ minHeight: 380 }}
           >
-            <div id="qr-reader" className="w-full min-h-[300px]" />
+            <div id="qr-reader" className="w-full min-h-[380px]" />
             {isStarting && !error && (
               <div className="absolute inset-0 flex items-center justify-center bg-slate-100">
                 <div className="text-center text-slate-600">
@@ -183,27 +206,47 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
             )}
           </div>
 
-          {availableCameras.length > 1 && (
+          {!error && !isStarting && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <p className="text-sm text-blue-900 mb-2">
+                QR kodu okuma alanına hizalayın, sonra butona basın.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsArmed(true)}
+                className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
+              >
+                {isArmed ? "Taranıyor..." : "Şimdi Tara"}
+              </button>
+            </div>
+          )}
+
+          {cameraChoices.length > 1 && (
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">
                 Kamera seç
               </label>
-              <select
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                value={selectedCameraId ?? ""}
-                onChange={(e) => {
-                  const id = e.target.value || null;
-                  void stopAndClearScanner().finally(() => {
-                    setSelectedCameraId(id);
-                  });
-                }}
-              >
-                {availableCameras.map((cam) => (
-                  <option key={cam.id} value={cam.id}>
-                    {cam.label || cam.id}
-                  </option>
+              <div className="grid grid-cols-2 gap-2">
+                {cameraChoices.map((cam) => (
+                  <button
+                    key={cam.id}
+                    type="button"
+                    onClick={() => {
+                      setIsArmed(false);
+                      void stopAndClearScanner().finally(() => {
+                        setSelectedCameraId(cam.id);
+                      });
+                    }}
+                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                      (selectedCameraId ?? "") === cam.id
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {cam.label}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
           )}
 
