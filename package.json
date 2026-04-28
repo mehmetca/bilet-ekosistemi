@@ -35,6 +35,7 @@
     "html5-qrcode": "^2.3.8",
     "konva": "^9.3.22",
     "lucide-react": "^0.460.0",
+    "luxon": "^3.7.2",
     "next": "14.2.34",
     "next-intl": "^3.26.5",
     "pdf-lib": "^1.17.1",
@@ -46,6 +47,7 @@
     "swr": "^2.2.5"
   },
   "devDependencies": {
+    "@types/luxon": "^3.7.1",
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",

@@ -58,21 +58,21 @@ export default function Footer() {
   />
 </NextLink>
 
-           <p className="text-sm text-slate-600 text-center md:text-left max-w-[220px]">
+           <p className="text-base text-slate-600 text-center md:text-left max-w-[260px] leading-relaxed">
               {t("footer.tagline")}
             </p>
           </div>
 
           <div className="flex flex-col items-center md:items-start">
-            <h3 className="font-semibold text-slate-900 mb-3 text-sm uppercase tracking-wider">
+            <h3 className="font-semibold text-slate-900 mb-3 text-base uppercase tracking-wider">
               {t("footer.menu")}
             </h3>
-            <nav className="flex flex-col gap-2">
+            <nav className="flex flex-col gap-1">
               {menuLinks.map(({ href, labelKey }) => (
                 <NextLink
                   key={href}
                   href={hrefWithLocale(locale, href)}
-                  className="text-slate-600 hover:text-primary-600 text-sm transition-colors"
+                  className="text-slate-600 hover:text-primary-600 text-base py-2.5 min-h-[44px] flex items-center transition-colors"
                 >
                   {t(labelKey)}
                 </NextLink>
@@ -81,18 +81,18 @@ export default function Footer() {
           </div>
 
           <div className="flex flex-col items-center md:items-start">
-            <div className="flex flex-wrap gap-4 text-sm mb-4">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-x-5 gap-y-2 text-base mb-4">
               {policyLinks.map(({ href, labelKey }) => (
                 <NextLink
                   key={href}
                   href={hrefWithLocale(locale, href)}
-                  className="text-slate-600 hover:text-primary-600 font-medium"
+                  className="text-slate-600 hover:text-primary-600 font-medium py-2 min-h-[44px] inline-flex items-center"
                 >
                   {t(labelKey)}
                 </NextLink>
               ))}
             </div>
-            <div className="space-y-4 text-xs text-slate-500 max-w-md">
+            <div className="space-y-4 text-sm text-slate-600 max-w-md leading-relaxed">
               <section id="guvenli-odeme">
                 <strong className="text-slate-700">{t("footer.securePayment")}:</strong>{" "}
                 {t("footer.securePaymentDesc")}
@@ -117,48 +117,52 @@ export default function Footer() {
       <div className="border-t border-slate-200 mt-8" />
 
 
-<div className="flex items-center justify-center gap-4 mt-6">
+<div className="flex items-center justify-center gap-2 sm:gap-4 mt-6">
   <a
     href="https://instagram.com/kurdeventofficial"
     target="_blank"
     rel="noopener noreferrer"
-    className="text-slate-600 hover:text-primary-600 transition-colors"
+    className="text-slate-600 hover:text-primary-600 transition-colors p-3 min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+    aria-label="Instagram"
   >
-    <Instagram className="h-5 w-5" />
+    <Instagram className="h-6 w-6" />
   </a>
 
   <a
     href="https://www.facebook.com/KurdEventOfficial"
     target="_blank"
     rel="noopener noreferrer"
-    className="text-slate-600 hover:text-primary-600 transition-colors"
+    className="text-slate-600 hover:text-primary-600 transition-colors p-3 min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+    aria-label="Facebook"
   >
-    <Facebook className="h-5 w-5" />
+    <Facebook className="h-6 w-6" />
   </a>
 
   <a
     href="https://twitter.com/Kurd_Event"
     target="_blank"
     rel="noopener noreferrer"
-    className="text-slate-600 hover:text-primary-600 transition-colors"
+    className="text-slate-600 hover:text-primary-600 transition-colors p-3 min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+    aria-label="Twitter"
   >
-    <Twitter className="h-5 w-5" />
+    <Twitter className="h-6 w-6" />
   </a>
 
   <a
    href="https://youtube.com/@kurdevent"
     target="_blank"
     rel="noopener noreferrer"
-    className="text-slate-600 hover:text-primary-600 transition-colors"
+    className="text-slate-600 hover:text-primary-600 transition-colors p-3 min-h-[44px] min-w-[44px] inline-flex items-center justify-center"
+    aria-label="YouTube"
   >
-    <Youtube className="h-5 w-5" />
+    <Youtube className="h-6 w-6" />
   </a>
 </div>
 
 
 
       <div className="container mx-auto px-4 py-4">
-        <p className="text-sm text-slate-600 font-medium text-center">{t("footer.copyright")}</p>
+        <p className="text-base text-slate-600 font-medium text-center">{t("footer.copyright")}</p>
       </div>
     </footer>
   );

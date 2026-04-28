@@ -13,6 +13,8 @@ import {
 import { getSiteUrl } from "@/lib/site-url";
 import { routing } from "@/i18n/routing";
 import type { Locale } from "@/lib/i18n-content";
+import { buildEventJsonLd } from "@/lib/event-jsonld";
+import { DateTime } from "luxon";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -75,67 +77,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-function buildEventStructuredData(
-  event: Event,
-  venue: Venue | null,
-  locale: string,
-  eventPath: string,
-  organizerDisplayName?: string | null
-) {
-  const eventDate = new Date(`${event.date} ${event.time || "20:00"}`);
-  const startDate = Number.isFinite(eventDate.getTime())
-    ? eventDate.toISOString()
-    : `${String(event.date || "1970-01-01").trim()}T12:00:00.000Z`;
-  const endDate = Number.isFinite(eventDate.getTime())
-    ? new Date(eventDate.getTime() + 2 * 60 * 60 * 1000).toISOString()
-    : `${String(event.date || "1970-01-01").trim()}T14:00:00.000Z`;
-  const organizerName =
-    organizerDisplayName?.trim() ||
-    event.organizer_display_name?.trim() ||
-    "KurdEvents";
-  const locationAddress = venue?.address?.trim() || event.address?.trim() || event.location?.trim() || undefined;
-  const locationCity = venue?.city?.trim() || event.city?.trim() || event.location?.trim() || undefined;
-
-  return {
-    "@context": "https://schema.org",
-    "@type": "Event",
-    name: event.title,
-    description: event.description?.replace(/<[^>]*>/g, "").slice(0, 500) || event.title,
-    startDate,
-    endDate,
-    eventStatus: "https://schema.org/EventScheduled",
-    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-    organizer: {
-      "@type": "Organization",
-      name: organizerName,
-      url: getSiteUrl(),
-    },
-    performer: {
-      "@type": "PerformingGroup",
-      name: organizerName,
-    },
-    location: {
-      "@type": "Place",
-      name: event.venue || venue?.name || "Mekan",
-      address: {
-        "@type": "PostalAddress",
-        streetAddress: locationAddress,
-        addressLocality: locationCity,
-        addressCountry: "DE",
-      },
-    },
-    image: event.image_url,
-    offers: {
-      "@type": "Offer",
-      url: `${getSiteUrl()}/${locale}${eventPath}`,
-      price: event.price_from || 0,
-      priceCurrency: "EUR",
-      availability: "https://schema.org/InStock",
-      validFrom: event.created_at || startDate,
-    },
-  };
-}
-
 export default async function EventDetailPage({ params }: PageProps) {
   const { locale = "tr", id } = await params;
 
@@ -146,13 +87,43 @@ export default async function EventDetailPage({ params }: PageProps) {
     const lookedUp = await getOrganizerDisplayName(firstEvent.created_by_user_id);
     const organizerDisplayName =
       firstEvent.organizer_display_name?.trim() || lookedUp || null;
+
+    const now = DateTime.now().setZone("Europe/Berlin");
+    const upcoming = showEvents.filter((e) => {
+      const parts = (e.date || "").trim().split("-").map((x) => parseInt(x, 10));
+      const t = (e.time || "20:00").trim();
+      const tm = /^(\d{1,2}):(\d{2})$/.exec(t);
+      const h = tm ? parseInt(tm[1]!, 10) : 20;
+      const mi = tm ? parseInt(tm[2]!, 10) : 0;
+      if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return true;
+      const [y, mo, d] = parts as [number, number, number];
+      const dt = DateTime.fromObject({ year: y, month: mo, day: d, hour: h, minute: mi, second: 0 }, { zone: "Europe/Berlin" });
+      return dt.isValid && dt >= now;
+    });
+    const ordered = [...(upcoming.length ? upcoming : showEvents)].sort((a, b) => {
+      const da = `${a.date} ${a.time || "00:00"}`;
+      const db = `${b.date} ${b.time || "00:00"}`;
+      return da.localeCompare(db, undefined, { numeric: true });
+    });
+    const primaryEvent = ordered[0]!;
+    const venue =
+      primaryEvent.venue_id != null ? await getVenue(primaryEvent.venue_id) : null;
+    const eventPath = eventPathFromId(id, showEvents, primaryEvent);
+    const structuredData = buildEventJsonLd(primaryEvent, venue, locale, eventPath, organizerDisplayName);
+
     return (
-      <ShowDetailClient
-        events={showEvents}
-        showSlug={id}
-        organizerDisplayName={organizerDisplayName}
-        locale={locale as Locale}
-      />
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+        />
+        <ShowDetailClient
+          events={showEvents}
+          showSlug={id}
+          organizerDisplayName={organizerDisplayName}
+          locale={locale as Locale}
+        />
+      </>
     );
   }
 
@@ -171,7 +142,7 @@ export default async function EventDetailPage({ params }: PageProps) {
     null;
 
   const eventPath = eventPathFromId(id, [], event);
-  const structuredData = buildEventStructuredData(event, venue, locale, eventPath, organizerDisplayName);
+  const structuredData = buildEventJsonLd(event, venue, locale, eventPath, organizerDisplayName);
 
   return (
     <>
