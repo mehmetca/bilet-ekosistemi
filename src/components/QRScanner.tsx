@@ -32,6 +32,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
   const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
   const [cameraChoices, setCameraChoices] = useState<CameraChoice[]>([]);
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
+  const [selectedFacingMode, setSelectedFacingMode] = useState<"environment" | "user">("environment");
 
   async function stopAndClearScanner() {
     const scanner = scannerRef.current;
@@ -108,26 +109,39 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
           return;
         }
 
-        await scanner.start(
-          cameraId,
-          config,
-          (decodedText) => {
-            if (!isArmed) return;
-            feedbackService.playSuccess();
-            setIsArmed(false);
-            const code = extractTicketCode(decodedText);
-            onScanRef.current(code);
-            if (!continuous) {
-              // Tarama biter bitmez scanner'ı güvenli şekilde durdur.
-              stopAndClearScanner().finally(() => {
-                onClose();
-              });
-            }
-          },
-          () => {
-            /* scan error - ignore, keeps trying */
+        const onDecoded = (decodedText: string) => {
+          if (!isArmed) return;
+          feedbackService.playSuccess();
+          setIsArmed(false);
+          const code = extractTicketCode(decodedText);
+          onScanRef.current(code);
+          if (!continuous) {
+            // Tarama biter bitmez scanner'ı güvenli şekilde durdur.
+            stopAndClearScanner().finally(() => {
+              onClose();
+            });
           }
-        );
+        };
+
+        try {
+          await scanner.start(
+            { facingMode: selectedFacingMode },
+            config,
+            onDecoded,
+            () => {
+              /* scan error - ignore, keeps trying */
+            }
+          );
+        } catch {
+          await scanner.start(
+            cameraId,
+            config,
+            onDecoded,
+            () => {
+              /* scan error - ignore, keeps trying */
+            }
+          );
+        }
 
         if (mounted) setIsStarting(false);
       } catch (err) {
@@ -163,7 +177,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
       mounted = false;
       void stopAndClearScanner();
     };
-  }, [continuous, onClose, selectedCameraId, isArmed]);
+  }, [continuous, onClose, selectedCameraId, isArmed, selectedFacingMode]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
@@ -221,34 +235,47 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
             </div>
           )}
 
-          {cameraChoices.length > 1 && (
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">
-                Kamera seç
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                {cameraChoices.map((cam) => (
-                  <button
-                    key={cam.id}
-                    type="button"
-                    onClick={() => {
-                      setIsArmed(false);
-                      void stopAndClearScanner().finally(() => {
-                        setSelectedCameraId(cam.id);
-                      });
-                    }}
-                    className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                      (selectedCameraId ?? "") === cam.id
-                        ? "border-blue-500 bg-blue-50 text-blue-700"
-                        : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
-                    }`}
-                  >
-                    {cam.label}
-                  </button>
-                ))}
-              </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-600 mb-1">Kamera seç</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsArmed(false);
+                  setSelectedFacingMode("environment");
+                  const back = cameraChoices.find((c) => c.label === "Arka Kamera");
+                  void stopAndClearScanner().finally(() => {
+                    setSelectedCameraId(back?.id ?? availableCameras[0]?.id ?? null);
+                  });
+                }}
+                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  selectedFacingMode === "environment"
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Arka Kamera
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsArmed(false);
+                  setSelectedFacingMode("user");
+                  const front = cameraChoices.find((c) => c.label === "Ön Kamera");
+                  void stopAndClearScanner().finally(() => {
+                    setSelectedCameraId(front?.id ?? availableCameras[1]?.id ?? availableCameras[0]?.id ?? null);
+                  });
+                }}
+                className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                  selectedFacingMode === "user"
+                    ? "border-blue-500 bg-blue-50 text-blue-700"
+                    : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                }`}
+              >
+                Ön Kamera
+              </button>
             </div>
-          )}
+          </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
