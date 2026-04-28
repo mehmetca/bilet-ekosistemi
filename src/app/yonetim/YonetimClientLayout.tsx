@@ -7,14 +7,24 @@ import AdminPolicyHeader from "@/components/AdminPolicyHeader";
 import Footer from "@/components/Footer";
 import OrganizerLayout from "@/components/OrganizerLayout";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function YonetimClientLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { isOrganizer, loading } = useSimpleAuth();
+  const { isOrganizer, isController, loading } = useSimpleAuth();
+  const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!isController) return;
+    if (pathname?.startsWith("/yonetim/bilet-kontrol")) return;
+    router.replace("/yonetim/bilet-kontrol");
+  }, [loading, isController, pathname, router]);
 
   useEffect(() => {
     if (sidebarOpen && window.matchMedia("(max-width: 767px)").matches) {
@@ -29,7 +39,13 @@ export default function YonetimClientLayout({
 
   return (
     <AdminGuard>
-      {!loading && isOrganizer ? (
+      {!loading && isController ? (
+        <div className="min-h-screen bg-slate-50">
+          <Suspense fallback={<div className="flex items-center justify-center py-16 text-slate-500">Yükleniyor...</div>}>
+            {children}
+          </Suspense>
+        </div>
+      ) : !loading && isOrganizer ? (
         <OrganizerLayout>
           <Suspense fallback={<div className="flex items-center justify-center py-16 text-slate-500">Yükleniyor...</div>}>
             {children}

@@ -1,25 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, XCircle, QrCode, LogIn, Camera } from "lucide-react";
-
-function GuideImagePlaceholder({ title, subtitle, tone }: { title: string; subtitle: string; tone: "green" | "red" | "blue" }) {
-  const toneClass =
-    tone === "green"
-      ? "from-green-100 to-emerald-100 border-green-200 text-green-900"
-      : tone === "red"
-        ? "from-red-100 to-rose-100 border-red-200 text-red-900"
-        : "from-blue-100 to-indigo-100 border-blue-200 text-blue-900";
-
-  return (
-    <div className={`rounded-xl border bg-gradient-to-br p-4 ${toneClass}`}>
-      <div className="aspect-[16/10] w-full rounded-lg border border-white/60 bg-white/50 p-4">
-        <div className="text-sm font-semibold">{title}</div>
-        <div className="mt-2 text-xs opacity-80">{subtitle}</div>
-      </div>
-    </div>
-  );
-}
+import { ArrowLeft } from "lucide-react";
 
 export default function BiletKontrolKullanimKlavuzuPage() {
   return (
@@ -39,63 +22,76 @@ export default function BiletKontrolKullanimKlavuzuPage() {
         <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6">
           <p className="text-slate-700">
             Bilet kontrolörü olarak görev almış bulunmaktasınız. Bilet sahibi biletini basılı olarak veya telefonundan gösterdiğinde, QR kodu
-            kendi telefonunuzdan okutulur ve sonuç bu ekranda görülür.
+            kendi telefonunuzdan okutulur ve sonuç bu ekranda görülür. Aşağıdaki fotoğraflar gerçek akışı gösterir.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="mb-2 flex items-center gap-2 text-slate-900 font-semibold">
-              <LogIn className="h-5 w-5 text-blue-600" />
-              1) Giriş Akışı
+        <div className="space-y-6">
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <div className="mb-2 text-sm font-semibold text-slate-900">1) QR kodu kamera ile okutun</div>
+              <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                <Image
+                  src="/images/controller-guide/step-1.png"
+                  alt="QR kod tarama popup ekranı"
+                  width={420}
+                  height={760}
+                  className="h-auto w-full"
+                  priority
+                />
+              </div>
+              <p className="mt-2 text-xs text-slate-700">
+                <code>Kamera ile Tara</code> ve sonra <code>Şimdi Tara</code>. Giriş yoksa önce login ekranı açılır.
+              </p>
             </div>
-            <p className="text-sm text-slate-700">
-              Daha önce siteye giriş yaptıysanız direkt kontrol paneline gelirsiniz. Giriş yapılmamışsa QR okutunca giriş sayfasına yönlenirsiniz.
-              Kullanıcı adı ve şifre ile tekrar giriş yaptıktan sonra bilet kontrol sayfasına dönerek işleme devam edin.
-            </p>
-          </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="mb-2 flex items-center gap-2 text-slate-900 font-semibold">
-              <Camera className="h-5 w-5 text-blue-600" />
-              2) QR Okutma
+            <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
+              <div className="mb-2 text-sm font-semibold text-green-900">2) Yeşil kart: geçerli bilet</div>
+              <div className="overflow-hidden rounded-xl border border-green-200 bg-white">
+                <Image
+                  src="/images/controller-guide/step-2.png"
+                  alt="Geçerli bilet yeşil sonuç kartı"
+                  width={420}
+                  height={760}
+                  className="h-auto w-full"
+                />
+              </div>
+              <p className="mt-2 text-xs text-green-900">
+                Girişe izin verilebilir, alttaki <code>Giriş işaretle</code> butonuna mutlaka basın.
+              </p>
             </div>
-            <p className="text-sm text-slate-700">
-              Bilet üzerindeki QR kodu okutulduğunda sonuç kartı açılır. Geçerli bilette kart yeşil görünür; geçersiz veya daha önce kullanılmış
-              bilette kart kırmızı görünür.
-            </p>
-          </div>
-        </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <QrCode className="h-4 w-4" />
-              Foto 1 - Kontrol Ekranı
+            <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
+              <div className="mb-2 text-sm font-semibold text-green-900">3) Giriş işaretlendi onayı</div>
+              <div className="overflow-hidden rounded-xl border border-green-200 bg-white">
+                <Image
+                  src="/images/controller-guide/step-3.png"
+                  alt="Giriş işaretlendi onay ekranı"
+                  width={420}
+                  height={760}
+                  className="h-auto w-full"
+                />
+              </div>
+              <p className="mt-2 text-xs text-green-900">
+                <code>Giriş işaretlendi</code> mesajını görmeden işlemi tamamlanmış saymayın.
+              </p>
             </div>
-            <GuideImagePlaceholder title="QR okutma sonrası kontrol ekranı" subtitle="Bilet bilgileri burada görünür." tone="blue" />
-          </div>
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
-              Foto 3 - Geçerli Bilet
+
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+              <div className="mb-2 text-sm font-semibold text-red-900">4) Kırmızı kart: içeri almayın</div>
+              <div className="overflow-hidden rounded-xl border border-red-200 bg-white">
+                <Image
+                  src="/images/controller-guide/step-4.png"
+                  alt="Kullanılmış veya geçersiz bilet kırmızı sonuç kartı"
+                  width={420}
+                  height={760}
+                  className="h-auto w-full"
+                />
+              </div>
+              <p className="mt-2 text-xs text-red-900">
+                Bilet daha önce kullanılmış veya geçersizdir; ziyaretçiyi nazik şekilde içeri almayın.
+              </p>
             </div>
-            <GuideImagePlaceholder
-              title="Yeşil kart: Geçerli bilet"
-              subtitle="Mutlaka 'Giriş işaretle' butonuna basın ve 'Giriş işaretlendi' yazısını görün."
-              tone="green"
-            />
-          </div>
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <XCircle className="h-4 w-4 text-red-600" />
-              Foto 4 - Geçersiz/Kullanılmış
-            </div>
-            <GuideImagePlaceholder
-              title="Kırmızı kart: Geçersiz veya kullanılmış"
-              subtitle="Bu biletlerle gelen kişileri nazik bir şekilde içeri almayın."
-              tone="red"
-            />
           </div>
         </div>
       </div>

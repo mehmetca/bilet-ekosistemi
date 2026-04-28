@@ -26,6 +26,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
   const [error, setError] = useState<string | null>(null);
   const [isStarting, setIsStarting] = useState(true);
   const [isArmed, setIsArmed] = useState(false);
+  const isArmedRef = useRef(false);
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
@@ -110,8 +111,9 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
         }
 
         const onDecoded = (decodedText: string) => {
-          if (!isArmed) return;
+          if (!isArmedRef.current) return;
           feedbackService.playSuccess();
+          isArmedRef.current = false;
           setIsArmed(false);
           const code = extractTicketCode(decodedText);
           onScanRef.current(code);
@@ -177,7 +179,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
       mounted = false;
       void stopAndClearScanner();
     };
-  }, [continuous, onClose, selectedCameraId, isArmed, selectedFacingMode]);
+  }, [continuous, onClose, selectedCameraId, selectedFacingMode]);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4">
@@ -187,6 +189,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
           <button
             type="button"
             onClick={() => {
+              isArmedRef.current = false;
               void stopAndClearScanner().finally(() => {
                 onClose();
               });
@@ -227,7 +230,10 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
               </p>
               <button
                 type="button"
-                onClick={() => setIsArmed(true)}
+                onClick={() => {
+                  isArmedRef.current = true;
+                  setIsArmed(true);
+                }}
                 className="w-full rounded-lg bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700"
               >
                 {isArmed ? "Taranıyor..." : "Şimdi Tara"}
@@ -241,6 +247,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
               <button
                 type="button"
                 onClick={() => {
+                  isArmedRef.current = false;
                   setIsArmed(false);
                   setSelectedFacingMode("environment");
                   const back = cameraChoices.find((c) => c.label === "Arka Kamera");
@@ -259,6 +266,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
               <button
                 type="button"
                 onClick={() => {
+                  isArmedRef.current = false;
                   setIsArmed(false);
                   setSelectedFacingMode("user");
                   const front = cameraChoices.find((c) => c.label === "Ön Kamera");
@@ -302,6 +310,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
             <button
               type="button"
               onClick={() => {
+                isArmedRef.current = false;
                 void stopAndClearScanner().finally(() => {
                   onClose();
                 });
