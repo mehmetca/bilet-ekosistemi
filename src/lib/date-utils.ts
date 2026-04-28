@@ -126,6 +126,36 @@ export function parseEventYmd(raw: string | null | undefined): { y: number; m: n
 
 type SupportedUiLocale = "tr" | "de" | "en" | "ku" | "ckb";
 
+const KU_MONTHS_LONG = [
+  "rêbendan",
+  "reşemî",
+  "adar",
+  "avrêl",
+  "gulan",
+  "pûşper",
+  "tîrmeh",
+  "gelawêj",
+  "rezber",
+  "kewçêr",
+  "sermawez",
+  "berfanbar",
+] as const;
+
+const CKB_MONTHS_LONG = [
+  "کانوونی دووەم",
+  "شوبات",
+  "ئادار",
+  "نیسان",
+  "ئایار",
+  "حوزەیران",
+  "تەممووز",
+  "ئاب",
+  "ئەیلوول",
+  "تشرینی یەکەم",
+  "تشرینی دووەم",
+  "کانوونی یەکەم",
+] as const;
+
 /**
  * Etkinlik kartı: kısa ay, gün, uzun satır (gün ay yıl günadı, saat).
  */
@@ -176,4 +206,26 @@ export function formatCartEventWhen(
 ): string {
   const { lineLong } = formatEventLongDateTime(dateStr, timeStr, locale);
   return lineLong;
+}
+
+/**
+ * Etkinlik kartı için ay adını locale'a göre yazar: örn. `11 Ocak 2026`, `11 rêbendan 2026`.
+ */
+export function formatEventDateWithMonth(
+  raw: string | null | undefined,
+  locale: SupportedUiLocale
+): string {
+  const ymd = parseEventYmd(raw);
+  if (!ymd) return formatEventDateDMY(raw);
+  const { y, m, d } = ymd;
+  const mi = Math.max(1, Math.min(12, m)) - 1;
+
+  if (locale === "tr") return `${d} ${TR_MONTHS_LONG[mi]} ${y}`;
+  if (locale === "ku") return `${d} ${KU_MONTHS_LONG[mi]} ${y}`;
+  if (locale === "ckb") return `${d} ${CKB_MONTHS_LONG[mi]} ${y}`;
+
+  const localDate = new Date(y, mi, d);
+  const loc = locale === "de" ? "de-DE" : "en-GB";
+  const month = new Intl.DateTimeFormat(loc, { month: "long" }).format(localDate);
+  return `${d} ${month} ${y}`;
 }

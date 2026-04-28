@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Search, Calendar, MapPin } from "lucide-react";
 import { Link, useRouter } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
+import { formatEventDateWithMonth, isEventPastByLocalDateTime } from "@/lib/date-utils";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import type { Event } from "@/types/database";
@@ -197,7 +197,7 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
                       <div className="mt-3 space-y-2 text-sm text-slate-600">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 flex-shrink-0" />
-                        {event.date ? formatEventDateDMY(event.date) : ""} • {event.time ?? ""}
+                        {event.date ? formatEventDateWithMonth(event.date, locale as "tr" | "de" | "en" | "ku" | "ckb") : ""} • {event.time ?? ""}
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 flex-shrink-0" />

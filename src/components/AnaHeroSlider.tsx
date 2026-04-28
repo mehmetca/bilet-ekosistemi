@@ -22,6 +22,56 @@ function isInternalLink(href: string) {
   return href.startsWith("/");
 }
 
+const MONTH_EQUIV: Record<
+  string,
+  { tr: string; de: string; en: string; ku: string; ckb: string }
+> = {
+  ocak: { tr: "Ocak", de: "Januar", en: "January", ku: "rêbendan", ckb: "کانوونی دووەم" },
+  subat: { tr: "Şubat", de: "Februar", en: "February", ku: "reşemî", ckb: "شوبات" },
+  mart: { tr: "Mart", de: "März", en: "March", ku: "adar", ckb: "ئادار" },
+  nisan: { tr: "Nisan", de: "April", en: "April", ku: "avrêl", ckb: "نیسان" },
+  mayis: { tr: "Mayıs", de: "Mai", en: "May", ku: "gulan", ckb: "ئایار" },
+  haziran: { tr: "Haziran", de: "Juni", en: "June", ku: "pûşper", ckb: "حوزەیران" },
+  temmuz: { tr: "Temmuz", de: "Juli", en: "July", ku: "tîrmeh", ckb: "تەممووز" },
+  agustos: { tr: "Ağustos", de: "August", en: "August", ku: "gelawêj", ckb: "ئاب" },
+  eylul: { tr: "Eylül", de: "September", en: "September", ku: "rezber", ckb: "ئەیلوول" },
+  ekim: { tr: "Ekim", de: "Oktober", en: "October", ku: "kewçêr", ckb: "تشرینی یەکەم" },
+  kasim: { tr: "Kasım", de: "November", en: "November", ku: "sermawez", ckb: "تشرینی دووەم" },
+  aralik: { tr: "Aralık", de: "Dezember", en: "December", ku: "berfanbar", ckb: "کانوونی یەکەم" },
+};
+
+function normalizeMonthToken(token: string): string {
+  return (token || "")
+    .toLocaleLowerCase("tr")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z]/g, "");
+}
+
+function localizeOverlayMonth(monthRaw: string, locale: string): string {
+  const key = normalizeMonthToken(monthRaw);
+  const item = MONTH_EQUIV[key];
+  if (!item) return monthRaw;
+  const loc = (locale || "").toLowerCase();
+  if (loc.startsWith("de")) return item.de;
+  if (loc.startsWith("en")) return item.en;
+  if (loc.startsWith("ku")) return item.ku;
+  if (loc.startsWith("ckb")) return item.ckb;
+  return item.tr;
+}
+
+function splitOverlayMonthYear(raw: string, locale: string): { month: string; year: string } {
+  const text = (raw || "").trim();
+  if (!text) return { month: localizeOverlayMonth("Mayıs", locale), year: "2026" };
+  const parts = text.split(/\s+/).filter(Boolean);
+  const yearToken = parts.find((p) => /^\d{4}$/.test(p)) || "2026";
+  const monthToken =
+    parts.find((p) => !/^\d+$/.test(p) && !/^\d{4}$/.test(p)) ||
+    parts[0] ||
+    "Mayıs";
+  return { month: localizeOverlayMonth(monthToken, locale), year: yearToken };
+}
+
 export default function AnaHeroSlider({ placement = "main_slider" }: { placement?: string }) {
   const locale = useLocale();
   const [ads, setAds] = useState<Advertisement[]>([]);
@@ -172,9 +222,10 @@ export default function AnaHeroSlider({ placement = "main_slider" }: { placement
               const overlayTitle = ad.overlay_title?.trim() || ad.title?.trim() || "HARIKA";
               const overlayDay = ad.overlay_day?.trim() || "05";
               const overlayMonthYear = ad.overlay_month_year?.trim() || "Mayıs 2026";
-              const [overlayMonthRaw = "Mayıs", overlayYearRaw = "2026"] = overlayMonthYear.split(/\s+/);
-              const overlayMonth = overlayMonthRaw;
-              const overlayYear = overlayYearRaw;
+              const { month: overlayMonth, year: overlayYear } = splitOverlayMonthYear(
+                overlayMonthYear,
+                locale
+              );
 
               const inner = (
                 <div className="w-full flex-shrink-0">

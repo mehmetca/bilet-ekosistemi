@@ -7,7 +7,7 @@ import { CATEGORY_LABELS } from "@/types/database";
 import { Link } from "@/i18n/navigation";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatPrice } from "@/lib/formatPrice";
-import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
+import { formatEventDateWithMonth, isEventPastByLocalDateTime } from "@/lib/date-utils";
 import type { Locale } from "@/lib/i18n-content";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
 import { useTranslations } from "next-intl";
@@ -154,7 +154,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
                 {CATEGORY_LABELS[currentEvent.category as keyof typeof CATEGORY_LABELS] ?? currentEvent.category ?? "Etkinlik"}
               </span>
               <span className="text-xs opacity-90">
-                {formatEventDateDMY(currentEvent.date)}
+                {formatEventDateWithMonth(currentEvent.date, locale)}
               </span>
             </div>
             
@@ -166,7 +166,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
               <div className="flex items-center gap-1 min-w-0">
                 <Calendar className="h-4 w-4 shrink-0" />
                 <span className="truncate">
-                  {currentEvent.date ? formatEventDateDMY(currentEvent.date) : ""} • {currentEvent.time ?? ""}
+                  {currentEvent.date ? formatEventDateWithMonth(currentEvent.date, locale) : ""} • {currentEvent.time ?? ""}
                 </span>
               </div>
               <div className="flex items-center gap-1 min-w-0">

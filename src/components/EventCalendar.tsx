@@ -10,7 +10,7 @@ import { parseEventDescription } from "@/lib/eventMeta";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { useTranslations, useLocale } from "next-intl";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
-import { parseDateInput, toISODateString, formatEventDateDMY, formatEventDateDMYFromDate } from "@/lib/date-utils";
+import { parseDateInput, toISODateString, formatEventDateWithMonth, formatEventDateDMYFromDate } from "@/lib/date-utils";
 
 interface EventCalendarProps {
   events: Event[];
@@ -182,7 +182,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     <div className="mt-3 space-y-2 text-sm text-slate-500">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 flex-shrink-0" />
-                      {event.date ? formatEventDateDMY(event.date) : ""} • {event.time ?? ""}
+                      {event.date ? formatEventDateWithMonth(event.date, locale as "tr" | "de" | "en" | "ku" | "ckb") : ""} • {event.time ?? ""}
                     </div>
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 flex-shrink-0" />
@@ -256,7 +256,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     <div className="mt-3 space-y-2 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 flex-shrink-0" />
-                        {event.date ? formatEventDateDMY(event.date) : ""} • {event.time ?? ""}
+                        {event.date ? formatEventDateWithMonth(event.date, locale as "tr" | "de" | "en" | "ku" | "ckb") : ""} • {event.time ?? ""}
                       </div>
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 flex-shrink-0" />
