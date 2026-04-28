@@ -213,9 +213,10 @@ export default function EventCalendar({ events }: EventCalendarProps) {
             </h3>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {pastEvents.map((event) => (
-                <div
+                <Link
                   key={`past-${event.id}`}
-                  className="block overflow-hidden rounded-2xl bg-slate-50 border border-slate-300 opacity-80"
+                  href={`/etkinlik/${(event as Event & { show_slug?: string | null }).show_slug || event.slug || event.id}`}
+                  className="block overflow-hidden rounded-2xl bg-slate-50 border border-slate-300 opacity-80 hover:opacity-100 hover:shadow-lg transition-all"
                 >
                   <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden relative">
                     {event.image_url ? (
@@ -246,7 +247,12 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     <span className="text-xs font-medium text-slate-600">
                       {event.category ? t(`categories.${event.category}`) : t("categories.event")}
                     </span>
-                    <h3 className="mt-2 font-semibold text-slate-700 line-clamp-2">{event.title}</h3>
+                    <h3 className="mt-2 font-semibold text-slate-700 line-clamp-2">
+                      {(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").title || event.title) ?? ""}
+                    </h3>
+                    <p className="mt-2 text-sm text-slate-600 line-clamp-2">
+                      {parseEventDescription(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").description || event.description).content}
+                    </p>
                     <div className="mt-3 space-y-2 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 flex-shrink-0" />
@@ -261,7 +267,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                       {t("home.eventEndedBanner")}
                     </p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </div>

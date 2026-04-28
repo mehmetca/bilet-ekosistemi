@@ -2186,7 +2186,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
 
                 {isPastEvent && (
-                  <p className="mb-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
+                  <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
                     {t("eventEnded")}
                   </p>
                 )}

@@ -32,6 +32,55 @@ function eventDateISO(event: Event): string {
   return d.includes("T") ? d.split("T")[0]! : d.slice(0, 10);
 }
 
+function normalizeForSearch(value: string): string {
+  const lower = (value || "").toLocaleLowerCase("tr");
+  const mapped = lower
+    .replace(/ı/g, "i")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ü/g, "u")
+    .replace(/ç/g, "c")
+    .replace(/ğ/g, "g");
+
+  return mapped
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isNearMatch(token: string, candidate: string): boolean {
+  if (!token || !candidate) return false;
+  if (candidate.includes(token)) return true;
+  if (Math.abs(candidate.length - token.length) > 1) return false;
+
+  // Kısa kelimelerde çok gevşek eşleşme yanlış sonuç üretmesin.
+  if (token.length < 4 || candidate.length < 4) return false;
+
+  // En fazla 1 karakter hata (ekleme/silme/değiştirme) toleransı.
+  let i = 0;
+  let j = 0;
+  let edits = 0;
+  while (i < token.length && j < candidate.length) {
+    if (token[i] === candidate[j]) {
+      i++;
+      j++;
+      continue;
+    }
+    edits++;
+    if (edits > 1) return false;
+    if (token.length > candidate.length) i++;
+    else if (token.length < candidate.length) j++;
+    else {
+      i++;
+      j++;
+    }
+  }
+  if (i < token.length || j < candidate.length) edits++;
+  return edits <= 1;
+}
+
 function getLocalISODateString(d: Date): string {
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -298,13 +347,21 @@ export default function ClientHomePage({
       e.city,
       e.address,
     ].filter(Boolean) as string[];
-    return parts.join(" ").toLowerCase();
+    return normalizeForSearch(parts.join(" "));
   };
 
   const filteredEventsRaw = upcomingEvents.filter((event) => {
-    const term = searchTerm.trim().toLowerCase();
+    const term = normalizeForSearch(searchTerm.trim());
+    const termTokens = term ? term.split(" ").filter(Boolean) : [];
     const searchableText = getSearchableText(event);
-    const matchesSearch = !term || searchableText.includes(term);
+    const searchableWords = searchableText.split(" ").filter(Boolean);
+    const matchesSearch =
+      termTokens.length === 0 ||
+      termTokens.every(
+        (token) =>
+          searchableText.includes(token) ||
+          searchableWords.some((w) => isNearMatch(token, w))
+      );
 
     const eventCityRaw = (event as Event & { city?: string | null }).city || event.location || "";
     const eventCityPart = eventCityRaw.includes(",") ? eventCityRaw.split(",")[0].trim() : eventCityRaw.trim();
@@ -405,7 +462,7 @@ export default function ClientHomePage({
                 />
               </div>
               <Link 
-                href="#events"
+                href={searchTerm.trim() ? `/arama?q=${encodeURIComponent(searchTerm.trim())}` : "/arama"}
                 className="rounded-xl bg-primary-600 px-6 sm:px-8 py-3.5 sm:py-4 font-semibold text-white hover:bg-primary-700 transition-colors text-center shrink-0"
               >
                 {locale === "tr" && heroVariant?.cta_text ? heroVariant.cta_text : t("search")}

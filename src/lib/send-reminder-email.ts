@@ -47,10 +47,10 @@ export async function sendReminderEmail(payload: ReminderMailPayload): Promise<{
             Bilet almak veya detayları görmek için aşağıdaki linke tıklayın:
           </p>
           <a href="${payload.eventUrl}" style="display:inline-block;background:#003f8c;color:#fff;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;">
-            EventSeat Etkinlik Sayfasına Git
+            KurdEvents Etkinlik Sayfasına Git
           </a>
           <p style="margin:24px 0 0;font-size:12px;color:#64748b;">
-            EventSeat – Bu hatırlatmayı etkinlik sayfasında e-posta adresinizi girerek aldınız.
+            KurdEvents – Bu hatırlatmayı etkinlik sayfasında e-posta adresinizi girerek aldınız.
           </p>
         </div>
       </div>

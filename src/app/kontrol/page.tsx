@@ -38,7 +38,7 @@ export default function KontrolPage() {
             href="/"
             className="text-primary-600 hover:text-primary-700 font-medium text-sm"
           >
-            ← EventSeat
+            ← KurdEvents
           </Link>
         </div>
         <h1 className="text-xl font-bold text-slate-900 text-center mb-2">

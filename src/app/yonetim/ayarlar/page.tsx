@@ -21,9 +21,9 @@ export default function AyarlarPage() {
   }, []);
 
   const [settings, setSettings] = useState({
-    siteName: "EventSeat",
+    siteName: "KurdEvents",
     siteDescription: "Modern bilet satış platformu",
-    contactEmail: "info@eventseat.com",
+    contactEmail: "info@kurdevents.com",
     maxTicketQuantity: 10,
     enableNotifications: true,
     maintenanceMode: false

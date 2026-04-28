@@ -56,7 +56,7 @@ export default async function RootLayout({
       try {
         messages = (await import("../../messages/en.json")).default;
       } catch {
-        messages = { common: { backToHome: "Ana Sayfaya Dön" }, home: { heroTitle: "EventSeat" } };
+        messages = { common: { backToHome: "Ana Sayfaya Dön" }, home: { heroTitle: "KurdEvents" } };
       }
     }
   }

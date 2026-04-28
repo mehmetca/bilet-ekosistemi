@@ -312,14 +312,14 @@ async function buildQrCodeDataUrl(payload: TicketMailPayload) {
   let ticketOrigin = baseOrigin;
   try {
     const originUrl = new URL(baseOrigin);
-    // Apex host bazı cihazlarda sorunlu yönlenebildiği için doğrudan www kullan.
-    if (originUrl.hostname.toLowerCase() === "eventseat.de") {
-      ticketOrigin = "https://www.eventseat.de";
+    // Eski domain gelirse kanonik alan adına normalize et.
+    if (originUrl.hostname.toLowerCase() === "eventseat.de" || originUrl.hostname.toLowerCase() === "www.eventseat.de") {
+      ticketOrigin = "https://kurdevents.com";
     } else {
       ticketOrigin = originUrl.origin;
     }
   } catch {
-    ticketOrigin = "https://www.eventseat.de";
+    ticketOrigin = "https://kurdevents.com";
   }
 
   const qrData = `${ticketOrigin}/yonetim/bilet-kontrol?code=${encodeURIComponent(payload.ticketCode)}`;
@@ -1199,6 +1199,7 @@ export async function POST(request: NextRequest) {
         seatDetails.push({ section_name, row_label, seat_label, ticket_code: seatTicketCode });
         const { error: seatInsertError } = await supabase.from("order_seats").insert({
           order_id: orderData.id,
+          event_id: ticket.event_id,
           seat_id: seatId,
           section_name,
           row_label,

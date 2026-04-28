@@ -209,9 +209,9 @@ export default function SifreYenilePage() {
               </p>
 
               <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 text-sm text-slate-700 mb-6">
-                <p className="font-medium text-slate-800 mb-2">EventSeat</p>
+                <p className="font-medium text-slate-800 mb-2">KurdEvents</p>
                 <p className="mb-2">
-                  Bu e-posta, EventSeat hesabınız için şifre sıfırlama talebiniz üzerine gönderilmiştir.
+                  Bu e-posta, KurdEvents hesabınız için şifre sıfırlama talebiniz üzerine gönderilmiştir.
                   E-postadaki bağlantıya tıklayarak yeni şifrenizi belirleyebilirsiniz.
                 </p>
                 <p className="text-slate-600">

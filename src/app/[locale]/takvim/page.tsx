@@ -20,7 +20,7 @@ export default async function TakvimPage() {
         {/* Footer */}
         <footer className="border-t border-slate-200 bg-white py-8 mt-16">
           <div className="container mx-auto px-4 text-center text-sm text-slate-500">
-            {new Date().getFullYear()} EventSeat
+            {new Date().getFullYear()} KurdEvents
           </div>
         </footer>
       </div>

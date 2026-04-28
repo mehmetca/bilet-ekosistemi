@@ -4,9 +4,9 @@ import { createServerSupabase } from "@/lib/supabase-server";
 
 const DEFAULT_MAX_TICKET_QUANTITY = 10;
 const DEFAULT_SETTINGS = {
-  siteName: "EventSeat",
+  siteName: "KurdEvents",
   siteDescription: "Modern bilet satış platformu",
-  contactEmail: "info@eventseat.com",
+  contactEmail: "info@kurdevents.com",
   maxTicketQuantity: DEFAULT_MAX_TICKET_QUANTITY,
   enableNotifications: true,
   maintenanceMode: false,
