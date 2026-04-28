@@ -32,6 +32,10 @@ const nextConfig = {
     return [
       { source: "/turne", destination: "/", permanent: true },
       { source: "/turne/:path*", destination: "/", permanent: true },
+      // Search Console / kullanıcı typo toleransı: localized robots/sitemap isteklerini köke topla
+      { source: "/:locale(tr|de|en|ku|ckb)/robots-txt", destination: "/robots.txt", permanent: true },
+      { source: "/:locale(tr|de|en|ku|ckb)/robots.txt", destination: "/robots.txt", permanent: true },
+      { source: "/:locale(tr|de|en|ku|ckb)/sitemap.xml", destination: "/sitemap.xml", permanent: true },
       // Bilgilendirme ana sayfa → SSS (server redirect Sentry ile çakışmasın diye config'de)
       { source: "/tr/bilgilendirme", destination: "/tr/bilgilendirme/sss", permanent: false },
       { source: "/de/bilgilendirme", destination: "/de/bilgilendirme/sss", permanent: false },
