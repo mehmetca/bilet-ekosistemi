@@ -1,11 +1,34 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import OrganizerDashboard from "@/components/OrganizerDashboard";
 
 export default function YonetimDashboard() {
-  const { isAdmin, isController, isOrganizer } = useSimpleAuth();
+  const { isAdmin, isController, isOrganizer, accessToken } = useSimpleAuth();
+  const [pendingControllerCount, setPendingControllerCount] = useState(0);
+
+  useEffect(() => {
+    if (!isAdmin || !accessToken) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/users", {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          cache: "no-store",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { controllerRequests?: Array<unknown> };
+        if (!cancelled) setPendingControllerCount((data.controllerRequests || []).length);
+      } catch {
+        // ignore
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, accessToken]);
 
   if (isOrganizer) {
     return <OrganizerDashboard />;
@@ -30,6 +53,16 @@ export default function YonetimDashboard() {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+      {isAdmin && pendingControllerCount > 0 && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-left">
+          <p className="font-semibold text-amber-900">
+            {pendingControllerCount} kontrolör onay bekliyor.
+          </p>
+          <p className="mt-1 text-sm text-amber-800">
+            Onaylamak için <Link href="/yonetim/kullanicilar" className="underline">Kullanıcı Yönetimi</Link> sayfasına gidin.
+          </p>
+        </div>
+      )}
       <h2 className="text-xl font-semibold text-slate-900 mb-4">Yönetim Paneline Hoş Geldiniz</h2>
       <p className="text-slate-600 mb-6">Sol menüden istediğiniz sayfaya erişebilirsiniz.</p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

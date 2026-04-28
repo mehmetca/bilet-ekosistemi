@@ -11,7 +11,7 @@ import { LogOut } from "lucide-react";
 
 export default function PanelPage() {
   const t = useTranslations("panel");
-  const { user, loading: authLoading, signOut } = useSimpleAuth();
+  const { user, loading: authLoading, signOut, isAdmin, isController, isOrganizer } = useSimpleAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -19,7 +19,17 @@ export default function PanelPage() {
       router.replace("/giris");
       return;
     }
-  }, [user, authLoading, router]);
+    if (!authLoading && user) {
+      if (isController) {
+        router.replace("/yonetim/bilet-kontrol");
+        return;
+      }
+      if (isAdmin || isOrganizer) {
+        router.replace("/yonetim");
+        return;
+      }
+    }
+  }, [user, authLoading, isAdmin, isController, isOrganizer, router]);
 
   async function ensureProfile() {
     if (!user) return;

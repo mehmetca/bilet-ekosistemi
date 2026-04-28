@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileCheck, CheckCircle, XCircle, Calendar, MapPin, User, AlertCircle, Camera, Users, LogIn } from "lucide-react";
+import { FileCheck, CheckCircle, XCircle, Calendar, MapPin, User, AlertCircle, Camera, LogIn } from "lucide-react";
+import Link from "next/link";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { checkTicket, type CheckResult } from "@/app/kontrol/actions";
 import QRScanner from "@/components/QRScanner";
-import MultiTicketScanner from "@/components/MultiTicketScanner";
 import { supabase } from "@/lib/supabase-client";
 
 export default function BiletKontrolPage() {
@@ -14,7 +14,6 @@ export default function BiletKontrolPage() {
   const [result, setResult] = useState<CheckResult | null>(null);
   const [ticketCode, setTicketCode] = useState("");
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [showMultiScanner, setShowMultiScanner] = useState(false);
   const [checkinLoading, setCheckinLoading] = useState(false);
   const [checkinDone, setCheckinDone] = useState(false);
 
@@ -67,6 +66,14 @@ export default function BiletKontrolPage() {
     const formData = new FormData();
     formData.append('ticket_code', c);
     await handleSubmit(formData);
+  }
+
+  function resetForNextTicket() {
+    setTicketCode("");
+    setResult(null);
+    setCheckinDone(false);
+    setLoading(false);
+    setCheckinLoading(false);
   }
 
   async function handleCheckin() {
@@ -143,9 +150,15 @@ export default function BiletKontrolPage() {
   return (
     <div className="p-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold text-slate-900 mb-2">
-          Bilet Kontrol
-        </h1>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <h1 className="text-2xl font-bold text-slate-900">Bilet Kontrol</h1>
+          <Link
+            href="/yonetim/bilet-kontrol/kullanim-klavuzu"
+            className="shrink-0 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100"
+          >
+            Kullanım Kılavuzu
+          </Link>
+        </div>
         <p className="text-slate-600 mb-8">
           Bilet kodunu girin, geçerliliği kontrol edilsin ve girişte kullanıldı olarak işaretlensin.
         </p>
@@ -184,15 +197,6 @@ export default function BiletKontrolPage() {
         >
           <Camera className="h-5 w-5" />
           Kamera ile Tara
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setShowMultiScanner(true)}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-pink-700 transition shadow-md mb-6"
-        >
-          <Users className="h-5 w-5" />
-          Çoklu Bilet Tara (Grup Girişi)
         </button>
 
         {result && (
@@ -244,7 +248,16 @@ export default function BiletKontrolPage() {
                     {checkinLoading ? "İşleniyor..." : "Giriş işaretle"}
                   </button>
                 ) : (
-                  <p className="mt-4 font-medium text-green-700">✓ Giriş işaretlendi.</p>
+                  <div className="mt-4 space-y-3">
+                    <p className="font-medium text-green-700">✓ Giriş işaretlendi.</p>
+                    <button
+                      type="button"
+                      onClick={resetForNextTicket}
+                      className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      Yeni bilet tara
+                    </button>
+                  </div>
                 )}
               </>
             ) : (
@@ -288,6 +301,13 @@ export default function BiletKontrolPage() {
                     </div>
                   </dl>
                 )}
+                <button
+                  type="button"
+                  onClick={resetForNextTicket}
+                  className="mt-4 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Yeni bilet tara
+                </button>
               </>
             )}
           </div>
@@ -303,14 +323,6 @@ export default function BiletKontrolPage() {
           />
         )}
 
-        {showMultiScanner && (
-          <MultiTicketScanner
-            onBatchComplete={() => {
-              setShowMultiScanner(false);
-            }}
-            onClose={() => setShowMultiScanner(false)}
-          />
-        )}
       </div>
     </div>
   );
