@@ -26,23 +26,25 @@ const MONTH_EQUIV: Record<
   string,
   { tr: string; de: string; en: string; ku: string; ckb: string }
 > = {
-  ocak: { tr: "Ocak", de: "Januar", en: "January", ku: "rêbendan", ckb: "کانوونی دووەم" },
-  subat: { tr: "Şubat", de: "Februar", en: "February", ku: "reşemî", ckb: "شوبات" },
-  mart: { tr: "Mart", de: "März", en: "March", ku: "adar", ckb: "ئادار" },
-  nisan: { tr: "Nisan", de: "April", en: "April", ku: "avrêl", ckb: "نیسان" },
-  mayis: { tr: "Mayıs", de: "Mai", en: "May", ku: "gulan", ckb: "ئایار" },
-  haziran: { tr: "Haziran", de: "Juni", en: "June", ku: "pûşper", ckb: "حوزەیران" },
-  temmuz: { tr: "Temmuz", de: "Juli", en: "July", ku: "tîrmeh", ckb: "تەممووز" },
-  agustos: { tr: "Ağustos", de: "August", en: "August", ku: "gelawêj", ckb: "ئاب" },
-  eylul: { tr: "Eylül", de: "September", en: "September", ku: "rezber", ckb: "ئەیلوول" },
-  ekim: { tr: "Ekim", de: "Oktober", en: "October", ku: "kewçêr", ckb: "تشرینی یەکەم" },
-  kasim: { tr: "Kasım", de: "November", en: "November", ku: "sermawez", ckb: "تشرینی دووەم" },
-  aralik: { tr: "Aralık", de: "Dezember", en: "December", ku: "berfanbar", ckb: "کانوونی یەکەم" },
+  ocak: { tr: "Ocak", de: "Januar", en: "January", ku: "Rêbendan", ckb: "کانوونی دووەم" },
+  subat: { tr: "Şubat", de: "Februar", en: "February", ku: "Sibat", ckb: "شوبات" },
+  mart: { tr: "Mart", de: "März", en: "March", ku: "Adar", ckb: "ئادار" },
+  nisan: { tr: "Nisan", de: "April", en: "April", ku: "Avrêl", ckb: "نیسان" },
+  mayis: { tr: "Mayıs", de: "Mai", en: "May", ku: "Gulan", ckb: "ئایار" },
+  haziran: { tr: "Haziran", de: "Juni", en: "June", ku: "Pûşper", ckb: "حوزەیران" },
+  temmuz: { tr: "Temmuz", de: "Juli", en: "July", ku: "Tîrmeh", ckb: "تەممووز" },
+  agustos: { tr: "Ağustos", de: "August", en: "August", ku: "Tebax", ckb: "ئاب" },
+  eylul: { tr: "Eylül", de: "September", en: "September", ku: "Rezber", ckb: "ئەیلوول" },
+  ekim: { tr: "Ekim", de: "Oktober", en: "October", ku: "Cotmeh", ckb: "تشرینی یەکەم" },
+  kasim: { tr: "Kasım", de: "November", en: "November", ku: "Sermawez", ckb: "تشرینی دووەم" },
+  aralik: { tr: "Aralık", de: "Dezember", en: "December", ku: "Berfanbar", ckb: "کانوونی یەکەم" },
 };
 
 function normalizeMonthToken(token: string): string {
   return (token || "")
     .toLocaleLowerCase("tr")
+    .replace(/ı/g, "i")
+    .replace(/İ/g, "i")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z]/g, "");

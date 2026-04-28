@@ -23,6 +23,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
   const [selectedDate, setSelectedDate] = useState<string>("");
   const [filteredEvents, setFilteredEvents] = useState<Event[]>(events);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [pastPage, setPastPage] = useState<number>(1);
   const fallbackImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
 
@@ -54,6 +55,10 @@ export default function EventCalendar({ events }: EventCalendarProps) {
     setFilteredEvents(filtered); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, selectedCategory, events, isAdmin]);
 
+  useEffect(() => {
+    setPastPage(1);
+  }, [selectedDate, selectedCategory, events, isAdmin]);
+
   const now = new Date();
   const getEventDateTime = (event: Event) => new Date(`${event.date}T${event.time || "00:00"}`);
 
@@ -67,6 +72,12 @@ export default function EventCalendar({ events }: EventCalendarProps) {
       return eventDate < now;
     })
     .sort((a, b) => getEventDateTime(b).getTime() - getEventDateTime(a).getTime());
+
+  const PAST_EVENTS_PER_PAGE = 8; // 2 satır (xl: 4 kolon)
+  const pastTotalPages = Math.max(1, Math.ceil(pastEvents.length / PAST_EVENTS_PER_PAGE));
+  const safePastPage = Math.min(pastPage, pastTotalPages);
+  const pastPageStart = (safePastPage - 1) * PAST_EVENTS_PER_PAGE;
+  const visiblePastEvents = pastEvents.slice(pastPageStart, pastPageStart + PAST_EVENTS_PER_PAGE);
 
   return (
     <div className="space-y-6">
@@ -212,7 +223,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
               </span>
             </h3>
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {pastEvents.map((event) => (
+              {visiblePastEvents.map((event) => (
                 <Link
                   key={`past-${event.id}`}
                   href={`/etkinlik/${(event as Event & { show_slug?: string | null }).show_slug || event.slug || event.id}`}
@@ -270,6 +281,40 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 </Link>
               ))}
             </div>
+            {pastTotalPages > 1 && (
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPastPage((p) => Math.max(1, p - 1))}
+                  disabled={safePastPage <= 1}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  ←
+                </button>
+                {Array.from({ length: pastTotalPages }, (_, i) => i + 1).map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    type="button"
+                    onClick={() => setPastPage(pageNum)}
+                    className={`rounded-md px-3 py-1.5 text-sm ${
+                      pageNum === safePastPage
+                        ? "bg-primary-600 text-white"
+                        : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setPastPage((p) => Math.min(pastTotalPages, p + 1))}
+                  disabled={safePastPage >= pastTotalPages}
+                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  →
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -127,18 +127,18 @@ export function parseEventYmd(raw: string | null | undefined): { y: number; m: n
 type SupportedUiLocale = "tr" | "de" | "en" | "ku" | "ckb";
 
 const KU_MONTHS_LONG = [
-  "rêbendan",
-  "reşemî",
-  "adar",
-  "avrêl",
-  "gulan",
-  "pûşper",
-  "tîrmeh",
-  "gelawêj",
-  "rezber",
-  "kewçêr",
-  "sermawez",
-  "berfanbar",
+  "Rêbendan",
+  "Sibat",
+  "Adar",
+  "Avrêl",
+  "Gulan",
+  "Pûşper",
+  "Tîrmeh",
+  "Tebax",
+  "Rezber",
+  "Cotmeh",
+  "Sermawez",
+  "Berfanbar",
 ] as const;
 
 const CKB_MONTHS_LONG = [

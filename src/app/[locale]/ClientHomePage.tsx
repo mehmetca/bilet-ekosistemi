@@ -310,13 +310,9 @@ export default function ClientHomePage({
     return bDate - aDate;
   });
 
-  const todayIso = getLocalISODateString(new Date());
-  // "Yaklaşan" listede gün içindeki saat farklarından kaynaklı yanlış "bitti" elemesini önlemek için
-  // ana filtreyi gün bazlı yapıyoruz; kart içi durum etiketi yine saat bazlı hesaplanır.
-  const upcomingEvents = sortedEvents.filter((event) => {
-    const day = eventDateISO(event);
-    return day >= todayIso;
-  });
+  // "Yaklaşan" listede gerçekten bitmemiş etkinlikleri göster.
+  // Böylece etkinlik biter bitmez ana sayfada "biten" tarafına düşer.
+  const upcomingEvents = sortedEvents.filter((event) => !isEventPast(event));
   // Şehir listesi: tekrarsız, virgülden önceki kısım + büyük/küçük harf farkı birleştirilir (örn. 3x Berlin → 1)
   const cityOptions = (() => {
     const byKey = new Map<string, string>();
