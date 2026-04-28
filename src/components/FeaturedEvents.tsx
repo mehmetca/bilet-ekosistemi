@@ -47,7 +47,7 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
   if (featured.length === 0) return null;
 
   return (
-    <section className="container mx-auto px-4 py-12">
+    <section className="site-container py-12">
       <h2 className="text-2xl font-bold text-slate-900 mb-6">{title}</h2>
       <div className="grid gap-6 md:grid-cols-2">
         {featured.map((event) => {

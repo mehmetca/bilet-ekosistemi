@@ -59,6 +59,13 @@ export default function LoginPage() {
   const [regCity, setRegCity] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regAnrede, setRegAnrede] = useState("");
+  const [ctrlFullName, setCtrlFullName] = useState("");
+  const [ctrlPhone, setCtrlPhone] = useState("");
+  const [ctrlEmail, setCtrlEmail] = useState("");
+  const [ctrlPassword, setCtrlPassword] = useState("");
+  const [ctrlLoading, setCtrlLoading] = useState(false);
+  const [ctrlError, setCtrlError] = useState("");
+  const [ctrlSuccess, setCtrlSuccess] = useState("");
 
   useEffect(() => {
     return () => {
@@ -293,6 +300,17 @@ export default function LoginPage() {
         .maybeSingle();
 
       const role = roleData?.role as string | undefined;
+      if (!role) {
+        const { data: pendingController } = await sb
+          .from("controller_requests")
+          .select("status")
+          .eq("user_id", data.session.user.id)
+          .maybeSingle();
+        if (pendingController && pendingController.status !== "approved") {
+          await sb.auth.signOut({ scope: "local" });
+          throw new Error("Kontrolör başvurunuz henüz onaylanmadı.");
+        }
+      }
       const hasManagementRole = role === "admin" || role === "controller" || role === "organizer";
 
       if (activeLoginAttemptRef.current !== attemptId) return;
@@ -315,11 +333,81 @@ export default function LoginPage() {
     }
   }
 
+  async function handleControllerApply(e: React.FormEvent) {
+    e.preventDefault();
+    if (ctrlLoading) return;
+    setCtrlError("");
+    setCtrlSuccess("");
+    if (!ctrlFullName.trim() || !ctrlPhone.trim()) {
+      setCtrlError("Ad Soyad ve telefon zorunludur.");
+      return;
+    }
+    if (!ctrlEmail.trim() || !ctrlPassword.trim()) {
+      setCtrlError("E-posta ve şifre zorunludur.");
+      return;
+    }
+
+    setCtrlLoading(true);
+    try {
+      const sb = createSupabaseBrowserClient();
+      const { data: signUpData, error: signUpError } = await sb.auth.signUp({
+        email: ctrlEmail.trim(),
+        password: ctrlPassword,
+        options: { emailRedirectTo: undefined },
+      });
+      if (signUpError) {
+        if (PASSWORD_EXISTS_PATTERN.test(signUpError.message || "")) {
+          setCtrlError("Bu e-posta zaten kayıtlı. Giriş yapıp admin onayı bekleyin.");
+          return;
+        }
+        setCtrlError(signUpError.message || "Kontrolör başvurusu başlatılamadı.");
+        return;
+      }
+
+      const {
+        data: { session },
+      } = await sb.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken || !signUpData.user?.id) {
+        setCtrlError("Başvuru için oturum açılamadı. Lütfen tekrar deneyin.");
+        return;
+      }
+
+      const res = await fetch("/api/controller-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          full_name: ctrlFullName.trim(),
+          phone: ctrlPhone.trim(),
+        }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        setCtrlError(payload.error || "Başvuru kaydedilemedi.");
+        return;
+      }
+
+      await sb.auth.signOut({ scope: "local" });
+      setCtrlSuccess("Başvurunuz alındı. Admin onayından sonra giriş yapabilirsiniz.");
+      setCtrlFullName("");
+      setCtrlPhone("");
+      setCtrlEmail("");
+      setCtrlPassword("");
+    } catch (err) {
+      setCtrlError(err instanceof Error ? err.message : "Beklenmeyen hata");
+    } finally {
+      setCtrlLoading(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
 
-      <div className="container mx-auto px-4 py-16">
+      <div className="site-container py-16">
         <div className="mx-auto max-w-md">
           {/* Geri butonu */}
           <Link
@@ -715,6 +803,69 @@ export default function LoginPage() {
                 >
                   <GoogleIcon />
                   {regGoogleLoading ? t("registering") : t("signUpWithGoogle")}
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <div className="mt-12 pt-12 border-t border-slate-200">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-bold text-slate-900 mb-2">Kontrolör Başvurusu</h2>
+                <p className="text-slate-600 text-sm">
+                  Bilet kontrol ekibi için başvuru formu. Admin onayı olmadan giriş yapılamaz.
+                </p>
+              </div>
+              <form onSubmit={handleControllerApply} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Ad Soyad *</label>
+                  <input
+                    type="text"
+                    value={ctrlFullName}
+                    onChange={(e) => setCtrlFullName(e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-slate-300 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Telefon *</label>
+                  <input
+                    type="tel"
+                    value={ctrlPhone}
+                    onChange={(e) => setCtrlPhone(e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-slate-300 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">E-posta *</label>
+                  <input
+                    type="email"
+                    value={ctrlEmail}
+                    onChange={(e) => setCtrlEmail(e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-slate-300 px-4 py-3"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">Şifre *</label>
+                  <input
+                    type="password"
+                    value={ctrlPassword}
+                    onChange={(e) => setCtrlPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    className="w-full rounded-lg border border-slate-300 px-4 py-3"
+                  />
+                </div>
+                {ctrlError && <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">{ctrlError}</div>}
+                {ctrlSuccess && <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">{ctrlSuccess}</div>}
+                <button
+                  type="submit"
+                  disabled={ctrlLoading}
+                  className="w-full bg-slate-900 text-white py-3 rounded-lg font-semibold hover:bg-slate-800 disabled:opacity-50"
+                >
+                  {ctrlLoading ? "Gönderiliyor..." : "Kontrolör Başvurusu Gönder"}
                 </button>
               </form>
             </div>

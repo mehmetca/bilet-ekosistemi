@@ -1422,7 +1422,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       <Header />
       
       <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto w-full max-w-7xl px-4 py-8">
+        <div className="site-container py-8">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
             {tCat((event.category || "diger").toLowerCase())}
           </p>
@@ -1503,7 +1503,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       </div>
 
       {/* Content Section - full width, no sidebar */}
-      <div className="mx-auto w-full max-w-7xl px-4 py-10">
+      <div className="site-container py-10">
         <div>
           {/* Bilet Seçimi - geniş alan */}
           <div

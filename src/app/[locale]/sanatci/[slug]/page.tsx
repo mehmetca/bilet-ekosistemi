@@ -390,7 +390,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
           )}
           {!heroBannerUrl && <div className="absolute inset-0 bg-black/55" />}
           {/* Content */}
-          <div className="relative mx-auto w-full max-w-6xl px-4 py-6 md:py-0 md:h-full md:flex md:items-end md:pb-8">
+          <div className="relative site-container py-6 md:py-0 md:h-full md:flex md:items-end md:pb-8">
             <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:items-end">
               {/* Artist Image */}
               {!heroBannerUrl && (
@@ -438,7 +438,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-6xl px-4 py-8">
+      <div className="site-container py-8">
         <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-start">
           {/* Sol: Bio Section */}
           <div className="min-w-0">

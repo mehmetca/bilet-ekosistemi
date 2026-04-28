@@ -150,7 +150,7 @@ function SanatciIndexContent() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
-      <main className="container mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-10">
+      <main className="site-container py-6 sm:py-10">
         <div className="mb-4 sm:mb-6 text-center">
           <h1 className="page-title text-3xl sm:text-4xl md:text-5xl">{t("title")}</h1>
           <p className="body-muted mt-2 sm:mt-3 text-base sm:text-lg">{t("subtitle")}</p>
@@ -310,7 +310,7 @@ function ArtistsLoadingFallback() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
-      <main className="container mx-auto px-4 py-10">
+      <main className="site-container py-10">
         <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500">
           {t("loading")}
         </div>

@@ -34,7 +34,7 @@ export default function BilgilendirmeLayout({
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
-      <div className="container mx-auto px-4 py-6">
+      <div className="site-container py-6">
         <Link
           href={isB2BPage ? "/bilgilendirme" : "/"}
           className="inline-flex items-center gap-2 text-slate-600 hover:text-primary-600 mb-6 transition-colors"

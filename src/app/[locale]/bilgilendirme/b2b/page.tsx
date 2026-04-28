@@ -50,7 +50,7 @@ export default function B2BPage() {
       </aside>
 
       {/* İçerik */}
-      <div className="flex-1 min-w-0 max-w-3xl order-1 lg:order-2">
+      <div className="flex-1 min-w-0 order-1 lg:order-2">
         {/* Üst bilgi - tüm bölümlerin üstünde */}
         <div className="mb-6 lg:mb-10">
           <h1 className="text-3xl font-bold text-slate-900 mb-2">{t("title")}</h1>

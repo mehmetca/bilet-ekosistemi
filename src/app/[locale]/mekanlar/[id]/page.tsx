@@ -132,7 +132,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
     return (
       <div className="min-h-screen bg-[#f5f6f8]">
         <Header />
-        <div className="mx-auto max-w-5xl px-4 py-16 text-center text-slate-600">{t("title")}</div>
+        <div className="site-container py-16 text-center text-slate-600">{t("title")}</div>
       </div>
     );
   }
@@ -141,7 +141,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
     return (
       <div className="min-h-screen bg-[#f5f6f8]">
         <Header />
-        <div className="mx-auto max-w-5xl px-4 py-16 text-center text-slate-600">{t("notFound")}</div>
+        <div className="site-container py-16 text-center text-slate-600">{t("notFound")}</div>
       </div>
     );
   }
@@ -173,7 +173,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
             if (e.target === e.currentTarget) closeGalleryModal();
           }}
         >
-          <div className="relative w-full max-w-5xl">
+          <div className="relative w-full max-w-7xl mx-auto">
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 rounded-full bg-black/50 border border-white/10 px-3 py-1 text-xs font-semibold text-white">
               {galleryModalIndex + 1} / {gallery.length}
             </div>
@@ -226,7 +226,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
         </div>
 
         <div className="absolute inset-x-0 bottom-[-26px]">
-          <div className="mx-auto max-w-5xl px-4 pb-6">
+          <div className="site-container pb-6">
             <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 p-5">
               <div className="flex flex-col gap-2">
                 <h1 className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-white truncate">
@@ -238,7 +238,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 pt-16 pb-10">
+      <div className="site-container pt-16 pb-10">
         {/* Ayrıntılar */}
         <div className="grid gap-6 xl:grid-cols-[1fr_340px] xl:items-start">
           <div className="space-y-4">

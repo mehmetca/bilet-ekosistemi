@@ -8,7 +8,7 @@ export default function ImpressumPage() {
   const dateLocale = locale === "tr" ? "tr-TR" : locale === "de" ? "de-DE" : "en-US";
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full min-w-0">
       <h1 className="text-3xl font-bold text-slate-900 mb-2">{t("title")}</h1>
       <p className="text-sm text-slate-500 mb-8">
         {new Date().toLocaleDateString(dateLocale, { year: "numeric", month: "long", day: "numeric" })}

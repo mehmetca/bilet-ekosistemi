@@ -55,7 +55,7 @@ export default function HaberDetayClient({ haber, events, otherNews, locale = "t
     <div className="min-h-screen bg-slate-50">
       <Header />
 
-      <div className="mx-auto w-full max-w-7xl px-4 py-6 lg:py-8">
+      <div className="site-container py-6 lg:py-8">
         {/* Üst satır: başlık (sol) | Yaklaşan Etkinlikler (sağ) */}
         <div className="grid gap-6 lg:grid-cols-[1fr_360px] lg:items-end mb-6">
           <div>

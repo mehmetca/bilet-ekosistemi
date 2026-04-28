@@ -6,7 +6,7 @@ import { Ticket, ArrowLeft } from "lucide-react";
 export default function AdminHeader() {
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+      <div className="site-container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2 font-medium text-slate-600 hover:text-primary-600">
           <ArrowLeft className="h-4 w-4" />
           Ana Sayfaya Dön

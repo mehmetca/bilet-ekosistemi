@@ -115,7 +115,8 @@ export default function OrganizerApplicationPage() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
-      <main className="container mx-auto px-4 py-8 max-w-2xl">
+      <main className="site-container py-8">
+        <div className="mx-auto max-w-2xl">
         <Link
           href={`/${locale}/giris`}
           className="inline-flex items-center gap-2 text-slate-600 hover:text-primary-600 text-sm font-medium mb-6"
@@ -360,6 +361,7 @@ export default function OrganizerApplicationPage() {
               {loading ? t("submitting") : t("organizerApply")}
             </button>
           </form>
+        </div>
         </div>
       </main>
     </div>

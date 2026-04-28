@@ -84,6 +84,38 @@ function parseSalonPlanSelectValue(val: string): string | null {
   }
 }
 
+/**
+ * Eski/yeni DB şemaları arasında kategori uyumu:
+ * bazı ortamlarda "stand-up", bazılarında "standup" kabul edilebiliyor.
+ */
+function categoryVariantsForDb(raw: string): string[] {
+  const v = (raw || "").trim().toLowerCase();
+  const normalized = v
+    .replace(/\s+/g, "-")
+    .replace(/_/g, "-")
+    .replace(/ş/g, "s")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c");
+
+  if (normalized === "konser") return ["konser"];
+  if (normalized === "tiyatro") return ["tiyatro"];
+  if (normalized === "festival") return ["festival"];
+  if (normalized === "diger" || normalized === "di-ger" || normalized === "digeri" || normalized === "digerleri")
+    return ["diger"];
+  if (normalized === "stand-up" || normalized === "standup" || normalized === "stand-up-")
+    return ["stand-up", "standup", "diger"];
+
+  // Son çare: DB check'e takılmamak için güvenli kategori
+  return ["diger"];
+}
+
+function normalizeCategoryForUi(raw: string | null | undefined): EventCategory {
+  return (categoryVariantsForDb(String(raw || ""))[0] || "konser") as EventCategory;
+}
+
 type WizardTicket = {
   id: string;
   /** Hazır şablon value, "custom" veya "salon_plan" (isim `name` alanında) */
@@ -238,7 +270,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setDescriptionDe(parsedDe.content || "");
       setDescriptionEn(parsedEn.content || "");
       setDescriptionCkb(parsedCkb.content || "");
-      setCategory((ev.category as EventCategory) || "konser");
+      setCategory(normalizeCategoryForUi((ev as { category?: string | null }).category));
       setImageUrl((ev.image_url as string) || "");
       setOrganizerDisplayName((ev.organizer_display_name as string) || "");
       setShowSlugId((ev.show_slug as string) || "");
@@ -693,11 +725,20 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       const eventId = editingEventId;
 
       if (eventId) {
-        const { error: updateError } = await supabase
-          .from("events")
-          .update(eventData)
-          .eq("id", eventId);
-        if (updateError) throw updateError;
+        let updateSucceeded = false;
+        let lastUpdateError: unknown = null;
+        for (const cat of categoryVariantsForDb(String(eventData.category || ""))) {
+          const { error: updateError } = await supabase
+            .from("events")
+            .update({ ...eventData, category: cat })
+            .eq("id", eventId);
+          if (!updateError) {
+            updateSucceeded = true;
+            break;
+          }
+          lastUpdateError = updateError;
+        }
+        if (!updateSucceeded) throw lastUpdateError;
         const { data: existingTicketsData, error: existingTicketsError } = await supabase
           .from("tickets")
           .select("id, name, type, price, quantity, available, description")
@@ -807,14 +848,23 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         eventData.is_approved = false;
       }
 
-      const { data: insertedEvent, error: insertError } = await supabase
-        .from("events")
-        .insert(eventData)
-        .select("id")
-        .single();
+      let insertedEventId: string | null = null;
+      let lastInsertError: unknown = null;
+      for (const cat of categoryVariantsForDb(String(eventData.category || ""))) {
+        const { data: insertedEvent, error: insertError } = await supabase
+          .from("events")
+          .insert({ ...eventData, category: cat })
+          .select("id")
+          .single();
 
-      if (insertError) throw insertError;
-      if (!insertedEvent?.id) throw new Error("Etkinlik oluşturulamadı.");
+        if (!insertError && insertedEvent?.id) {
+          insertedEventId = insertedEvent.id;
+          break;
+        }
+        lastInsertError = insertError || new Error("Etkinlik oluşturulamadı.");
+      }
+
+      if (!insertedEventId) throw lastInsertError || new Error("Etkinlik oluşturulamadı.");
 
       const ticketRows = hasExternalLink
         ? []
@@ -829,7 +879,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
           }
           if (!desc) desc = `${displayName} - etkinlik bileti`;
           return {
-            event_id: insertedEvent.id,
+            event_id: insertedEventId,
             name: displayName,
             type: t.type,
             price: Number(t.price) || 0,
@@ -848,7 +898,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         ? "Etkinliğiniz onaya gönderildi. Yönetici onayından sonra yayına alınacaktır."
         : "Etkinlik oluşturuldu!";
       alert(message);
-      router.push(`/tr/etkinlik/${insertedEvent.id}`);
+      router.push(`/tr/etkinlik/${insertedEventId}`);
     } catch (err) {
       console.error("Wizard submit error:", err);
       let msg = "Bilinmeyen hata";

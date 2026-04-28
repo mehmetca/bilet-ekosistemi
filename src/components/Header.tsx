@@ -96,7 +96,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
-      <div className="container mx-auto flex h-14 sm:h-16 items-center px-3 sm:px-4">
+      <div className="site-container flex h-14 sm:h-16 items-center">
 
 <NextLink
   href={navHref(locale, "/")}

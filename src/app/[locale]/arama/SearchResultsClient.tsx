@@ -139,7 +139,7 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <main className="container mx-auto max-w-6xl px-4 py-8">
+      <main className="site-container py-8">
         <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
           <h1 className="mb-4 text-2xl font-bold text-slate-900">{pageTitle}</h1>
           <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">

@@ -51,7 +51,7 @@ export default function SearchSection({ events, onFilteredEventsChange }: Search
 
   return (
     <section className="bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
-      <div className="container mx-auto px-4 text-center">
+      <div className="site-container text-center">
         <h1 className="text-4xl font-bold md:text-5xl">
           Hayalinizdeki Etkinliğe Bilet Bulun
         </h1>

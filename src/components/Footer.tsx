@@ -82,7 +82,7 @@ export default function Footer() {
 
   return (
     <footer className="border-t border-slate-200/80 bg-slate-50">
-      <div className="container mx-auto px-4 py-10">
+      <div className="site-container py-10">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-12">
           <div className="flex flex-col items-center md:items-start">
             <NextLink
@@ -140,7 +140,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-slate-200">
-        <div className="container mx-auto px-4 py-8">
+        <div className="site-container py-8">
           <div className="grid grid-cols-1 gap-8 text-xs text-slate-500 md:grid-cols-2 md:gap-12">
             <div className="space-y-4">
               <section id="gonderim-politikasi">
@@ -175,7 +175,7 @@ export default function Footer() {
       </div>
 
       <div className="border-t border-slate-200">
-        <div className="container mx-auto px-4 py-4">
+        <div className="site-container py-4">
           <p className="text-center text-sm font-medium text-slate-600">
             {t("footer.copyright")}
           </p>

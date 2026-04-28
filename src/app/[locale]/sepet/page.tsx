@@ -371,7 +371,7 @@ export default function CheckoutPage() {
     <div className="min-h-screen bg-[#f5f6f8]">
       <Header />
 
-      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="site-container py-8">
         {/* Progress steps – ödeme adımları */}
         {!showExpiredFullPage ? (
         <div className="mb-10 flex items-center justify-center gap-2 sm:gap-4">

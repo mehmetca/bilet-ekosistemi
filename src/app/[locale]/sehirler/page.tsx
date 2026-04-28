@@ -45,7 +45,7 @@ export default async function SehirlerPage() {
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
       <Header />
-      <div className="mx-auto max-w-6xl px-4 py-12">
+      <div className="site-container py-12">
         <div className="mb-10 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-slate-900">{t("title")}</h1>
           <p className="mt-4 text-lg text-slate-600">{t("subtitle")}</p>

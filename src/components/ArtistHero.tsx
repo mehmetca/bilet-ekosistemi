@@ -13,7 +13,7 @@ export default function ArtistHero({ artist }: ArtistHeroProps) {
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-black/20" />
       
-      <div className="relative container mx-auto px-4 py-16">
+      <div className="relative site-container py-16">
         <div className="grid gap-8 lg:grid-cols-2 items-center">
           {/* Sol Taraf - Sanatçı Bilgileri */}
           <div className="space-y-6">

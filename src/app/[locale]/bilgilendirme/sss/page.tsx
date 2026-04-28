@@ -34,7 +34,7 @@ export default function SSSPage() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full min-w-0">
       <div className="flex items-center gap-3 mb-2">
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600">
           <HelpCircle className="h-6 w-6" />

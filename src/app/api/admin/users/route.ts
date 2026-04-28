@@ -3,6 +3,15 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireAdmin } from "@/lib/api-auth";
 
 type AuthUser = { id: string; email?: string; created_at?: string };
+type ControllerRequest = {
+  id: string;
+  user_id: string;
+  email: string;
+  full_name: string;
+  phone: string;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+};
 
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin(request);
@@ -10,9 +19,10 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    const [usersRes, requestsRes, authRes] = await Promise.all([
+    const [usersRes, requestsRes, controllerRequestsRes, authRes] = await Promise.all([
       supabase.from("user_roles").select("*").order("created_at", { ascending: false }),
       supabase.from("organizer_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("controller_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.auth.admin.listUsers({ perPage: 1000 }),
     ]);
 
@@ -23,6 +33,10 @@ export async function GET(request: NextRequest) {
     if (requestsRes.error) {
       console.error("organizer_requests fetch error:", requestsRes.error);
       return NextResponse.json({ error: requestsRes.error.message }, { status: 500 });
+    }
+    if (controllerRequestsRes.error) {
+      console.error("controller_requests fetch error:", controllerRequestsRes.error);
+      return NextResponse.json({ error: controllerRequestsRes.error.message }, { status: 500 });
     }
     if (authRes.error) {
       console.error("auth listUsers error:", authRes.error);
@@ -57,6 +71,7 @@ export async function GET(request: NextRequest) {
       users: allUsers,
       userRoles,
       organizerRequests: requestsRes.data || [],
+      controllerRequests: (controllerRequestsRes.data || []) as ControllerRequest[],
     });
   } catch (err) {
     console.error("admin users API error:", err);
@@ -150,6 +165,42 @@ export async function POST(request: NextRequest) {
         .from("organizer_requests")
         .update({ status: "rejected", reviewed_at: new Date().toISOString() })
         .eq("id", requestId);
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "approveController") {
+      const { requestId } = body as { requestId?: string };
+      if (!requestId) return NextResponse.json({ error: "requestId gerekli" }, { status: 400 });
+
+      const { data: req } = await supabase
+        .from("controller_requests")
+        .select("id,user_id")
+        .eq("id", requestId)
+        .single();
+      if (!req) return NextResponse.json({ error: "Başvuru bulunamadı" }, { status: 404 });
+
+      const { error: roleErr } = await supabase
+        .from("user_roles")
+        .upsert({ user_id: req.user_id, role: "controller" }, { onConflict: "user_id,role" });
+      if (roleErr) return NextResponse.json({ error: roleErr.message }, { status: 500 });
+
+      const { error: updErr } = await supabase
+        .from("controller_requests")
+        .update({ status: "approved", reviewed_at: new Date().toISOString(), approved_at: new Date().toISOString() })
+        .eq("id", requestId);
+      if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
+
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === "rejectController") {
+      const { requestId } = body as { requestId?: string };
+      if (!requestId) return NextResponse.json({ error: "requestId gerekli" }, { status: 400 });
+      const { error: updErr } = await supabase
+        .from("controller_requests")
+        .update({ status: "rejected", reviewed_at: new Date().toISOString() })
+        .eq("id", requestId);
+      if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
       return NextResponse.json({ success: true });
     }
 

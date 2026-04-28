@@ -63,7 +63,7 @@ export default function AdvertisementGrid() {
   // Loading state
   if (loading) {
     return (
-      <section className="container mx-auto px-4 py-8">
+      <section className="site-container py-8">
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h2 className="text-xl font-bold text-slate-900 mb-6">Sponsorlarımız</h2>
           <div className="text-center py-10">
@@ -80,7 +80,7 @@ export default function AdvertisementGrid() {
   // Error state
   if (error) {
     return (
-      <section className="container mx-auto px-4 py-8">
+      <section className="site-container py-8">
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h2 className="text-xl font-bold text-slate-900 mb-6">Sponsorlarımız</h2>
           <div className="text-center py-10">
@@ -94,7 +94,7 @@ export default function AdvertisementGrid() {
   // Empty state
   if (advertisements.length === 0) {
     return (
-      <section className="container mx-auto px-4 py-8">
+      <section className="site-container py-8">
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h2 className="text-xl font-bold text-slate-900 mb-6">Sponsorlarımız</h2>
           <div className="text-center py-10">
@@ -106,7 +106,7 @@ export default function AdvertisementGrid() {
   }
 
   return (
-    <section className="container mx-auto px-4 py-8">
+    <section className="site-container py-8">
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <h2 className="text-xl font-bold text-slate-900 mb-6">Sponsorlarımız</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

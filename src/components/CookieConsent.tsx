@@ -38,7 +38,7 @@ export default function CookieConsent() {
       role="dialog"
       aria-label="Çerez onayı"
     >
-      <div className="container mx-auto px-4 pt-4 max-w-4xl">
+      <div className="site-container max-w-4xl pt-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-slate-700 flex-1">
             {t("message")}{" "}

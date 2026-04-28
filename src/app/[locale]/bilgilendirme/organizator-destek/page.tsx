@@ -9,7 +9,7 @@ export default function OrganizatorDestekPage() {
   const dateLocale = locale === "tr" ? "tr-TR" : locale === "de" ? "de-DE" : "en-US";
 
   return (
-    <div className="max-w-3xl">
+    <div className="w-full min-w-0">
       <div className="flex items-center gap-3 mb-2">
         <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600">
           <FileText className="h-6 w-6" />

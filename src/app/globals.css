@@ -76,6 +76,13 @@
   }
 }
 
+@layer components {
+  /** Genel site sayfalarında tek tip yatay genişlik (tailwind theme.container üst sınırı + padding). */
+  .site-container {
+    @apply container mx-auto px-4;
+  }
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;

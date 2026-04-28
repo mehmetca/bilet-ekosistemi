@@ -13,13 +13,13 @@ export default async function TakvimPage() {
       <div className="min-h-screen bg-slate-50">
         <Header />
         
-        <main className="container mx-auto max-w-6xl px-4 py-8">
+        <main className="site-container py-8">
           <EventCalendar events={events} />
         </main>
 
         {/* Footer */}
         <footer className="border-t border-slate-200 bg-white py-8 mt-16">
-          <div className="container mx-auto px-4 text-center text-sm text-slate-500">
+          <div className="site-container py-0 text-center text-sm text-slate-500">
             {new Date().getFullYear()} KurdEvents
           </div>
         </footer>

@@ -431,7 +431,7 @@ export default function ClientHomePage({
         <HeroBackgroundSlider initialBackgrounds={initialHeroBackgrounds} />
         
         {/* Content */}
-        <div className="relative z-10 container mx-auto px-4 text-center">
+        <div className="relative z-10 site-container text-center">
           <h1 className="mb-6 px-1 text-white break-words hyphens-auto">
             <span className="block text-3xl font-bold sm:text-4xl md:text-6xl">
               {locale === "tr" && heroVariant?.hero_title ? heroVariant.hero_title : t("heroTitle")}
@@ -514,7 +514,7 @@ export default function ClientHomePage({
       {/* Ana Slider: Slider'lar alanına taşındı */}
 
       {/* Slider'lar */}
-      <section className="container mx-auto px-4 py-12">
+      <section className="site-container py-12">
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           <div className="p-6 pb-4">
             <h2 className="text-xl font-bold text-slate-900">{t("upcomingEvents")}</h2>
@@ -610,7 +610,7 @@ export default function ClientHomePage({
       />
 
       {/* Events */}
-      <section id="events" className="container mx-auto px-4 py-16">
+      <section id="events" className="site-container py-16">
         <h2 className="text-2xl font-bold text-slate-900 mb-4">{t("upcomingEvents")}</h2>
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">

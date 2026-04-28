@@ -34,11 +34,21 @@ type DisplayUser = {
   created_at?: string;
   roles: string[];
 };
+type ControllerRequest = {
+  id: string;
+  user_id: string;
+  email: string;
+  full_name: string;
+  phone: string;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+};
 
 function KullanicilarContent() {
   const { accessToken, loading: authLoading } = useSimpleAuth();
   const [users, setUsers] = useState<DisplayUser[]>([]);
   const [organizerRequests, setOrganizerRequests] = useState<OrganizerRequest[]>([]);
+  const [controllerRequests, setControllerRequests] = useState<ControllerRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [viewingRequest, setViewingRequest] = useState<OrganizerRequest | null>(null);
@@ -56,9 +66,10 @@ function KullanicilarContent() {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as { error?: string }).error || "Veriler yüklenemedi");
       }
-      const data = (await res.json()) as { users?: DisplayUser[]; organizerRequests?: OrganizerRequest[] };
+      const data = (await res.json()) as { users?: DisplayUser[]; organizerRequests?: OrganizerRequest[]; controllerRequests?: ControllerRequest[] };
       setUsers(data.users || []);
       setOrganizerRequests((data.organizerRequests as OrganizerRequest[]) || []);
+      setControllerRequests((data.controllerRequests as ControllerRequest[]) || []);
     } catch (error) {
       console.error("Fetch error:", error);
       alert(`Kullanıcılar listelenemedi: ${error instanceof Error ? error.message : "Bilinmeyen hata"}`);
@@ -155,6 +166,34 @@ function KullanicilarContent() {
     } catch (error) {
       alert("Hata: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
     }
+  }
+
+  async function handleApproveController(req: ControllerRequest) {
+    if (!confirm(`${req.email} adresli kontrolör başvurusunu onaylamak istiyor musunuz?`)) return;
+    if (!accessToken) return;
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: authHeaders(accessToken, true),
+      body: JSON.stringify({ action: "approveController", requestId: req.id }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) return alert(data.error || "Kontrolör onayı başarısız");
+    alert("Kontrolör onaylandı.");
+    fetchData();
+  }
+
+  async function handleRejectController(req: ControllerRequest) {
+    if (!confirm(`${req.email} adresli kontrolör başvurusunu reddetmek istiyor musunuz?`)) return;
+    if (!accessToken) return;
+    const res = await fetch("/api/admin/users", {
+      method: "POST",
+      headers: authHeaders(accessToken, true),
+      body: JSON.stringify({ action: "rejectController", requestId: req.id }),
+    });
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    if (!res.ok) return alert(data.error || "Kontrolör reddetme başarısız");
+    alert("Kontrolör başvurusu reddedildi.");
+    fetchData();
   }
 
   async function handleDeleteUser(user: DisplayUser) {
@@ -305,6 +344,43 @@ function KullanicilarContent() {
               >
                 İptal
               </button>
+            </div>
+          </div>
+        )}
+
+        {controllerRequests.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">
+            <h3 className="text-lg font-semibold text-blue-900 mb-4 flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Bekleyen Kontrolör Başvuruları ({controllerRequests.length})
+            </h3>
+            <div className="space-y-3">
+              {controllerRequests.map((req) => (
+                <div key={req.id} className="flex items-center justify-between gap-4 p-4 bg-white rounded-lg border border-blue-100">
+                  <div>
+                    <p className="font-medium text-slate-900">{req.email}</p>
+                    <p className="text-sm text-slate-700">Ad Soyad: {req.full_name}</p>
+                    <p className="text-sm text-slate-700">Telefon: {req.phone}</p>
+                    <p className="text-sm text-slate-500">Başvuru: {new Date(req.created_at).toLocaleString("tr-TR")}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleApproveController(req)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700"
+                    >
+                      <CheckCircle className="h-4 w-4" />
+                      Onayla
+                    </button>
+                    <button
+                      onClick={() => handleRejectController(req)}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 text-sm font-medium rounded-lg hover:bg-red-200"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Reddet
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

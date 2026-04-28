@@ -100,7 +100,7 @@ export default function CityPageClient({ city, initialEvents }: CityPageClientPr
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl px-4 py-8">
+      <div className="site-container py-8">
         {/* Sıralama */}
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <span className="text-sm font-medium text-slate-600">{t("sortBy")}:</span>

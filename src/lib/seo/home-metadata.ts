@@ -24,7 +24,7 @@ const HOME_SEO: Record<AppLocale, HomeSeo> = {
     openGraphLocale: "en_US",
   },
   tr: {
-      title: "KurdEvents - Tum etkinlikler icin bilet platformu",
+    title: "KurdEvents - Tüm etkinlikler için bilet platformu",
     description: "Biletleri online satın, koltuk planını yönetin ve etkinliklerinizi daha kolay organize edin.",
     openGraphLocale: "tr_TR",
   },

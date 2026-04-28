@@ -129,7 +129,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
 
       {/* Hero – etkinlik özeti */}
       <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto w-full max-w-7xl px-4 py-8">
+        <div className="site-container py-8">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
             {tCat((firstEvent.category || "diger").toLowerCase())}
           </p>
@@ -174,7 +174,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
       </div>
 
       {/* Şehir seçimi ve seanslar */}
-      <div className="mx-auto w-full max-w-7xl px-4 py-10">
+      <div className="site-container py-10">
         {hasExternalTickets && (
           <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
             <h2 className="text-lg font-semibold text-blue-900 mb-2">{t("ticketInfo")}</h2>
