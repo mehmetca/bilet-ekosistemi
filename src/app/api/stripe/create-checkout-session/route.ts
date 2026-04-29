@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       ],
       customer_email: buyerEmail || undefined,
       payment_method_types: ["card"],
-    });
+    } as never);
 
     return NextResponse.json({
       success: true,

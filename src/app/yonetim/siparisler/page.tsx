@@ -221,7 +221,7 @@ export default function SiparislerPage() {
                             {(order as any).delivery_method === "express" ? "Ekspres Kargo" : "Standart Kargo"}
                           </div>
                           <div className="text-xs text-slate-500">
-                            {[order.buyer_address, order.buyer_plz, order.buyer_city].filter(Boolean).join(", ") || "Adres girilmemiş"}
+                            {[(order as any).buyer_address, (order as any).buyer_plz, (order as any).buyer_city].filter(Boolean).join(", ") || "Adres girilmemiş"}
                           </div>
                         </div>
                       ) : (
