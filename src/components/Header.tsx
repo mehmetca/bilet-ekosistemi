@@ -107,6 +107,7 @@ export default function Header() {
     alt="Kurdevent Logo"
     width={160}
     height={50}
+    style={{ width: "auto", height: "auto" }}
     priority
   />
 </NextLink>
@@ -137,6 +138,7 @@ export default function Header() {
             )}
             <NextLink
               href={`/${locale}/sepet`}
+              prefetch={false}
               className="relative flex items-center gap-1 text-slate-600 hover:text-primary-600 font-medium transition-colors"
             >
               <ShoppingCart className="h-5 w-5" />
@@ -263,6 +265,7 @@ export default function Header() {
             ))}
             <NextLink
               href={`/${locale}/sepet`}
+              prefetch={false}
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
             >

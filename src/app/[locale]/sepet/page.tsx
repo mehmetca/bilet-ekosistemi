@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import NextLink from "next/link";
+import dynamic from "next/dynamic";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { useCart } from "@/context/CartContext";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import Header from "@/components/Header";
-import { Link, useRouter } from "@/i18n/navigation";
 import { formatPrice } from "@/lib/formatPrice";
 import { formatEventDateDMY, formatCartEventWhen } from "@/lib/date-utils";
 import {
@@ -35,12 +37,48 @@ import {
   type CartExpiredSnapshot,
 } from "@/lib/cart-reservation";
 import TicketPrint from "@/components/TicketPrint";
+import { stripePromise } from "@/lib/stripe-client";
+
+const EmbeddedCheckoutProvider = dynamic(
+  () => import("@stripe/react-stripe-js").then((m) => m.EmbeddedCheckoutProvider),
+  { ssr: false }
+);
+const EmbeddedCheckout = dynamic(
+  () => import("@stripe/react-stripe-js").then((m) => m.EmbeddedCheckout),
+  { ssr: false }
+);
+
+const SafeHeader = Header ?? (() => null);
+const SafeNextLink = (NextLink ??
+  ((props: { href?: string; className?: string; onClick?: () => void; children?: React.ReactNode }) => (
+    <a href={props.href || "#"} className={props.className} onClick={props.onClick}>
+      {props.children}
+    </a>
+  ))) as typeof NextLink;
+const SafeEmbeddedCheckoutProvider = (EmbeddedCheckoutProvider ??
+  ((props: { children?: React.ReactNode }) => <>{props.children}</>)) as typeof EmbeddedCheckoutProvider;
+const SafeEmbeddedCheckout = (EmbeddedCheckout ?? (() => null)) as typeof EmbeddedCheckout;
+const SafeTicketPrint = (TicketPrint ?? (() => null)) as typeof TicketPrint;
+
+const PENDING_STRIPE_CHECKOUT_KEY = "pendingStripeCheckoutData";
+
+type PendingStripeCheckoutData = {
+  buyerName: string;
+  buyerEmail: string;
+  buyerAddress: string;
+  buyerPlz: string;
+  buyerCity: string;
+  deliveryChoice: "e_ticket" | "standard" | "express";
+  seatHoldSessionId: string | null;
+  createdAt: number;
+};
 
 export default function CheckoutPage() {
   const t = useTranslations("checkout");
   const tEvent = useTranslations("eventDetail");
   const locale = useLocale() as "tr" | "de" | "en";
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user, loading: authLoading, accessToken: authAccessToken } = useSimpleAuth();
 
   const {
@@ -59,10 +97,9 @@ export default function CheckoutPage() {
   const [buyerPlz, setBuyerPlz] = useState("");
   const [buyerCity, setBuyerCity] = useState("");
   const [seatHoldSessionId, setSeatHoldSessionId] = useState<string | null>(null);
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpiry, setCardExpiry] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
-  const [cardHolderName, setCardHolderName] = useState("");
+  const processedStripeSessionsRef = useRef<Set<string>>(new Set());
+  const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
+  const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
 
   // Giriş yapmış kullanıcının profilini çek ve alanları doldur (adres dahil)
   useEffect(() => {
@@ -103,7 +140,9 @@ export default function CheckoutPage() {
   /** e_ticket = yalnızca e-posta/PDF; standard | express = basılı gönderim + kargo ücreti (checkout’ta bir kez). */
   const [deliveryChoice, setDeliveryChoice] = useState<"e_ticket" | "standard" | "express">("e_ticket");
   const [step2AddressError, setStep2AddressError] = useState<string | null>(null);
+  const [showDeliveryOptions, setShowDeliveryOptions] = useState(false);
   const [isPending, setIsPending] = useState(false);
+  const [hasSuccessfulCheckout, setHasSuccessfulCheckout] = useState(false);
   const [resTick, setResTick] = useState(0);
   const [showReservationExpired, setShowReservationExpired] = useState(false);
   const [expiredSnapshot, setExpiredSnapshot] = useState<CartExpiredSnapshot | null>(null);
@@ -206,36 +245,27 @@ export default function CheckoutPage() {
   const shippingFeeOnce = shippingFeeForPhysicalDelivery(physicalDeliveryForCheckout);
 
   const grandTotal = totalPrice + processingFeesTotal + shippingFeeOnce;
-  const subtotalUntilShipping = totalPrice + processingFeesTotal;
-  const displayGrandTotal =
-    currentStep === 1 ? subtotalUntilShipping : grandTotal;
+  const displayGrandTotal = grandTotal;
 
-  async function handleCompleteOrder(e: React.FormEvent) {
-    e.preventDefault();
-    if (items.length === 0) return;
-    const finalEmail = (buyerEmail.trim() || user?.email || "").trim();
-    const finalName = buyerName.trim() || (user?.email ? user.email.split("@")[0] : "") || "Müşteri";
-    if (!user) {
-      if (!buyerName.trim() || !buyerEmail.trim()) {
-        setError(tEvent("nameEmailRequired"));
-        return;
-      }
-    }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!finalEmail || !emailRegex.test(finalEmail)) {
-      setError("Geçerli bir e-posta adresi girin.");
-      return;
-    }
-    if (!cardNumber.trim() || !cardExpiry.trim() || !cardCvc.trim() || !cardHolderName.trim()) {
-      setError(t("cardFieldsRequired"));
-      return;
-    }
-    if (shippingFeeOnce > 0) {
-      if (!buyerAddress.trim() || !buyerPlz.trim() || !buyerCity.trim()) {
-        setError(t("addressRequiredShipping"));
-        return;
-      }
-    }
+  const finalizePaidOrder = useCallback(async (pendingData?: PendingStripeCheckoutData | null) => {
+    const finalEmail = (
+      pendingData?.buyerEmail?.trim() ||
+      buyerEmail.trim() ||
+      user?.email ||
+      ""
+    ).trim();
+    const finalName =
+      pendingData?.buyerName?.trim() ||
+      buyerName.trim() ||
+      (user?.email ? user.email.split("@")[0] : "") ||
+      "Müşteri";
+    const finalAddress = pendingData?.buyerAddress?.trim() || buyerAddress.trim();
+    const finalPlz = pendingData?.buyerPlz?.trim() || buyerPlz.trim();
+    const finalCity = pendingData?.buyerCity?.trim() || buyerCity.trim();
+    const finalDeliveryChoice = pendingData?.deliveryChoice || deliveryChoice;
+    const finalPhysicalDelivery: CheckoutPhysicalDelivery =
+      finalDeliveryChoice === "e_ticket" ? "none" : finalDeliveryChoice;
+    const finalSeatHoldSessionId = pendingData?.seatHoldSessionId ?? seatHoldSessionId;
     setError(null);
     setIsPending(true);
     const orderResults: typeof results = [];
@@ -268,19 +298,19 @@ export default function CheckoutPage() {
         formData.append("buyer_name", finalName);
         formData.append("buyer_email", finalEmail);
         if (user?.id) formData.append("client_user_id", user.id);
-        if (buyerAddress.trim()) formData.append("buyer_address", buyerAddress.trim());
-        if (buyerPlz.trim()) formData.append("buyer_plz", buyerPlz.trim());
-        if (buyerCity.trim()) formData.append("buyer_city", buyerCity.trim());
+        if (finalAddress) formData.append("buyer_address", finalAddress);
+        if (finalPlz) formData.append("buyer_plz", finalPlz);
+        if (finalCity) formData.append("buyer_city", finalCity);
         const shouldApplyShippingForThisItem =
-          !shippingApplied && physicalDeliveryForCheckout !== "none";
+          !shippingApplied && finalPhysicalDelivery !== "none";
         formData.append(
           "physical_delivery",
-          shouldApplyShippingForThisItem ? physicalDeliveryForCheckout : "none"
+          shouldApplyShippingForThisItem ? finalPhysicalDelivery : "none"
         );
         if (seatIdsAligned.length > 0) {
           formData.append("seat_ids", JSON.stringify(seatIdsAligned));
-          if (seatHoldSessionId) {
-            formData.append("seat_hold_session_id", seatHoldSessionId);
+          if (finalSeatHoldSessionId) {
+            formData.append("seat_hold_session_id", finalSeatHoldSessionId);
           }
         }
         const fee = item.eventCheckoutFee;
@@ -327,11 +357,110 @@ export default function CheckoutPage() {
       setResults(orderResults);
       const allSuccess = orderResults.every((r) => r.success);
       if (allSuccess) {
+        setHasSuccessfulCheckout(true);
         setCompletedItems([...items]);
         clearCart();
+        try {
+          sessionStorage.removeItem(PENDING_STRIPE_CHECKOUT_KEY);
+        } catch {
+          /* ignore */
+        }
+      } else {
+        setHasSuccessfulCheckout(false);
+        const firstFailed = orderResults.find((r) => !r.success);
+        if (firstFailed?.message) setError(firstFailed.message);
       }
+      return allSuccess;
     } catch {
       setError(tEvent("purchaseError"));
+      return false;
+    } finally {
+      setIsPending(false);
+    }
+  }, [
+    buyerAddress,
+    buyerCity,
+    buyerEmail,
+    buyerName,
+    buyerPlz,
+    clearCart,
+    deliveryChoice,
+    items,
+    seatHoldSessionId,
+    tEvent,
+    user,
+    authAccessToken,
+  ]);
+
+  async function handleCompleteOrder(e: React.FormEvent) {
+    e.preventDefault();
+    if (items.length === 0) return;
+    setHasSuccessfulCheckout(false);
+
+    const finalEmail = (buyerEmail.trim() || user?.email || "").trim();
+    if (!user) {
+      if (!buyerName.trim() || !buyerEmail.trim()) {
+        setError(tEvent("nameEmailRequired"));
+        return;
+      }
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!finalEmail || !emailRegex.test(finalEmail)) {
+      setError("Geçerli bir e-posta adresi girin.");
+      return;
+    }
+    if (shippingFeeOnce > 0) {
+      if (!buyerAddress.trim() || !buyerPlz.trim() || !buyerCity.trim()) {
+        setError(t("addressRequiredShipping"));
+        return;
+      }
+    }
+
+    setError(null);
+    setIsPending(true);
+    try {
+      try {
+        const pendingData: PendingStripeCheckoutData = {
+          buyerName: buyerName.trim(),
+          buyerEmail: finalEmail,
+          buyerAddress: buyerAddress.trim(),
+          buyerPlz: buyerPlz.trim(),
+          buyerCity: buyerCity.trim(),
+          deliveryChoice,
+          seatHoldSessionId,
+          createdAt: Date.now(),
+        };
+        sessionStorage.setItem(PENDING_STRIPE_CHECKOUT_KEY, JSON.stringify(pendingData));
+      } catch {
+        /* ignore */
+      }
+
+      const response = await fetch("/api/stripe/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: grandTotal,
+          currency: (checkoutCurrency || "EUR").toLowerCase(),
+          buyerEmail: finalEmail,
+          locale,
+        }),
+      });
+      const data = (await response.json()) as {
+        success?: boolean;
+        sessionId?: string;
+        clientSecret?: string | null;
+        message?: string;
+      };
+      if (!response.ok || !data.success || !data.clientSecret || !data.sessionId) {
+        setError(data.message || "Stripe ödeme oturumu başlatılamadı.");
+        return;
+      }
+
+      setCheckoutClientSecret(data.clientSecret);
+      setCheckoutSessionId(data.sessionId);
+      setCurrentStep(2);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Stripe ödeme akışı başlatılırken bir hata oluştu.");
     } finally {
       setIsPending(false);
     }
@@ -352,7 +481,95 @@ export default function CheckoutPage() {
     }
   }, []);
 
-  const allSuccess = results.length > 0 && results.every((r) => r.success);
+  useEffect(() => {
+    const stripeSuccess = searchParams.get("stripe_success");
+    const sessionId = (searchParams.get("session_id") || "").trim();
+    if (stripeSuccess === "1" && currentStep !== 2) {
+      setCurrentStep(2);
+    }
+    if (stripeSuccess !== "1" || !sessionId) return;
+    if (processedStripeSessionsRef.current.has(sessionId)) return;
+    if (results.length > 0 || isPending || items.length === 0) return;
+
+    processedStripeSessionsRef.current.add(sessionId);
+    void (async () => {
+      try {
+        setIsPending(true);
+        let pendingData: PendingStripeCheckoutData | null = null;
+        try {
+          const raw = sessionStorage.getItem(PENDING_STRIPE_CHECKOUT_KEY);
+          if (raw) pendingData = JSON.parse(raw) as PendingStripeCheckoutData;
+        } catch {
+          pendingData = null;
+        }
+        const verifyRes = await fetch("/api/stripe/verify-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId }),
+        });
+        const verifyData = (await verifyRes.json()) as { success?: boolean; paid?: boolean; message?: string };
+        if (!verifyRes.ok || !verifyData.success || !verifyData.paid) {
+          setError(verifyData.message || "Stripe ödemesi doğrulanamadı.");
+          router.replace(`/${locale}/sepet`);
+          return;
+        }
+        const success = await finalizePaidOrder(pendingData);
+        router.replace(`/${locale}/sepet`);
+        if (!success) {
+          try {
+            sessionStorage.removeItem(PENDING_STRIPE_CHECKOUT_KEY);
+          } catch {
+            /* ignore */
+          }
+        }
+      } catch {
+        setError("Stripe ödemesi doğrulanırken bir hata oluştu.");
+        router.replace(`/${locale}/sepet`);
+      } finally {
+        setIsPending(false);
+      }
+    })();
+  }, [searchParams, results.length, isPending, items.length, finalizePaidOrder, router, locale, currentStep]);
+
+  const handleEmbeddedCheckoutComplete = useCallback(async () => {
+    if (!checkoutSessionId || isPending) return;
+    try {
+      setIsPending(true);
+      let pendingData: PendingStripeCheckoutData | null = null;
+      try {
+        const raw = sessionStorage.getItem(PENDING_STRIPE_CHECKOUT_KEY);
+        if (raw) pendingData = JSON.parse(raw) as PendingStripeCheckoutData;
+      } catch {
+        pendingData = null;
+      }
+
+      const verifyRes = await fetch("/api/stripe/verify-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: checkoutSessionId }),
+      });
+      const verifyData = (await verifyRes.json()) as { success?: boolean; paid?: boolean; message?: string };
+      if (!verifyRes.ok || !verifyData.success || !verifyData.paid) {
+        setError(verifyData.message || "Stripe ödemesi doğrulanamadı.");
+        return;
+      }
+
+      await finalizePaidOrder(pendingData);
+    } catch {
+      setError("Ödeme sonrası sipariş oluşturulurken bir hata oluştu.");
+    } finally {
+      setIsPending(false);
+    }
+  }, [checkoutSessionId, finalizePaidOrder, isPending]);
+
+  const isStripeReturning = searchParams.get("stripe_success") === "1";
+  const allSuccess = hasSuccessfulCheckout || (results.length > 0 && results.every((r) => r.success));
+  const shouldShowEmptyCart =
+    items.length === 0 &&
+    results.length === 0 &&
+    !allSuccess &&
+    !isPending &&
+    !isStripeReturning;
 
   const clearExpiredSession = () => {
     setShowReservationExpired(false);
@@ -366,14 +583,26 @@ export default function CheckoutPage() {
 
   const showExpiredFullPage =
     showReservationExpired && items.length === 0 && results.length === 0 && !allSuccess;
+  const successPageTitle =
+    locale === "de"
+      ? "TICKETS"
+      : locale === "en"
+        ? "TICKETS"
+        : "BILETLER";
+  const emailSentSuccessText =
+    locale === "de"
+      ? "Deine Tickets wurden an deine E-Mail-Adresse gesendet."
+      : locale === "en"
+        ? "Your tickets were sent to your e-mail address."
+        : "Biletlerin e-posta adresine gonderilmistir.";
 
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
-      <Header />
+        <SafeHeader />
 
       <div className="site-container py-8">
         {/* Progress steps – ödeme adımları */}
-        {!showExpiredFullPage ? (
+        {!showExpiredFullPage && !allSuccess ? (
         <div className="mb-10 flex items-center justify-center gap-2 sm:gap-4">
           <button
             type="button"
@@ -405,30 +634,13 @@ export default function CheckoutPage() {
               2
             </div>
             <span className={`text-sm font-medium ${currentStep >= 2 ? "text-slate-900" : "text-slate-500"}`}>
-              {t("stepDelivery")}
-            </span>
-          </button>
-          <ChevronRight className="h-5 w-5 text-slate-400" />
-          <button
-            type="button"
-            onClick={() => currentStep >= 3 && setCurrentStep(3)}
-            className="flex items-center gap-2 text-left disabled:cursor-not-allowed"
-          >
-            <div
-              className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
-                currentStep >= 3 ? "!bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
-              }`}
-            >
-              3
-            </div>
-            <span className={`text-sm font-medium ${currentStep >= 3 ? "text-slate-900" : "text-slate-500"}`}>
               {t("stepPayment")}
             </span>
           </button>
         </div>
         ) : null}
 
-        {!showExpiredFullPage ? (
+        {!showExpiredFullPage && !allSuccess ? (
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">{t("title")}</h1>
           {items.length > 0 ? (
@@ -442,7 +654,7 @@ export default function CheckoutPage() {
         </div>
         ) : null}
 
-        {!showExpiredFullPage && items.length > 0 && reservationExpiresAt && reservationSecLeft > 0 ? (
+        {!showExpiredFullPage && !allSuccess && items.length > 0 && reservationExpiresAt && reservationSecLeft > 0 ? (
           <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-950 shadow-sm">
             <Clock className="h-6 w-6 shrink-0 text-emerald-700" aria-hidden />
             <p className="text-sm font-semibold sm:text-base">
@@ -455,15 +667,23 @@ export default function CheckoutPage() {
           <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
             <p className="mb-6 text-lg text-slate-700">{t("loginRequired")}</p>
             <p className="mb-6 text-sm text-slate-500">{t("redirectingToLogin")}</p>
-            <Link
-              href={`/giris?redirect=/${locale}/sepet`}
+            <SafeNextLink
+              href={`/${locale}/giris?redirect=/${locale}/sepet`}
               className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
             >
               {t("loginOrSignup")}
-            </Link>
+            </SafeNextLink>
           </div>
         ) : allSuccess ? (
           <div className="space-y-6">
+            <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">
+              <h1 className="text-center text-3xl font-bold text-slate-900 md:text-4xl">
+                {locale === "tr" ? "Biletler" : successPageTitle}
+              </h1>
+              {results.every((r) => r.success && r.emailSent !== false) ? (
+                <p className="mt-1 text-sm">{emailSentSuccessText}</p>
+              ) : null}
+            </div>
             {results.some((r) => r.success && !r.emailSent) && (
               <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
                 <p className="font-medium">{t("emailNotSent")}</p>
@@ -477,7 +697,7 @@ export default function CheckoutPage() {
                   className="rounded-xl border border-green-200 bg-green-50 p-6"
                 >
                   <p className="mb-4 font-medium text-green-800">{r.message}</p>
-                  <TicketPrint
+                  <SafeTicketPrint
                     ticketCode={r.ticketCode}
                     buyerName={r.orderDetails.buyerName}
                     quantity={r.orderDetails.quantity}
@@ -494,24 +714,24 @@ export default function CheckoutPage() {
                 </div>
               ) : null
             )}
-            <Link
-              href="/"
+            <SafeNextLink
+              href={`/${locale}`}
               className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
             >
               {t("continueShopping")}
-            </Link>
+            </SafeNextLink>
           </div>
-        ) : items.length === 0 && results.length === 0 ? (
+        ) : shouldShowEmptyCart ? (
           showExpiredFullPage ? (
             <div className="pb-10">
-              <Link
-                href="/"
+              <SafeNextLink
+                href={`/${locale}`}
                 onClick={clearExpiredSession}
                 className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-800"
               >
                 <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
                 {t("backToShop")}
-              </Link>
+              </SafeNextLink>
               <div className="mt-10 text-center px-2">
                 <h2 className="text-2xl font-bold text-primary-800 md:text-3xl">
                   {t("reservationExpiredPageTitle")}
@@ -553,13 +773,13 @@ export default function CheckoutPage() {
                     <p className="mt-1 text-sm text-slate-600">
                       {formatCartEventWhen(locale, expiredSnapshot.eventDate, expiredSnapshot.eventTime)}
                     </p>
-                    <Link
-                      href={`/etkinlik/${expiredSnapshot.eventId}`}
+                    <SafeNextLink
+                      href={`/${locale}/etkinlik/${expiredSnapshot.eventId}`}
                       onClick={clearExpiredSession}
                       className="mt-6 flex w-full items-center justify-center rounded-xl bg-primary-600 px-4 py-3.5 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-700"
                     >
                       {t("checkAvailability")}
-                    </Link>
+                    </SafeNextLink>
                   </div>
                 </div>
               ) : (
@@ -567,13 +787,13 @@ export default function CheckoutPage() {
                   <p className="text-sm leading-relaxed whitespace-pre-line text-slate-700">
                     {t("reservationExpiredNotice")}
                   </p>
-                  <Link
-                    href="/"
+                  <SafeNextLink
+                    href={`/${locale}`}
                     onClick={clearExpiredSession}
                     className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white hover:bg-primary-700"
                   >
                     {t("continueShopping")}
-                  </Link>
+                  </SafeNextLink>
                 </div>
               )}
               <div className="mt-14 flex justify-center">
@@ -592,279 +812,238 @@ export default function CheckoutPage() {
             <ShoppingCart className="mx-auto mb-4 h-16 w-16 text-slate-300" />
             <h2 className="mb-2 text-xl font-semibold text-slate-800">{t("emptyCart")}</h2>
             <p className="mb-6 text-slate-600">{t("emptyCartDesc")}</p>
-            <Link
-              href="/"
+            <SafeNextLink
+              href={`/${locale}`}
               className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
             >
               {t("continueShopping")}
-            </Link>
+            </SafeNextLink>
           </div>
           )
         ) : (
           <div className="grid gap-8 lg:grid-cols-[1fr_minmax(280px,360px)] lg:items-start">
             <div className="min-w-0 space-y-6">
-            {/* Adım 1: Sepet */}
+            {/* Adım 1: Sepet + Teslimat + Müşteri */}
             {currentStep === 1 && (
               <div className="space-y-4">
                 {items.map((item) => (
-                <div
-                  key={item.ticketId}
-                  className="flex gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-                >
-                  {item.imageUrl && (
-                    <div className="relative h-20 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                      <img
-                        src={item.imageUrl}
-                        alt=""
-                        className="h-full w-full object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-semibold text-slate-900">{item.eventTitle}</h3>
-                    <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatEventDateDMY(item.eventDate)} • {item.eventTime}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        {item.venue}, {item.location}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Ticket className="h-4 w-4 text-primary-600" />
-                      <span className="text-sm font-medium text-slate-700">{item.ticketName}</span>
-                    </div>
-                    {item.seatIds && item.seatIds.length > 0 ? (
-                      <div className="mt-2">
-                        <p className="text-xs font-semibold text-slate-700">
-                          {t("seatsInCart", { count: item.seatIds.length })}
-                        </p>
-                        <ul className="mt-1 list-none space-y-0.5 pl-0 text-xs text-slate-600">
-                          {item.seatIds.map((seatId, idx) => {
-                            const line =
-                              item.seatCaptions?.[idx]?.trim() ||
-                              t("seatLineFallback", { n: idx + 1 });
-                            return (
-                              <li
-                                key={`${item.ticketId}-seat-${seatId}`}
-                                className="truncate"
-                                title={line}
-                              >
-                                {line}
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <div className="flex items-center gap-2">
-                      {item.seatIds && item.seatIds.length > 0 ? (
-                        <span className="text-sm font-semibold text-slate-700">
-                          {item.seatIds.length} {item.seatIds.length === 1 ? "koltuk" : "koltuk"}
-                        </span>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.ticketId, item.quantity - 1)}
-                            className="h-8 w-8 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
-                          >
-                            −
-                          </button>
-                          <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
-                          <button
-                            type="button"
-                            onClick={() => updateQuantity(item.ticketId, item.quantity + 1)}
-                            disabled={item.quantity >= item.available}
-                            className="h-8 w-8 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50"
-                          >
-                            +
-                          </button>
-                        </>
-                      )}
-                    </div>
-                    <p className="text-lg font-bold text-primary-700">
-                      {formatPrice(
-                        item.price *
-                          (item.seatIds && item.seatIds.length > 0 ? item.seatIds.length : item.quantity),
-                        item.currency as import("@/types/database").EventCurrency | undefined
-                      )}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item.ticketId)}
-                      className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      {t("remove")}
-                    </button>
-                  </div>
-                </div>
-              ))}
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(2)}
-                    className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
+                  <div
+                    key={item.ticketId}
+                    className="flex gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
                   >
-                    {t("stepContinue")}
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-            )}
+                    {item.imageUrl && (
+                      <div className="relative h-20 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                        <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
+                      </div>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <h3 className="font-semibold text-slate-900">{item.eventTitle}</h3>
+                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {formatEventDateDMY(item.eventDate)} • {item.eventTime}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MapPin className="h-3 w-3" />
+                          {item.venue}, {item.location}
+                        </span>
+                      </div>
+                      <div className="mt-2 flex items-center gap-2">
+                        <Ticket className="h-4 w-4 text-primary-600" />
+                        <span className="text-sm font-medium text-slate-700">{item.ticketName}</span>
+                      </div>
+                      {item.seatIds && item.seatIds.length > 0 ? (
+                        <div className="mt-2">
+                          <p className="text-xs font-semibold text-slate-700">
+                            {t("seatsInCart", { count: item.seatIds.length })}
+                          </p>
+                          <ul className="mt-1 list-none space-y-0.5 pl-0 text-xs text-slate-600">
+                            {item.seatIds.map((seatId, idx) => {
+                              const line = item.seatCaptions?.[idx]?.trim() || t("seatLineFallback", { n: idx + 1 });
+                              return (
+                                <li key={`${item.ticketId}-seat-${seatId}`} className="truncate" title={line}>
+                                  {line}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="flex items-center gap-2">
+                        {item.seatIds && item.seatIds.length > 0 ? (
+                          <span className="text-sm font-semibold text-slate-700">{item.seatIds.length} koltuk</span>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.ticketId, item.quantity - 1)}
+                              className="h-8 w-8 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                            >
+                              −
+                            </button>
+                            <span className="w-8 text-center text-sm font-semibold">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.ticketId, item.quantity + 1)}
+                              disabled={item.quantity >= item.available}
+                              className="h-8 w-8 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                            >
+                              +
+                            </button>
+                          </>
+                        )}
+                      </div>
+                      <p className="text-lg font-bold text-primary-700">
+                        {formatPrice(
+                          item.price * (item.seatIds && item.seatIds.length > 0 ? item.seatIds.length : item.quantity),
+                          item.currency as import("@/types/database").EventCurrency | undefined
+                        )}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => removeItem(item.ticketId)}
+                        className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        {t("remove")}
+                      </button>
+                    </div>
+                  </div>
+                ))}
 
-            {/* Adım 2: Teslimat */}
-            {currentStep === 2 && (
-              <div className="space-y-4">
                 <div className="rounded-xl border border-slate-200 bg-white p-6">
                   <h2 className="mb-2 text-lg font-bold text-slate-900">{t("deliveryMethod")}</h2>
                   <p className="mb-4 text-sm text-slate-600">{t("deliveryOptionsIntro")}</p>
-                  <div className="divide-y divide-slate-200 rounded-lg border border-slate-200 overflow-hidden">
-                    {(
-                      [
-                        {
-                          id: "e_ticket" as const,
-                          icon: Mail,
-                          title: t("eTicket"),
-                          desc: t("eTicketDesc"),
-                          fee: 0,
-                        },
-                        {
-                          id: "standard" as const,
-                          icon: Truck,
-                          title: t("shippingStandard"),
-                          desc: t("shippingStandardDesc"),
-                          fee: shippingFeeForPhysicalDelivery("standard"),
-                        },
-                        {
-                          id: "express" as const,
-                          icon: Zap,
-                          title: t("shippingExpress"),
-                          desc: t("shippingExpressDesc"),
-                          fee: shippingFeeForPhysicalDelivery("express"),
-                        },
-                      ] as const
-                    ).map((opt) => {
-                      const Icon = opt.icon;
-                      const selected = deliveryChoice === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => {
-                            setDeliveryChoice(opt.id);
-                            setStep2AddressError(null);
-                          }}
-                          className={`flex w-full items-start gap-3 p-4 text-left transition-colors ${
-                            selected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
-                          }`}
-                        >
-                          <div
-                            className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
-                              selected ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
+                  <button
+                    type="button"
+                    onClick={() => setShowDeliveryOptions((v) => !v)}
+                    className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    {t("selectShipping")}
+                  </button>
+                  {showDeliveryOptions ? (
+                    <div className="mt-4 divide-y divide-slate-200 rounded-lg border border-slate-200 overflow-hidden">
+                      {(
+                        [
+                          { id: "e_ticket" as const, icon: Mail, title: t("eTicket"), desc: t("eTicketDesc"), fee: 0 },
+                          {
+                            id: "standard" as const,
+                            icon: Truck,
+                            title: t("shippingStandard"),
+                            desc: t("shippingStandardDesc"),
+                            fee: shippingFeeForPhysicalDelivery("standard"),
+                          },
+                          {
+                            id: "express" as const,
+                            icon: Zap,
+                            title: t("shippingExpress"),
+                            desc: t("shippingExpressDesc"),
+                            fee: shippingFeeForPhysicalDelivery("express"),
+                          },
+                        ] as const
+                      ).map((opt) => {
+                        const Icon = opt.icon;
+                        const selected = deliveryChoice === opt.id;
+                        return (
+                          <button
+                            key={opt.id}
+                            type="button"
+                            onClick={() => {
+                              setDeliveryChoice(opt.id);
+                              setStep2AddressError(null);
+                            }}
+                            className={`flex w-full items-start gap-3 p-4 text-left transition-colors ${
+                              selected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
                             }`}
                           >
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-semibold text-slate-900">{opt.title}</p>
-                            <p className="mt-0.5 text-sm text-slate-600">{opt.desc}</p>
-                          </div>
-                          <div className="flex-shrink-0 text-right">
-                            {opt.fee > 0 ? (
-                              <span className="text-sm font-bold text-slate-900">
-                                +{formatPrice(opt.fee, checkoutCurrency)}
-                              </span>
-                            ) : (
-                              <span className="text-sm font-semibold text-emerald-700">{t("shippingIncluded")}</span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {deliveryChoice !== "e_ticket" ? (
-                    <div className="mt-6 space-y-3">
-                      <p className="text-sm font-medium text-slate-800">{t("shippingAddressTitle")}</p>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="sm:col-span-2">
-                          <label className="mb-2 block text-sm font-medium text-slate-600">
-                            {t("addressRequired")}
-                          </label>
-                          <input
-                            type="text"
-                            value={buyerAddress}
-                            onChange={(e) => setBuyerAddress(e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                            placeholder={t("address")}
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-2 block text-sm font-medium text-slate-600">{t("plz")}</label>
-                          <input
-                            type="text"
-                            value={buyerPlz}
-                            onChange={(e) => setBuyerPlz(e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                            placeholder={t("plz")}
-                          />
-                        </div>
-                        <div>
-                          <label className="mb-2 block text-sm font-medium text-slate-600">{t("city")}</label>
-                          <input
-                            type="text"
-                            value={buyerCity}
-                            onChange={(e) => setBuyerCity(e.target.value)}
-                            className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                            placeholder={t("city")}
-                          />
-                        </div>
-                      </div>
-                      {step2AddressError ? (
-                        <p className="text-sm text-red-600">{step2AddressError}</p>
-                      ) : null}
+                            <div
+                              className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
+                                selected ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
+                              }`}
+                            >
+                              <Icon className="h-5 w-5" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-slate-900">{opt.title}</p>
+                              <p className="mt-0.5 text-sm text-slate-600">{opt.desc}</p>
+                            </div>
+                            <div className="flex-shrink-0 text-right">
+                              {opt.fee > 0 ? (
+                                <span className="text-sm font-bold text-slate-900">+{formatPrice(opt.fee, checkoutCurrency)}</span>
+                              ) : (
+                                <span className="text-sm font-semibold text-emerald-700">{t("shippingIncluded")}</span>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
                     </div>
                   ) : null}
                 </div>
-                <div className="flex justify-between">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(1)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50"
-                  >
-                    {t("stepBack")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (deliveryChoice !== "e_ticket") {
-                        if (!buyerAddress.trim() || !buyerPlz.trim() || !buyerCity.trim()) {
-                          setStep2AddressError(t("addressRequiredShipping"));
-                          return;
-                        }
-                      }
-                      setStep2AddressError(null);
-                      setCurrentStep(3);
-                    }}
-                    className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
-                  >
-                    {t("stepContinue")}
-                    <ChevronRight className="h-5 w-5" />
-                  </button>
-                </div>
+
+                {showDeliveryOptions ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-6">
+                    <h2 className="mb-4 text-lg font-bold text-slate-900">{t("customerInfo")}</h2>
+                    {user ? (
+                      <div className="mb-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
+                        <p><span className="font-medium">{t("fullName")}:</span> {buyerName || user.email?.split("@")[0] || "—"}</p>
+                        <p className="mt-1"><span className="font-medium">{t("email")}:</span> {buyerEmail || user.email || "—"}</p>
+                      </div>
+                    ) : null}
+                    <p className="mt-3 text-xs text-slate-500">
+                      {deliveryChoice !== "e_ticket" ? t("addressHintPhysical") : t("addressHint")}
+                    </p>
+                    <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                      <div className="sm:col-span-2">
+                        <label className="mb-2 block text-sm font-medium text-slate-600">
+                          {deliveryChoice !== "e_ticket" ? t("addressRequired") : t("addressOptional")}
+                        </label>
+                        <input
+                          type="text"
+                          value={buyerAddress}
+                          onChange={(e) => setBuyerAddress(e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                          placeholder={t("address")}
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          value={buyerPlz}
+                          onChange={(e) => setBuyerPlz(e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                          placeholder={t("plz")}
+                        />
+                      </div>
+                      <div>
+                        <input
+                          type="text"
+                          value={buyerCity}
+                          onChange={(e) => setBuyerCity(e.target.value)}
+                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                          placeholder={t("city")}
+                        />
+                      </div>
+                    </div>
+                    {user && !buyerAddress && !buyerPlz && !buyerCity ? (
+                      <p className="mt-2 text-xs text-primary-600">
+                        <SafeNextLink href={`/${locale}/bilgilerim`} className="underline hover:no-underline">
+                          {t("fillFromProfile")}
+                        </SafeNextLink>
+                      </p>
+                    ) : null}
+                    {step2AddressError ? <p className="mt-2 text-sm text-red-600">{step2AddressError}</p> : null}
+                  </div>
+                ) : null}
               </div>
             )}
 
-            {/* Adım 3: Ödeme bilgileri + Müşteri bilgileri */}
-            {currentStep === 3 && (
+            {/* Adım 2: Ödeme */}
+            {currentStep === 2 && (
               <div className="space-y-4">
-              {/* Kredi kartı - üstte */}
+              {/* Stripe ödeme - üstte */}
               <div className="rounded-xl border border-slate-200 bg-white p-6">
                 <h2 className="mb-4 text-lg font-bold text-slate-900 flex items-center gap-2">
                   <CreditCard className="h-5 w-5 text-slate-600" />
@@ -874,152 +1053,32 @@ export default function CheckoutPage() {
                   <Lock className="h-4 w-4" />
                   {t("securePayment")}
                 </p>
-                <div className="space-y-4">
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                      {t("cardNumber")}
-                    </label>
-                    <input
-                      type="text"
-                      value={cardNumber}
-                      onChange={(e) => {
-                        const v = e.target.value.replace(/\D/g, "").slice(0, 19);
-                        setCardNumber(v.replace(/(\d{4})(?=\d)/g, "$1 "));
+                {checkoutClientSecret && stripePromise ? (
+                  <div className="mt-4 rounded-lg border border-slate-200 bg-white p-2">
+                    <SafeEmbeddedCheckoutProvider
+                      stripe={stripePromise}
+                      options={{
+                        clientSecret: checkoutClientSecret,
+                        onComplete: () => {
+                          void handleEmbeddedCheckoutComplete();
+                        },
                       }}
-                      placeholder="1234 5678 9012 3456"
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-mono focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                    />
+                    >
+                      <SafeEmbeddedCheckout />
+                    </SafeEmbeddedCheckoutProvider>
                   </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700">
-                        {t("cardExpiry")}
-                      </label>
-                      <input
-                        type="text"
-                        value={cardExpiry}
-                        onChange={(e) => {
-                          let v = e.target.value.replace(/\D/g, "").slice(0, 4);
-                          if (v.length >= 2) v = v.slice(0, 2) + "/" + v.slice(2);
-                          setCardExpiry(v);
-                        }}
-                        placeholder="MM/YY"
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-mono focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700">
-                        {t("cardCvc")}
-                      </label>
-                      <input
-                        type="text"
-                        value={cardCvc}
-                        onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                        placeholder="123"
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-mono focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-slate-700">
-                      {t("cardHolderName")}
-                    </label>
-                    <input
-                      type="text"
-                      value={cardHolderName}
-                      onChange={(e) => setCardHolderName(e.target.value)}
-                      placeholder={t("cardHolderPlaceholder")}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                    />
-                  </div>
-                </div>
-                <p className="mt-3 text-xs text-slate-500">{t("testModeHint")}</p>
-              </div>
-
-              {/* Müşteri bilgileri - altta */}
-              <div className="rounded-xl border border-slate-200 bg-white p-6">
-                <h2 className="mb-4 text-lg font-bold text-slate-900">{t("customerInfo")}</h2>
-                {user ? (
-                  <div className="mb-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
-                    <p><span className="font-medium">{t("fullName")}:</span> {buyerName || user.email?.split("@")[0] || "—"}</p>
-                    <p className="mt-1"><span className="font-medium">{t("email")}:</span> {buyerEmail || user.email || "—"}</p>
-                  </div>
-                ) : (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700">
-                        {t("fullName")}
-                      </label>
-                      <input
-                        type="text"
-                        value={buyerName}
-                        onChange={(e) => setBuyerName(e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                        placeholder={tEvent("fullNamePlaceholder")}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-700">
-                        {t("email")}
-                      </label>
-                      <input
-                        type="email"
-                        value={buyerEmail}
-                        onChange={(e) => setBuyerEmail(e.target.value)}
-                        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                        placeholder={tEvent("reminderPlaceholder")}
-                      />
-                    </div>
-                  </div>
-                )}
-                <p className="mt-3 text-xs text-slate-500">
-                  {deliveryChoice !== "e_ticket" ? t("addressHintPhysical") : t("addressHint")}
-                </p>
-                <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className="mb-2 block text-sm font-medium text-slate-600">
-                      {deliveryChoice !== "e_ticket" ? t("addressRequired") : t("addressOptional")}
-                    </label>
-                    <input
-                      type="text"
-                      value={buyerAddress}
-                      onChange={(e) => setBuyerAddress(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                      placeholder={t("address")}
-                    />
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      value={buyerPlz}
-                      onChange={(e) => setBuyerPlz(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                      placeholder={t("plz")}
-                    />
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      value={buyerCity}
-                      onChange={(e) => setBuyerCity(e.target.value)}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
-                      placeholder={t("city")}
-                    />
-                  </div>
-                </div>
-                {user && !buyerAddress && !buyerPlz && !buyerCity && (
-                  <p className="mt-2 text-xs text-primary-600">
-                    <Link href="/bilgilerim" className="underline hover:no-underline">
-                      {t("fillFromProfile")}
-                    </Link>
+                ) : null}
+                {(isPending || isStripeReturning) ? (
+                  <p className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                    İşleminiz devam ediyor. Lütfen bekleyiniz, sayfayı kapatmayın ve yenilemeyin.
                   </p>
-                )}
+                ) : null}
               </div>
 
               <div className="flex justify-between">
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(2)}
+                  onClick={() => setCurrentStep(1)}
                   className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   {t("stepBack")}
@@ -1067,7 +1126,7 @@ export default function CheckoutPage() {
                       <span>{formatPrice(processingFeesTotal, checkoutCurrency)}</span>
                     </div>
                   )}
-                  {currentStep >= 2 && shippingFeeOnce > 0 && (
+                  {shippingFeeOnce > 0 && (
                     <div className="flex justify-between">
                       <span>{t("shippingFeeLabel")}</span>
                       <span>{formatPrice(shippingFeeOnce, checkoutCurrency)}</span>
@@ -1081,14 +1140,12 @@ export default function CheckoutPage() {
                   </span>
                 </div>
                 <p className="mt-2 text-xs leading-relaxed text-slate-500">
-                  {currentStep === 1
-                    ? t("summaryFooterStep1")
-                    : deliveryChoice !== "e_ticket" && shippingFeeOnce > 0
+                  {deliveryChoice !== "e_ticket" && shippingFeeOnce > 0
                       ? t("summaryFooterWithShipping")
                       : t("summaryFooterDigital")}
                 </p>
 
-                {currentStep === 3 && (
+                {currentStep === 1 && (
                   <>
                     {error && (
                       <p className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
@@ -1108,7 +1165,7 @@ export default function CheckoutPage() {
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
-                        handleCompleteOrder(e as unknown as React.FormEvent);
+                        void handleCompleteOrder(e as unknown as React.FormEvent);
                       }}
                       disabled={isPending || items.length === 0 || !user}
                       className="mt-6 w-full rounded-lg !bg-blue-600 py-4 font-semibold text-white transition-colors hover:!bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"

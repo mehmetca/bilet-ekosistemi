@@ -390,6 +390,7 @@
     "loginOrSignup": "Sign In / Sign Up",
     "stepContinue": "Continue",
     "stepBack": "Back",
+    "selectShipping": "Choose shipping",
     "emailNotSent": "E-mail could not be sent.",
     "emailNotSentHint": "You can print your ticket(s) now on this page, or later from the admin panel if you prefer.",
     "paymentDetails": "Payment Details",
@@ -400,6 +401,8 @@
     "cardHolderName": "Name on Card",
     "cardHolderPlaceholder": "Full Name",
     "testModeHint": "Test mode: Any card entered will be accepted.",
+    "stripeRedirectInfo": "After clicking \"Pay\", the Stripe payment form opens below and card details are entered securely inside Stripe.",
+    "stripeTestCardHint": "Test card: 4242 4242 4242 4242, expiry: any future date, CVC: any 3 digits.",
     "cardFieldsRequired": "Please enter all card details.",
     "seatsInCart": "Seats ({count})",
     "seatLineFallback": "Seat {n}"

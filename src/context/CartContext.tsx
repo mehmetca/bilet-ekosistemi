@@ -247,7 +247,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       item.seatCaptions && item.seatCaptions.length > 0 ? item.seatCaptions : undefined;
     setItems((prev) => {
       const existing = prev.find(
-        (i) => i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()
+        (i) =>
+          i.ticketId === item.ticketId ||
+          (i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim())
       );
       if (existing) {
         const prevIds = existing.seatIds || [];
@@ -264,10 +266,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
                 seatIds || []
               )
             : undefined;
-        const newQty = mergedSeatIds ? mergedSeatIds.length : Math.min(existing.available, cap, existing.quantity + qty);
+        // Fiyat kategorisi akışında `available` bazı etkinliklerde 1 gelebiliyor ve
+        // header sayacını 1'de kilitliyor; adet artışını sepete ekleme davranışına göre tut.
+        const newQty = mergedSeatIds ? mergedSeatIds.length : Math.min(cap, existing.quantity + qty);
         if (newQty <= 0) return prev.filter((i) => !(i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()));
         return prev.map((i) =>
-          i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()
+          (i.ticketId === item.ticketId ||
+            (i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()))
             ? {
                 ...i,
                 quantity: newQty,
@@ -289,7 +294,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         {
           ...item,
-          quantity: cappedSeatIds ? cappedSeatIds.length : Math.min(item.available, cap, qty),
+          quantity: cappedSeatIds ? cappedSeatIds.length : Math.min(cap, qty),
           seatIds: cappedSeatIds,
           seatCaptions: captionsNew,
           addedAt: now,

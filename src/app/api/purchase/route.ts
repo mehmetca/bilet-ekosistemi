@@ -772,6 +772,54 @@ async function sendTicketEmail(payload: TicketMailPayload) {
   }
 }
 
+async function sendAdminPhysicalDeliveryAlert(payload: {
+  buyerName: string;
+  buyerEmail: string;
+  buyerAddress: string;
+  buyerPlz: string;
+  buyerCity: string;
+  deliveryMethod: "standard" | "express";
+  shippingFee: number;
+  quantity: number;
+  ticketCode: string;
+  eventTitle?: string;
+}) {
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.TICKET_EMAIL_FROM;
+  const adminAlertEmail = process.env.ADMIN_ORDER_ALERT_EMAIL;
+  if (!resendApiKey || !fromAddress || !adminAlertEmail) return { sent: false };
+
+  const subject = `Fiziksel bilet siparişi: ${payload.ticketCode}`;
+  const html = `
+    <div style="font-family:Arial,sans-serif;color:#0f172a;">
+      <h2 style="margin:0 0 10px;">Yeni fiziksel teslimat siparişi</h2>
+      <p style="margin:0 0 8px;"><strong>Etkinlik:</strong> ${payload.eventTitle || "-"}</p>
+      <p style="margin:0 0 8px;"><strong>Bilet Kodu:</strong> ${payload.ticketCode}</p>
+      <p style="margin:0 0 8px;"><strong>Adet:</strong> ${payload.quantity}</p>
+      <p style="margin:0 0 8px;"><strong>Teslimat:</strong> ${payload.deliveryMethod}</p>
+      <p style="margin:0 0 12px;"><strong>Kargo Ücreti:</strong> EUR ${payload.shippingFee.toFixed(2)}</p>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;" />
+      <p style="margin:0 0 8px;"><strong>Alıcı:</strong> ${payload.buyerName} (${payload.buyerEmail})</p>
+      <p style="margin:0;"><strong>Adres:</strong> ${payload.buyerAddress}, ${payload.buyerPlz} ${payload.buyerCity}</p>
+    </div>
+  `;
+
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${resendApiKey}`,
+    },
+    body: JSON.stringify({
+      from: fromAddress,
+      to: [adminAlertEmail],
+      subject,
+      html,
+    }),
+  });
+  return { sent: res.ok };
+}
+
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -1248,6 +1296,25 @@ export async function POST(request: NextRequest) {
 
     if (!emailResult.sent) {
       console.error("Bilet e-postası gönderilemedi:", emailResult.reason);
+    }
+
+    if (physicalDelivery !== "none" && buyerAddress && buyerPlz && buyerCity) {
+      try {
+        await sendAdminPhysicalDeliveryAlert({
+          buyerName,
+          buyerEmail,
+          buyerAddress,
+          buyerPlz,
+          buyerCity,
+          deliveryMethod: physicalDelivery,
+          shippingFee,
+          quantity,
+          ticketCode,
+          eventTitle: eventSummary.title,
+        });
+      } catch (err) {
+        console.error("Admin fiziksel teslimat bildirimi gönderilemedi:", err);
+      }
     }
 
     return NextResponse.json({

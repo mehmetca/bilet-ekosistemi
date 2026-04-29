@@ -390,6 +390,7 @@
     "loginOrSignup": "Giriş Yap / Üye Ol",
     "stepContinue": "Devam",
     "stepBack": "Geri",
+    "selectShipping": "Kargo Seç",
     "emailNotSent": "E-posta gönderilemedi.",
     "emailNotSentHint": "Bilet veya biletlerinizi şimdi bu sayfadan yazdırabilirsiniz; isterseniz daha sonra da yönetim panelinden yazdırabilirsiniz.",
     "paymentDetails": "Ödeme Bilgileri",
@@ -400,6 +401,8 @@
     "cardHolderName": "Kart Üzerindeki İsim",
     "cardHolderPlaceholder": "Ad Soyad",
     "testModeHint": "Deneme modu: Girilen her kart kabul edilir.",
+    "stripeRedirectInfo": "Ode butonuna bastiginizda asagida Stripe odeme formu acilir ve kart bilgilerini guvenli sekilde Stripe formunda girersiniz.",
+    "stripeTestCardHint": "Test kart: 4242 4242 4242 4242, son kullanım: gelecekte bir tarih, CVC: herhangi 3 hane.",
     "cardFieldsRequired": "Lütfen tüm kart bilgilerini girin.",
     "seatsInCart": "Koltuklar ({count})",
     "seatLineFallback": "Koltuk {n}"

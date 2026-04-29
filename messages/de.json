@@ -390,6 +390,7 @@
     "loginOrSignup": "Anmelden / Registrieren",
     "stepContinue": "Weiter",
     "stepBack": "Zurück",
+    "selectShipping": "Versand waehlen",
     "emailNotSent": "E-Mail konnte nicht gesendet werden.",
     "emailNotSentHint": "Sie können Ihr(e) Ticket(s) jetzt auf dieser Seite ausdrucken oder später im Verwaltungspanel drucken.",
     "paymentDetails": "Zahlungsdetails",
@@ -400,6 +401,8 @@
     "cardHolderName": "Name auf der Karte",
     "cardHolderPlaceholder": "Vor- und Nachname",
     "testModeHint": "Testmodus: Jede eingegebene Karte wird akzeptiert.",
+    "stripeRedirectInfo": "Nach Klick auf \"Bezahlen\" wird unten das Stripe-Zahlungsformular geoeffnet und die Kartendaten werden sicher im Stripe-Formular eingegeben.",
+    "stripeTestCardHint": "Testkarte: 4242 4242 4242 4242, Ablaufdatum: ein zukünftiges Datum, CVC: beliebige 3 Ziffern.",
     "cardFieldsRequired": "Bitte geben Sie alle Kartendaten ein.",
     "seatsInCart": "Plätze ({count})",
     "seatLineFallback": "Platz {n}"

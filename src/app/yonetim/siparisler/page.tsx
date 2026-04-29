@@ -183,6 +183,7 @@ export default function SiparislerPage() {
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Etkinlik</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Bilet</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Alıcı</th>
+                  <th className="text-left p-4 text-sm font-medium text-slate-700">Teslimat</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Adet</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Tutar</th>
                   <th className="text-left p-4 text-sm font-medium text-slate-700">Durum</th>
@@ -212,6 +213,20 @@ export default function SiparislerPage() {
                         <div className="font-medium">{order.buyer_name}</div>
                         <div className="text-xs text-slate-500">{order.buyer_email}</div>
                       </div>
+                    </td>
+                    <td className="p-4 text-sm text-slate-900">
+                      {(order as any).delivery_method && (order as any).delivery_method !== "e_ticket" ? (
+                        <div>
+                          <div className="font-medium text-amber-700">
+                            {(order as any).delivery_method === "express" ? "Ekspres Kargo" : "Standart Kargo"}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {[order.buyer_address, order.buyer_plz, order.buyer_city].filter(Boolean).join(", ") || "Adres girilmemiş"}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-slate-500">E-Bilet</span>
+                      )}
                     </td>
                     <td className="p-4 text-sm text-slate-900">{order.quantity}</td>
                     <td className="p-4 text-sm font-medium text-slate-900">

@@ -2,10 +2,10 @@
 
 import { useState, useMemo } from "react";
 import Image from "next/image";
+import NextLink from "next/link";
 import { Calendar, ChevronRight, Music2, Building2 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
-import { Link } from "@/i18n/navigation";
 import type { Event } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent, getLocalizedText, type Locale } from "@/lib/i18n-content";
@@ -341,13 +341,13 @@ function CityEventsSection({
                     {t("eventEnded")}
                   </span>
                 ) : (
-                  <Link
-                    href={`/etkinlik/${event.id}`}
+                  <NextLink
+                    href={`/${locale}/etkinlik/${event.id}`}
                     className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-[#c62828] px-5 text-sm font-bold uppercase tracking-wide text-white shadow hover:bg-[#b71c1c] sm:ml-auto"
                   >
                     {t("buyTicket")}
                     <ChevronRight className="h-4 w-4" />
-                  </Link>
+                  </NextLink>
                 )}
               </div>
             </div>

@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import NextLink from "next/link";
 import {
   Calendar,
   MapPin,
@@ -19,9 +20,6 @@ import {
   ChevronDown,
   ChevronUp,
   Bell,
-  Building2,
-  Armchair,
-  LayoutGrid,
   X,
   ZoomIn,
   ZoomOut,
@@ -34,7 +32,6 @@ import { formatEventVenueAddressCityLine } from "@/lib/event-venue-display";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent, type Locale } from "@/lib/i18n-content";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
-import { Link } from "@/i18n/navigation";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/lib/supabase-client";
@@ -916,6 +913,26 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     ? Math.min(Number(selectedTicket.available || 0), maxTicketsPerOrder)
     : 1;
   const totalPrice = selectedTicket ? selectedTicket.price * ticketCount : 0;
+  const cartItemForSelectedPriceTicket = useMemo(() => {
+    if (!selectedTicket) return null;
+    return (
+      cartItems.find((it) => it.eventId === event.id && it.ticketId === selectedTicket.id) || null
+    );
+  }, [cartItems, event.id, selectedTicket]);
+  const currentEventCartCount = useMemo(() => {
+    return cartItems
+      .filter((it) => it.eventId === event.id)
+      .reduce((sum, it) => sum + it.quantity, 0);
+  }, [cartItems, event.id]);
+  const currentEventCartSummary = useMemo(() => {
+    const grouped = new Map<string, number>();
+    for (const it of cartItems) {
+      if (it.eventId !== event.id) continue;
+      const name = (it.ticketName || "Standart").trim() || "Standart";
+      grouped.set(name, (grouped.get(name) || 0) + Number(it.quantity || 0));
+    }
+    return Array.from(grouped.entries()).map(([name, quantity]) => ({ name, quantity }));
+  }, [cartItems, event.id]);
 
   // Grup biletinde adet minimumun altındaysa yukarı çek (sayfa ilk yüklendiğinde veya bilet türü değişince)
   useEffect(() => {
@@ -1446,7 +1463,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 ) : null}
                 {organizerDisplayName && (
                   <span className="inline-flex items-center gap-2 rounded-md bg-primary-50 px-3 py-1.5 text-primary-700">
-                    <Building2 className="h-4 w-4" />
+                    <Users className="h-4 w-4" />
                     {t("organizer")}: {organizerDisplayName}
                   </span>
                 )}
@@ -1534,7 +1551,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     }`}
                   >
                     <span className={`flex-shrink-0 rounded-xl p-3 ${bookingMode === "price" ? "bg-primary-100 text-primary-600" : "bg-slate-200 text-slate-500"}`}>
-                      <Armchair className="h-10 w-10" />
+                      <Ticket className="h-10 w-10" />
                     </span>
                     <div className="min-w-0">
                       <span className="block font-bold text-lg">{t("bestplatzbuchung")}</span>
@@ -1551,7 +1568,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     }`}
                   >
                     <span className={`flex-shrink-0 rounded-xl p-3 ${bookingMode === "seat" ? "bg-primary-100 text-primary-600" : "bg-slate-200 text-slate-500"}`}>
-                      <LayoutGrid className="h-10 w-10" />
+                      <DoorOpen className="h-10 w-10" />
                     </span>
                     <div className="min-w-0">
                       <span className="block font-bold text-lg">{t("saalplanbuchung")}</span>
@@ -2041,12 +2058,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       : "Ödemeyi tamamlamak için sepete gidin. Kotanız uygunsa plandan ek koltuk da seçebilirsiniz."}
                               </p>
                               <div className="flex flex-col gap-2">
-                                <Link
-                                  href="/sepet"
+                                <NextLink
+                                  href={`/${locale}/sepet`}
+                                  prefetch={false}
                                   className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
                                 >
                                   {tCheckout("goToCheckout")}
-                                </Link>
+                                </NextLink>
                               </div>
                             </div>
                           ) : (
@@ -2067,177 +2085,243 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               )}
 
-              {/* Bilet Türleri - Fiyat kategorisine göre (mevcut akış); tükenen kategoriler "Sold out" ile gösterilir */}
-              {!isExternalOnlyEvent && bookingMode === "price" && (ticketState.length === 0 ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
-                  {t("noTicketsAvailable")}
-                </div>
-              ) : (
-                <div className="mb-8 overflow-hidden rounded-xl border border-slate-200">
-                  <div className="hidden bg-slate-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid md:grid-cols-[minmax(0,1fr)_120px_170px]">
-                    <span>{t("ticketType")}</span>
-                    <span>{t("price")}</span>
-                    <span className="text-right">{t("quantity")}</span>
-                  </div>
-                  <div className="divide-y divide-slate-200">
-                    {ticketState.map((ticketType) => {
-                      const availableAmount = Number(ticketType.available || 0);
-                      const isSoldOut = availableAmount <= 0;
-                      if (isSoldOut) {
-                        return (
-                          <div
-                            key={ticketType.id}
-                            className="flex items-center justify-between gap-4 px-5 py-4 bg-slate-50 cursor-default"
-                          >
-                            <div>
-                              <p className="text-sm font-semibold text-slate-700">{ticketType.name}</p>
-                              <p className="text-xs text-slate-500">{t("remaining")}: 0</p>
-                            </div>
-                            <p className="text-lg font-bold text-slate-400">{formatPrice(ticketType.price, event.currency)}</p>
-                            <div className="flex items-center justify-end min-w-[100px]">
-                              <span className="text-lg font-bold uppercase tracking-wider text-red-600" aria-label={t("soldOut")}>
-                                {t("soldOut")}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      }
-                      const isSelected = selectedTicketType === ticketType.id;
-                      const minSelectable = getMinQuantityFromDescription(ticketType.description);
-                      const maxSelectable = Math.min(availableAmount, maxTicketsPerOrder);
-                      const effectiveMin = Math.min(minSelectable, maxSelectable);
-                      const rowCount = isSelected ? ticketCount : 0;
-
-                      return (
-                        <div
-                          key={ticketType.id}
-                          className={`cursor-pointer px-5 py-4 transition-colors ${
-                            isSelected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
-                          }`}
-                          onClick={() => {
-                            setSelectedTicketType(ticketType.id);
-                            setTicketCount((current) => {
-                              if (!isSelected) return effectiveMin;
-                              return Math.min(Math.max(effectiveMin, current), maxSelectable || effectiveMin);
-                            });
-                          }}
-                        >
-                          <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_120px_170px]">
-                            <div>
-                              <p className="text-sm font-semibold text-slate-900">{ticketType.name}</p>
-                              <p className="text-xs text-slate-500">
-                                {t("remaining")}: {availableAmount}
-                                {minSelectable > 1 && (
-                                  <span className="ml-1 text-primary-600"> · Min. {minSelectable} adet</span>
-                                )}
-                              </p>
-                            </div>
-
-                            <p className="text-lg font-bold text-primary-700">{formatPrice(ticketType.price, event.currency)}</p>
-
-                            <div className="flex items-center justify-end gap-2">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedTicketType(ticketType.id);
-                                  setTicketCount((current) => {
-                                    if (!isSelected) return effectiveMin;
-                                    return Math.max(effectiveMin, current - 1);
-                                  });
-                                }}
-                                disabled={availableAmount <= 0 || isPastEvent || rowCount <= effectiveMin}
-                                className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                -
-                              </button>
-                              <span className="w-8 text-center text-sm font-semibold text-slate-900">{rowCount}</span>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedTicketType(ticketType.id);
-                                  setTicketCount((current) => {
-                                    if (!isSelected) return effectiveMin;
-                                    return Math.min(maxSelectable || effectiveMin, current + 1);
-                                  });
-                                }}
-                                disabled={availableAmount <= 0 || isPastEvent || rowCount >= maxSelectable}
-                                className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-                              >
-                                +
-                              </button>
-                            </div>
-                          </div>
+              {/* Bilet Türleri - Fiyat kategorisine göre: yer seçimi ile aynı sağ panel akışı */}
+              {!isExternalOnlyEvent && bookingMode === "price" && (
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
+                  <div>
+                    {ticketState.length === 0 ? (
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
+                        {t("noTicketsAvailable")}
+                      </div>
+                    ) : (
+                      <div className="mb-8 overflow-hidden rounded-xl border border-slate-200">
+                        <div className="hidden bg-slate-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid md:grid-cols-[minmax(0,1fr)_120px_170px]">
+                          <span>{t("ticketType")}</span>
+                          <span>{t("price")}</span>
+                          <span className="text-right">{t("quantity")}</span>
                         </div>
-                      );
-                    })}
+                        <div className="divide-y divide-slate-200">
+                          {ticketState.map((ticketType) => {
+                            const availableAmount = Number(ticketType.available || 0);
+                            const isSoldOut = availableAmount <= 0;
+                            if (isSoldOut) {
+                              return (
+                                <div
+                                  key={ticketType.id}
+                                  className="flex items-center justify-between gap-4 bg-slate-50 px-5 py-4 cursor-default"
+                                >
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-700">{ticketType.name}</p>
+                                    <p className="text-xs text-slate-500">{t("remaining")}: 0</p>
+                                  </div>
+                                  <p className="text-lg font-bold text-slate-400">{formatPrice(ticketType.price, event.currency)}</p>
+                                  <div className="flex min-w-[100px] items-center justify-end">
+                                    <span className="text-lg font-bold uppercase tracking-wider text-red-600" aria-label={t("soldOut")}>
+                                      {t("soldOut")}
+                                    </span>
+                                  </div>
+                                </div>
+                              );
+                            }
+
+                            const isSelected = selectedTicketType === ticketType.id;
+                            const minSelectable = getMinQuantityFromDescription(ticketType.description);
+                            const maxSelectable = Math.min(availableAmount, maxTicketsPerOrder);
+                            const effectiveMin = Math.min(minSelectable, maxSelectable);
+                            const selectedRowCount = isSelected ? ticketCount : 0;
+                            const cartQtyForTicket = cartItems
+                              .filter((it) => it.eventId === event.id && it.ticketId === ticketType.id)
+                              .reduce((sum, it) => sum + it.quantity, 0);
+                            // Kullanıcıya tutarlı görünmesi için, varsa sepetteki gerçek adedi göster.
+                            const rowCount = cartQtyForTicket > 0 ? cartQtyForTicket : selectedRowCount;
+
+                            return (
+                              <div
+                                key={ticketType.id}
+                                className={`cursor-pointer px-5 py-4 transition-colors ${
+                                  isSelected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
+                                }`}
+                                onClick={() => {
+                                  setSelectedTicketType(ticketType.id);
+                                  setTicketCount((current) => {
+                                    if (!isSelected) return effectiveMin;
+                                    return Math.min(Math.max(effectiveMin, current), maxSelectable || effectiveMin);
+                                  });
+                                }}
+                              >
+                                <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_120px_170px]">
+                                  <div>
+                                    <p className="text-sm font-semibold text-slate-900">{ticketType.name}</p>
+                                    <p className="text-xs text-slate-500">
+                                      {t("remaining")}: {availableAmount}
+                                      {minSelectable > 1 && (
+                                        <span className="ml-1 text-primary-600"> · Min. {minSelectable} adet</span>
+                                      )}
+                                    </p>
+                                  </div>
+                                  <p className="text-lg font-bold text-primary-700">{formatPrice(ticketType.price, event.currency)}</p>
+                                  <div className="flex items-center justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedTicketType(ticketType.id);
+                                        setTicketCount((current) => {
+                                          if (!isSelected) return effectiveMin;
+                                          return Math.max(effectiveMin, current - 1);
+                                        });
+                                      }}
+                                      disabled={availableAmount <= 0 || isPastEvent || selectedRowCount <= effectiveMin}
+                                      className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      -
+                                    </button>
+                                    <span className="w-8 text-center text-sm font-semibold text-slate-900">{rowCount}</span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedTicketType(ticketType.id);
+                                        setTicketCount((current) => {
+                                          if (!isSelected) return effectiveMin;
+                                          return Math.min(maxSelectable || effectiveMin, current + 1);
+                                        });
+                                      }}
+                                      disabled={availableAmount <= 0 || isPastEvent || selectedRowCount >= maxSelectable}
+                                      className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                      +
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="border-t pt-6">
+                      <div className="mb-6 flex items-center justify-between">
+                        <span className="text-lg font-semibold text-slate-900">{t("totalPrice")}</span>
+                        <span className="text-3xl font-bold text-primary-700">
+                          {formatPrice(totalPrice, event.currency)}
+                        </span>
+                      </div>
+
+                      {isPastEvent && (
+                        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+                          {t("eventEnded")}
+                        </p>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!selectedTicket || isPastEvent || isUnapproved) return;
+                          const minQ = Math.min(selectedMinQ, selectedMaxQ);
+                          if (ticketCount < minQ) return;
+                          addItem({
+                            ticketId: selectedTicket.id,
+                            eventId: event.id,
+                            eventTitle: localized.title || event.title,
+                            eventDate: event.date,
+                            eventTime: event.time || "20:00",
+                            venue: localized.venue || event.venue,
+                            location: event.location,
+                            imageUrl: event.image_url,
+                            ticketName: selectedTicket.name || selectedTicket.ticket_type || "Standart",
+                            price: Number(selectedTicket.price || 0),
+                            currency: event.currency,
+                            eventCheckoutFee:
+                              typeof event.checkout_processing_fee === "number" &&
+                              event.checkout_processing_fee > 0
+                                ? event.checkout_processing_fee
+                                : undefined,
+                            quantity: ticketCount,
+                            available: Number(selectedTicket.available || 0),
+                          });
+                          setActionMessage(tCheckout("addedToCart"));
+                        }}
+                        disabled={
+                          isUnapproved ||
+                          !selectedTicket ||
+                          isPastEvent ||
+                          ticketCount < Math.min(selectedMinQ, selectedMaxQ)
+                        }
+                        className="w-full rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
+                      >
+                        {tCheckout("addToCart")}
+                      </button>
+                    </div>
                   </div>
+
+                  <aside className="rounded-2xl border border-slate-200 bg-white p-5 h-fit">
+                    <h3 className="mb-4 text-lg font-bold text-slate-900">{t("deinePlatze")}</h3>
+                    {currentEventCartSummary.length > 0 ? (
+                      <div className="space-y-2">
+                        <ul className="space-y-1 text-sm text-slate-700">
+                          {currentEventCartSummary.map((item, idx) => (
+                            <li key={`price-cat-cart-side-${item.name}-${idx}`}>
+                              {idx + 1}. {item.name} x {item.quantity}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : selectedTicket ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-slate-600">
+                          Bilet kategorisi: <strong>{selectedTicket.name || selectedTicket.ticket_type || "Standart"}</strong>
+                        </p>
+                        <ul className="space-y-1 text-sm text-slate-700">
+                          {Array.from({ length: ticketCount }).map((_, idx) => (
+                            <li key={`price-cat-selected-side-${idx}`}>
+                              {idx + 1}. {selectedTicket.name || selectedTicket.ticket_type || "Standart"} x 1
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-500">
+                        {locale === "de"
+                          ? "Wählen Sie eine Ticketkategorie und Menge."
+                          : locale === "en"
+                            ? "Select a ticket category and quantity."
+                            : "Bir bilet kategorisi ve adet seçin."}
+                      </p>
+                    )}
+
+                    {currentEventCartCount > 0 ? (
+                      <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+                        <p className="text-sm font-semibold text-emerald-800">
+                          {locale === "de"
+                            ? "Für diese Veranstaltung befinden sich bereits Tickets in Ihrem Warenkorb."
+                            : locale === "en"
+                              ? "You already have tickets for this event in your cart."
+                              : "Bu etkinlik için sepetinizde biletler bulunmaktadır."}
+                        </p>
+                        <p className="mt-1 text-xs text-emerald-700">
+                          {locale === "de"
+                            ? "Gehen Sie zum Warenkorb, um die Zahlung abzuschließen. Sie können weitere Tickets hinzufügen, sofern Ihr Limit es zulässt."
+                            : locale === "en"
+                              ? "Go to your cart to complete payment. You can add more tickets if your order limit allows."
+                              : "Ödemeyi tamamlamak için sepete gidin. Kotanız uygunsa ek bilet de seçebilirsiniz."}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {totalItems > 0 && (
+                      <NextLink
+                        href={`/${locale}/sepet`}
+                        prefetch={false}
+                        className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                      >
+                        {tCheckout("goToCheckout")} ({currentEventCartCount > 0 ? currentEventCartCount : totalItems})
+                      </NextLink>
+                    )}
+                  </aside>
                 </div>
-              ))}
-
-              {/* Toplam Fiyat ve Sepete Ekle – sadece fiyat kategorisi modunda */}
-              {!isExternalOnlyEvent && bookingMode === "price" && <div className="border-t pt-6">
-                <div className="flex items-center justify-between mb-6">
-                  <span className="text-lg font-semibold text-slate-900">{t("totalPrice")}</span>
-                  <span className="text-3xl font-bold text-primary-700">
-                    {formatPrice(totalPrice, event.currency)}
-                  </span>
-                </div>
-
-                {isPastEvent && (
-                  <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
-                    {t("eventEnded")}
-                  </p>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!selectedTicket || isPastEvent || isUnapproved) return;
-                    const minQ = Math.min(selectedMinQ, selectedMaxQ);
-                    if (ticketCount < minQ) return; // Grup biletinde minimum adet şartı
-                    addItem({
-                      ticketId: selectedTicket.id,
-                      eventId: event.id,
-                      eventTitle: localized.title || event.title,
-                      eventDate: event.date,
-                      eventTime: event.time || "20:00",
-                      venue: localized.venue || event.venue,
-                      location: event.location,
-                      imageUrl: event.image_url,
-                      ticketName: selectedTicket.name || selectedTicket.ticket_type || "Standart",
-                      price: Number(selectedTicket.price || 0),
-                      currency: event.currency,
-                      eventCheckoutFee:
-                        typeof event.checkout_processing_fee === "number" &&
-                        event.checkout_processing_fee > 0
-                          ? event.checkout_processing_fee
-                          : undefined,
-                      quantity: ticketCount,
-                      available: Number(selectedTicket.available || 0),
-                    });
-                    setActionMessage(tCheckout("addedToCart"));
-                  }}
-                  disabled={
-                    isUnapproved ||
-                    !selectedTicket ||
-                    isPastEvent ||
-                    ticketCount < Math.min(selectedMinQ, selectedMaxQ)
-                  }
-                  className="w-full rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
-                >
-                  {tCheckout("addToCart")}
-                </button>
-                {totalItems > 0 && (
-                  <Link
-                    href="/sepet"
-                    className="mt-3 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"
-                  >
-                    {tCheckout("goToCheckout")} ({totalItems})
-                  </Link>
-                )}
-              </div>}
+              )}
             </div>
 
             {/* Etkinlik Hakkında – düzenli içerik + sağ özet panel */}
@@ -2280,7 +2364,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     </div>
                   </div>
                   <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                         {locale === "de" ? "Veranstaltungsort" : locale === "en" ? "Venue" : "Mekan"}
@@ -2343,12 +2427,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t("venueInfo")}</h2>
-                  <Link
-                    href="/mekanlar"
+                  <NextLink
+                    href={`/${locale}/mekanlar`}
                     className="text-sm font-medium text-primary-600 hover:text-primary-700"
                   >
                     {t("allVenues")} →
-                  </Link>
+                  </NextLink>
                 </div>
                 <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
                   <div className="space-y-5">

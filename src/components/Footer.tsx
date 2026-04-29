@@ -94,6 +94,7 @@ export default function Footer() {
                 alt="Kurdevent Logo"
                 width={300}
                 height={90}
+                style={{ width: "auto", height: "auto" }}
                 priority
               />
             </NextLink>
