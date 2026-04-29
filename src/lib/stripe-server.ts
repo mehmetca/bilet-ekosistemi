@@ -1,11 +1,18 @@
 import Stripe from "stripe";
 
-const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+type StripeClient = InstanceType<typeof Stripe>;
+let stripeSingleton: StripeClient | null = null;
 
-if (!stripeSecretKey) {
-  throw new Error("STRIPE_SECRET_KEY is missing.");
+export function getStripe(): StripeClient {
+  if (stripeSingleton) return stripeSingleton;
+
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeSecretKey) {
+    throw new Error("STRIPE_SECRET_KEY is missing.");
+  }
+
+  stripeSingleton = new Stripe(stripeSecretKey, {
+    apiVersion: "2026-04-22.dahlia",
+  });
+  return stripeSingleton;
 }
-
-export const stripe = new Stripe(stripeSecretKey, {
-  apiVersion: "2026-04-22.dahlia",
-});

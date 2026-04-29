@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe-server";
+import { getStripe } from "@/lib/stripe-server";
 
 type CreateCheckoutBody = {
   amount: number;
@@ -26,6 +26,7 @@ export async function POST(request: NextRequest) {
     const unitAmount = Math.round(amount * 100);
     const origin = request.headers.get("origin") || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
+    const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       ui_mode: "embedded",
       redirect_on_completion: "never",

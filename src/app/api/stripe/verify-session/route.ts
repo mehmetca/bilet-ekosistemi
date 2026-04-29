@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe-server";
+import { getStripe } from "@/lib/stripe-server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "sessionId zorunlu." }, { status: 400 });
     }
 
+    const stripe = getStripe();
     const session = await stripe.checkout.sessions.retrieve(cleanSessionId);
     const paid = session.payment_status === "paid";
 
