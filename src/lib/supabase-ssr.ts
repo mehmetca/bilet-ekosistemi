@@ -5,7 +5,8 @@ import { authCookieDomainFromHost } from "@/lib/auth-cookie-domain";
 // Server-side client (Server Components, Server Actions, Route Handlers)
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
-  const cookieDomain = authCookieDomainFromHost(headers().get("host"));
+  const headerStore = await headers();
+  const cookieDomain = authCookieDomainFromHost(headerStore.get("host"));
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

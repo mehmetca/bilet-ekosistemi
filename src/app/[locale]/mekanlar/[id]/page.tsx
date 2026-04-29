@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import Header from "@/components/Header";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
@@ -15,7 +16,9 @@ interface VenueFaqItem {
   cevap: string;
 }
 
-export default function MekanDetailPage({ params }: { params: { id: string } }) {
+export default function MekanDetailPage() {
+  const params = useParams<{ id: string }>();
+  const venueParamId = params?.id || "";
   const t = useTranslations("venues");
   const tCommon = useTranslations("common");
   const locale = useLocale() as "tr" | "de" | "en";
@@ -35,7 +38,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
         const { data, error } = await supabase
           .from("venues")
           .select("*")
-          .eq("id", params.id)
+          .eq("id", venueParamId)
           .single();
 
         if (error || !data) return;
@@ -52,7 +55,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
     return () => {
       cancelled = true;
     };
-  }, [params.id]);
+  }, [venueParamId]);
 
   const localized = useMemo(() => {
     if (!venueRaw) return null;
@@ -156,7 +159,7 @@ export default function MekanDetailPage({ params }: { params: { id: string } }) 
   const rules = localized.rules;
 
   const venueFaq = (Array.isArray(venueRaw.faq) ? (venueRaw.faq as VenueFaqItem[]) : []).filter((x) => x?.soru && x?.cevap);
-  const venueId = String(venueRaw.id ?? params.id);
+  const venueId = String(venueRaw.id ?? venueParamId);
   const venueName = localized.name || (venueRaw.name as string | null) || venueId;
 
   return (

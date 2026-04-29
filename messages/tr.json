@@ -350,7 +350,7 @@
     "stepPayment": "Ödeme",
     "yourOrder": "Sipariş Özeti",
     "deliveryMethod": "Teslimat Yöntemi",
-    "deliveryOptionsIntro": "E-bilet: indirilebilir veya yazıcıdan yazdırılabilir dijital bilet. Basılı bilet isterseniz kargo seçin; kargo ücreti bu siparişe yalnızca bir kez eklenir.",
+    "deliveryOptionsIntro": "E-bilet: indirilebilir veya yazıcıdan yazdırılabilir dijital bilettir. Bilet satın alımını tamamladıktan sonra ücretsiz olarak indirebilir ve yazdırabilirsiniz. Basılı bilet isterseniz kargoyu seçin; kargo ücreti bu siparişe yalnızca bir kez eklenir.",
     "eTicket": "E-Bilet (Elektronik)",
     "eTicketDesc": "Biletiniz sipariş sonrası e-posta ile gönderilir; PDF olarak indirip yazdırabilirsiniz.",
     "shippingStandard": "Standart kargo",

@@ -6,11 +6,12 @@ import { sortCitiesByUpcomingEventCount } from "@/lib/city-event-sort";
 import type { Event, News } from "@/types/database";
 
 type HomePageProps = {
-  params: { locale: string };
+  params: Promise<{ locale: string }>;
 };
 
 export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
-  return buildHomeMetadata(params.locale);
+  const { locale } = await params;
+  return buildHomeMetadata(locale);
 }
 
 type HeroBg = { id: string; title: string; image_url: string; is_active: boolean; sort_order: number; transition_duration: number };

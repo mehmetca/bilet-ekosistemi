@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
-      ui_mode: "embedded",
+      ui_mode: "embedded_page",
       redirect_on_completion: "never",
       mode: "payment",
       line_items: [

@@ -98,6 +98,7 @@ export default function CheckoutPage() {
   const [buyerCity, setBuyerCity] = useState("");
   const [seatHoldSessionId, setSeatHoldSessionId] = useState<string | null>(null);
   const processedStripeSessionsRef = useRef<Set<string>>(new Set());
+  const isPollingStripeRef = useRef(false);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
 
@@ -562,6 +563,49 @@ export default function CheckoutPage() {
     }
   }, [checkoutSessionId, finalizePaidOrder, isPending]);
 
+  // Bazı Stripe sürümlerinde embedded teşekkür ekranı gösterilip onComplete her zaman tetiklenmeyebiliyor.
+  // Bu yüzden ödeme adımında session durumunu kısa aralıkla doğrulayıp başarılıysa siparişi finalize et.
+  useEffect(() => {
+    if (!checkoutSessionId || currentStep !== 2 || hasSuccessfulCheckout || results.length > 0) return;
+    let cancelled = false;
+
+    const verifyAndFinalizeIfPaid = async () => {
+      if (cancelled || isPollingStripeRef.current || isPending) return;
+      isPollingStripeRef.current = true;
+      try {
+        const verifyRes = await fetch("/api/stripe/verify-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: checkoutSessionId }),
+        });
+        const verifyData = (await verifyRes.json()) as { success?: boolean; paid?: boolean };
+        if (!verifyRes.ok || !verifyData.success || !verifyData.paid) return;
+        await handleEmbeddedCheckoutComplete();
+      } catch {
+        // geçici ağ hatalarında sonraki tur yeniden dener
+      } finally {
+        isPollingStripeRef.current = false;
+      }
+    };
+
+    void verifyAndFinalizeIfPaid();
+    const intervalId = window.setInterval(() => {
+      void verifyAndFinalizeIfPaid();
+    }, 2500);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+    };
+  }, [
+    checkoutSessionId,
+    currentStep,
+    handleEmbeddedCheckoutComplete,
+    hasSuccessfulCheckout,
+    isPending,
+    results.length,
+  ]);
+
   const isStripeReturning = searchParams.get("stripe_success") === "1";
   const allSuccess = hasSuccessfulCheckout || (results.length > 0 && results.every((r) => r.success));
   const shouldShowEmptyCart =
@@ -821,7 +865,13 @@ export default function CheckoutPage() {
           </div>
           )
         ) : (
-          <div className="grid gap-8 lg:grid-cols-[1fr_minmax(280px,360px)] lg:items-start">
+          <div
+            className={`grid gap-8 lg:items-start ${
+              currentStep === 2
+                ? "lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,360px)]"
+                : "lg:grid-cols-[1fr_minmax(280px,360px)]"
+            }`}
+          >
             <div className="min-w-0 space-y-6">
             {/* Adım 1: Sepet + Teslimat + Müşteri */}
             {currentStep === 1 && (
@@ -1054,18 +1104,20 @@ export default function CheckoutPage() {
                   {t("securePayment")}
                 </p>
                 {checkoutClientSecret && stripePromise ? (
-                  <div className="mt-4 rounded-lg border border-slate-200 bg-white p-2">
-                    <SafeEmbeddedCheckoutProvider
-                      stripe={stripePromise}
-                      options={{
-                        clientSecret: checkoutClientSecret,
-                        onComplete: () => {
-                          void handleEmbeddedCheckoutComplete();
-                        },
-                      }}
-                    >
-                      <SafeEmbeddedCheckout />
-                    </SafeEmbeddedCheckoutProvider>
+                  <div className="mt-4 px-[20px]">
+                    <div className="w-full rounded-lg border border-slate-200 bg-white p-3 md:p-4 lg:p-5">
+                      <SafeEmbeddedCheckoutProvider
+                        stripe={stripePromise}
+                        options={{
+                          clientSecret: checkoutClientSecret,
+                          onComplete: () => {
+                            void handleEmbeddedCheckoutComplete();
+                          },
+                        }}
+                      >
+                        <SafeEmbeddedCheckout />
+                      </SafeEmbeddedCheckoutProvider>
+                    </div>
                   </div>
                 ) : null}
                 {(isPending || isStripeReturning) ? (

@@ -7,27 +7,24 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 const nextConfig = {
   // next-intl / use-intl: RSC + client sınırında tek webpack grafiği; ayrıca Windows vendor-chunk hatalarını azaltır
   transpilePackages: ["lucide-react", "next-intl", "use-intl"],
-  experimental: {
-    instrumentationHook: false,
-    // Sentry / OpenTelemetry webpack vendor-chunks (örn. @opentelemetry.js) Windows dev'de
-    // eksik dosya → MODULE_NOT_FOUND. Sunucuda paketleri bundle dışı bırakır.
-    serverComponentsExternalPackages: [
-      "@sentry/nextjs",
-      "@sentry/node",
-      "@sentry/opentelemetry",
-      "@opentelemetry/api",
-      "@opentelemetry/semantic-conventions",
-      // Windows dev: eksik ./vendor-chunks/@supabase.js hatasını önlemek için sunucu bundle'dan çıkar
-      "@supabase/supabase-js",
-      "@supabase/ssr",
-      // use-intl burada external yapma — __webpack_modules__[id] is not a function hatasına yol açar; transpilePackages kullan
-      // Windows dev: eksik ./vendor-chunks/@formatjs.js — sadece formatjs ailesi (next-intl'i external yapma)
-      "intl-messageformat",
-      "@formatjs/ecma402-abstract",
-      "@formatjs/icu-messageformat-parser",
-      "@formatjs/fast-memoize",
-    ],
-  },
+  // Sentry / OpenTelemetry webpack vendor-chunks (örn. @opentelemetry.js) Windows dev'de
+  // eksik dosya → MODULE_NOT_FOUND. Sunucuda paketleri bundle dışı bırakır.
+  serverExternalPackages: [
+    "@sentry/nextjs",
+    "@sentry/node",
+    "@sentry/opentelemetry",
+    "@opentelemetry/api",
+    "@opentelemetry/semantic-conventions",
+    // Windows dev: eksik ./vendor-chunks/@supabase.js hatasını önlemek için sunucu bundle'dan çıkar
+    "@supabase/supabase-js",
+    "@supabase/ssr",
+    // use-intl burada external yapma — __webpack_modules__[id] is not a function hatasına yol açar; transpilePackages kullan
+    // Windows dev: eksik ./vendor-chunks/@formatjs.js — sadece formatjs ailesi (next-intl'i external yapma)
+    "intl-messageformat",
+    "@formatjs/ecma402-abstract",
+    "@formatjs/icu-messageformat-parser",
+    "@formatjs/fast-memoize",
+  ],
   async redirects() {
     return [
       { source: "/turne", destination: "/", permanent: true },
@@ -119,7 +116,6 @@ export default async function config(phase) {
       org: process.env.SENTRY_ORG || "bilet-ekosistemi",
       project: process.env.SENTRY_PROJECT || "bilet-ekosistemi",
       silent: !process.env.CI,
-      reactComponentAnnotation: { enabled: false },
     });
   }
   return configWithIntl;

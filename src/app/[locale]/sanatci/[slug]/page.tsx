@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { supabase } from "@/lib/supabase-client";
 import type { Artist, Event } from "@/types/database";
@@ -42,8 +43,9 @@ function getYouTubeEmbedUrl(url?: string): string | null {
   }
 }
 
-export default function ArtistPage({ params }: { params: { slug: string } }) {
-  const resolvedParams = params;
+export default function ArtistPage() {
+  const params = useParams<{ slug: string }>();
+  const slug = params?.slug || "";
   const locale = useLocale() as "tr" | "de" | "en" | "ku" | "ckb";
   const t = useTranslations("artists");
   const tCommon = useTranslations("common");
@@ -85,13 +87,13 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
         const { data: artistData, error: artistError } = await supabase
           .from("artists")
           .select("*")
-          .eq("slug", resolvedParams.slug)
+          .eq("slug", slug)
           .single();
 
         if (artistError) {
           console.error("Artist fetch error:", {
             error: artistError,
-            slug: resolvedParams.slug,
+            slug,
             details: artistError.details,
             message: artistError.message,
             code: artistError.code
@@ -128,7 +130,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
     }
 
     fetchData();
-  }, [resolvedParams.slug]);
+  }, [slug]);
 
   // Tüm yaklaşan etkinliklerden rastgele 3 adet çek (sayfa/sanatçı değişince farklı seçim)
   useEffect(() => {
@@ -153,7 +155,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
     }
     fetchEvents();
     return () => { cancelled = true; };
-  }, [resolvedParams.slug]);
+  }, [slug]);
 
   const localized = artist ? getLocalizedArtist(artist as unknown as Record<string, unknown>, locale) : { name: "", bio: "" };
   const parsedProfile = parseArtistBio(localized.bio || artist?.bio);
@@ -297,7 +299,7 @@ export default function ArtistPage({ params }: { params: { slug: string } }) {
             {t("artistNotFound")}
           </h1>
           <p className="text-slate-600 mb-6">
-            {t("artistNotFoundDesc", { slug: resolvedParams.slug })}
+            {t("artistNotFoundDesc", { slug })}
           </p>
           <div className="space-y-3">
             <a

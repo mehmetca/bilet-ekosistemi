@@ -5,13 +5,10 @@ export const dynamic = "force-dynamic";
 
 export async function DELETE(
   _request: NextRequest,
-  context: { params: Promise<{ id: string }> | { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const params = context.params;
-    const orderId = typeof (params as Promise<{ id: string }>).then === "function"
-      ? (await (params as Promise<{ id: string }>)).id
-      : (params as { id: string }).id;
+    const { id: orderId } = await context.params;
 
     if (!orderId) {
       return NextResponse.json({ error: "Sipariş ID gerekli" }, { status: 400 });
