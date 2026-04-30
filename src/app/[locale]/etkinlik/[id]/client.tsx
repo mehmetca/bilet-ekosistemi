@@ -849,6 +849,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [seatMapView, setSeatMapView] = useState<"list" | "map">("map");
   const [selectedSeatCategory, setSelectedSeatCategory] = useState<string>("all");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const seatActionPendingIdsRef = useRef<Set<string>>(new Set());
   /** Yer seçerek bilet al akışında, seçilen koltuklar sepete eklendi mi? (sidebar mesajını değiştirmek için) */
   const [hasSeatSelectionAddedToCart, setHasSeatSelectionAddedToCart] = useState(false);
   /** Koltuk geçici rezervasyonları için anonim oturum kimliği */
@@ -1180,58 +1181,99 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
   const handleSeatToggle = useCallback(
     async (seatId: string) => {
-      if (salesBlockedSeatIds.has(seatId)) return;
+      if (seatActionPendingIdsRef.current.has(seatId)) {
+        setActionMessage(
+          locale === "de"
+            ? "Platzaktion läuft, bitte kurz warten."
+            : locale === "en"
+            ? "Seat action in progress, please wait."
+            : "Koltuk islemi suruyor, lutfen kisa bir sure bekleyin."
+        );
+        return;
+      }
+      if (salesBlockedSeatIds.has(seatId)) {
+        setActionMessage(
+          locale === "de"
+            ? "Der gewahlte Platz ist bereits blockiert."
+            : locale === "en"
+            ? "The selected seat is currently blocked."
+            : "Sectiginiz koltuk su anda bloke durumda."
+        );
+        return;
+      }
       const sessionId = ensureSeatHoldSessionId(seatHoldSessionId);
-      if (!sessionId) return;
+      if (!sessionId) {
+        setActionMessage(
+          locale === "de"
+            ? "Sitzungs-ID konnte nicht erstellt werden. Bitte Seite neu laden."
+            : locale === "en"
+            ? "Could not initialize session. Please refresh the page."
+            : "Oturum olusturulamadi. Lutfen sayfayi yenileyin."
+        );
+        return;
+      }
+      seatActionPendingIdsRef.current.add(seatId);
       if (sessionId !== seatHoldSessionId) setSeatHoldSessionId(sessionId);
       const inCartOnly = cartSeatIdsForEvent.has(seatId) && !selectedSeatIds.has(seatId);
       const isSelected = selectedSeatIds.has(seatId) || inCartOnly;
 
-      if (isSelected) {
-        if (selectedSeatIds.has(seatId)) {
-          setSelectedSeatIds((prev) => {
-            const next = new Set(prev);
-            next.delete(seatId);
-            return next;
-          });
-        }
-        removeSeatItem(event.id, seatId);
-        try {
-          await fetch("/api/seat-holds", {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ eventId: event.id, seatId, sessionId }),
-          });
-        } catch {
-          /* ignore */
-        }
-        return;
-      }
-
-      if (heldSeatIds.size >= maxTicketsPerOrder) {
-        setActionMessage(
-          locale === "de"
-            ? `Max. ${maxTicketsPerOrder} Platze pro Bestellung.`
-            : locale === "en"
-            ? `Maximum ${maxTicketsPerOrder} tickets per order.`
-            : `Siparis basina en fazla ${maxTicketsPerOrder} bilet alabilirsiniz.`
-        );
-        return;
-      }
       try {
-        if (selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seatId)) return;
+        if (isSelected) {
+          if (selectedSeatIds.has(seatId)) {
+            setSelectedSeatIds((prev) => {
+              const next = new Set(prev);
+              next.delete(seatId);
+              return next;
+            });
+          }
+          removeSeatItem(event.id, seatId);
+          try {
+            await fetch("/api/seat-holds", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ eventId: event.id, seatId, sessionId }),
+            });
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+
+        if (heldSeatIds.size >= maxTicketsPerOrder) {
+          setActionMessage(
+            locale === "de"
+              ? `Max. ${maxTicketsPerOrder} Platze pro Bestellung.`
+              : locale === "en"
+              ? `Maximum ${maxTicketsPerOrder} tickets per order.`
+              : `Siparis basina en fazla ${maxTicketsPerOrder} bilet alabilirsiniz.`
+          );
+          return;
+        }
+
+        if (selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seatId)) {
+          setActionMessage(
+            locale === "de"
+              ? "Bitte wählen Sie einen Platz aus der ausgewählten Preiskategorie."
+              : locale === "en"
+              ? "Please choose a seat from the selected price category."
+              : "Lutfen secili fiyat kategorisinden bir koltuk secin."
+          );
+          return;
+        }
         const res = await fetch("/api/seat-holds", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ seatId, eventId: event.id, sessionId }),
         });
         if (!res.ok) {
+          const failData = (await res.json().catch(() => null)) as { error?: string } | null;
           setActionMessage(
-            locale === "de"
-              ? "Der gewahlte Platz ist leider bereits verkauft oder reserviert."
-              : locale === "en"
-              ? "The selected seat is unfortunately already sold or reserved."
-              : "Sectiginiz bilet maalesef satildi."
+            failData?.error?.trim() ||
+              (locale === "de"
+                ? "Der gewahlte Platz ist leider bereits verkauft oder reserviert."
+                : locale === "en"
+                ? "The selected seat is unfortunately already sold or reserved."
+                : "Sectiginiz koltuk su anda baska bir kullanici tarafindan tutuluyor veya satildi.")
           );
           return;
         }
@@ -1277,6 +1319,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             ? "Could not reserve the seat."
             : "Koltuk rezerve edilemedi."
         );
+      } finally {
+        seatActionPendingIdsRef.current.delete(seatId);
       }
     },
     [

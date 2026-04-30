@@ -868,7 +868,7 @@ export default function CheckoutPage() {
           <div
             className={`grid gap-8 lg:items-start ${
               currentStep === 2
-                ? "lg:grid-cols-[minmax(0,1.6fr)_minmax(280px,360px)]"
+                ? "lg:grid-cols-[minmax(0,2fr)_minmax(280px,340px)]"
                 : "lg:grid-cols-[1fr_minmax(280px,360px)]"
             }`}
           >
@@ -1104,8 +1104,8 @@ export default function CheckoutPage() {
                   {t("securePayment")}
                 </p>
                 {checkoutClientSecret && stripePromise ? (
-                  <div className="mt-4 px-[20px]">
-                    <div className="w-full rounded-lg border border-slate-200 bg-white p-3 md:p-4 lg:p-5">
+                  <div className="mt-4 px-0 md:px-1">
+                    <div className="w-full rounded-lg border border-slate-200 bg-white p-2 md:p-3 lg:p-4">
                       <SafeEmbeddedCheckoutProvider
                         stripe={stripePromise}
                         options={{
