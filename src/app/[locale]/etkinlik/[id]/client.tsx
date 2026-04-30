@@ -1226,6 +1226,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
       try {
         if (isSelected) {
+          const wasCartOnly = inCartOnly && !selectedSeatIds.has(seatId);
           if (selectedSeatIds.has(seatId)) {
             setSelectedSeatIds((prev) => {
               const next = new Set(prev);
@@ -1235,13 +1236,38 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           }
           removeSeatItem(event.id, seatId);
           try {
-            await fetch("/api/seat-holds", {
+            const releaseRes = await fetch("/api/seat-holds", {
               method: "DELETE",
               headers: seatHoldHeaders,
               body: JSON.stringify({ eventId: event.id, seatId, sessionId }),
             });
+            if (wasCartOnly) {
+              setActionMessage(
+                locale === "de"
+                  ? "Dieser Platz war in einem alten Warenkorb markiert. Falls ihn inzwischen jemand anderes reserviert hat, wählen Sie bitte einen anderen Platz."
+                  : locale === "en"
+                  ? "This seat was marked in an old cart. If another user has reserved it, please choose a different seat."
+                  : "Bu koltuk eski bir sepetten isaretliydi. Bu sirada baska bir kullanici rezervasyon aldiysa lutfen farkli bir koltuk secin."
+              );
+            } else if (!releaseRes.ok) {
+              setActionMessage(
+                locale === "de"
+                  ? "Platz konnte nicht freigegeben werden. Bitte erneut versuchen."
+                  : locale === "en"
+                  ? "Could not release the seat. Please try again."
+                  : "Koltuk birakilamadi. Lutfen tekrar deneyin."
+              );
+            }
           } catch {
-            /* ignore */
+            if (wasCartOnly) {
+              setActionMessage(
+                locale === "de"
+                  ? "Dieser Platz war in einem alten Warenkorb markiert. Bitte wählen Sie den Platz erneut."
+                  : locale === "en"
+                  ? "This seat was marked in an old cart. Please select it again."
+                  : "Bu koltuk eski bir sepetten isaretliydi. Lutfen koltugu tekrar secin."
+              );
+            }
           }
           return;
         }
