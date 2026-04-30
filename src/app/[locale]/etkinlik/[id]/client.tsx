@@ -1399,7 +1399,14 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             seatCaptions: [seatMeta?.venueLine || seatId],
           });
           setHasSeatSelectionAddedToCart(true);
-          setActionMessage(tCheckout("addedToCart"));
+          const priceText = formatPrice(Number(ticketForCart.price || 0), event.currency);
+          setActionMessage(
+            locale === "de"
+              ? `Ticketpreis: ${priceText} - zum Warenkorb hinzugefügt.`
+              : locale === "en"
+              ? `Ticket price: ${priceText} - added to cart.`
+              : `Bilet fiyatı: ${priceText} - sepete eklendi.`
+          );
         }
       } catch {
         setActionMessage(
@@ -1802,7 +1809,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             className={`mb-4 rounded-lg px-3 py-2 text-sm ${
                               /another customer|anderen kunden|başka bir kullanıcı/i.test(actionMessage)
                                 ? "border border-slate-900 bg-slate-900 font-semibold text-white"
-                                : "border border-slate-300 bg-white text-slate-900"
+                                : "border border-slate-300 bg-white font-semibold text-slate-900"
                             }`}
                           >
                             {actionMessage}
