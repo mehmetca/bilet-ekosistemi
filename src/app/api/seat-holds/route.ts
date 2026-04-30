@@ -40,12 +40,14 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = await getUserIdFromRequest(req, supabase);
+    // Login kullanicilarinda hold sahipligi hesap bazli olsun; tarayici session id'si ile devredilmesin.
+    const effectiveSessionId = userId ? null : (sessionId ?? null);
 
     const { data, error } = await supabase.rpc("hold_seat", {
       p_event_id: eventId,
       p_seat_id: seatId,
       p_user_id: userId,
-      p_session_id: sessionId ?? null,
+      p_session_id: effectiveSessionId,
       p_hold_seconds: CART_RESERVATION_SECONDS,
     });
 
@@ -86,12 +88,13 @@ export async function DELETE(req: NextRequest) {
     }
 
     const userId = await getUserIdFromRequest(req, supabase);
+    const effectiveSessionId = userId ? null : (sessionId ?? null);
 
     const { error } = await supabase.rpc("release_seat_hold", {
       p_event_id: eventId,
       p_seat_id: seatId,
       p_user_id: userId,
-      p_session_id: sessionId ?? null,
+      p_session_id: effectiveSessionId,
     });
 
     if (error) {

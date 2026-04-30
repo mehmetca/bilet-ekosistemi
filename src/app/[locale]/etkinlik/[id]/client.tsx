@@ -1214,6 +1214,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       }
       seatActionPendingIdsRef.current.add(seatId);
       if (sessionId !== seatHoldSessionId) setSeatHoldSessionId(sessionId);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const seatHoldHeaders: HeadersInit = {
+        "Content-Type": "application/json",
+        ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+      };
       const inCartOnly = cartSeatIdsForEvent.has(seatId) && !selectedSeatIds.has(seatId);
       const isSelected = selectedSeatIds.has(seatId) || inCartOnly;
 
@@ -1230,7 +1237,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           try {
             await fetch("/api/seat-holds", {
               method: "DELETE",
-              headers: { "Content-Type": "application/json" },
+              headers: seatHoldHeaders,
               body: JSON.stringify({ eventId: event.id, seatId, sessionId }),
             });
           } catch {
@@ -1262,7 +1269,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         }
         const res = await fetch("/api/seat-holds", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: seatHoldHeaders,
           body: JSON.stringify({ seatId, eventId: event.id, sessionId }),
         });
         if (!res.ok) {
