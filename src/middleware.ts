@@ -86,6 +86,26 @@ export async function middleware(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  // Legacy /index.html varyantlarini tek kanonik URL'ye yonlendir.
+  if (/^\/(?:tr|de|en|ku|ckb)?\/?index\.html$/i.test(pathname)) {
+    const url = request.nextUrl.clone();
+    const m = pathname.match(/^\/(tr|de|en|ku|ckb)\/index\.html$/i);
+    url.pathname = m ? `/${m[1].toLowerCase()}` : "/";
+    return NextResponse.redirect(url, 308);
+  }
+
+  // Gecersiz slug/path enjeksiyonlari (ornek: /de/$) indexlenmesin ve hizla dusurulsun.
+  if (/(^|\/)\$(\/|$)/.test(pathname)) {
+    return new NextResponse("Gone", {
+      status: 410,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Robots-Tag": "noindex, nofollow",
+        "Cache-Control": "public, max-age=300",
+      },
+    });
+  }
+
   // Eski yönetim URL'leri → slider-yonetimi (reklam engelleyici / kısa ömürlü path uyumu)
   if (pathname === "/yonetim/reklamlar" || pathname.startsWith("/yonetim/reklamlar/")) {
     const u = request.nextUrl.clone();
@@ -186,5 +206,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
+  matcher: [
+    "/((?!api|_next|_vercel|.*\\..*).*)",
+    "/index.html",
+    "/(tr|de|en|ku|ckb)/index.html",
+  ],
 };

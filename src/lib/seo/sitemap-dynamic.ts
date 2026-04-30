@@ -8,6 +8,16 @@ function parseDate(s: string | null | undefined): Date {
   return Number.isFinite(d.getTime()) ? d : new Date();
 }
 
+function isValidPathTailSegment(value: string): boolean {
+  const v = value.trim();
+  if (!v) return false;
+  if (v === "$") return false;
+  if (v.includes("/")) return false;
+  if (/[?#]/.test(v)) return false;
+  // URL-safe slug/id karakterleri ile sınırla.
+  return /^[a-zA-Z0-9._~-]+$/.test(v);
+}
+
 type EventRow = {
   id: string;
   slug: string | null;
@@ -47,7 +57,7 @@ function eventPathEntries(rows: EventRow[]): SitemapPathEntry[] {
 
   for (const r of noShow) {
     const tail = (r.slug?.trim() || r.id).trim();
-    if (!tail) continue;
+    if (!isValidPathTailSegment(tail)) continue;
     pushPath(`/etkinlik/${tail}`, parseDate(r.updated_at));
   }
 
@@ -55,11 +65,12 @@ function eventPathEntries(rows: EventRow[]): SitemapPathEntry[] {
     const lastMod = new Date(Math.max(...group.map((e) => parseDate(e.updated_at).getTime())));
     if (group.length >= 2) {
       const showSlug = group[0].show_slug!.trim();
+      if (!isValidPathTailSegment(showSlug)) continue;
       pushPath(`/etkinlik/${showSlug}`, lastMod);
     } else {
       const r = group[0];
       const tail = (r.slug?.trim() || r.id).trim();
-      if (!tail) continue;
+      if (!isValidPathTailSegment(tail)) continue;
       pushPath(`/etkinlik/${tail}`, lastMod);
     }
   }
@@ -108,7 +119,7 @@ export async function fetchSitemapDynamicPaths(): Promise<SitemapPathEntry[]> {
   if (!citiesRes.error && citiesRes.data?.length) {
     for (const c of citiesRes.data as { slug: string; updated_at?: string | null }[]) {
       const slug = c.slug?.trim();
-      if (!slug) continue;
+      if (!slug || !isValidPathTailSegment(slug)) continue;
       entries.push({ path: `/city/${slug}`, lastModified: parseDate(c.updated_at ?? null) });
     }
   }
@@ -131,7 +142,7 @@ export async function fetchSitemapDynamicPaths(): Promise<SitemapPathEntry[]> {
   if (!artistsRes.error && artistsRes.data?.length) {
     for (const a of artistsRes.data as { slug: string; updated_at?: string | null }[]) {
       const slug = a.slug?.trim();
-      if (!slug) continue;
+      if (!slug || !isValidPathTailSegment(slug)) continue;
       entries.push({ path: `/sanatci/${slug}`, lastModified: parseDate(a.updated_at ?? null) });
     }
   }

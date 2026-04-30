@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe-server";
 
 type CreateCheckoutBody = {
@@ -54,6 +55,56 @@ export async function POST(request: NextRequest) {
       clientSecret: session.client_secret,
     });
   } catch (error) {
+    const baseErrorPayload =
+      error instanceof Error
+        ? {
+            name: error.name,
+            message: error.message,
+          }
+        : { rawError: String(error) };
+
+    if (error instanceof Stripe.errors.StripeConnectionError) {
+      console.error("Stripe connection error while creating checkout session:", {
+        ...baseErrorPayload,
+        type: error.type,
+        code: error.code,
+        requestId: error.requestId,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Stripe baglantisinda gecici bir sorun olustu. Lutfen birkac saniye sonra tekrar deneyin.",
+        },
+        { status: 503 }
+      );
+    }
+
+    if (error instanceof Stripe.errors.StripeAuthenticationError) {
+      console.error("Stripe authentication error while creating checkout session:", {
+        ...baseErrorPayload,
+        type: error.type,
+        code: error.code,
+        requestId: error.requestId,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Odeme servisi dogrulamasi basarisiz. Lutfen sistem yoneticisiyle iletisime gecin.",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (error instanceof Stripe.errors.StripeError) {
+      console.error("Stripe checkout session creation failed:", {
+        ...baseErrorPayload,
+        type: error.type,
+        code: error.code,
+        requestId: error.requestId,
+      });
+    } else {
+      console.error("Stripe checkout session creation failed:", baseErrorPayload);
+    }
     return NextResponse.json(
       {
         success: false,
