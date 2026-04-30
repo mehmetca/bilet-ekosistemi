@@ -17,6 +17,48 @@ type ReleaseSeatBody = {
   sessionId?: string;
 };
 
+export async function GET(req: NextRequest) {
+  try {
+    const eventId = req.nextUrl.searchParams.get("event_id")?.trim() || "";
+    const sessionId = req.nextUrl.searchParams.get("session_id")?.trim() || "";
+    if (!eventId) {
+      return NextResponse.json({ ok: true, heldByOthersSeatIds: [] as string[] });
+    }
+
+    const supabase = getSupabaseAdmin();
+    const userId = await getUserIdFromRequest(req, supabase);
+    const nowIso = new Date().toISOString();
+    const { data, error } = await supabase
+      .from("seat_holds")
+      .select("seat_id,user_id,session_id,held_until")
+      .eq("event_id", eventId)
+      .gt("held_until", nowIso);
+
+    if (error) {
+      console.error("seat-holds GET error:", error);
+      return NextResponse.json({ ok: false, error: "Koltuk rezervasyonlari alinamadi." }, { status: 500 });
+    }
+
+    const heldByOthersSeatIds = ((data || []) as Array<{
+      seat_id: string;
+      user_id: string | null;
+      session_id: string | null;
+    }>)
+      .filter((row) => {
+        if (userId) return row.user_id !== userId;
+        if (sessionId) return row.session_id !== sessionId;
+        return true;
+      })
+      .map((row) => row.seat_id)
+      .filter(Boolean);
+
+    return NextResponse.json({ ok: true, heldByOthersSeatIds: [...new Set(heldByOthersSeatIds)] });
+  } catch (err) {
+    console.error("seat-holds GET route error:", err);
+    return NextResponse.json({ ok: false, error: "Sunucu hatası" }, { status: 500 });
+  }
+}
+
 async function getUserIdFromRequest(req: NextRequest, supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string | null> {
   const authHeader = req.headers.get("authorization");
   const token = authHeader?.replace("Bearer ", "");

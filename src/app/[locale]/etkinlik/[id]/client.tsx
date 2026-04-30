@@ -845,6 +845,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
   /** Satılmış koltuklar (completed siparişlerdeki order_seats) – salon planında dolu gösterilir, seçilemez */
   const [soldSeatIds, setSoldSeatIds] = useState<Set<string>>(new Set());
+  /** Başka kullanıcı tarafından geçici olarak tutulan koltuklar */
+  const [heldByOthersSeatIds, setHeldByOthersSeatIds] = useState<Set<string>>(new Set());
   /** EventSeat: "list" = liste görünümü, "map" = salon planı (şematik) */
   const [seatMapView, setSeatMapView] = useState<"list" | "map">("map");
   const [selectedSeatCategory, setSelectedSeatCategory] = useState<string>("all");
@@ -1073,16 +1075,50 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       .catch(() => setSoldSeatIds(new Set()));
   }, [event?.id, hasSeatingPlan]);
 
+  const fetchHeldByOthersSeats = useCallback(async () => {
+    if (!event?.id || !hasSeatingPlan) return;
+    try {
+      const sid = ensureSeatHoldSessionId(seatHoldSessionId);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const q = new URLSearchParams({ event_id: event.id });
+      if (sid) q.set("session_id", sid);
+      const res = await fetch(`/api/seat-holds?${q.toString()}`, {
+        headers: {
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+      });
+      const data = (await res.json().catch(() => null)) as { heldByOthersSeatIds?: string[] } | null;
+      const ids = Array.isArray(data?.heldByOthersSeatIds) ? data!.heldByOthersSeatIds : [];
+      setHeldByOthersSeatIds(new Set(ids));
+    } catch {
+      setHeldByOthersSeatIds(new Set());
+    }
+  }, [event?.id, hasSeatingPlan, seatHoldSessionId]);
+
   useEffect(() => {
     fetchSoldSeats();
-  }, [fetchSoldSeats]);
+    void fetchHeldByOthersSeats();
+  }, [fetchSoldSeats, fetchHeldByOthersSeats]);
 
   useEffect(() => {
     if (!event?.id || !hasSeatingPlan) return;
-    const onFocus = () => fetchSoldSeats();
+    const onFocus = () => {
+      fetchSoldSeats();
+      void fetchHeldByOthersSeats();
+    };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [event?.id, hasSeatingPlan, fetchSoldSeats]);
+  }, [event?.id, hasSeatingPlan, fetchSoldSeats, fetchHeldByOthersSeats]);
+
+  useEffect(() => {
+    if (!event?.id || !hasSeatingPlan) return;
+    const id = window.setInterval(() => {
+      void fetchHeldByOthersSeats();
+    }, 7000);
+    return () => window.clearInterval(id);
+  }, [event?.id, hasSeatingPlan, fetchHeldByOthersSeats]);
 
   const musensaalIdMaps = useMemo(() => {
     if (!isMusensaalPlan || !seatingPlanData?.length) return null;
@@ -1172,15 +1208,36 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const seatTitleById = useMemo(() => {
     const m = new Map<string, string>();
     seatMetaById.forEach((meta, seatId) => {
+      if (heldByOthersSeatIds.has(seatId)) {
+        m.set(
+          seatId,
+          locale === "de"
+            ? "Dieser Platz wird aktuell von einem anderen Kunden reserviert."
+            : locale === "en"
+            ? "This seat is currently reserved by another customer."
+            : "Bu koltuk şu anda başka bir kullanıcı tarafından rezerve edilmiş."
+        );
+        return;
+      }
       const price = formatPrice(Number(meta.ticket?.price || 0), event.currency);
       const tname = meta.ticket?.name || "Bilet";
       m.set(seatId, `${tname} · ${meta.venueLine} · ${price}`);
     });
     return m;
-  }, [seatMetaById, event.currency]);
+  }, [seatMetaById, event.currency, heldByOthersSeatIds, locale]);
 
   const handleSeatToggle = useCallback(
     async (seatId: string) => {
+      if (heldByOthersSeatIds.has(seatId)) {
+        setActionMessage(
+          locale === "de"
+            ? "Dieser Platz wird aktuell von einem anderen Kunden reserviert."
+            : locale === "en"
+            ? "This seat is currently reserved by another customer."
+            : "Bu koltuk şu anda başka bir kullanıcı tarafından rezerve edilmiş."
+        );
+        return;
+      }
       if (seatActionPendingIdsRef.current.has(seatId)) {
         setActionMessage(
           locale === "de"
@@ -1247,7 +1304,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   ? "Dieser Platz war in einem alten Warenkorb markiert. Falls ihn inzwischen jemand anderes reserviert hat, wählen Sie bitte einen anderen Platz."
                   : locale === "en"
                   ? "This seat was marked in an old cart. If another user has reserved it, please choose a different seat."
-                  : "Bu koltuk eski bir sepetten isaretliydi. Bu sirada baska bir kullanici rezervasyon aldiysa lutfen farkli bir koltuk secin."
+                  : "Bu koltuk eski bir sepetten işaretliydi. Bu sırada başka bir kullanıcı rezervasyon aldıysa lütfen farklı bir koltuk seçin."
               );
             } else if (!releaseRes.ok) {
               setActionMessage(
@@ -1265,7 +1322,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   ? "Dieser Platz war in einem alten Warenkorb markiert. Bitte wählen Sie den Platz erneut."
                   : locale === "en"
                   ? "This seat was marked in an old cart. Please select it again."
-                  : "Bu koltuk eski bir sepetten isaretliydi. Lutfen koltugu tekrar secin."
+                  : "Bu koltuk eski bir sepetten işaretliydi. Lütfen koltuğu tekrar seçin."
               );
             }
           }
@@ -1306,7 +1363,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 ? "Der gewahlte Platz ist leider bereits verkauft oder reserviert."
                 : locale === "en"
                 ? "The selected seat is unfortunately already sold or reserved."
-                : "Sectiginiz koltuk su anda baska bir kullanici tarafindan tutuluyor veya satildi.")
+                : "Seçtiğiniz koltuk şu anda başka bir kullanıcı tarafından tutuluyor veya satıldı.")
           );
           return;
         }
@@ -1362,6 +1419,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       cartSeatIdsForEvent,
       event,
       heldSeatIds,
+      heldByOthersSeatIds,
       locale,
       localized.title,
       maxTicketsPerOrder,
@@ -1739,6 +1797,17 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             </button>
                           ) : null}
                         </div>
+                        {actionMessage ? (
+                          <p
+                            className={`mb-4 rounded-lg px-3 py-2 text-sm ${
+                              /another customer|anderen kunden|başka bir kullanıcı/i.test(actionMessage)
+                                ? "border border-slate-900 bg-slate-900 font-semibold text-white"
+                                : "border border-slate-300 bg-white text-slate-900"
+                            }`}
+                          >
+                            {actionMessage}
+                          </p>
+                        ) : null}
                         {seatMapView === "map" && (
                           <div className="mb-4">
                             {isMusensaalPlan && musensaalIdMaps && getPlan("musensaal") ? (
