@@ -67,7 +67,7 @@ export default async function RootLayout({
   const inner = <Providers>{children}</Providers>;
 
   return (
-    <html lang={validLocale}>
+    <html lang={validLocale} suppressHydrationWarning>
       <head />
       <body className={inter.className}>
         <SimpleAuthProvider>

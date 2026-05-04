@@ -1,7 +1,69 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
 import { requireRole } from "@/lib/api-auth";
 import { extractTicketCode } from "@/lib/ticket-code";
+
+type CheckinAuth = {
+  user: User;
+  roles: string[];
+};
+
+async function requireCheckinScope(
+  supabase: SupabaseClient,
+  auth: CheckinAuth,
+  eventCreatorId: string | null
+): Promise<NextResponse | null> {
+  if (auth.roles.includes("admin")) return null;
+
+  if (auth.roles.includes("controller")) {
+    const { data: assignments, error } = await supabase
+      .from("organizer_controllers")
+      .select("organizer_user_id")
+      .eq("controller_user_id", auth.user.id);
+
+    if (error) {
+      console.error("checkin-ticket controller assignment error:", error);
+      return NextResponse.json(
+        { success: false, message: "Yetki kapsamı doğrulanamadı." },
+        { status: 500 }
+      );
+    }
+
+    const allowedOrganizerIds = new Set(
+      (assignments || [])
+        .map((assignment) => assignment.organizer_user_id as string | null)
+        .filter((id): id is string => Boolean(id))
+    );
+
+    if (!eventCreatorId || !allowedOrganizerIds.has(eventCreatorId)) {
+      return NextResponse.json(
+        { success: false, message: "Bu etkinliğe check-in yetkiniz yok." },
+        { status: 403 }
+      );
+    }
+
+    return null;
+  }
+
+  if (auth.roles.includes("organizer")) {
+    if (eventCreatorId !== auth.user.id) {
+      return NextResponse.json(
+        { success: false, message: "Bu etkinliğe check-in yetkiniz yok." },
+        { status: 403 }
+      );
+    }
+    return null;
+  }
+
+  return NextResponse.json(
+    { success: false, message: "Bu işlem için yetkiniz yok." },
+    { status: 403 }
+  );
+}
+
+function isCheckinEligibleStatus(status: string | undefined): boolean {
+  return status === "confirmed" || status === "completed";
+}
 
 /**
  * Check-in API: Bilet girişini işaretler (orders.checked_at).
@@ -58,6 +120,42 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      const { data: parentOrder, error: parentOrderError } = await supabase
+        .from("orders")
+        .select("id, event_id, status, events(created_by_user_id)")
+        .eq("id", orderSeat.order_id)
+        .maybeSingle();
+
+      if (parentOrderError) {
+        console.error("checkin-ticket order_seats parent fetch error:", parentOrderError);
+        return NextResponse.json(
+          { success: false, message: "Bilet sorgulanamadı." },
+          { status: 500 }
+        );
+      }
+
+      if (!parentOrder) {
+        return NextResponse.json(
+          { success: false, message: "Bilet bulunamadı." },
+          { status: 404 }
+        );
+      }
+
+      if (!isCheckinEligibleStatus(parentOrder.status as string | undefined)) {
+        return NextResponse.json(
+          { success: false, message: "Bilet onaylanmamış; check-in yapılamaz." },
+          { status: 400 }
+        );
+      }
+
+      const parentEvent = parentOrder.events as { created_by_user_id?: string } | null;
+      const scopeError = await requireCheckinScope(
+        supabase,
+        auth,
+        parentEvent?.created_by_user_id ?? null
+      );
+      if (scopeError) return scopeError;
+
       const { error: seatUpdateError } = await supabase
         .from("order_seats")
         .update({ checked_at: new Date().toISOString() })
@@ -105,46 +203,17 @@ export async function POST(request: NextRequest) {
     }
 
     const status = order.status as string | undefined;
-    if (status !== "confirmed" && status !== "completed") {
+    if (!isCheckinEligibleStatus(status)) {
       return NextResponse.json(
         { success: false, message: "Bilet onaylanmamış; check-in yapılamaz." },
         { status: 400 }
       );
     }
 
-    const isAdmin = auth.roles.includes("admin");
-    const isController = auth.roles.includes("controller");
-    const isOrganizer = auth.roles.includes("organizer");
     const event = order.events as { created_by_user_id?: string } | null;
     const eventCreatorId = event?.created_by_user_id ?? null;
-
-    if (isAdmin) {
-      // Admin: tüm etkinliklerde check-in
-    } else if (isController) {
-      const { data: assignment } = await supabase
-        .from("organizer_controllers")
-        .select("organizer_user_id")
-        .eq("controller_user_id", auth.user.id)
-        .maybeSingle();
-      if (assignment?.organizer_user_id != null && eventCreatorId !== assignment.organizer_user_id) {
-        return NextResponse.json(
-          { success: false, message: "Bu etkinliğe check-in yetkiniz yok." },
-          { status: 403 }
-        );
-      }
-    } else if (isOrganizer) {
-      if (eventCreatorId !== auth.user.id) {
-        return NextResponse.json(
-          { success: false, message: "Bu etkinliğe check-in yetkiniz yok." },
-          { status: 403 }
-        );
-      }
-    } else {
-      return NextResponse.json(
-        { success: false, message: "Bu işlem için yetkiniz yok." },
-        { status: 403 }
-      );
-    }
+    const scopeError = await requireCheckinScope(supabase, auth, eventCreatorId);
+    if (scopeError) return scopeError;
 
     const { error: updateError } = await supabase
       .from("orders")

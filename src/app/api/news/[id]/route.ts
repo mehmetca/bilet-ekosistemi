@@ -2,6 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireAdmin } from "@/lib/api-auth";
 
+const NEWS_FIELDS = [
+  "title",
+  "content",
+  "summary",
+  "excerpt",
+  "image_url",
+  "is_published",
+  "title_tr",
+  "title_de",
+  "title_en",
+  "content_tr",
+  "content_de",
+  "content_en",
+  "excerpt_tr",
+  "excerpt_de",
+  "excerpt_en",
+] as const;
+
+function pickNewsPayload(body: Record<string, unknown>) {
+  const payload: Record<string, unknown> = {};
+  for (const field of NEWS_FIELDS) {
+    if (field in body) payload[field] = body[field];
+  }
+  return payload;
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -10,11 +36,11 @@ export async function PUT(
   if (auth instanceof Response) return auth;
   try {
     const { id } = await params;
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
     const supabaseAdmin = getSupabaseAdmin();
 
-    const updateData = {
-      ...body,
+    const updateData: Record<string, unknown> = {
+      ...pickNewsPayload(body),
       updated_at: new Date().toISOString(),
     };
 
@@ -43,9 +69,12 @@ export async function PUT(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const auth = await requireAdmin(request);
+  if (auth instanceof Response) return auth;
+
   try {
     const { id } = await params;
     const supabaseAdmin = getSupabaseAdmin();

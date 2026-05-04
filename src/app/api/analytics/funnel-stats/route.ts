@@ -1,23 +1,19 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { requireRole } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const auth = await requireRole(request, ["admin", "controller", "organizer"]);
+  if (auth instanceof Response) return auth;
+
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json(
-        { message: "Sunucu yapılandırması eksik." },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const supabase = getSupabaseAdmin();
+    const isOrganizerOnly =
+      auth.roles.includes("organizer") &&
+      !auth.roles.includes("admin") &&
+      !auth.roles.includes("controller");
 
     const { searchParams } = new URL(request.url);
     const period = searchParams.get("period") || "7"; // son 7 gün
@@ -26,20 +22,59 @@ export async function GET(request: Request) {
     since.setDate(since.getDate() - days);
     const sinceStr = since.toISOString();
 
+    let eventIds: string[] | null = null;
+    if (isOrganizerOnly) {
+      const { data: myEvents, error: eventsError } = await supabase
+        .from("events")
+        .select("id")
+        .eq("created_by_user_id", auth.user.id);
+      if (eventsError) {
+        console.error("Funnel organizer events lookup error:", eventsError);
+        return NextResponse.json(
+          { message: "Huni verisi kapsamı doğrulanamadı." },
+          { status: 500 }
+        );
+      }
+      eventIds = (myEvents || []).map((event) => event.id);
+      if (eventIds.length === 0) {
+        return NextResponse.json({
+          period: days,
+          totals: { views: 0, intents: 0, completed: 0 },
+          funnel: [],
+          ab_breakdown: [],
+        });
+      }
+    }
+
+    let viewsQuery = supabase
+      .from("event_views")
+      .select("event_id, viewed_at, hero_variant")
+      .gte("viewed_at", sinceStr);
+    let intentsQuery = supabase
+      .from("purchase_intents")
+      .select("event_id, intent_at, hero_variant")
+      .gte("intent_at", sinceStr);
+    let ordersQuery = supabase
+      .from("orders")
+      .select("event_id, status, created_at")
+      .gte("created_at", sinceStr);
+    let eventsQuery = supabase
+      .from("events")
+      .select("id, title, date")
+      .order("date", { ascending: false });
+
+    if (eventIds) {
+      viewsQuery = viewsQuery.in("event_id", eventIds);
+      intentsQuery = intentsQuery.in("event_id", eventIds);
+      ordersQuery = ordersQuery.in("event_id", eventIds);
+      eventsQuery = eventsQuery.in("id", eventIds);
+    }
+
     const [viewsRes, intentsRes, ordersRes, eventsRes] = await Promise.all([
-      supabase
-        .from("event_views")
-        .select("event_id, viewed_at, hero_variant")
-        .gte("viewed_at", sinceStr),
-      supabase
-        .from("purchase_intents")
-        .select("event_id, intent_at, hero_variant")
-        .gte("intent_at", sinceStr),
-      supabase
-        .from("orders")
-        .select("event_id, status, created_at")
-        .gte("created_at", sinceStr),
-      supabase.from("events").select("id, title, date").order("date", { ascending: false }),
+      viewsQuery,
+      intentsQuery,
+      ordersQuery,
+      eventsQuery,
     ]);
 
     const views = viewsRes.data || [];

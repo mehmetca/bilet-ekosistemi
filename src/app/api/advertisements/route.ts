@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireAdmin } from "@/lib/api-auth";
 
+const ADVERTISEMENT_FIELDS = [
+  "title",
+  "image_url",
+  "link_url",
+  "placement",
+  "is_active",
+  "locale",
+  "overlay_title",
+  "overlay_day",
+  "overlay_month_year",
+] as const;
+
+function pickAdvertisementPayload(body: Record<string, unknown>) {
+  const payload: Record<string, unknown> = {};
+  for (const field of ADVERTISEMENT_FIELDS) {
+    if (field in body) payload[field] = body[field];
+  }
+  return payload;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
@@ -38,12 +58,13 @@ export async function POST(request: NextRequest) {
   const auth = await requireAdmin(request);
   if (auth instanceof Response) return auth;
   try {
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
+    const payload = pickAdvertisementPayload(body);
     const supabaseAdmin = getSupabaseAdmin();
 
     const { data, error } = await supabaseAdmin
       .from("advertisements")
-      .insert(body)
+      .insert(payload)
       .select()
       .maybeSingle();
 
@@ -53,7 +74,7 @@ export async function POST(request: NextRequest) {
       const overlaySchemaMissing =
         msg.includes("overlay_title") || msg.includes("overlay_day") || msg.includes("overlay_month_year");
       if (overlaySchemaMissing) {
-        const safeBody = { ...body } as Record<string, unknown>;
+        const safeBody = { ...payload } as Record<string, unknown>;
         delete safeBody.overlay_title;
         delete safeBody.overlay_day;
         delete safeBody.overlay_month_year;

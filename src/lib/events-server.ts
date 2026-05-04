@@ -3,10 +3,15 @@
  * Etkinlik detay, şehir, takvim ve show_slug sorguları tek yerden.
  */
 import { createServerSupabase } from "@/lib/supabase-server";
-import { eventMatchesCityRow, getMatchTerms } from "@/lib/city-event-sort";
+import { eventMatchesCityRow } from "@/lib/city-event-sort";
 import type { Event, Ticket, Venue } from "@/types/database";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SAFE_ROUTE_SLUG_REGEX = /^[a-zA-Z0-9.-]+$/;
+
+function isSafeRouteSlug(value: string): boolean {
+  return SAFE_ROUTE_SLUG_REGEX.test(value) && !value.includes("..");
+}
 
 export const TICKET_DISPLAY_ORDER = [
   "Normal / Standart Bilet",
@@ -35,11 +40,11 @@ export async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {
     const supabase = createServerSupabase();
     const showSlugTrimmed = (showSlug || "").trim();
     if (!showSlugTrimmed) return [];
+    if (!isSafeRouteSlug(showSlugTrimmed)) return [];
     const { data, error } = await supabase
       .from("events")
       .select("*")
-      // URL'den gelen slug büyük/küçük harf farkından dolayı boş gelebilmesin
-      .ilike("show_slug", showSlugTrimmed)
+      .eq("show_slug", showSlugTrimmed)
       .eq("is_active", true)
       .eq("is_approved", true)
       .eq("is_draft", false)
@@ -58,6 +63,9 @@ export async function getEventBySlug(
   try {
     const supabase = createServerSupabase();
     const slugOrIdTrimmed = (slugOrId || "").trim();
+    if (!UUID_REGEX.test(slugOrIdTrimmed) && !isSafeRouteSlug(slugOrIdTrimmed)) {
+      return null;
+    }
 
     const { data, error } = await supabase
       .from("events")
@@ -191,8 +199,6 @@ export async function getEventsForCity(
 ): Promise<Event[]> {
   try {
     const supabase = createServerSupabase();
-    const matchTerms = getMatchTerms(citySlug, city);
-    console.log("[DEBUG getEventsForCity] slug:", citySlug, "matchTerms:", matchTerms);
 
     const { data: eventsData, error } = await supabase
       .from("events")
@@ -204,37 +210,21 @@ export async function getEventsForCity(
       .order("time", { ascending: true });
 
     if (error) {
-      console.error("[DEBUG getEventsForCity] Supabase error:", error);
+      console.error("getEventsForCity Supabase error:", error);
       return [];
     }
-    
-    console.log("[DEBUG getEventsForCity] Total events fetched:", eventsData?.length || 0);
 
     const filtered = eventsData.filter((e: Record<string, unknown>) => {
-      const match = eventMatchesCityRow(e, citySlug, city);
-      if (match) {
-        const loc = ((e.location as string) || "").toLowerCase().trim();
-        const cityField = ((e.city as string) || "").toLowerCase().trim();
-        const v = e.venues;
-        let venueCity = "";
-        if (v != null) {
-          if (Array.isArray(v)) venueCity = (v[0] as { city?: string })?.city || "";
-          else venueCity = (v as { city?: string }).city || "";
-        }
-        const vc = venueCity.toLowerCase().trim();
-        console.log("[DEBUG getEventsForCity] Matched event:", e.title, "city:", cityField, "location:", loc, "venueCity:", vc);
-      }
-      return match;
+      return eventMatchesCityRow(e, citySlug, city);
     });
 
-    console.log("[DEBUG getEventsForCity] Filtered events:", filtered.length);
-
     return filtered.map((e: Record<string, unknown>) => {
-      const { venues, ...ev } = e;
+      const ev = { ...e };
+      delete ev.venues;
       return ev;
     }) as unknown as Event[];
   } catch (err) {
-    console.error("[DEBUG getEventsForCity] Error:", err);
+    console.error("getEventsForCity error:", err);
     return [];
   }
 }

@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { requireRole } from "@/lib/api-auth";
+
+const MAX_ACTION_LENGTH = 80;
+const MAX_ENTITY_TYPE_LENGTH = 80;
 
 export async function POST(request: NextRequest) {
-  try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !serviceRoleKey) {
-      return NextResponse.json({ error: "Config eksik" }, { status: 500 });
-    }
+  const auth = await requireRole(request, ["admin", "controller", "organizer"]);
+  if (auth instanceof NextResponse) return auth;
 
+  try {
     const body = await request.json();
     const { action, entity_type, entity_id, details } = body as {
       action: string;
@@ -17,38 +18,30 @@ export async function POST(request: NextRequest) {
       details?: Record<string, unknown>;
     };
 
-    if (!action || !entity_type) {
+    const actionTrimmed = typeof action === "string" ? action.trim() : "";
+    const entityTypeTrimmed = typeof entity_type === "string" ? entity_type.trim() : "";
+
+    if (
+      !actionTrimmed ||
+      !entityTypeTrimmed ||
+      actionTrimmed.length > MAX_ACTION_LENGTH ||
+      entityTypeTrimmed.length > MAX_ENTITY_TYPE_LENGTH
+    ) {
       return NextResponse.json({ error: "action ve entity_type gerekli" }, { status: 400 });
     }
 
-    const authHeader = request.headers.get("authorization");
-    let userId: string | null = null;
-    let userEmail: string | null = null;
-
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.slice(7);
-      const supabase = createClient(supabaseUrl, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!);
-      const { data: { user } } = await supabase.auth.getUser(token);
-      if (user) {
-        userId = user.id;
-        userEmail = user.email ?? null;
-      }
-    }
-
-    const supabase = createClient(supabaseUrl, serviceRoleKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const supabase = getSupabaseAdmin();
 
     const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
       request.headers.get("x-real-ip") || null;
 
     await supabase.from("audit_logs").insert({
-      user_id: userId,
-      user_email: userEmail,
-      action,
-      entity_type,
+      user_id: auth.user.id,
+      user_email: auth.user.email ?? null,
+      action: actionTrimmed,
+      entity_type: entityTypeTrimmed,
       entity_id: entity_id || null,
-      details: details || {},
+      details: details && typeof details === "object" && !Array.isArray(details) ? details : {},
       ip_address: ip,
     });
 

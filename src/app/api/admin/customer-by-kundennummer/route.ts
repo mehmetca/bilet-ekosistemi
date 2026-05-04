@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { requireAdmin } from "@/lib/api-auth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (auth instanceof Response) return auth;
+
   try {
     const { searchParams } = new URL(request.url);
     const kundennummer = searchParams.get("kundennummer")?.trim();
@@ -12,27 +16,6 @@ export async function GET(request: NextRequest) {
     }
 
     const supabase = getSupabaseAdmin();
-
-    // Admin kontrolü
-    const authHeader = request.headers.get("authorization");
-    const token = authHeader?.replace("Bearer ", "");
-    if (!token) {
-      return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
-    }
-    const { data: { user } } = await supabase.auth.getUser(token);
-    if (!user) {
-      return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
-    }
-    const { data: roleRow } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .in("role", ["admin", "controller", "organizer"])
-      .limit(1)
-      .maybeSingle();
-    if (!roleRow) {
-      return NextResponse.json({ error: "Yetkisiz" }, { status: 403 });
-    }
 
     // Profil bul (büyük/küçük harf duyarsız)
     const { data: profile, error: profileErr } = await supabase

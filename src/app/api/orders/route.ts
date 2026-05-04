@@ -7,8 +7,30 @@ export async function GET(request: NextRequest) {
   if (auth instanceof Response) return auth;
   try {
     const supabase = getSupabaseAdmin();
+    const isOrganizerOnly = auth.roles.includes("organizer") && !auth.roles.includes("admin");
 
-    const { data, error } = await supabase
+    let organizerEventIds: string[] | null = null;
+    if (isOrganizerOnly) {
+      const { data: myEvents, error: eventsError } = await supabase
+        .from("events")
+        .select("id")
+        .eq("created_by_user_id", auth.user.id);
+
+      if (eventsError) {
+        console.error("Organizer events lookup error:", eventsError);
+        return NextResponse.json(
+          { message: "Sipariş kapsamı doğrulanamadı." },
+          { status: 500 }
+        );
+      }
+
+      organizerEventIds = (myEvents || []).map((event) => event.id);
+      if (organizerEventIds.length === 0) {
+        return NextResponse.json([]);
+      }
+    }
+
+    let query = supabase
       .from("orders")
       .select(
         `
@@ -41,6 +63,12 @@ export async function GET(request: NextRequest) {
         `
       )
       .order("created_at", { ascending: false });
+
+    if (organizerEventIds) {
+      query = query.in("event_id", organizerEventIds);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       return NextResponse.json({ message: error.message }, { status: 500 });

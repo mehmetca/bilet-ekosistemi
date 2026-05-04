@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkTicket } from "@/app/kontrol/actions";
+import { requireRole } from "@/lib/api-auth";
 
 /**
  * Bilet kontrol API - MultiTicketScanner ve diğer istemciler için.
@@ -8,6 +9,9 @@ import { checkTicket } from "@/app/kontrol/actions";
  */
 export async function POST(request: NextRequest) {
   try {
+    const auth = await requireRole(request, ["admin", "controller", "organizer"]);
+    if (auth instanceof NextResponse) return auth;
+
     const formData = await request.formData();
     const result = await checkTicket(formData);
     return NextResponse.json(result);

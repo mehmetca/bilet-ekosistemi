@@ -67,12 +67,19 @@ export default function OrganizerApplicationPage() {
         return;
       }
 
+      const accessToken = signUpData.session?.access_token;
+      if (!accessToken) {
+        setError("Başvuru kaydı için e-posta doğrulamasından sonra tekrar giriş yapmanız gerekiyor.");
+        return;
+      }
+
       const res = await fetch("/api/organizer-request", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({
-          user_id: signUpData.user.id,
-          email: email.trim(),
           company_name: companyName.trim() || undefined,
           legal_form: legalForm.trim() || undefined,
           address: address.trim() || undefined,

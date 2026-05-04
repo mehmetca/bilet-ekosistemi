@@ -9,6 +9,7 @@ import { PDFDocument, PDFPage, StandardFonts, degrees, rgb } from "pdf-lib";
 import { parsePhysicalDelivery, shippingFeeForPhysicalDelivery } from "@/lib/checkout-shipping";
 import { createSupabaseServerClient } from "@/lib/supabase-ssr";
 import { getSiteUrl } from "@/lib/site-url";
+import { getStripe } from "@/lib/stripe-server";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -832,6 +833,7 @@ export async function POST(request: NextRequest) {
     const buyerCity = (formData.get("buyer_city") as string)?.trim() || null;
     const physicalDelivery = parsePhysicalDelivery(formData.get("physical_delivery") as string | null);
     const shippingFee = shippingFeeForPhysicalDelivery(physicalDelivery);
+    const stripeSessionId = ((formData.get("stripe_session_id") as string | null) || "").trim();
     let seatIds: string[] = [];
     const seatHoldSessionIdRaw = (formData.get("seat_hold_session_id") as string | null) ?? null;
     const seatHoldSessionId =
@@ -868,6 +870,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, message: "Lütfen tüm alanları doldurun." },
         { status: 400 }
+      );
+    }
+
+    if (!stripeSessionId) {
+      return NextResponse.json(
+        { success: false, message: "Ödeme oturumu doğrulanamadı. Lütfen ödemeyi tekrar başlatın." },
+        { status: 402 }
       );
     }
 
@@ -983,7 +992,7 @@ export async function POST(request: NextRequest) {
     // Sadece onaylanmış etkinliklerde bilet satışı; otomatik koltuk ataması için seating_plan_id gerekir
     const { data: eventRow } = await supabase
       .from("events")
-      .select("id, is_approved, seating_plan_id, checkout_processing_fee")
+      .select("id, is_approved, seating_plan_id, checkout_processing_fee, currency")
       .eq("id", ticket.event_id)
       .single();
     if (!eventRow || eventRow.is_approved !== true) {
@@ -1107,6 +1116,75 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let verifiedStripeSession: {
+      payment_intent?: string | null;
+      amount_total?: number | null;
+      currency?: string | null;
+    };
+    try {
+      const stripe = getStripe();
+      const session = await stripe.checkout.sessions.retrieve(stripeSessionId);
+      if (session.payment_status !== "paid") {
+        return NextResponse.json(
+          { success: false, message: "Ödeme tamamlanmadan sipariş oluşturulamaz." },
+          { status: 402 }
+        );
+      }
+      verifiedStripeSession = {
+        payment_intent:
+          typeof session.payment_intent === "string"
+            ? session.payment_intent
+            : session.payment_intent?.id ?? null,
+        amount_total: session.amount_total,
+        currency: session.currency,
+      };
+    } catch (stripeError) {
+      console.error("Stripe session verification failed in purchase:", stripeError);
+      return NextResponse.json(
+        { success: false, message: "Ödeme oturumu doğrulanamadı." },
+        { status: 402 }
+      );
+    }
+
+    const paidAmountCents = Number(verifiedStripeSession.amount_total || 0);
+    const currentOrderAmountCents = Math.round(totalPrice * 100);
+    const expectedCurrency = String(
+      (eventRow as { currency?: string | null }).currency || "EUR"
+    ).toLowerCase();
+    if (
+      paidAmountCents <= 0 ||
+      currentOrderAmountCents <= 0 ||
+      (verifiedStripeSession.currency || "").toLowerCase() !== expectedCurrency
+    ) {
+      return NextResponse.json(
+        { success: false, message: "Ödeme tutarı veya para birimi siparişle uyuşmuyor." },
+        { status: 402 }
+      );
+    }
+
+    const { data: sessionOrders, error: sessionOrdersError } = await supabase
+      .from("orders")
+      .select("id, total_price")
+      .eq("stripe_session_id", stripeSessionId);
+    if (sessionOrdersError) {
+      console.error("Stripe session order lookup failed:", sessionOrdersError);
+      return NextResponse.json(
+        { success: false, message: "Ödeme oturumu kontrol edilemedi." },
+        { status: 500 }
+      );
+    }
+
+    const alreadyAllocatedCents = (sessionOrders || []).reduce(
+      (sum, order) => sum + Math.round(Number(order.total_price || 0) * 100),
+      0
+    );
+    if (alreadyAllocatedCents + currentOrderAmountCents > paidAmountCents) {
+      return NextResponse.json(
+        { success: false, message: "Bu ödeme oturumu için sipariş tutarı aşılıyor." },
+        { status: 409 }
+      );
+    }
+
     // Yer seçerek bilet: koltukların daha önce satılmamış olduğunu kontrol et (bir bilet bir defa satılır)
     if (seatIds.length > 0) {
       // Aktif hold varsa, sadece hold sahibi bu koltuğu satin alabilsin.
@@ -1151,6 +1229,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const { data: stockReserved, error: stockReserveError } = await supabase.rpc("reserve_ticket_stock", {
+      p_ticket_id: ticketId,
+      p_quantity: quantity,
+    });
+    if (stockReserveError) {
+      console.error("API Stock reserve error:", stockReserveError);
+      return NextResponse.json(
+        { success: false, message: "Stok kontrolü yapılamadı. Lütfen tekrar deneyin." },
+        { status: 500 }
+      );
+    }
+    if (!stockReserved) {
+      return NextResponse.json(
+        { success: false, message: "Yetersiz stok. Lütfen bilet adedini güncelleyin." },
+        { status: 409 }
+      );
+    }
+
     const orderRowBase: Record<string, unknown> = {
       event_id: ticket.event_id,
       ticket_id: ticketId,
@@ -1160,6 +1256,10 @@ export async function POST(request: NextRequest) {
       status: "completed",
       buyer_name: buyerName,
       buyer_email: buyerEmail,
+      stripe_session_id: stripeSessionId,
+      stripe_payment_intent_id: verifiedStripeSession.payment_intent || null,
+      stripe_amount_total: paidAmountCents,
+      stripe_currency: verifiedStripeSession.currency || null,
       ...(buyerAddress ? { buyer_address: buyerAddress } : {}),
       ...(buyerPlz ? { buyer_plz: buyerPlz } : {}),
       ...(buyerCity ? { buyer_city: buyerCity } : {}),
@@ -1196,28 +1296,14 @@ export async function POST(request: NextRequest) {
 
     if (orderError) {
       console.error("API Order error:", orderError);
+      await supabase.rpc("release_ticket_stock", {
+        p_ticket_id: ticketId,
+        p_quantity: quantity,
+      });
       return NextResponse.json(
         { success: false, message: `Sipariş oluşturulamadı: ${orderError.message}. Tekrar deneyin.` },
         { status: 500 }
       );
-    }
-
-    // Update ticket stock. Keep quantity as total capacity (never below available).
-    const currentTotalQuantity = Math.max(
-      Number(ticket.quantity || 0),
-      Number(ticket.available || 0)
-    );
-    const nextAvailable = Math.max(0, Number(ticket.available || 0) - quantity);
-    const { error: updateError } = await supabase
-      .from("tickets")
-      .update({
-        available: nextAvailable,
-        quantity: currentTotalQuantity,
-      })
-      .eq("id", ticketId);
-
-    if (updateError) {
-      console.error("API Stock update error:", updateError);
     }
 
     const seatDetails: SeatDetail[] = [];
@@ -1256,11 +1342,11 @@ export async function POST(request: NextRequest) {
         });
         if (seatInsertError) {
           const isDuplicateSeat = seatInsertError.code === "23505";
-          if (isDuplicateSeat) {
-            await supabase.from("orders").delete().eq("id", orderData.id);
-            const nextAvailable = Math.min(Number(ticket.available || 0) + quantity, Number(ticket.quantity || 0));
-            await supabase.from("tickets").update({ available: nextAvailable }).eq("id", ticketId);
-          }
+          await supabase.from("orders").delete().eq("id", orderData.id);
+          await supabase.rpc("release_ticket_stock", {
+            p_ticket_id: ticketId,
+            p_quantity: quantity,
+          });
           return NextResponse.json(
             {
               success: false,

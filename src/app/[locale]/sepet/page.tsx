@@ -248,7 +248,10 @@ export default function CheckoutPage() {
   const grandTotal = totalPrice + processingFeesTotal + shippingFeeOnce;
   const displayGrandTotal = grandTotal;
 
-  const finalizePaidOrder = useCallback(async (pendingData?: PendingStripeCheckoutData | null) => {
+  const finalizePaidOrder = useCallback(async (
+    pendingData?: PendingStripeCheckoutData | null,
+    stripeSessionId?: string | null
+  ) => {
     const finalEmail = (
       pendingData?.buyerEmail?.trim() ||
       buyerEmail.trim() ||
@@ -298,6 +301,7 @@ export default function CheckoutPage() {
         formData.append("quantity", String(purchaseQty));
         formData.append("buyer_name", finalName);
         formData.append("buyer_email", finalEmail);
+        if (stripeSessionId) formData.append("stripe_session_id", stripeSessionId);
         if (user?.id) formData.append("client_user_id", user.id);
         if (finalAddress) formData.append("buyer_address", finalAddress);
         if (finalPlz) formData.append("buyer_plz", finalPlz);
@@ -514,7 +518,7 @@ export default function CheckoutPage() {
           router.replace(`/${locale}/sepet`);
           return;
         }
-        const success = await finalizePaidOrder(pendingData);
+        const success = await finalizePaidOrder(pendingData, sessionId);
         router.replace(`/${locale}/sepet`);
         if (!success) {
           try {
@@ -555,7 +559,7 @@ export default function CheckoutPage() {
         return;
       }
 
-      await finalizePaidOrder(pendingData);
+      await finalizePaidOrder(pendingData, checkoutSessionId);
     } catch {
       setError("Ödeme sonrası sipariş oluşturulurken bir hata oluştu.");
     } finally {

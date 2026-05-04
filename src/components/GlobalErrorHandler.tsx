@@ -6,6 +6,7 @@ import { isBenignSupabaseRefreshTokenMessage } from "@/lib/supabase-auth-errors"
 
 export default function GlobalErrorHandler({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<{ message: string; stack?: string } | null>(null);
+  const isDev = process.env.NODE_ENV === "development";
 
   useEffect(() => {
     const CHUNK_RELOAD_GUARD_KEY = "__chunk_reload_once__";
@@ -26,6 +27,7 @@ export default function GlobalErrorHandler({ children }: { children: React.React
       const s = msg.toLowerCase();
       return (
         s.includes("failed to execute 'removechild' on 'node'") ||
+        s.includes("failed to execute 'removechild' on 'node': the node to be removed is not a child of this node") ||
         (s.includes("removechild") && s.includes("not a child of this node"))
       );
     }
@@ -36,6 +38,15 @@ export default function GlobalErrorHandler({ children }: { children: React.React
         s.includes("chunkloaderror") ||
         s.includes("loading chunk") ||
         (s.includes("failed to fetch dynamically imported module") && s.includes("/_next/static/chunks"))
+      );
+    }
+
+    function isRecoverableHydrationMismatch(msg: string): boolean {
+      const s = msg.toLowerCase();
+      return (
+        s.includes("hydration failed") ||
+        s.includes("text content does not match server-rendered html") ||
+        s.includes("server rendered text didn't match the client")
       );
     }
 
@@ -56,6 +67,9 @@ export default function GlobalErrorHandler({ children }: { children: React.React
         triggerChunkHardReloadOnce();
         return;
       }
+      if (isRecoverableHydrationMismatch(msg)) {
+        return;
+      }
       if (
         isBenignMediaError(msg) ||
         isBenignDomDetachError(msg) ||
@@ -74,6 +88,10 @@ export default function GlobalErrorHandler({ children }: { children: React.React
       if (isChunkLoadError(msg)) {
         event.preventDefault();
         triggerChunkHardReloadOnce();
+        return;
+      }
+
+      if (isRecoverableHydrationMismatch(msg)) {
         return;
       }
 
@@ -133,25 +151,27 @@ export default function GlobalErrorHandler({ children }: { children: React.React
             Sayfa hata verdi
           </h2>
           <p style={{ color: "#64748b", marginBottom: "1rem", fontSize: "0.875rem" }}>
-            Aşağıdaki hata sayfanın beyaza dönmesine neden oldu. Lütfen bu metni kopyalayıp geliştiriciye iletin.
+            Beklenmeyen bir hata oluştu. Lütfen sayfayı yenileyip tekrar deneyin.
           </p>
-          <pre
-            style={{
-              background: "#fef2f2",
-              color: "#991b1b",
-              padding: "1rem",
-              borderRadius: "0.5rem",
-              fontSize: "0.75rem",
-              overflow: "auto",
-              maxHeight: "12rem",
-              marginBottom: "1rem",
-              whiteSpace: "pre-wrap",
-              wordBreak: "break-word",
-            }}
-          >
-            {error.message}
-            {error.stack ? `\n\n${error.stack}` : ""}
-          </pre>
+          {isDev && (
+            <pre
+              style={{
+                background: "#fef2f2",
+                color: "#991b1b",
+                padding: "1rem",
+                borderRadius: "0.5rem",
+                fontSize: "0.75rem",
+                overflow: "auto",
+                maxHeight: "12rem",
+                marginBottom: "1rem",
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+              }}
+            >
+              {error.message}
+              {error.stack ? `\n\n${error.stack}` : ""}
+            </pre>
+          )}
           <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
             <button
               type="button"

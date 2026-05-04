@@ -76,10 +76,13 @@ type OrganizerRequestBody = {
 
 export async function POST(request: NextRequest) {
   try {
+    const { supabase, user } = await getSupabaseWithUser(request);
+    if (!user) {
+      return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
+    }
+
     const body = (await request.json()) as OrganizerRequestBody;
     const {
-      user_id,
-      email,
       company_name,
       legal_form,
       address,
@@ -92,9 +95,9 @@ export async function POST(request: NextRequest) {
       terms_accepted,
     } = body;
 
-    if (!user_id || !email || typeof user_id !== "string" || typeof email !== "string") {
+    if (!user.email) {
       return NextResponse.json(
-        { error: "user_id ve email gerekli" },
+        { error: "Başvuru için doğrulanmış e-posta gerekli" },
         { status: 400 }
       );
     }
@@ -106,18 +109,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json(
-        { error: "Sunucu yapılandırma hatası" },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, serviceKey);
-
     // auth.users'a yazılma gecikmesi olabilir; FK hatası alırsak retry
     const maxAttempts = 5;
     const delays = [300, 500, 1000, 2000]; // ms bekleme (attempt 0 sonrası, 1 sonrası, ...)
@@ -128,8 +119,8 @@ export async function POST(request: NextRequest) {
       }
 
       const { error: insertError } = await supabase.from("organizer_requests").insert({
-        user_id,
-        email: email.trim(),
+        user_id: user.id,
+        email: user.email.trim(),
         status: "pending",
         company_name: company_name?.trim() || null,
         legal_form: legal_form?.trim() || null,
@@ -179,7 +170,7 @@ export async function POST(request: NextRequest) {
 /** Organizatör kendi bilgilerini güncelleyebilir (onaylı organizatörler) */
 export async function PATCH(request: NextRequest) {
   try {
-    const { supabase, user } = await getSupabaseWithUser(request);
+    const { user } = await getSupabaseWithUser(request);
     if (!user) {
       return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
     }

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * messages/tr.json, en.json, de.json içindeki anahtarları karşılaştırır.
+ * messages/*.json içindeki anahtarları karşılaştırır.
  * Eksik veya fazla anahtarları raporlar (tr referans alınır).
  * Kullanım: node scripts/check-i18n-keys.js
  */
@@ -8,7 +8,11 @@ const fs = require("fs");
 const path = require("path");
 
 const messagesDir = path.join(__dirname, "..", "messages");
-const locales = ["tr", "en", "de"];
+const locales = fs
+  .readdirSync(messagesDir)
+  .filter((file) => file.endsWith(".json"))
+  .map((file) => path.basename(file, ".json"))
+  .sort();
 
 function getAllKeys(obj, prefix = "") {
   const keys = new Set();

@@ -9,6 +9,8 @@ export default function LocaleError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const isDev = process.env.NODE_ENV === "development";
+
   useEffect(() => {
     console.error("Locale error:", error);
     if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SENTRY_DSN) {
@@ -30,7 +32,7 @@ export default function LocaleError({
       <div style={{ background: "white", borderRadius: "1rem", border: "1px solid #e2e8f0", padding: "2rem", maxWidth: "28rem", width: "100%", textAlign: "center" }}>
         <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0f172a", marginBottom: "0.5rem" }}>Bir Hata Oluştu</h2>
         <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>Uygulamada beklenmedik bir hata oluştu. Lütfen tekrar deneyin.</p>
-        {error?.message && (
+        {isDev && error?.message && (
           <details style={{ marginBottom: "1rem", textAlign: "left" }}>
             <summary style={{ fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }}>Hata detayları</summary>
             <pre style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#94a3b8", background: "#f1f5f9", padding: "0.5rem", borderRadius: "0.25rem", overflow: "auto", maxHeight: "8rem" }}>{error.message}</pre>

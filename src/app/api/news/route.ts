@@ -2,6 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireAdmin } from "@/lib/api-auth";
 
+const NEWS_FIELDS = [
+  "title",
+  "content",
+  "summary",
+  "excerpt",
+  "image_url",
+  "is_published",
+  "title_tr",
+  "title_de",
+  "title_en",
+  "content_tr",
+  "content_de",
+  "content_en",
+  "excerpt_tr",
+  "excerpt_de",
+  "excerpt_en",
+] as const;
+
+function pickNewsPayload(body: Record<string, unknown>) {
+  const payload: Record<string, unknown> = {};
+  for (const field of NEWS_FIELDS) {
+    if (field in body) payload[field] = body[field];
+  }
+  return payload;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
@@ -36,14 +62,15 @@ export async function POST(request: NextRequest) {
   if (auth instanceof Response) return auth;
   try {
     const supabase = getSupabaseAdmin();
-    const body = await request.json();
+    const body = (await request.json()) as Record<string, unknown>;
+    const payload = pickNewsPayload(body);
     
     const { data, error } = await supabase
       .from("news")
       .insert({
-        ...body,
-        is_published: true, // Otomatik yayınla
-        published_at: new Date().toISOString(), // Her zaman yayın tarihi ekle
+        ...payload,
+        is_published: payload.is_published === false ? false : true,
+        published_at: payload.is_published === false ? null : new Date().toISOString(),
       })
       .select()
       .single();

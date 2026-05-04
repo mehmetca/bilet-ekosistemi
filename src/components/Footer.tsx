@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import NextLink from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
@@ -79,6 +80,13 @@ function SocialRow({ className }: { className?: string }) {
 export default function Footer() {
   const t = useTranslations();
   const locale = useLocale();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null;
 
   return (
     <footer className="border-t border-slate-200/80 bg-slate-50">
