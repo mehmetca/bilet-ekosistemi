@@ -9,6 +9,9 @@
     "previous": "Previous",
     "next": "Next"
   },
+  "errors": {
+    "translationWarning": "This issue may be caused by browser translation (e.g. Google Translate). Please use the language selector on the website."
+  },
   "newsDetail": {
     "newsNotFound": "News Not Found",
     "newsNotFoundDesc": "The news you are looking for does not exist or has been removed."

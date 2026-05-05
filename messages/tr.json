@@ -9,6 +9,9 @@
     "previous": "Önceki",
     "next": "Sonraki"
   },
+  "errors": {
+    "translationWarning": "Bu hata tarayıcı çevirisi (Google Translate vb.) kaynaklı olabilir. Lütfen site içindeki dil seçiciyi kullanın."
+  },
   "newsDetail": {
     "newsNotFound": "Haber Bulunamadı",
     "newsNotFoundDesc": "Aradığınız haber mevcut değil veya kaldırılmış."

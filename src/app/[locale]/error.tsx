@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { getTranslationWarning } from "@/i18n/translation-warning";
 
 export default function LocaleError({
   error,
@@ -10,6 +12,9 @@ export default function LocaleError({
   reset: () => void;
 }) {
   const isDev = process.env.NODE_ENV === "development";
+  const pathname = usePathname();
+  const localeFromPath = pathname?.split("/")[1];
+  const translationWarning = getTranslationWarning(localeFromPath);
 
   useEffect(() => {
     console.error("Locale error:", error);
@@ -32,6 +37,19 @@ export default function LocaleError({
       <div style={{ background: "white", borderRadius: "1rem", border: "1px solid #e2e8f0", padding: "2rem", maxWidth: "28rem", width: "100%", textAlign: "center" }}>
         <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "#0f172a", marginBottom: "0.5rem" }}>Bir Hata Oluştu</h2>
         <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>Uygulamada beklenmedik bir hata oluştu. Lütfen tekrar deneyin.</p>
+        <p
+          style={{
+            marginBottom: "1rem",
+            background: "#fff7ed",
+            color: "#9a3412",
+            border: "1px solid #fed7aa",
+            borderRadius: "0.5rem",
+            padding: "0.75rem",
+            fontSize: "0.875rem",
+          }}
+        >
+          {translationWarning}
+        </p>
         {isDev && error?.message && (
           <details style={{ marginBottom: "1rem", textAlign: "left" }}>
             <summary style={{ fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }}>Hata detayları</summary>

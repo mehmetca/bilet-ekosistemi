@@ -9,6 +9,9 @@
     "previous": "Berê",
     "next": "Paşê"
   },
+  "errors": {
+    "translationWarning": "Ev pirsgirêk dibe ku ji wergera gerokê (mînak Google Translate) be. Ji kerema xwe hilbijêrkera zimanê li ser malperê bikar bînin."
+  },
   "home": {
     "heroTitle": "Ji bo bûyera xeyalên xwe bilêt bibînin",
     "seoH1": "Platforma bilêtan ji bo hemû bûyeran",

@@ -9,6 +9,9 @@
     "previous": "Vorherige",
     "next": "Nächste"
   },
+  "errors": {
+    "translationWarning": "Dieser Fehler kann durch die Browser-Uebersetzung (z. B. Google Translate) verursacht sein. Bitte nutzen Sie den Sprachwaehler auf der Website."
+  },
   "newsDetail": {
     "newsNotFound": "Nachricht nicht gefunden",
     "newsNotFoundDesc": "Die gesuchte Nachricht existiert nicht oder wurde entfernt."

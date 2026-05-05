@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { getTranslationWarning } from "@/i18n/translation-warning";
 
 export default function GlobalError({
   error,
@@ -9,6 +11,10 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const pathname = usePathname();
+  const localeFromPath = pathname?.split("/")[1];
+  const translationWarning = getTranslationWarning(localeFromPath);
+
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
       import("@sentry/nextjs")
@@ -34,6 +40,19 @@ export default function GlobalError({
           <h1 style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>Bir hata oluştu</h1>
           <p style={{ color: "#64748b", marginBottom: "1.5rem" }}>
             Üzgünüz, beklenmeyen bir hata meydana geldi.
+          </p>
+          <p
+            style={{
+              marginBottom: "1rem",
+              background: "#fff7ed",
+              color: "#9a3412",
+              border: "1px solid #fed7aa",
+              borderRadius: "0.5rem",
+              padding: "0.75rem",
+              fontSize: "0.875rem",
+            }}
+          >
+            {translationWarning}
           </p>
           {isDev && error?.message && (
             <details
