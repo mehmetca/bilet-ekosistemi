@@ -33,10 +33,12 @@ const nextConfig = {
       { source: "/:locale(tr|de|en|ku|ckb)/robots-txt", destination: "/robots.txt", permanent: true },
       { source: "/:locale(tr|de|en|ku|ckb)/robots.txt", destination: "/robots.txt", permanent: true },
       { source: "/:locale(tr|de|en|ku|ckb)/sitemap.xml", destination: "/sitemap.xml", permanent: true },
-      // Bilgilendirme ana sayfa → SSS (server redirect Sentry ile çakışmasın diye config'de)
-      { source: "/tr/bilgilendirme", destination: "/tr/bilgilendirme/sss", permanent: false },
-      { source: "/de/bilgilendirme", destination: "/de/bilgilendirme/sss", permanent: false },
-      { source: "/en/bilgilendirme", destination: "/en/bilgilendirme/sss", permanent: false },
+      // Bilgilendirme kökü → SSS (kalıcı; tek kanonik cluster için)
+      {
+        source: "/:locale(tr|de|en|ku|ckb)/bilgilendirme",
+        destination: "/:locale/bilgilendirme/sss",
+        permanent: true,
+      },
     ];
   },
   async headers() {

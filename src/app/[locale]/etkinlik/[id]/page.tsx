@@ -38,7 +38,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const showEvents = await getEventsByShowSlug(id);
   const slugResult = await getEventBySlug(id);
   const event = showEvents[0] || slugResult?.event;
-  if (!event) return { title: "Etkinlik Bulunamadı" };
+  if (!event) {
+    return {
+      title: "Etkinlik Bulunamadı",
+      robots: { index: false, follow: true },
+    };
+  }
 
   const title = `${event.title} | KurdEvents`;
   const description =
