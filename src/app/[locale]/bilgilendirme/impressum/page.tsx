@@ -38,6 +38,8 @@ export default function ImpressumPage() {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("contact")}</h3>
+            <p className="text-slate-700">{t("email")}: hallo@kurdevents.org</p>
+            <p className="text-slate-700">{t("email")}: eventseat21@gmail.com</p>
             <p className="text-slate-700">
               {t("email")}: {t("emailValue")}
             </p>
