@@ -94,8 +94,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  // Gecersiz slug/path enjeksiyonlari (ornek: /de/$) indexlenmesin ve hizla dusurulsun.
-  if (/(^|\/)\$(\/|$)/.test(pathname)) {
+  // Gecersiz slug/path enjeksiyonlari (ornek: /de/$, /de/& veya encoded varyantlar) indexlenmesin.
+  let decodedPathname = pathname;
+  try {
+    decodedPathname = decodeURIComponent(pathname);
+  } catch {
+    decodedPathname = pathname;
+  }
+  if (/(^|\/)[$&](\/|$)/.test(pathname) || /(^|\/)[$&](\/|$)/.test(decodedPathname)) {
     return new NextResponse("Gone", {
       status: 410,
       headers: {
