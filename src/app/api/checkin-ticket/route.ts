@@ -22,9 +22,17 @@ async function requireCheckinScope(
       .eq("controller_user_id", auth.user.id);
 
     if (error) {
-      console.error("checkin-ticket controller assignment error:", error);
+      console.error("checkin-ticket controller assignment error:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+      });
       return NextResponse.json(
-        { success: false, message: "Yetki kapsamı doğrulanamadı." },
+        {
+          success: false,
+          message: "Yetki kapsamı doğrulanamadı.",
+        },
         { status: 500 }
       );
     }
@@ -34,6 +42,11 @@ async function requireCheckinScope(
         .map((assignment) => assignment.organizer_user_id as string | null)
         .filter((id): id is string => Boolean(id))
     );
+
+    // Migration 067: atanmamış kontrolör (tabloda satır yok) tüm etkinliklerde check-in yapabilir.
+    if (allowedOrganizerIds.size === 0) {
+      return null;
+    }
 
     if (!eventCreatorId || !allowedOrganizerIds.has(eventCreatorId)) {
       return NextResponse.json(

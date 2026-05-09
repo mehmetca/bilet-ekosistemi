@@ -262,7 +262,10 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
 
   async function signOut() {
     const supabase = await getSupabase();
-    await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    const { error } = await supabase.auth.signOut({ scope: "global" });
+    if (error) {
+      await supabase.auth.signOut({ scope: "local" }).catch(() => {});
+    }
     setUser(null);
     setAccessToken(null);
     setUserRole(null);
