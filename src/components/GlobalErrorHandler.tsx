@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase-client";
 import { isBenignSupabaseRefreshTokenMessage } from "@/lib/supabase-auth-errors";
+import { tryReloadOnceForTransientReactError } from "@/lib/client-error-recovery";
 
 export default function GlobalErrorHandler({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<{ message: string; stack?: string } | null>(null);
@@ -22,13 +23,16 @@ export default function GlobalErrorHandler({ children }: { children: React.React
     }
 
     // React/DOM reconciliation sırasında nadiren görülen benign hata.
-    // (örn. route geçişinde node zaten kaldırılmışsa)
+    // (örn. route geçişinde node zaten kaldırılmışsa; Google Translate vb. DOM’a müdahale)
     function isBenignDomDetachError(msg: string): boolean {
       const s = msg.toLowerCase();
       return (
         s.includes("failed to execute 'removechild' on 'node'") ||
         s.includes("failed to execute 'removechild' on 'node': the node to be removed is not a child of this node") ||
-        (s.includes("removechild") && s.includes("not a child of this node"))
+        (s.includes("removechild") && s.includes("not a child of this node")) ||
+        s.includes("failed to execute 'insertbefore' on 'node'") ||
+        s.includes("failed to execute 'appendchild' on 'node'") ||
+        (s.includes("notfounderror") && (s.includes("node") || s.includes("removechild")))
       );
     }
 
@@ -46,7 +50,13 @@ export default function GlobalErrorHandler({ children }: { children: React.React
       return (
         s.includes("hydration failed") ||
         s.includes("text content does not match server-rendered html") ||
-        s.includes("server rendered text didn't match the client")
+        s.includes("server rendered text didn't match the client") ||
+        s.includes("there was an error while hydrating") ||
+        s.includes("did not match the client") ||
+        // Minified React 18: hydration / uyumsuz ağaç (çeviri eklentisi vb.)
+        s.includes("minified react error #418") ||
+        s.includes("minified react error #423") ||
+        s.includes("minified react error #425")
       );
     }
 
@@ -65,6 +75,10 @@ export default function GlobalErrorHandler({ children }: { children: React.React
       if (isChunkLoadError(msg)) {
         event.preventDefault();
         triggerChunkHardReloadOnce();
+        return;
+      }
+      if (tryReloadOnceForTransientReactError(msg)) {
+        event.preventDefault();
         return;
       }
       if (isRecoverableHydrationMismatch(msg)) {
@@ -88,6 +102,11 @@ export default function GlobalErrorHandler({ children }: { children: React.React
       if (isChunkLoadError(msg)) {
         event.preventDefault();
         triggerChunkHardReloadOnce();
+        return;
+      }
+
+      if (tryReloadOnceForTransientReactError(msg)) {
+        event.preventDefault();
         return;
       }
 

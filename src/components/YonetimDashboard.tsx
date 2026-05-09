@@ -30,30 +30,10 @@ export default function YonetimDashboard() {
     };
   }, [isAdmin, accessToken]);
 
-  if (isOrganizer) {
-    return <OrganizerDashboard />;
-  }
-
-  if (isController) {
+  if (isAdmin) {
     return (
       <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-        <h2 className="text-xl font-semibold text-slate-900 mb-4">Kontrolör Paneli</h2>
-        <p className="text-slate-600 mb-6">
-          Bilet doğrulama sayfasından biletleri kontrol edebilirsiniz.
-        </p>
-        <Link
-          href="/yonetim/bilet-kontrol"
-          className="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors"
-        >
-          Bilet Kontrol →
-        </Link>
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
-      {isAdmin && pendingControllerCount > 0 && (
+        {pendingControllerCount > 0 && (
         <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-left">
           <p className="font-semibold text-amber-900">
             {pendingControllerCount} kontrolör onay bekliyor.
@@ -152,6 +132,34 @@ export default function YonetimDashboard() {
           </Link>
         </div>
       </div>
+    </div>
+  );
+  }
+
+  if (isOrganizer) {
+    return <OrganizerDashboard />;
+  }
+
+  if (isController) {
+    return (
+      <div className="bg-white rounded-xl border border-slate-200 p-8 text-center">
+        <h2 className="text-xl font-semibold text-slate-900 mb-4">Kontrolör Paneli</h2>
+        <p className="text-slate-600 mb-6">
+          Bilet doğrulama sayfasından biletleri kontrol edebilirsiniz.
+        </p>
+        <Link
+          href="/yonetim/bilet-kontrol"
+          className="inline-flex items-center gap-2 bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors"
+        >
+          Bilet Kontrol →
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-600">
+      <p>Yönetim paneline erişim için uygun bir rol atanmalıdır.</p>
     </div>
   );
 }

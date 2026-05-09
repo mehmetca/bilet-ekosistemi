@@ -67,9 +67,12 @@ export default async function RootLayout({
   const inner = <Providers>{children}</Providers>;
 
   return (
-    <html lang={validLocale} suppressHydrationWarning>
-      <head />
-      <body className={inter.className}>
+    <html lang={validLocale} suppressHydrationWarning translate="no">
+      <head>
+        {/* Tarayıcı / eklenti çevirisi DOM’u bozup React hidrasyonunu kırıyor; site kendi dil seçicisini kullanır. */}
+        <meta name="google" content="notranslate" />
+      </head>
+      <body className={`${inter.className} notranslate`} translate="no">
         <SimpleAuthProvider>
           {isLocalePrefixedRoute ? (
             inner

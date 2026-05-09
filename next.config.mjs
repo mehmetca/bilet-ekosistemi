@@ -1,12 +1,16 @@
+import path from "path";
+import { fileURLToPath } from "url";
 import createNextIntlPlugin from "next-intl/plugin";
 import { PHASE_PRODUCTION_BUILD } from "next/constants.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // next-intl / use-intl: RSC + client sınırında tek webpack grafiği; ayrıca Windows vendor-chunk hatalarını azaltır
-  transpilePackages: ["lucide-react", "next-intl", "use-intl"],
+  // konva: tarayıcı paketi; gerektiğinde transpile (canvas fallback webpack’te kapalı).
+  transpilePackages: ["lucide-react", "next-intl", "use-intl", "konva"],
   // Sentry / OpenTelemetry webpack vendor-chunks (örn. @opentelemetry.js) Windows dev'de
   // eksik dosya → MODULE_NOT_FOUND. Sunucuda paketleri bundle dışı bırakır.
   serverExternalPackages: [

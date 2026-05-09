@@ -26,53 +26,57 @@ interface SimpleAuthType {
 
 const SimpleAuthContext = createContext<SimpleAuthType | undefined>(undefined);
 
+function primaryUserRole(slugs: string[]): "admin" | "controller" | "organizer" | null {
+  if (slugs.includes("admin")) return "admin";
+  if (slugs.includes("controller")) return "controller";
+  if (slugs.includes("organizer")) return "organizer";
+  return null;
+}
+
 export function SimpleAuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<"admin" | "controller" | "organizer" | null>(null);
+  /** Kullanıcının tüm rolleri (ör. hem admin hem organizer). Tek satır limit(1) admin yetkilerini gizliyordu. */
+  const [roleSlugs, setRoleSlugs] = useState<string[]>([]);
   const userRef = useRef<User | null>(null);
-  const userRoleRef = useRef<"admin" | "controller" | "organizer" | null>(null);
+  const roleSlugsRef = useRef<string[]>([]);
   const roleFetchInFlightForRef = useRef<string | null>(null);
   const lastAuthEventRef = useRef<{ key: string; at: number } | null>(null);
   const authSubscriptionRef = useRef<{ unsubscribe?: () => void } | undefined>(undefined);
 
-  const isAdmin = userRole === "admin";
-  const isController = userRole === "controller";
-  const isOrganizer = userRole === "organizer";
+  const isAdmin = roleSlugs.includes("admin");
+  const isController = roleSlugs.includes("controller");
+  const isOrganizer = roleSlugs.includes("organizer");
+  const userRole = primaryUserRole(roleSlugs);
 
   async function fetchUserRole(userId: string, force = false) {
     if (!force && roleFetchInFlightForRef.current === userId) {
-      return userRoleRef.current;
+      return primaryUserRole(roleSlugsRef.current);
     }
-    if (!force && userRoleRef.current && userRef.current?.id === userId) {
-      return userRoleRef.current;
+    if (!force && userRef.current?.id === userId && roleSlugsRef.current.length > 0) {
+      return primaryUserRole(roleSlugsRef.current);
     }
 
     try {
       roleFetchInFlightForRef.current = userId;
       const supabase = await getSupabase();
-      const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .order("role", { ascending: false })
-        .limit(1);
+      const { data, error } = await supabase.from("user_roles").select("role").eq("user_id", userId);
 
       if (error) {
-        setUserRole(null);
-        userRoleRef.current = null;
+        setRoleSlugs([]);
+        roleSlugsRef.current = [];
         return null;
       }
 
-      const role = data && data.length > 0 ? (data[0].role as "admin" | "controller" | "organizer") : null;
-      setUserRole(role);
-      userRoleRef.current = role;
-      return role;
+      const slugs = [...new Set((data || []).map((r) => String(r.role || "").trim()).filter(Boolean))];
+      setRoleSlugs(slugs);
+      roleSlugsRef.current = slugs;
+      return primaryUserRole(slugs);
     } catch (error) {
       console.error("Role fetch error:", error);
-      setUserRole(null);
-      userRoleRef.current = null;
+      setRoleSlugs([]);
+      roleSlugsRef.current = [];
       return null;
     } finally {
       roleFetchInFlightForRef.current = null;
@@ -82,7 +86,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     let mounted = true;
     userRef.current = user;
-    userRoleRef.current = userRole;
+    roleSlugsRef.current = roleSlugs;
 
     const loadingTimeout = window.setTimeout(() => {
       try {
@@ -115,7 +119,8 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
               }
               if (mounted) {
                 setUser(null);
-                setUserRole(null);
+                setRoleSlugs([]);
+                roleSlugsRef.current = [];
                 setLoading(false);
               }
               return;
@@ -123,7 +128,8 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             console.error("Supabase auth init error:", supabaseErr);
             if (mounted) {
               setUser(null);
-              setUserRole(null);
+              setRoleSlugs([]);
+              roleSlugsRef.current = [];
               setLoading(false);
             }
             return;
@@ -139,7 +145,8 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
               }
               if (mounted) {
                 setUser(null);
-                setUserRole(null);
+                setRoleSlugs([]);
+                roleSlugsRef.current = [];
                 setLoading(false);
               }
               return;
@@ -168,9 +175,9 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             } else {
               setUser(null);
               setAccessToken(null);
-              setUserRole(null);
+              setRoleSlugs([]);
               userRef.current = null;
-              userRoleRef.current = null;
+              roleSlugsRef.current = [];
             }
           }
         } catch (error) {
@@ -203,9 +210,9 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             if (event === "SIGNED_OUT") {
               setUser(null);
               setAccessToken(null);
-              setUserRole(null);
+              setRoleSlugs([]);
               userRef.current = null;
-              userRoleRef.current = null;
+              roleSlugsRef.current = [];
               setLoading(false);
             } else if (
               event === "SIGNED_IN" ||
@@ -235,9 +242,9 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
               } else {
                 setUser(null);
                 setAccessToken(null);
-                setUserRole(null);
+                setRoleSlugs([]);
                 userRef.current = null;
-                userRoleRef.current = null;
+                roleSlugsRef.current = [];
               }
               setLoading(false);
             }
@@ -268,9 +275,9 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     }
     setUser(null);
     setAccessToken(null);
-    setUserRole(null);
+    setRoleSlugs([]);
     userRef.current = null;
-    userRoleRef.current = null;
+    roleSlugsRef.current = [];
   }
 
   async function refreshRole() {

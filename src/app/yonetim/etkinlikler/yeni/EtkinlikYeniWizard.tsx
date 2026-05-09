@@ -177,6 +177,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const [newVenueAddress, setNewVenueAddress] = useState("");
   const [seatingPlans, setSeatingPlans] = useState<SeatingPlanOption[]>([]);
   const [selectedSeatingPlanId, setSelectedSeatingPlanId] = useState("");
+  /**
+   * Yeni etkinlikte: şablondan derin kopya → her tarih/saat/organizatör kendi koltuk UUID'lerine sahip olur.
+   * Düzenlemede kapalı (mevcut plan korunur).
+   */
+  const [dedicatedPlanPerEvent, setDedicatedPlanPerEvent] = useState(true);
   const [sectionCapacitiesByTicketLabel, setSectionCapacitiesByTicketLabel] = useState<Record<string, number>>({});
   /** Seçili oturum planı: bilet adı = sırada ticket_type_label → bölümde ticket_type_label → bölüm adı */
   const [planDerivedTicketLabels, setPlanDerivedTicketLabels] = useState<string[]>([]);
@@ -294,6 +299,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setEventCity(city);
       setEventAddress(address);
       setSelectedSeatingPlanId((ev.seating_plan_id as string) || "");
+      setDedicatedPlanPerEvent(false);
 
       const { data: ticketsData } = await supabase
         .from("tickets")
@@ -667,6 +673,43 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
     setSubmitting(true);
     try {
       const titleTrVal = titleTr.trim();
+      let effectiveSeatingPlanId = (selectedSeatingPlanId || "").trim() || null;
+
+      if (!editingEventId && effectiveSeatingPlanId && dedicatedPlanPerEvent) {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) {
+          alert("Oturum süresi dolmuş olabilir. Yeniden giriş yapıp tekrar deneyin.");
+          return;
+        }
+        const templateLabel = seatingPlans.find((p) => p.id === effectiveSeatingPlanId)?.name || "Salon";
+        const cloneName = `${templateLabel} · ${titleTrVal.slice(0, 48)} · ${date} ${time}`
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 200);
+        const res = await fetch("/api/yonetim/clone-seating-plan", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            source_plan_id: effectiveSeatingPlanId,
+            name: cloneName,
+          }),
+        });
+        const cloneJson = (await res.json().catch(() => ({}))) as { error?: string; plan_id?: string };
+        if (!res.ok) {
+          throw new Error(cloneJson.error || "Salon kopyası oluşturulamadı.");
+        }
+        if (!cloneJson.plan_id) {
+          throw new Error("Salon kopyası oluşturulamadı.");
+        }
+        effectiveSeatingPlanId = cloneJson.plan_id;
+      }
+
       const venueTrVal = selectedVenue?.name ?? venueManualName.trim();
       const cityVal = (selectedVenueId ? selectedVenue?.city ?? eventCity : eventCity).trim();
       const addressVal = (selectedVenueId ? selectedVenue?.address ?? eventAddress : eventAddress).trim();
@@ -703,7 +746,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         currency,
         image_url: imageUrl || null,
         venue_id: selectedVenueId || null,
-        seating_plan_id: selectedSeatingPlanId || null,
+        seating_plan_id: effectiveSeatingPlanId,
         show_slug: showSlugId.trim() || null,
         title_tr: titleTrVal || null,
         title_de: titleDe.trim() || null,
@@ -1171,6 +1214,25 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                     ))}
                   </select>
                   <p className="mt-1 text-xs text-slate-500">Seçerseniz bilet alan kullanıcılar &quot;Yer seçerek bilet al&quot; ile koltuk seçebilir.</p>
+                  {!editingEventId && (
+                    <label className="mt-3 flex items-start gap-2 rounded-lg border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-sm text-slate-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 rounded border-slate-300"
+                        checked={dedicatedPlanPerEvent}
+                        onChange={(e) => setDedicatedPlanPerEvent(e.target.checked)}
+                      />
+                      <span>
+                        <span className="font-medium">Bu etkinlik için salonun ayrı kopyasını kullan</span>
+                        <span className="block text-xs text-slate-600 mt-1">
+                          Önerilir: Aynı mekandaki şablon koltukları <strong>yeni UUID’lerle</strong> kopyalanır; farklı tarih, saat veya
+                          organizatörler birbirinin doluluk/satış verisini paylaşmaz. 15:00 ve 20:00 gibi iki seans için{" "}
+                          <strong>iki ayrı etkinlik kaydı</strong> oluşturun; aynı gösteri sayfasında gruplamak için aynı{" "}
+                          <em>Slug ID (show_slug)</em> değerini kullanabilirsiniz.
+                        </span>
+                      </span>
+                    </label>
+                  )}
                   <p className="mt-2">
                     <Link href={salonPlanEditorHref} className="text-sm font-medium text-primary-600 hover:underline">
                       Salon planını düzenle (bölüm, koltuk, sürükle-bırak) →

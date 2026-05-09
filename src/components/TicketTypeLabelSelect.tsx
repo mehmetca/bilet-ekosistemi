@@ -17,7 +17,7 @@ export default function TicketTypeLabelSelect({
   className,
   id,
 }: Props) {
-  const trimmed = value.trim();
+  const trimmed = String(value ?? "").trim();
   const presetSet = new Set(EVENT_TICKET_TYPE_PRESET_LABELS);
   const isPreset = trimmed !== "" && presetSet.has(trimmed);
   const selectValue = trimmed === "" ? "" : isPreset ? trimmed : "__custom__";

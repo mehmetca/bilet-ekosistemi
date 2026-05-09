@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { getTranslationWarning } from "@/i18n/translation-warning";
+import { tryReloadOnceForTransientReactError } from "@/lib/client-error-recovery";
 
 export default function LocaleError({
   error,
@@ -17,6 +18,7 @@ export default function LocaleError({
   const translationWarning = getTranslationWarning(localeFromPath);
 
   useEffect(() => {
+    if (tryReloadOnceForTransientReactError(String(error?.message || ""))) return;
     console.error("Locale error:", error);
     if (typeof window !== "undefined" && process.env.NEXT_PUBLIC_SENTRY_DSN) {
       import("@sentry/nextjs")
@@ -50,12 +52,17 @@ export default function LocaleError({
         >
           {translationWarning}
         </p>
-        {isDev && error?.message && (
+        {(isDev && error?.message) || error?.digest ? (
           <details style={{ marginBottom: "1rem", textAlign: "left" }}>
-            <summary style={{ fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }}>Hata detayları</summary>
-            <pre style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#94a3b8", background: "#f1f5f9", padding: "0.5rem", borderRadius: "0.25rem", overflow: "auto", maxHeight: "8rem" }}>{error.message}</pre>
+            <summary style={{ fontSize: "0.875rem", color: "#64748b", cursor: "pointer" }}>
+              {isDev ? "Hata detayları" : "Teknik bilgi (destek için)"}
+            </summary>
+            <pre style={{ marginTop: "0.5rem", fontSize: "0.75rem", color: "#94a3b8", background: "#f1f5f9", padding: "0.5rem", borderRadius: "0.25rem", overflow: "auto", maxHeight: "8rem", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+              {error.digest ? `Digest: ${error.digest}\n\n` : ""}
+              {isDev ? error.message : error.message ? `${error.message.slice(0, 200)}${error.message.length > 200 ? "…" : ""}` : ""}
+            </pre>
           </details>
-        )}
+        ) : null}
         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
           <button
             onClick={reset}

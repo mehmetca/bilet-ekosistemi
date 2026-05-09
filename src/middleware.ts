@@ -192,9 +192,11 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith("/yonetim") || pathname.startsWith("/giris") || pathname.startsWith("/auth")) {
+    const cookieLocale = request.cookies.get("NEXT_LOCALE")?.value;
+    const panelLocale = isAppLocale(cookieLocale) ? cookieLocale : resolveUnprefixedPathLocale(request);
     const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-next-intl-locale", routing.defaultLocale);
-    requestHeaders.set("X-NEXT-INTL-LOCALE", routing.defaultLocale);
+    requestHeaders.set("x-next-intl-locale", panelLocale);
+    requestHeaders.set("X-NEXT-INTL-LOCALE", panelLocale);
     requestHeaders.set("x-pathname", pathname);
     const res = NextResponse.next({ request: { headers: requestHeaders } });
     return withSupabaseAuth(request, res);

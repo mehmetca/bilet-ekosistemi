@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Stage, Layer, Group, Circle, Text } from "react-konva";
+import { useEffect, useRef, useState } from "react";
+import Konva from "konva";
 import type { Seat } from "@/types/database";
 import {
   ROW_EDITOR_GAP as GAP,
@@ -31,68 +31,157 @@ export type SeatingKonvaRowEditorProps = {
   onSeatsDraftChange?: (nextSeats: Seat[]) => void;
 };
 
-export default function SeatingKonvaRowEditor({ rowId, rowLabel, seats, onSeatsDraftChange }: SeatingKonvaRowEditorProps) {
-  const [positions, setPositions] = useState<Record<string, { x: number; y: number }>>({});
+/** react-konva kullanılmıyor (çift React / ReactCurrentOwner); yalnızca konva imperatif API. */
+export default function SeatingKonvaRowEditor({
+  rowId,
+  rowLabel,
+  seats,
+  onSeatsDraftChange,
+}: SeatingKonvaRowEditorProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const stageRef = useRef<Konva.Stage | null>(null);
+  const seatsRef = useRef(seats);
+  seatsRef.current = seats;
+
   const [saving, setSaving] = useState(false);
 
+  const onDraftRef = useRef(onSeatsDraftChange);
+  onDraftRef.current = onSeatsDraftChange;
+
+  function emitRoundedSeats(nextSeats: Seat[]) {
+    const rounded = nextSeats.map((s) => ({
+      ...s,
+      x: s.x != null ? Math.round(Number(s.x) * 10000) / 10000 : null,
+      y: s.y != null ? Math.round(Number(s.y) * 10000) / 10000 : null,
+    }));
+    onDraftRef.current?.(rounded);
+  }
+
+  const handleApplyGrid = () => {
+    const sorted = sortSeatsForGrid(seatsRef.current);
+    if (sorted.length === 0) return;
+    setSaving(true);
+    try {
+      const nextSeats = sorted.map((s, i) => {
+        const p = gridPosition(i, STAGE_H);
+        return { ...s, x: p.x, y: p.y };
+      });
+      emitRoundedSeats(nextSeats);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const seatsKey = JSON.stringify(
+    sortSeatsForGrid(seats).map((s) => ({
+      id: s.id,
+      x: s.x,
+      y: s.y,
+      seat_label: s.seat_label,
+      sales_blocked: s.sales_blocked === true,
+    }))
+  );
+
   useEffect(() => {
+    const el = containerRef.current;
+    if (!el || seats.length === 0) {
+      stageRef.current?.destroy();
+      stageRef.current = null;
+      if (el && "replaceChildren" in el) el.replaceChildren();
+      else if (el) {
+        const box = el as HTMLElement;
+        while (box.firstChild) box.removeChild(box.firstChild);
+      }
+      return;
+    }
+
     const sorted = sortSeatsForGrid(seats);
-    const next: Record<string, { x: number; y: number }> = {};
+    const stageW = rowEditorStageWidth(sorted.length);
+
+    stageRef.current?.destroy();
+    stageRef.current = null;
+    if ("replaceChildren" in el) el.replaceChildren();
+    else {
+      const box = el as HTMLElement;
+      while (box.firstChild) box.removeChild(box.firstChild);
+    }
+
+    const stage = new Konva.Stage({
+      container: el,
+      width: stageW,
+      height: STAGE_H,
+    });
+    stageRef.current = stage;
+
+    const layer = new Konva.Layer();
+    stage.add(layer);
+
     sorted.forEach((s, i) => {
       const hasStored =
         s.x != null &&
         s.y != null &&
         !Number.isNaN(Number(s.x)) &&
         !Number.isNaN(Number(s.y));
-      next[s.id] = hasStored
-        ? { x: Number(s.x), y: Number(s.y) }
-        : gridPosition(i, STAGE_H);
+      const pos = hasStored ? { x: Number(s.x), y: Number(s.y) } : gridPosition(i, STAGE_H);
+
+      const lbl = String(s.seat_label);
+      const tw = Math.max(lbl.length * 8, 18);
+
+      const group = new Konva.Group({
+        x: pos.x,
+        y: pos.y,
+        draggable: true,
+        dragBoundFunc: (p) => ({
+          x: Math.min(stageW - R, Math.max(R, p.x)),
+          y: Math.min(STAGE_H - R, Math.max(R, p.y)),
+        }),
+      });
+
+      group.add(
+        new Konva.Circle({
+          radius: R,
+          fill: s.sales_blocked ? "#fde68a" : "#e2e8f0",
+          stroke: s.sales_blocked ? "#b45309" : "#64748b",
+          strokeWidth: 1.5,
+        })
+      );
+      group.add(
+        new Konva.Text({
+          text: lbl,
+          fontSize: 10,
+          fill: "#1e293b",
+          fontStyle: "bold",
+          x: -tw / 2,
+          y: -5,
+          width: tw,
+          align: "center",
+        })
+      );
+
+      group.on("dragend", () => {
+        const nx = group.x();
+        const ny = group.y();
+        const cur = seatsRef.current;
+        const nextSeats = cur.map((seat) =>
+          seat.id === s.id ? { ...seat, x: nx, y: ny } : seat
+        );
+        queueMicrotask(() => emitRoundedSeats(nextSeats));
+      });
+
+      layer.add(group);
     });
-    setPositions(next);
-  }, [rowId, seats]);
 
-  const emitDraftSeats = useCallback(
-    (nextPos: Record<string, { x: number; y: number }>) => {
-      const nextSeats = seats.map((s) => {
-        const p = nextPos[s.id];
-        if (!p) return s;
-        return {
-          ...s,
-          x: Math.round(p.x * 10000) / 10000,
-          y: Math.round(p.y * 10000) / 10000,
-        };
-      });
-      onSeatsDraftChange?.(nextSeats);
-    },
-    [onSeatsDraftChange, seats]
-  );
+    layer.draw();
 
-  const handleApplyGrid = async () => {
-    const sorted = sortSeatsForGrid(seats);
-    if (sorted.length === 0) return;
-    setSaving(true);
-    try {
-      const nextPos: Record<string, { x: number; y: number }> = {};
-      for (let i = 0; i < sorted.length; i++) {
-        const s = sorted[i];
-        nextPos[s.id] = gridPosition(i, STAGE_H);
-      }
-      setPositions((prev) => {
-        const merged = { ...prev, ...nextPos };
-        queueMicrotask(() => emitDraftSeats(merged));
-        return merged;
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
+    return () => {
+      stage.destroy();
+      stageRef.current = null;
+    };
+  }, [rowId, seatsKey, seats.length]);
 
   if (seats.length === 0) {
     return <p className="text-xs text-slate-500">Bu sırada koltuk yok; önce koltuk numaraları ekleyin.</p>;
   }
-
-  const sorted = sortSeatsForGrid(seats);
-  const stageW = rowEditorStageWidth(sorted.length);
 
   return (
     <div className="mt-2 rounded-md border border-slate-200 bg-slate-50/90 p-2">
@@ -111,53 +200,7 @@ export default function SeatingKonvaRowEditor({ rowId, rowLabel, seats, onSeatsD
         </button>
       </div>
       <div className="rounded border border-slate-300 bg-white overflow-x-auto max-w-full">
-        <Stage width={stageW} height={STAGE_H}>
-          <Layer>
-            {sorted.map((s) => {
-              const pos = positions[s.id] ?? gridPosition(0, STAGE_H);
-              const lbl = String(s.seat_label);
-              const tw = Math.max(lbl.length * 8, 18);
-              return (
-                <Group
-                  key={s.id}
-                  x={pos.x}
-                  y={pos.y}
-                  draggable
-                  dragBoundFunc={(p) => ({
-                    x: Math.min(stageW - R, Math.max(R, p.x)),
-                    y: Math.min(STAGE_H - R, Math.max(R, p.y)),
-                  })}
-                  onDragEnd={(e) => {
-                    const nx = e.target.x();
-                    const ny = e.target.y();
-                    setPositions((prev) => {
-                      const next = { ...prev, [s.id]: { x: nx, y: ny } };
-                      queueMicrotask(() => emitDraftSeats(next));
-                      return next;
-                    });
-                  }}
-                >
-                  <Circle
-                    radius={R}
-                    fill={s.sales_blocked ? "#fde68a" : "#e2e8f0"}
-                    stroke={s.sales_blocked ? "#b45309" : "#64748b"}
-                    strokeWidth={1.5}
-                  />
-                  <Text
-                    text={lbl}
-                    fontSize={10}
-                    fill="#1e293b"
-                    fontStyle="bold"
-                    x={-tw / 2}
-                    y={-5}
-                    width={tw}
-                    align="center"
-                  />
-                </Group>
-              );
-            })}
-          </Layer>
-        </Stage>
+        <div ref={containerRef} className="konva-row-editor-canvas" />
       </div>
     </div>
   );

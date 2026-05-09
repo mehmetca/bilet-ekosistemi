@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   X,
   Calendar,
@@ -20,6 +21,7 @@ import {
   Bell,
   Search as SearchIcon,
   LayoutGrid,
+  PieChart,
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
@@ -30,6 +32,7 @@ interface AdminNavigationFixedProps {
 
 export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminNavigationFixedProps) {
   const pathname = usePathname();
+  const t = useTranslations("adminPanel");
 
   useEffect(() => {
     if (onClose) onClose();
@@ -38,160 +41,54 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
 
   const isActive = (path: string) => pathname === path;
 
-  const adminMenuItems = [
-    {
-      href: "/yonetim",
-      label: "Dashboard",
-      icon: Calendar,
-      description: "Yönetim paneli"
-    },
-    {
-      href: "/yonetim/etkinlikler",
-      label: "Etkinlikler",
-      icon: Calendar,
-      description: "Etkinlik yönetimi"
-    },
-    {
-      href: "/yonetim/mekanlar",
-      label: "Mekanlar",
-      icon: MapPin,
-      description: "Salon tasarımı ve mekan bilgileri"
-    },
-    {
-      href: "/yonetim/salon-yapim-wizard",
-      label: "Salon Yapım Wizard",
-      icon: LayoutGrid,
-      description: "Adım adım salon planı oluşturma"
-    },
-    {
-      href: "/yonetim/sehirler",
-      label: "Şehirler",
-      icon: MapPin,
-      description: "Das ist los in deiner Stadt!"
-    },
-    {
-      href: "/yonetim/slider-yonetimi",
-      label: "Slider",
-      icon: Megaphone,
-      description: "Ana ve haber slider görselleri"
-    },
-    {
-      href: "/yonetim/sanatcilar",
-      label: "Sanatçılar",
-      icon: User,
-      description: "Biyografi ve galeri yönetimi"
-    },
-    {
-      href: "/yonetim/bilet-turleri",
-      label: "Bilet Türleri",
-      icon: Ticket,
-      description: "Bilet türleri ve stok"
-    },
-    {
-      href: "/yonetim/bilet-listesi",
-      label: "Siparişler",
-      icon: CreditCard,
-      description: "Tüm siparişler"
-    },
-    {
-      href: "/yonetim/muhasebe",
-      label: "Muhasebe",
-      icon: BarChart3,
-      description: "Finansal raporlar"
-    },
-    {
-      href: "/yonetim/kullanicilar",
-      label: "Kullanıcılar",
-      icon: Users,
-      description: "Rol ve yetki yönetimi"
-    },
-    {
-      href: "/yonetim/musteri-ara",
-      label: "Müşteri Ara",
-      icon: SearchIcon,
-      description: "Kundennummer ile müşteri bilgisi"
-    },
-    {
-      href: "/yonetim/bilet-kontrol",
-      label: "Bilet Kontrol",
-      icon: Shield,
-      description: "Bilet doğrulama"
-    },
-    {
-      href: "/yonetim/etkinlik-uyarilari",
-      label: "Etkinlik Uyarıları",
-      icon: Bell,
-      description: "Bilet hatırlatması kayıtları"
-    },
-    {
-      href: "/yonetim/huni-analitigi",
-      label: "Huni Analitiği",
-      icon: BarChart3,
-      description: "Görüntüleme → Satın alma"
-    },
-    {
-      href: "/yonetim/ab-test",
-      label: "A/B Test",
-      icon: FlaskConical,
-      description: "Hero ve CTA varyantları"
-    },
-    {
-      href: "/yonetim/audit-log",
-      label: "Denetim Kaydı",
-      icon: Shield,
-      description: "Audit log"
-    },
-    {
-      href: "/yonetim/ayarlar",
-      label: "Ayarlar",
-      icon: Settings,
-      description: "Sistem ayarları"
-    }
-  ];
+  const adminMenuItems = useMemo(
+    () => [
+      { href: "/yonetim", label: t("nav.dashboard"), icon: Calendar, description: t("nav.dashboardDescAdmin") },
+      { href: "/yonetim/etkinlikler", label: t("nav.events"), icon: Calendar, description: t("nav.eventsDesc") },
+      { href: "/yonetim/mekanlar", label: t("nav.venues"), icon: MapPin, description: t("nav.venuesDesc") },
+      { href: "/yonetim/salon-yapim-wizard", label: t("nav.salonWizard"), icon: LayoutGrid, description: t("nav.salonWizardDesc") },
+      { href: "/yonetim/sehirler", label: t("nav.cities"), icon: MapPin, description: t("nav.citiesDesc") },
+      { href: "/yonetim/slider-yonetimi", label: t("nav.slider"), icon: Megaphone, description: t("nav.sliderDesc") },
+      { href: "/yonetim/sanatcilar", label: t("nav.artists"), icon: User, description: t("nav.artistsDesc") },
+      { href: "/yonetim/bilet-turleri", label: t("nav.ticketTypes"), icon: Ticket, description: t("nav.ticketTypesDesc") },
+      { href: "/yonetim/bilet-listesi", label: t("nav.orders"), icon: CreditCard, description: t("nav.ordersDesc") },
+      { href: "/yonetim/bilet-ozeti", label: t("nav.ticketSummary"), icon: PieChart, description: t("nav.ticketSummaryDesc") },
+      { href: "/yonetim/muhasebe", label: t("nav.accounting"), icon: BarChart3, description: t("nav.accountingDesc") },
+      { href: "/yonetim/kullanicilar", label: t("nav.users"), icon: Users, description: t("nav.usersDesc") },
+      { href: "/yonetim/musteri-ara", label: t("nav.customerSearch"), icon: SearchIcon, description: t("nav.customerSearchDesc") },
+      { href: "/yonetim/bilet-kontrol", label: t("nav.ticketCheck"), icon: Shield, description: t("nav.ticketCheckDesc") },
+      { href: "/yonetim/etkinlik-uyarilari", label: t("nav.eventAlerts"), icon: Bell, description: t("nav.eventAlertsDesc") },
+      { href: "/yonetim/huni-analitigi", label: t("nav.funnel"), icon: BarChart3, description: t("nav.funnelDesc") },
+      { href: "/yonetim/ab-test", label: t("nav.abTest"), icon: FlaskConical, description: t("nav.abTestDesc") },
+      { href: "/yonetim/audit-log", label: t("nav.audit"), icon: Shield, description: t("nav.auditDesc") },
+      { href: "/yonetim/ayarlar", label: t("nav.settings"), icon: Settings, description: t("nav.settingsDesc") },
+    ],
+    [t]
+  );
 
-  const controllerMenuItems = [
-    {
-      href: "/yonetim",
-      label: "Dashboard",
-      icon: Calendar,
-      description: "Kontrolör paneli"
-    },
-    {
-      href: "/yonetim/bilet-kontrol",
-      label: "Bilet Kontrol",
-      icon: Shield,
-      description: "Bilet doğrulama"
-    }
-  ];
+  const controllerMenuItems = useMemo(
+    () => [
+      { href: "/yonetim", label: t("nav.dashboard"), icon: Calendar, description: t("nav.dashboardDescController") },
+      { href: "/yonetim/bilet-kontrol", label: t("nav.ticketCheck"), icon: Shield, description: t("nav.ticketCheckDesc") },
+    ],
+    [t]
+  );
 
-  const organizerMenuItems = [
-    {
-      href: "/yonetim",
-      label: "Dashboard",
-      icon: Calendar,
-      description: "Organizatör paneli"
-    },
-    {
-      href: "/yonetim/etkinlikler",
-      label: "Etkinlikler",
-      icon: Calendar,
-      description: "Etkinlik yönetimi"
-    },
-    {
-      href: "/yonetim/biletlerim",
-      label: "Biletlerim",
-      icon: Ticket,
-      description: "Satın aldığınız biletler"
-    },
-    {
-      href: "/yonetim/bilgilerim",
-      label: "Organizasyon Bilgileri",
-      icon: User,
-      description: "Başvuru formu ve bilgileriniz"
-    }
-  ];
+  const organizerMenuItems = useMemo(
+    () => [
+      { href: "/yonetim", label: t("nav.dashboard"), icon: Calendar, description: t("nav.dashboardDescOrganizer") },
+      { href: "/yonetim/etkinlikler", label: t("nav.organizerEvents"), icon: Calendar, description: t("nav.eventsDesc") },
+      { href: "/yonetim/biletlerim", label: t("nav.myTickets"), icon: Ticket, description: t("nav.myTicketsDesc") },
+      { href: "/yonetim/bilgilerim", label: t("nav.orgInfo"), icon: User, description: t("nav.orgInfoDesc") },
+    ],
+    [t]
+  );
 
-  const menuItems = isAdmin ? adminMenuItems : isController ? controllerMenuItems : organizerMenuItems;
+  const menuItems = isAdmin
+    ? adminMenuItems
+    : isController && !isOrganizer
+      ? controllerMenuItems
+      : organizerMenuItems;
 
   const sidebarContent = (
     <div className="w-56 h-full bg-white flex flex-col overflow-hidden">
@@ -199,7 +96,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       <div className="flex-shrink-0 p-4 border-b border-slate-200">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <h1 className="text-base font-bold text-slate-900 truncate">Yönetim</h1>
+            <h1 className="text-base font-bold text-slate-900 truncate">{t("sidebarTitle")}</h1>
             <div className="mt-2 flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0"></div>
               <span className="text-xs text-slate-600 truncate">
@@ -208,7 +105,11 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
             </div>
             <div className="mt-1">
               <span className="inline-flex items-center px-1 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
-                {userRole === "admin" ? "Yönetici" : userRole === "controller" ? "Kontrolör" : "Organizatör"}
+                {userRole === "admin"
+                  ? t("roles.admin")
+                  : userRole === "controller"
+                    ? t("roles.controller")
+                    : t("roles.organizer")}
               </span>
             </div>
           </div>
@@ -217,7 +118,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
               type="button"
               onClick={onClose}
               className="md:hidden p-1.5 -mr-1 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded flex-shrink-0"
-              aria-label="Menüyü kapat"
+              aria-label={t("shell.closeMenu")}
             >
               <X className="h-5 w-5" />
             </button>
@@ -259,13 +160,17 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
           className="flex items-center gap-2 px-3 py-2 w-full text-left text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-lg transition-colors"
         >
           <LogOut className="h-4 w-4" />
-          <span className="text-sm font-medium">Çıkış Yap</span>
+          <span className="text-sm font-medium">{t("signOut")}</span>
         </button>
         <p className="text-xs font-medium text-slate-900 truncate px-3">
           {user?.email}
         </p>
         <p className="text-xs text-slate-500 truncate px-3 mt-0.5">
-          {userRole === "admin" ? "Yönetici" : userRole === "controller" ? "Kontrolör" : "Organizatör"}
+          {userRole === "admin"
+            ? t("roles.admin")
+            : userRole === "controller"
+              ? t("roles.controller")
+              : t("roles.organizer")}
         </p>
       </div>
     </div>

@@ -176,9 +176,9 @@ function MekanlarContent() {
     .filter((x) => x.length > 0);
 
   useEffect(() => {
-    if (!isAdmin) return;
+    if (!isAdmin && !isOrganizer) return;
     fetchVenues();
-  }, [isAdmin]);
+  }, [isAdmin, isOrganizer]);
 
   useEffect(() => {
     if (!showForm || !isAdmin) return;
@@ -202,9 +202,16 @@ function MekanlarContent() {
   }
 
   function normalizeVenue(row: Record<string, unknown>): Venue {
-    const faq = row.faq;
-    const faqArr = Array.isArray(faq)
-      ? (faq as VenueFaqItem[]).filter((x) => x?.soru && x?.cevap)
+    let faqRaw: unknown = row.faq;
+    if (typeof faqRaw === "string") {
+      try {
+        faqRaw = JSON.parse(faqRaw) as unknown;
+      } catch {
+        faqRaw = [];
+      }
+    }
+    const faqArr = Array.isArray(faqRaw)
+      ? (faqRaw as VenueFaqItem[]).filter((x) => x?.soru && x?.cevap)
       : [];
     return {
       id: row.id as string,
@@ -282,7 +289,7 @@ function MekanlarContent() {
       transport_info: venue.transport_info || "",
       map_embed_url: venue.map_embed_url || "",
       rules: venue.rules || "",
-      faq: venue.faq.length > 0 ? [...venue.faq] : [{ soru: "", cevap: "" }],
+      faq: Array.isArray(venue.faq) && venue.faq.length > 0 ? [...venue.faq] : [{ soru: "", cevap: "" }],
       name_tr: venue.name_tr || venue.name || "",
       name_de: venue.name_de || "",
       name_en: venue.name_en || "",
@@ -1145,7 +1152,7 @@ function MekanlarContent() {
                         {venueThumbs.length > 0 && (
                           <p className="mt-1 text-xs text-slate-500">Galeri: {venueThumbs.length} görsel</p>
                         )}
-                        {venue.faq.length > 0 && (
+                        {Array.isArray(venue.faq) && venue.faq.length > 0 && (
                           <button
                             onClick={() =>
                               setExpandedId((id) => (id === venue.id ? null : venue.id))
@@ -1165,9 +1172,9 @@ function MekanlarContent() {
                             )}
                           </button>
                         )}
-                        {expandedId === venue.id && venue.faq.length > 0 && (
+                        {expandedId === venue.id && Array.isArray(venue.faq) && venue.faq.length > 0 && (
                           <div className="mt-3 space-y-2">
-                            {venue.faq.map((item, i) => (
+                            {(venue.faq as VenueFaqItem[]).map((item, i) => (
                               <div key={i} className="text-sm border-l-2 border-primary-200 pl-3">
                                 <strong className="text-slate-700">{item.soru}</strong>
                                 <p className="text-slate-600 mt-1">{item.cevap}</p>

@@ -15,6 +15,9 @@ node_modules
 .next-dev
 out
 
+# supabase CLI
+supabase/.temp/
+
 # misc
 bilet
 tsconfig.tsbuildinfo
