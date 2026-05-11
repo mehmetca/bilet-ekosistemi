@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireAdmin } from "@/lib/api-auth";
 
-const SETTINGS_KEY = "salon_tasarim_vizor_plan";
+const SETTINGS_KEY = "salon_yapim_wizard_plan";
 
 /** Planı oku (herkese açık – önizleme için). Yönetim paneli kendi auth ile istek atar. */
 export async function GET() {
@@ -24,7 +24,7 @@ export async function GET() {
 
     return NextResponse.json({ plan2Blocks, savedAt });
   } catch (e) {
-    console.error("salon-vizor-plan GET error:", e);
+    console.error("salon-yapim-plan GET error:", e);
     return NextResponse.json({ plan2Blocks: null, savedAt: null }, { status: 200 });
   }
 }
@@ -52,13 +52,13 @@ export async function POST(request: NextRequest) {
       );
 
     if (upsertError) {
-      console.error("salon-vizor-plan POST upsert error:", upsertError);
+      console.error("salon-yapim-plan POST upsert error:", upsertError);
       return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, savedAt });
   } catch (e) {
-    console.error("salon-vizor-plan POST error:", e);
+    console.error("salon-yapim-plan POST error:", e);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }

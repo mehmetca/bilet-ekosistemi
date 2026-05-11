@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, type Dispatch, type SetStateAction } from "react";
 import { Plan2Layout } from "./Plan2BlockDesignerLayout";
 import type { Block, BlockRow, SeatSegment, BlockType, BlockOrientation } from "./Plan2BlockDesignerShared";
 import { normalizeSegments } from "./Plan2BlockDesignerShared";
@@ -52,17 +52,17 @@ const DEFAULT_BLOCKS: Block[] = [
 type Plan2BlockDesignerProps = {
   /** Controlled: planı kaydeden üst bileşen state'i yönetir */
   blocks?: Block[];
-  onBlocksChange?: (blocks: Block[]) => void;
+  onBlocksChange?: Dispatch<SetStateAction<Block[]>>;
 };
 
 export default function Plan2BlockDesigner({ blocks: controlledBlocks, onBlocksChange }: Plan2BlockDesignerProps) {
   const [internalBlocks, setInternalBlocks] = useState<Block[]>(DEFAULT_BLOCKS);
   const isControlled = controlledBlocks != null && onBlocksChange != null;
   const blocks = isControlled ? controlledBlocks : internalBlocks;
-  const setBlocks = (action: Block[] | ((prev: Block[]) => Block[])) => {
-    const next = typeof action === "function" ? action(blocks) : action;
-    if (isControlled) onBlocksChange!(next);
-    else setInternalBlocks(next);
+  /** React setState ile uyumlu: fonksiyonel guncellemeyi parent'a oldugu gibi iletir (closure'daki blocks kullanilmaz). */
+  const setBlocks = (action: SetStateAction<Block[]>) => {
+    if (isControlled) onBlocksChange!(action);
+    else setInternalBlocks(action);
   };
 
   const [orientation, setOrientation] = useState<BlockOrientation>("horizontal");
@@ -165,8 +165,10 @@ export default function Plan2BlockDesigner({ blocks: controlledBlocks, onBlocksC
   };
 
   const applyRowsPreset = (blockId: string, rowCount: number, seatsPerRow: number) => {
-    const safeRowCount = Math.max(1, Math.min(300, Math.floor(rowCount)));
-    const safeSeatsPerRow = Math.max(1, Math.min(500, Math.floor(seatsPerRow)));
+    const rc = Number(rowCount);
+    const sp = Number(seatsPerRow);
+    const safeRowCount = Number.isFinite(rc) && rc > 0 ? Math.max(1, Math.min(300, Math.floor(rc))) : 1;
+    const safeSeatsPerRow = Number.isFinite(sp) && sp > 0 ? Math.max(1, Math.min(500, Math.floor(sp))) : 1;
     setBlocks((prev) =>
       prev.map((b) => {
         if (b.id !== blockId || b.blockType === "corridor") return b;
@@ -297,4 +299,3 @@ export default function Plan2BlockDesigner({ blocks: controlledBlocks, onBlocksC
     addBlock,
   });
 }
-

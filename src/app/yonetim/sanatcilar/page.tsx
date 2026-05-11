@@ -21,9 +21,13 @@ type ArtistFormState = {
   name_tr: string;
   name_de: string;
   name_en: string;
+  name_ku: string;
+  name_ckb: string;
   bio_tr: string;
   bio_de: string;
   bio_en: string;
+  bio_ku: string;
+  bio_ckb: string;
   gallery_1: string;
   gallery_1_position: ArtistGalleryPosition;
   gallery_2: string;
@@ -52,9 +56,13 @@ const EMPTY_FORM: ArtistFormState = {
   name_tr: "",
   name_de: "",
   name_en: "",
+  name_ku: "",
+  name_ckb: "",
   bio_tr: "",
   bio_de: "",
   bio_en: "",
+  bio_ku: "",
+  bio_ckb: "",
   gallery_1: "",
   gallery_1_position: "top",
   gallery_2: "",
@@ -224,7 +232,7 @@ export default function SanatcilarPage() {
         (signal) =>
           supabase
             .from("artists")
-            .select("id,name,slug,bio,image_url,show_on_artist_page,show_on_tour_page,name_tr,name_de,name_en,bio_tr,bio_de,bio_en")
+            .select("id,name,slug,bio,image_url,show_on_artist_page,show_on_tour_page,name_tr,name_de,name_en,name_ku,name_ckb,bio_tr,bio_de,bio_en,bio_ku,bio_ckb")
             .eq("id", artistId)
             .abortSignal(signal)
             .single(),
@@ -240,6 +248,8 @@ export default function SanatcilarPage() {
       const parsed = parseArtistBio(bioRaw);
       const parsedDe = parseArtistBio((data.bio_de as string) || "");
       const parsedEn = parseArtistBio((data.bio_en as string) || "");
+      const parsedKu = parseArtistBio((data.bio_ku as string) || "");
+      const parsedCkb = parseArtistBio((data.bio_ckb as string) || "");
       const nameVal = (data.name_tr as string) || (data.name as string) || "";
       setForm({
         id: data.id as string,
@@ -250,9 +260,13 @@ export default function SanatcilarPage() {
         name_tr: (data.name_tr as string) || (data.name as string) || "",
         name_de: (data.name_de as string) || "",
         name_en: (data.name_en as string) || "",
+        name_ku: (data.name_ku as string) || "",
+        name_ckb: (data.name_ckb as string) || "",
         bio_tr: parsed.content || "",
         bio_de: parsedDe.content || "",
         bio_en: parsedEn.content || "",
+        bio_ku: parsedKu.content || "",
+        bio_ckb: parsedCkb.content || "",
         gallery_1: parsed.gallery[0]?.url || "",
         gallery_1_position: parsed.gallery[0]?.position || "top",
         gallery_2: parsed.gallery[1]?.url || "",
@@ -381,6 +395,12 @@ export default function SanatcilarPage() {
     const bioEn = form.bio_en.trim()
       ? buildArtistBio(form.bio_en, gallery, socials, card, videos)
       : null;
+    const bioKu = form.bio_ku.trim()
+      ? buildArtistBio(form.bio_ku, gallery, socials, card, videos)
+      : null;
+    const bioCkb = form.bio_ckb.trim()
+      ? buildArtistBio(form.bio_ckb, gallery, socials, card, videos)
+      : null;
 
     const payload = {
       name: nameVal,
@@ -390,9 +410,13 @@ export default function SanatcilarPage() {
       name_tr: nameVal || null,
       name_de: form.name_de.trim() || null,
       name_en: form.name_en.trim() || null,
+      name_ku: form.name_ku.trim() || null,
+      name_ckb: form.name_ckb.trim() || null,
       bio_tr: bioTr || null,
       bio_de: bioDe,
       bio_en: bioEn,
+      bio_ku: bioKu,
+      bio_ckb: bioCkb,
     };
 
     const mutationAbortController = new AbortController();
@@ -568,8 +592,8 @@ export default function SanatcilarPage() {
 
         <section className="xl:col-span-2 bg-white border border-slate-200 rounded-xl p-5 space-y-5">
           <div className="rounded-lg border border-slate-200 p-4 bg-slate-50/50">
-            <h3 className="text-sm font-semibold text-slate-700 mb-3">Sanatçı Adı (TR zorunlu, DE/EN opsiyonel)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <h3 className="text-sm font-semibold text-slate-700 mb-3">Sanatçı Adı (TR zorunlu; diğer diller isteğe bağlı)</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
               <div>
                 <label className="block text-xs text-slate-500 mb-0.5">Türkçe *</label>
                 <input
@@ -599,6 +623,25 @@ export default function SanatcilarPage() {
                   value={form.name_en}
                   onChange={(e) => setFormField("name_en", e.target.value)}
                   placeholder="Sanatçı adı (EN)"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-0.5">Nav (KU – Kurmancî)</label>
+                <input
+                  value={form.name_ku}
+                  onChange={(e) => setFormField("name_ku", e.target.value)}
+                  placeholder="Nav (Kurmancî)"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-500 mb-0.5">ناو (CKB – Soranî)</label>
+                <input
+                  value={form.name_ckb}
+                  onChange={(e) => setFormField("name_ckb", e.target.value)}
+                  placeholder="ناو (Soranî)"
+                  dir="rtl"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2"
                 />
               </div>
@@ -762,7 +805,7 @@ export default function SanatcilarPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Biyografi / Özgeçmiş (TR zorunlu, DE/EN opsiyonel)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Biyografi / Özgeçmiş (TR zorunlu; diğer diller isteğe bağlı)</label>
             <div className="space-y-4">
               <div>
                 <span className="text-xs text-slate-500 font-medium">Türkçe *</span>
@@ -795,6 +838,28 @@ export default function SanatcilarPage() {
                   <MDEditor
                     value={form.bio_en}
                     onChange={(val) => setFormField("bio_en", val || "")}
+                    preview="edit"
+                    height={180}
+                  />
+                </div>
+              </div>
+              <div>
+                <span className="text-xs text-slate-500 font-medium">Kurmancî (KU)</span>
+                <div className="border border-slate-200 rounded-lg overflow-hidden mt-1">
+                  <MDEditor
+                    value={form.bio_ku}
+                    onChange={(val) => setFormField("bio_ku", val || "")}
+                    preview="edit"
+                    height={180}
+                  />
+                </div>
+              </div>
+              <div>
+                <span className="text-xs text-slate-500 font-medium">Soranî (CKB)</span>
+                <div className="border border-slate-200 rounded-lg overflow-hidden mt-1">
+                  <MDEditor
+                    value={form.bio_ckb}
+                    onChange={(val) => setFormField("bio_ckb", val || "")}
                     preview="edit"
                     height={180}
                   />

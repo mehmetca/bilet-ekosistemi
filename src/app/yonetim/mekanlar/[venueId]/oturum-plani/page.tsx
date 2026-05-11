@@ -1546,7 +1546,7 @@ function OturumPlaniContent() {
         <strong>{venueName}</strong> için salonları burada tanımlayın. Salonda <strong>Hızlı salon şablonu</strong> ile tek/çift parket, yan şeritler ve Musensaal tarzı çoklu yan blokları saniyeler içinde oluşturabilirsiniz. Musensaal (Rosengarten Mannheim) ayrıntılı planını kullanmak için aşağıdan şablondan kopyalayın; açtığınız salonda görsel koltuk planı önizlemesi gösterilir. Etkinlik oluştururken mekan + salon seçilir. Her sıra altında <strong>sürükle-bırak</strong> ile koltuk konumlarını kaydedebilirsiniz.
       </p>
       <p className="mt-1 text-xs text-slate-500">
-        Blok taslağı ile tasarlamak isterseniz: <Link href="/yonetim/salon-tasarim-vizor" className="text-primary-600 hover:underline">Salon Tasarım Vizörü</Link> ile tasarlayıp &quot;Bu planı mekana aktar&quot; ile bu mekana ekleyebilirsiniz.
+        Blok taslağı ile görsel olarak tasarlamak isterseniz: <Link href="/yonetim/salon-yapim-wizard" className="text-primary-600 hover:underline">Salon Yapım Wizard</Link> ile tasarlayıp &quot;Mekana Aktar&quot; adımında bu mekanı seçerek ekleyebilirsiniz.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2 items-center">
@@ -1974,7 +1974,7 @@ function OturumPlaniContent() {
                       <p className="text-xs text-slate-500 mb-3">
                         Bu alan kaydetmeden önce mevcut taslağı gösterir. Veritabanına yazmak için <strong>Salonu Kaydet</strong> kullanın. Bölüm sırası listedeki
                         sıraya göredir; yalnızca isimde <em>sol/left</em> veya <em>sağ/right</em> geçenler yan koridorun solunda veya sağında, diğerleri altta yan
-                        yana yerleşir. <strong>Yatay koridor</strong> modundaki bölüm önizlemede tam satır kaplar; altındaki bloklar bir sonraki satıra iner.
+                        yana yerleşir. Aynı blok adıyla başlayan (örn. &quot;Orta salon - VIP&quot;, &quot;Orta salon - Kategori 1&quot;) bölümler önizlemede tek sütun olarak alt alta yığılır.
                       </p>
                       <div className="overflow-x-auto">
                         <div className="min-w-0 max-w-full rounded-lg border border-slate-100 bg-slate-50 p-2">
@@ -1982,25 +1982,45 @@ function OturumPlaniContent() {
                             SAHNE
                           </div>
                           {onlyCenterSide ? (
-                            <div className="flex w-full flex-col items-center gap-y-1">
+                            <div className="flex w-full flex-col items-stretch gap-y-1">
                               {(() => {
-                                const rows: ReactNode[] = [];
-                                let idx = 0;
-                                while (idx < centerSections.length) {
-                                  const remaining = centerSections.length - idx;
-                                  const inRow = remaining === 1 ? 1 : 2;
-                                  const slice = centerSections.slice(idx, idx + inRow);
-                                  rows.push(
-                                    <div
-                                      key={`preview-row-${idx}`}
-                                      className="flex w-full flex-row flex-wrap items-start justify-center gap-x-1 gap-y-1"
-                                    >
-                                      {slice.map((s) => renderSectionCard(s))}
-                                    </div>
-                                  );
-                                  idx += inRow;
+                                /**
+                                 * Bölüm adından blok prefix'ini ("Orta salon - VIP" → "Orta salon") çıkarıp aynı bloka ait
+                                 * bölümleri tek sütunda alt alta yığarız. Birden fazla blok grubu varsa gruplar yan yana
+                                 * yerleştirilir; ekran daralırsa flex-wrap ile alt satıra iner.
+                                 */
+                                const getBlockPrefix = (name: string): string => {
+                                  const raw = String(name || "");
+                                  const i = raw.indexOf(" - ");
+                                  return (i > 0 ? raw.slice(0, i) : raw).trim();
+                                };
+                                const groups: SeatingPlanSection[][] = [];
+                                const idxMap = new Map<string, number>();
+                                for (const s of centerSections) {
+                                  const key = getBlockPrefix(s.name);
+                                  let gi = idxMap.get(key);
+                                  if (gi === undefined) {
+                                    gi = groups.length;
+                                    idxMap.set(key, gi);
+                                    groups.push([]);
+                                  }
+                                  groups[gi].push(s);
                                 }
-                                return rows;
+                                if (groups.length <= 1) {
+                                  return (groups[0] ?? centerSections).map((s) => renderSectionCard(s));
+                                }
+                                return (
+                                  <div className="flex w-full flex-row flex-wrap items-start justify-center gap-x-2 gap-y-1">
+                                    {groups.map((grp, gi) => (
+                                      <div
+                                        key={`preview-blockcol-${gi}`}
+                                        className="flex min-w-0 flex-1 flex-col items-stretch gap-y-1"
+                                      >
+                                        {grp.map((s) => renderSectionCard(s))}
+                                      </div>
+                                    ))}
+                                  </div>
+                                );
                               })()}
                             </div>
                           ) : (
@@ -2471,7 +2491,7 @@ function OturumPlaniContent() {
 
       {plans.length === 0 && (
         <p className="mt-6 text-slate-500">
-          Henüz salon yok. Yukarıdan &quot;Yeni salon&quot; veya &quot;2 salon ekle&quot; / &quot;3 salon ekle&quot; ile ekleyin; her salona bölüm, sıra ve koltuk tanımlayın veya Salon Tasarım Vizöründen plan aktarın.
+          Henüz salon yok. Yukarıdan &quot;Yeni salon&quot; veya &quot;2 salon ekle&quot; / &quot;3 salon ekle&quot; ile ekleyin; her salona bölüm, sıra ve koltuk tanımlayın veya <Link href="/yonetim/salon-yapim-wizard" className="text-primary-600 hover:underline">Salon Yapım Wizard</Link> ile tasarlayıp &quot;Mekana Aktar&quot; ile bu mekana ekleyin.
         </p>
       )}
     </div>

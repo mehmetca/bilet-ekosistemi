@@ -425,7 +425,7 @@
     "deinePlatze": "کورسییە هەڵبژێردراوەکان",
     "ticketsAndPricesTitle": "{title} بلیت و نرخەکان",
     "cityFilterAll": "گشت",
-    "venueTicketsSubtitle": "{شار} — {ناونیشان}",
+    "venueTicketsSubtitle": "{city} — {title}",
     "addressLabel": "ناونیشان",
     "lastTicketsBadge": "دوا {ژماردن} بلیتەکان",
     "beforeSeatsGone": "پێش ئەوەی کورسییەکان تەواو ببن",
@@ -434,25 +434,25 @@
     "fromPricesCta": "نرخەکان لە {نرخ}ەوە دەست پێدەکات",
     "ticketPricesLink": "نرخی بلیتەکان",
     "soldOutCta": "فرشتی",
-    "organizerLine": "ڕێکخراو: {ناو}"
+    "organizerLine": "ڕێکخراو: {name}"
   },
   "city": {
     "resultsCount": "ئەنجامەکانی {count} بۆ {city} دۆزرایەوە.",
     "sortBy": "ڕیزبەندی بەپێی",
     "noEvents": "هیچ بۆنەیەکی داهاتوو لەم شارەدا نییە.",
     "viewAllEvents": "هەموو ڕووداوەکان ببینە",
-    "aboutCity": "دەربارەی {شار}"
+    "aboutCity": "دەربارەی {city}"
   },
   "showDetail": {
     "selectCity": "شارێک هەڵبژێرە بۆ بینینی دانیشتنەکان",
     "allCities": "هەموو شارەکان",
-    "cityTicketsHeadline": "{ناونیشان} {شار} بلیت",
+    "cityTicketsHeadline": "بلیتی {title} لە {city}",
     "ticketsAndPrices": "بلیت و نرخەکان",
     "ticketsIn": "بلیتەکان",
     "tickets": "بلیتەکان",
     "performances": "وانە",
     "noUpcomingPerformances": "هیچ دانیشتنێکی داهاتوو نییە.",
-    "noPerformancesInCity": "لە {شار}دا هیچ دانیشتنێک نییە."
+    "noPerformancesInCity": "لە {city}دا هیچ دانیشتنێک نییە."
   },
   "artists": {
     "title": "هونەرمەندان",

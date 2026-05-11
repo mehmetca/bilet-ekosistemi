@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireAdmin } from "@/lib/api-auth";
-import { vizorPlanToTemplate } from "@/lib/salon-vizor-to-db";
-import type { VizorBlock } from "@/lib/salon-vizor-to-db";
+import { wizardPlanToTemplate } from "@/lib/salon-yapim-to-db";
+import type { WizardBlock } from "@/lib/salon-yapim-to-db";
 
 /**
- * POST: Salon vizördeki planı belirtilen mekana oturum planı olarak ekler.
+ * POST: Salon Yapım Wizard'daki planı belirtilen mekana oturum planı olarak ekler.
  * Etkinlik oluştururken bu mekan ve plan seçilebilir.
  */
 export async function POST(request: NextRequest) {
@@ -16,13 +16,13 @@ export async function POST(request: NextRequest) {
     const body = await request.json().catch(() => ({}));
     const venueId = typeof body.venueId === "string" ? body.venueId.trim() : "";
     const planName = typeof body.planName === "string" ? body.planName.trim() : "";
-    const plan2Blocks = Array.isArray(body.plan2Blocks) ? body.plan2Blocks as VizorBlock[] : [];
+    const plan2Blocks = Array.isArray(body.plan2Blocks) ? body.plan2Blocks as WizardBlock[] : [];
     const settingsByBlockId =
       body.settingsByBlockId && typeof body.settingsByBlockId === "object"
         ? (body.settingsByBlockId as Record<string, {
             zone?: string;
-            horizontalFlow?: VizorBlock["horizontalFlow"];
-            verticalFlow?: VizorBlock["verticalFlow"];
+            horizontalFlow?: WizardBlock["horizontalFlow"];
+            verticalFlow?: WizardBlock["verticalFlow"];
           }>)
         : {};
 
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const { data: venue } = await supabase.from("venues").select("id").eq("id", venueId).single();
     if (!venue) return NextResponse.json({ error: "Mekan bulunamadı" }, { status: 404 });
 
-    const template = vizorPlanToTemplate(
+    const template = wizardPlanToTemplate(
       plan2Blocks.map((b) => ({
         ...b,
         zone: settingsByBlockId[b.id]?.zone ?? b.zone,
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       message: "Plan mekana eklendi. Etkinlik oluştururken bu mekanı ve oturum planını seçebilirsiniz.",
     });
   } catch (e) {
-    console.error("salon-vizor-to-venue POST error:", e);
+    console.error("salon-yapim-to-venue POST error:", e);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }

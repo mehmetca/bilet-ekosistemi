@@ -425,7 +425,7 @@
     "deinePlatze": "Kursiyên hilbijartî",
     "ticketsAndPricesTitle": "{title} Bilêt û Biha",
     "cityFilterAll": "Gişt",
-    "venueTicketsSubtitle": "{bajar} - {sernav}",
+    "venueTicketsSubtitle": "{city} - {title}",
     "addressLabel": "Navnîşan",
     "lastTicketsBadge": "Bilêtên {hejmar} Dawî",
     "beforeSeatsGone": "Berî ku kursî xilas bibin",
@@ -437,11 +437,11 @@
     "organizerLine": "Rêxistin: {name}"
   },
   "city": {
-    "resultsCount": "{count} encam ji bo {bajar} hatin dîtin.",
+    "resultsCount": "{count} encam ji bo {city} hatin dîtin.",
     "sortBy": "Bi rêzkirin",
     "noEvents": "Li vî bajarî bûyerên pêşerojê tune.",
     "viewAllEvents": "Hemî bûyeran bibînin",
-    "aboutCity": "Derbarê {bajar}"
+    "aboutCity": "Derbarê {city}"
   },
   "showDetail": {
     "selectCity": "Ji bo dîtina danişînan bajarek hilbijêrin",
@@ -452,7 +452,7 @@
     "tickets": "bilêtên",
     "performances": "rûniştinî",
     "noUpcomingPerformances": "Rûniştinên pêşerojê tune.",
-    "noPerformancesInCity": "Li {bajar} danişîn tune."
+    "noPerformancesInCity": "Li {city} danişîn tune."
   },
   "artists": {
     "title": "Hunermend",

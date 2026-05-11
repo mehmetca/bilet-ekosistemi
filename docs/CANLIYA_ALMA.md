@@ -117,18 +117,18 @@ Tarayıcıda `http://localhost:3000` açarak kontrol edin.
 - **Yerelde** farklı bir Supabase (veya farklı proje) kullanıyorsanız, canlıda o veriler olmaz. Çözüm: Canlı ortamda **aynı Supabase projesini** kullanın veya gerekli verileri production veritabanına taşıyın.
 - Vercel’deki `NEXT_PUBLIC_SUPABASE_URL` ve `SUPABASE_SERVICE_ROLE_KEY` değerlerinin production Supabase’e ait olduğundan emin olun.
 
-### Salon Tasarım Vizörü
+### Salon Yapım Wizard
 
-- Vizördeki plan artık **sunucuda** da saklanıyor (`site_settings` tablosu, `salon_tasarim_vizor_plan` anahtarı).
-- Yönetim panelinde **Kaydet** dediğinizde plan hem tarayıcıda hem (admin iseniz) sunucuda yazılır; canlıda sayfayı açtığınızda önce sunucudaki plan yüklenir, yoksa tarayıcıdaki kullanılır.
-- Canlıda plan boşsa: Önce yerelde veya canlıda giriş yapıp **Kaydet**’e basın; sonra canlıda sayfayı yenileyin.
+- Wizard taslakları **sunucuda** saklanır (`site_settings` tablosu, `salon_yapim_wizard_plan` anahtarı).
+- Yönetim panelinde **Taslak Kaydet** dediğinizde plan sunucuya yazılır; **Mekana Aktar** ile aynı plan `seating_plans` tablosuna mekana bağlı olarak aktarılır.
+- Canlıda plan boşsa: Önce yerelde veya canlıda giriş yapıp **Taslak Kaydet**'e basın; sonra canlıda sayfayı yenileyin.
 
 ### Özet kontrol listesi (yansımama)
 
-- [ ] Değişiklikler commit + push edildi ve Vercel doğru branch’ten deploy alıyor
-- [ ] Gerekirse Vercel’de **Redeploy** (Clear cache) yapıldı
+- [ ] Değişiklikler commit + push edildi ve Vercel doğru branch'ten deploy alıyor
+- [ ] Gerekirse Vercel'de **Redeploy** (Clear cache) yapıldı
 - [ ] Canlı ortam aynı Supabase projesine bağlı (mekanlar/etkinlikler için)
-- [ ] Salon Vizör planı için en az bir kez **Kaydet** ile sunucuya yazıldı
+- [ ] Salon Yapım Wizard taslağı için en az bir kez **Taslak Kaydet** ile sunucuya yazıldı
 - [ ] Tarayıcıda hard refresh (Ctrl+Shift+R) denendi
 
 ---

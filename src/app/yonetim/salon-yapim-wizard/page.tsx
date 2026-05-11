@@ -15,14 +15,18 @@ import {
   ChevronRight,
 } from "lucide-react";
 import OrganizerOrAdminGuard from "@/components/OrganizerOrAdminGuard";
-import Plan2BlockDesigner from "@/app/yonetim/salon-tasarim-vizor/Plan2BlockDesigner";
-import type { Block } from "@/app/yonetim/salon-tasarim-vizor/Plan2BlockDesigner";
+import Plan2BlockDesigner from "@/components/salon-builder/Plan2BlockDesigner";
+import type { Block } from "@/components/salon-builder/Plan2BlockDesigner";
 import { supabase } from "@/lib/supabase-client";
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 2.5;
 const ZOOM_STEP = 0.2;
 const PAN_STEP = 120;
+/** Cerceve kullanici w/h ile kucultulebilir; icerik tasarsa kaydirilir. */
+const BOX_MIN_W = 80;
+const BOX_MIN_H = 72;
+const PIN_MARGIN = 24;
 
 type HorizontalFlow = "ltr" | "rtl";
 type BlockZone =
@@ -35,10 +39,14 @@ type BlockZone =
   | "balconyRear"
   | "stageBackBalcony";
 
+type HorizontalPin = "none" | "left" | "right";
+
 type BlockSettings = {
   zone: BlockZone;
   horizontalFlow: HorizontalFlow;
   verticalFlow: "topToBottom" | "bottomToTop";
+  /** Tuvalde yatay konumu sabitler; orta blokla calisirken kenar bloklar kaymaz. */
+  horizontalPin: HorizontalPin;
   x: number;
   y: number;
   w: number;
@@ -130,6 +138,15 @@ function zoneLabel(z: BlockZone): string {
   return map[z];
 }
 
+function horizontalPinLabel(p: HorizontalPin): string {
+  const map: Record<HorizontalPin, string> = {
+    none: "Yok",
+    left: "Sol kenara",
+    right: "Sag kenara",
+  };
+  return map[p];
+}
+
 function horizontalFlowLabel(m: HorizontalFlow): string {
   const map: Record<HorizontalFlow, string> = {
     ltr: "Soldan Saga",
@@ -149,28 +166,14 @@ function getDefaultBlockSize(block: Block) {
   return { w: 300, h: 170 };
 }
 
-/** Önizleme kutusu: w/h = minimum; gerçek çerçeve içerik kadar büyür. */
+/** Önizleme kutusu boyutu: kayitli w/h (icerikten bagimsiz); taşma icinde kaydirilir. */
 function estimateBlockOuterPx(block: Block, s: BlockSettings): { w: number; h: number } {
-  const minW = s.w ?? getDefaultBlockSize(block).w;
-  const minH = s.h ?? getDefaultBlockSize(block).h;
-  const innerPad = 56;
-  if (isVerticalBlock(block)) {
-    const colCount = Math.max(1, block.rows.length);
-    const depth = Math.max(1, ...block.rows.map((r) => r.totalSeats));
-    const contentW = 28 + colCount * 20;
-    const contentH = 72 + depth * 20;
-    return {
-      w: Math.max(minW, contentW + innerPad),
-      h: Math.max(minH, contentH + innerPad),
-    };
-  }
-  const maxSeats = Math.max(1, ...block.rows.map((r) => r.totalSeats));
-  const rowCount = Math.max(1, block.rows.length);
-  const contentW = 40 + maxSeats * 20;
-  const contentH = 72 + rowCount * 22;
+  const def = getDefaultBlockSize(block);
+  const minW = s.w ?? def.w;
+  const minH = s.h ?? def.h;
   return {
-    w: Math.max(minW, contentW + innerPad),
-    h: Math.max(minH, contentH + innerPad),
+    w: Math.max(BOX_MIN_W, minW),
+    h: Math.max(BOX_MIN_H, minH),
   };
 }
 
@@ -204,9 +207,8 @@ function WizardPreview({
   const CANVAS_HEIGHT = 1200;
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(0.9);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
   const [draggingCanvas, setDraggingCanvas] = useState(false);
-  const panDragRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
+  const panDragRef = useRef({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
   const [draggingBlockId, setDraggingBlockId] = useState<string | null>(null);
   const blockDragRef = useRef({ x: 0, y: 0, blockX: 0, blockY: 0 });
   const [resizingBlockId, setResizingBlockId] = useState<string | null>(null);
@@ -216,12 +218,24 @@ function WizardPreview({
   const canvasDimensions = useMemo(() => {
     let w = CANVAS_WIDTH;
     let h = CANVAS_HEIGHT;
+    let maxRightNonRight = CANVAS_WIDTH;
     for (const b of blocks) {
       const s = settingsByBlockId[b.id];
       if (!s) continue;
-      const { w: bw, h: bh } = estimateBlockOuterPx(b, s);
-      w = Math.max(w, s.x + bw + 100);
-      h = Math.max(h, s.y + bh + 100);
+      const outer = estimateBlockOuterPx(b, s);
+      const pin = s.horizontalPin ?? "none";
+      if (pin === "right") continue;
+      const left = pin === "left" ? PIN_MARGIN : s.x;
+      maxRightNonRight = Math.max(maxRightNonRight, left + outer.w + 100);
+      h = Math.max(h, s.y + outer.h + 100);
+    }
+    w = Math.max(CANVAS_WIDTH, maxRightNonRight);
+    for (const b of blocks) {
+      const s = settingsByBlockId[b.id];
+      if (!s || (s.horizontalPin ?? "none") !== "right") continue;
+      const outer = estimateBlockOuterPx(b, s);
+      const left = Math.max(PIN_MARGIN, w - outer.w - PIN_MARGIN);
+      w = Math.max(w, left + outer.w + 100);
     }
     return { w, h };
   }, [blocks, settingsByBlockId]);
@@ -237,16 +251,8 @@ function WizardPreview({
         e.preventDefault();
         const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
         setScale((s) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, s + delta)));
-        return;
       }
-      e.preventDefault();
-      let dx = e.deltaX;
-      let dy = e.deltaY;
-      if (e.shiftKey && Math.abs(e.deltaY) > Math.abs(dx)) {
-        dx = e.deltaY;
-        dy = 0;
-      }
-      setPan((p) => ({ x: p.x - dx, y: p.y - dy }));
+      /* Ctrl/Cmd disinda tekerlek: yerel kaydirma cubuklari (preventDefault yok) */
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -254,10 +260,13 @@ function WizardPreview({
 
   useEffect(() => {
     if (!draggingCanvas) return;
+    const el = containerRef.current;
     const onMove = (e: MouseEvent) => {
+      if (!el) return;
       const dx = e.clientX - panDragRef.current.x;
       const dy = e.clientY - panDragRef.current.y;
-      setPan({ x: panDragRef.current.panX + dx, y: panDragRef.current.panY + dy });
+      el.scrollLeft = panDragRef.current.scrollLeft - dx;
+      el.scrollTop = panDragRef.current.scrollTop - dy;
     };
     const onUp = () => setDraggingCanvas(false);
     window.addEventListener("mousemove", onMove);
@@ -274,10 +283,16 @@ function WizardPreview({
       const dx = (e.clientX - blockDragRef.current.x) / scale;
       const dy = (e.clientY - blockDragRef.current.y) / scale;
       const { w: cw, h: ch } = canvasDimRef.current;
-      const rawX = Math.max(10, Math.min(cw - 40, blockDragRef.current.blockX + dx));
+      const cur = settingsByBlockId[draggingBlockId];
+      const pin = cur?.horizontalPin ?? "none";
       const rawY = Math.max(10, Math.min(ch - 40, blockDragRef.current.blockY + dy));
-      const nx = Math.round(rawX / GRID_SIZE) * GRID_SIZE;
       const ny = Math.round(rawY / GRID_SIZE) * GRID_SIZE;
+      if (pin === "left" || pin === "right") {
+        onSettingsChange(draggingBlockId, { y: ny });
+        return;
+      }
+      const rawX = Math.max(10, Math.min(cw - 40, blockDragRef.current.blockX + dx));
+      const nx = Math.round(rawX / GRID_SIZE) * GRID_SIZE;
       onSettingsChange(draggingBlockId, { x: nx, y: ny });
     };
     const onUp = () => setDraggingBlockId(null);
@@ -287,7 +302,7 @@ function WizardPreview({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [draggingBlockId, onSettingsChange, scale]);
+  }, [draggingBlockId, onSettingsChange, scale, settingsByBlockId]);
 
   useEffect(() => {
     if (!resizingBlockId || !onSettingsChange) return;
@@ -296,8 +311,8 @@ function WizardPreview({
       const dy = (e.clientY - resizeRef.current.y) / scale;
       const rawW = resizeRef.current.w + dx;
       const rawH = resizeRef.current.h + dy;
-      const w = Math.max(180, Math.round(rawW / GRID_SIZE) * GRID_SIZE);
-      const h = Math.max(140, Math.round(rawH / GRID_SIZE) * GRID_SIZE);
+      const w = Math.max(BOX_MIN_W, Math.round(rawW / GRID_SIZE) * GRID_SIZE);
+      const h = Math.max(BOX_MIN_H, Math.round(rawH / GRID_SIZE) * GRID_SIZE);
       onSettingsChange(resizingBlockId, { w, h });
     };
     const onUp = () => setResizingBlockId(null);
@@ -316,8 +331,8 @@ function WizardPreview({
     const horizontalFlow = settings?.horizontalFlow ?? getDefaultHorizontalFlow(block);
     const verticalFlow = settings?.verticalFlow ?? "topToBottom";
     const vertical = isVerticalBlock(block);
-    const rowsByFlow = verticalFlow === "bottomToTop" ? [...block.rows].reverse() : block.rows;
-    const verticalRows = vertical ? rowsByFlow : rowsByFlow;
+    const horizontalRows = verticalFlow === "bottomToTop" ? [...block.rows].reverse() : block.rows;
+    const verticalRows = horizontalFlow === "rtl" ? [...block.rows].reverse() : block.rows;
     const startBlockDrag = (e: React.MouseEvent) => {
       if (!editable || !onSettingsChange) return;
       e.stopPropagation();
@@ -330,6 +345,7 @@ function WizardPreview({
       zone: getDefaultZoneFromBlockType(block),
       horizontalFlow: getDefaultHorizontalFlow(block),
       verticalFlow: "topToBottom" as const,
+      horizontalPin: "none" as const,
       x: 80,
       y: 80,
       w: getDefaultBlockSize(block).w,
@@ -337,18 +353,29 @@ function WizardPreview({
       layer: 1,
     };
     const outer = estimateBlockOuterPx(block, sFull);
+    const pin = sFull.horizontalPin ?? "none";
+    const effLeft =
+      pin === "left"
+        ? PIN_MARGIN
+        : pin === "right"
+          ? Math.max(PIN_MARGIN, canvasDimensions.w - outer.w - PIN_MARGIN)
+          : sFull.x;
+    const dragCursor =
+      editable && (pin === "left" || pin === "right") ? "cursor-ns-resize" : editable ? "cursor-move" : "";
+    const scrollMaxH = Math.max(40, outer.h - 88);
     return (
       <div
         key={block.id}
-        className={`absolute max-w-none rounded-lg border border-slate-200 bg-white p-3 shadow-sm ${editable ? "cursor-move" : ""}`}
+        className={`absolute max-w-none rounded-lg border border-slate-200 bg-white p-3 shadow-sm ${dragCursor}`}
         style={{
-          left: sFull.x,
+          left: effLeft,
           top: sFull.y,
-          minWidth: sFull.w,
           width: outer.w,
-          minHeight: sFull.h,
-          height: "auto",
+          maxWidth: outer.w,
+          maxHeight: outer.h,
           zIndex: sFull.layer,
+          boxSizing: "border-box",
+          overflow: "hidden",
         }}
         onMouseDown={startBlockDrag}
       >
@@ -388,20 +415,32 @@ function WizardPreview({
         <p className="mb-2 text-[10px] text-slate-500">
           {horizontalFlowLabel(horizontalFlow)}
           {` • ${verticalFlow === "topToBottom" ? "Yukarıdan aşağı" : "Aşağıdan yukarı"}`}
+          {pin !== "none" ? ` • Sabit: ${horizontalPinLabel(pin)}` : ""}
         </p>
+        <div className="overflow-auto" style={{ maxHeight: scrollMaxH }}>
         {vertical ? (
           !showSeatDetails ? (
             <div className="rounded bg-slate-200" style={{ width: Math.max(70, verticalRows.length * 18), height: 120 }} />
           ) : (
             <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                {verticalRows.map((row) => (
+                  <span
+                    key={`${row.id}-label`}
+                    className="flex h-4 w-4 items-center justify-center text-[9px] font-semibold text-slate-500"
+                    title={`Sıra ${row.rowNumber}`}
+                  >
+                    {row.rowNumber}
+                  </span>
+                ))}
+              </div>
               {Array.from({ length: Math.max(...verticalRows.map((r) => r.totalSeats), 1) }, (_, seatIdx) => {
                 return (
                   <div key={`${block.id}-depth-${seatIdx}`} className="flex items-center gap-1">
                     {verticalRows.map((row) => {
                       if (seatIdx >= row.totalSeats) return <div key={`${row.id}-empty-${seatIdx}`} className="h-4 w-4" />;
-                      const sourceIdx = verticalFlow === "topToBottom" ? seatIdx : row.totalSeats - 1 - seatIdx;
-                      const seatNo = sourceIdx + 1;
                       const displayNo = verticalFlow === "topToBottom" ? seatIdx + 1 : row.totalSeats - seatIdx;
+                      const seatNo = displayNo;
                       const seg = row.segments.find((s) => seatNo >= s.fromSeat && seatNo <= s.toSeat);
                       const seatId = `${block.id}-${row.id}-${seatNo}`;
                       const selected = selectedSeatIds.has(seatId);
@@ -429,7 +468,7 @@ function WizardPreview({
           )
         ) : (
           <div className="space-y-1">
-            {rowsByFlow.map((row) => {
+            {horizontalRows.map((row) => {
               const order = getSeatOrder(row.totalSeats, horizontalFlow);
               const seats = Array.from({ length: row.totalSeats }, (_, i) => {
                 const seg = row.segments.find((s) => i + 1 >= s.fromSeat && i + 1 <= s.toSeat);
@@ -469,6 +508,7 @@ function WizardPreview({
             })}
           </div>
         )}
+        </div>
         {editable && (
           <button
             type="button"
@@ -481,7 +521,7 @@ function WizardPreview({
               resizeRef.current = { x: e.clientX, y: e.clientY, w: cur.w, h: cur.h };
               setResizingBlockId(block.id);
             }}
-            title="Minimum genislik/yukseklik (icerik daha buyukse cerceve otomatik buyur)"
+            title="Cerçeve boyutu (kucultmek icin surukleyin; icerik taşarsa kaydirilir)"
           />
         )}
       </div>
@@ -501,50 +541,68 @@ function WizardPreview({
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-sm text-slate-600">
-          Uzakta: salon sekli • Yakinda: koltuk secimi ({showSeatDetails ? "detay acik" : "detay kapali"}). Kaydir: tekerlek • Yatay: Shift + tekerlek • Yaklastir: Ctrl veya Cmd + tekerlek • Surukle: bos alana tikla veya fare orta tus.
+          Uzakta: salon sekli • Yakinda: koltuk secimi ({showSeatDetails ? "detay acik" : "detay kapali"}). Kaydirma cubuklari veya fare tekeri • Yaklastir: Ctrl veya Cmd + tekerlek • Bos alana surukle: kaydir • Fare orta tus: kaydir.
         </p>
         <div className="flex flex-wrap items-center gap-1">
           <button type="button" onClick={() => setScale((s) => Math.min(MAX_ZOOM, s + ZOOM_STEP))} className="rounded border border-slate-300 px-2 py-1 text-xs">+</button>
           <button type="button" onClick={() => setScale((s) => Math.max(MIN_ZOOM, s - ZOOM_STEP))} className="rounded border border-slate-300 px-2 py-1 text-xs">-</button>
-          <button type="button" onClick={() => { setScale(0.9); setPan({ x: 0, y: 0 }); }} className="rounded border border-slate-300 px-2 py-1 text-xs">Sifirla</button>
+          <button type="button" onClick={() => { setScale(0.9); containerRef.current?.scrollTo(0, 0); }} className="rounded border border-slate-300 px-2 py-1 text-xs">Sifirla</button>
           <span className="mx-1 hidden text-slate-300 sm:inline">|</span>
-          <button type="button" title="Yukari" onClick={() => setPan((p) => ({ ...p, y: p.y + PAN_STEP }))} className="rounded border border-slate-300 p-1 text-slate-600 hover:bg-slate-100">
+          <button type="button" title="Yukari" onClick={() => containerRef.current?.scrollBy({ top: -PAN_STEP, behavior: "smooth" })} className="rounded border border-slate-300 p-1 text-slate-600 hover:bg-slate-100">
             <ChevronUp className="h-4 w-4" />
           </button>
-          <button type="button" title="Asagi" onClick={() => setPan((p) => ({ ...p, y: p.y - PAN_STEP }))} className="rounded border border-slate-300 p-1 text-slate-600 hover:bg-slate-100">
+          <button type="button" title="Asagi" onClick={() => containerRef.current?.scrollBy({ top: PAN_STEP, behavior: "smooth" })} className="rounded border border-slate-300 p-1 text-slate-600 hover:bg-slate-100">
             <ChevronDown className="h-4 w-4" />
           </button>
-          <button type="button" title="Sol" onClick={() => setPan((p) => ({ ...p, x: p.x + PAN_STEP }))} className="rounded border border-slate-300 p-1 text-slate-600 hover:bg-slate-100">
+          <button type="button" title="Sol" onClick={() => containerRef.current?.scrollBy({ left: -PAN_STEP, behavior: "smooth" })} className="rounded border border-slate-300 p-1 text-slate-600 hover:bg-slate-100">
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button type="button" title="Sag" onClick={() => setPan((p) => ({ ...p, x: p.x - PAN_STEP }))} className="rounded border border-slate-300 p-1 text-slate-600 hover:bg-slate-100">
+          <button type="button" title="Sag" onClick={() => containerRef.current?.scrollBy({ left: PAN_STEP, behavior: "smooth" })} className="rounded border border-slate-300 p-1 text-slate-600 hover:bg-slate-100">
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
       <div
         ref={containerRef}
-        className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50"
+        className="overflow-x-auto overflow-y-auto rounded-lg border border-slate-200 bg-slate-50"
         style={{ minHeight: 420, maxHeight: "70vh", cursor: draggingCanvas ? "grabbing" : "grab" }}
         onAuxClick={(e) => {
           if (e.button === 1) e.preventDefault();
         }}
         onMouseDown={(e) => {
+          const el = containerRef.current;
           if (e.button === 1) {
             e.preventDefault();
-            panDragRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+            if (el) {
+              panDragRef.current = { x: e.clientX, y: e.clientY, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop };
+            }
             setDraggingCanvas(true);
             return;
           }
           if (e.button !== 0) return;
-          panDragRef.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+          if (el) {
+            panDragRef.current = { x: e.clientX, y: e.clientY, scrollLeft: el.scrollLeft, scrollTop: el.scrollTop };
+          }
           setDraggingCanvas(true);
         }}
       >
-        <div style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`, transformOrigin: "0 0" }}>
+        <div
+          style={{
+            width: canvasDimensions.w * scale,
+            height: canvasDimensions.h * scale,
+            position: "relative",
+          }}
+        >
           <div
             className="relative m-6 rounded-xl border border-dashed border-slate-300 bg-white/70"
-            style={{ width: canvasDimensions.w, height: canvasDimensions.h, minWidth: CANVAS_WIDTH, minHeight: CANVAS_HEIGHT }}
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "0 0",
+              width: canvasDimensions.w,
+              height: canvasDimensions.h,
+              minWidth: CANVAS_WIDTH,
+              minHeight: CANVAS_HEIGHT,
+            }}
           >
             <div className="pointer-events-none absolute left-1/2 top-8 -translate-x-1/2 rounded bg-slate-800 px-8 py-2 text-sm font-semibold text-white">
               SAHNE
@@ -566,6 +624,7 @@ export default function SalonYapimWizardPage() {
   const [venueId, setVenueId] = useState("");
   const [planName, setPlanName] = useState("Salon plani");
   const [exporting, setExporting] = useState(false);
+  const [lastExport, setLastExport] = useState<{ venueId: string; planName: string } | null>(null);
   const [settingsByBlockId, setSettingsByBlockId] = useState<Record<string, BlockSettings>>({});
 
   useEffect(() => {
@@ -583,16 +642,25 @@ export default function SalonYapimWizardPage() {
       for (const block of blocks) {
         const size = getDefaultBlockSize(block);
         const pos = getAutoPosition(Object.keys(next).length);
-        next[block.id] = prev[block.id] ?? {
-          zone: getDefaultZoneFromBlockType(block),
-          horizontalFlow: getDefaultHorizontalFlow(block),
-          verticalFlow: "topToBottom",
-          x: pos.x,
-          y: pos.y,
-          w: size.w,
-          h: size.h,
-          layer: 1,
-        };
+        const existing = prev[block.id];
+        if (existing) {
+          next[block.id] = {
+            ...existing,
+            horizontalPin: existing.horizontalPin ?? "none",
+          };
+        } else {
+          next[block.id] = {
+            zone: getDefaultZoneFromBlockType(block),
+            horizontalFlow: getDefaultHorizontalFlow(block),
+            verticalFlow: "topToBottom",
+            horizontalPin: "none",
+            x: pos.x,
+            y: pos.y,
+            w: size.w,
+            h: size.h,
+            layer: 1,
+          };
+        }
       }
       return next;
     });
@@ -604,7 +672,7 @@ export default function SalonYapimWizardPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const res = await fetch("/api/salon-vizor-plan", {
+      const res = await fetch("/api/salon-yapim-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({ plan2Blocks: blocks, savedAt: new Date().toISOString() }),
@@ -619,10 +687,11 @@ export default function SalonYapimWizardPage() {
     if (!venueId || !planName.trim()) return;
     setExporting(true);
     setSaveInfo("");
+    setLastExport(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const res = await fetch("/api/salon-vizor-to-venue", {
+      const res = await fetch("/api/salon-yapim-to-venue", {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
@@ -633,7 +702,12 @@ export default function SalonYapimWizardPage() {
         }),
       });
       const json = await res.json().catch(() => ({}));
-      setSaveInfo(res.ok ? (json.message || "Mekana aktarildi.") : (json.error || "Aktarim basarisiz."));
+      if (res.ok) {
+        setSaveInfo(json.message || "Mekana aktarildi.");
+        setLastExport({ venueId, planName: planName.trim() });
+      } else {
+        setSaveInfo(json.error || "Aktarim basarisiz.");
+      }
     } finally {
       setExporting(false);
     }
@@ -696,6 +770,7 @@ export default function SalonYapimWizardPage() {
                           zone: opt.zone,
                           horizontalFlow: opt.type?.includes("right") ? "rtl" : "ltr",
                           verticalFlow: "topToBottom",
+                          horizontalPin: "none",
                           x: getAutoPosition(blocks.length).x,
                           y: getAutoPosition(blocks.length).y,
                           w: getDefaultBlockSize(nb).w,
@@ -720,6 +795,7 @@ export default function SalonYapimWizardPage() {
                     zone: getDefaultZoneFromBlockType(block),
                     horizontalFlow: getDefaultHorizontalFlow(block),
                     verticalFlow: "topToBottom" as const,
+                    horizontalPin: "none" as const,
                     x: getAutoPosition(blocks.indexOf(block)).x,
                     y: getAutoPosition(blocks.indexOf(block)).y,
                     w: getDefaultBlockSize(block).w,
@@ -727,7 +803,7 @@ export default function SalonYapimWizardPage() {
                     layer: 1,
                   };
                   return (
-                    <div key={block.id} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-6">
+                    <div key={block.id} className="grid gap-2 rounded-lg border border-slate-200 bg-white p-3 md:grid-cols-7">
                       <div>
                         <p className="text-sm font-medium text-slate-800">{block.name || "Blok"}</p>
                         <p className="text-xs text-slate-500">{block.rows.length} sira</p>
@@ -777,10 +853,31 @@ export default function SalonYapimWizardPage() {
                         </select>
                       </div>
                       <div>
+                        <label className="mb-1 block text-xs font-medium text-slate-600">Tuvalde yatay sabitle</label>
+                        <select
+                          value={setting.horizontalPin ?? "none"}
+                          onChange={(e) => {
+                            const horizontalPin = e.target.value as HorizontalPin;
+                            setSettingsByBlockId((prev) => ({ ...prev, [block.id]: { ...setting, horizontalPin } }));
+                          }}
+                          className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+                        >
+                          {(["none", "left", "right"] as HorizontalPin[]).map((p) => (
+                            <option key={p} value={p}>{horizontalPinLabel(p)}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
                         <label className="mb-1 block text-xs font-medium text-slate-600">X</label>
                         <input
                           type="number"
                           value={Math.round(setting.x)}
+                          disabled={setting.horizontalPin === "left" || setting.horizontalPin === "right"}
+                          title={
+                            setting.horizontalPin === "left" || setting.horizontalPin === "right"
+                              ? "Sabit blokta X onizlemede otomatik (sol/sag kenar)"
+                              : undefined
+                          }
                           onChange={(e) => {
                             const x = Number(e.target.value || 0);
                             setSettingsByBlockId((prev) => ({ ...prev, [block.id]: { ...setting, x } }));
@@ -836,6 +933,7 @@ export default function SalonYapimWizardPage() {
                       zone: getDefaultZoneFromBlockType(newBlock),
                       horizontalFlow: getDefaultHorizontalFlow(newBlock),
                       verticalFlow: "topToBottom",
+                      horizontalPin: "none",
                       x: 320,
                       y: 180,
                       w: getDefaultBlockSize(newBlock).w,
@@ -889,6 +987,31 @@ export default function SalonYapimWizardPage() {
               {exporting ? "Aktariliyor..." : "Mekana Aktar"}
             </button>
             {saveInfo && <p className="text-sm text-slate-700">{saveInfo}</p>}
+            {lastExport && (
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-900">
+                <p className="mb-2">
+                  <strong>{lastExport.planName}</strong> adlı salon, seçtiğiniz mekanın <strong>Oturum Planı</strong> altına eklendi.
+                </p>
+                <Link
+                  href={`/yonetim/mekanlar/${lastExport.venueId}/oturum-plani`}
+                  className="inline-flex items-center gap-2 rounded-md border border-emerald-600 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+                >
+                  Oturum Planı sayfasını aç
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
+              </div>
+            )}
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+              <p className="mb-1 font-semibold text-slate-700">Nereye kaydedilir?</p>
+              <ul className="list-inside list-disc space-y-0.5">
+                <li>
+                  <strong>Taslak Kaydet</strong>: bu sihirbazda son durumu saklar (isim kullanılmaz, listede gözükmez).
+                </li>
+                <li>
+                  <strong>Mekana Aktar</strong>: salon, seçilen mekanın <em>Oturum Planı</em> sayfasında <em>Plan adı</em> ile listelenir.
+                </li>
+              </ul>
+            </div>
           </div>
         )}
       </div>

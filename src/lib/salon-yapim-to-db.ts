@@ -1,34 +1,34 @@
 /**
- * Salon Tasarım Vizöründe kaydedilen planı (plan2Blocks) veritabanı oturum planına dönüştürür.
+ * Salon Yapım Wizard'da kaydedilen planı (plan2Blocks) veritabanı oturum planına dönüştürür.
  * Her bloktaki segment kategorileri (VIP, Kategori 2 vb.) bölüm (section) olur; etkinlikte bilet türüyle eşleşir.
  */
 
 import type { TemplatePlan, TemplateSection, TemplateSectionRow } from "./seating-plans/musensaal-to-db";
 
-/** Vizörden gelen blok/sıra/segment yapısı (API'de JSON olarak gelir) */
-export interface VizorBlockRow {
+/** Wizard'dan gelen blok/sıra/segment yapısı (API'de JSON olarak gelir) */
+export interface WizardBlockRow {
   id: string;
   rowNumber: number;
   totalSeats: number;
   segments: { id: string; fromSeat: number; toSeat: number; category: string }[];
 }
 
-export interface VizorBlock {
+export interface WizardBlock {
   id: string;
   name: string;
   blockType?: string;
   zone?: string;
   horizontalFlow?: "ltr" | "rtl";
   verticalFlow?: "topToBottom" | "bottomToTop";
-  rows: VizorBlockRow[];
+  rows: WizardBlockRow[];
 }
 
 function buildSeatLabels(
   lo: number,
   hi: number,
-  horizontalFlow: VizorBlock["horizontalFlow"],
-  verticalFlow: VizorBlock["verticalFlow"],
-  blockType: VizorBlock["blockType"]
+  horizontalFlow: WizardBlock["horizontalFlow"],
+  verticalFlow: WizardBlock["verticalFlow"],
+  blockType: WizardBlock["blockType"]
 ): string[] {
   const total = hi - lo + 1;
   if (total <= 0) return [];
@@ -52,7 +52,7 @@ function buildSeatLabels(
  * plan2Blocks → TemplatePlan.
  * Koridor blokları atlanır. Her (blok, kategori) için bir bölüm oluşturulur; bölüm adı "Blok adı - Kategori", ticket_type_label = kategori.
  */
-export function vizorPlanToTemplate(plan2Blocks: VizorBlock[], planName: string): TemplatePlan {
+export function wizardPlanToTemplate(plan2Blocks: WizardBlock[], planName: string): TemplatePlan {
   const sectionMap = new Map<string, { section: TemplateSection; sortOrder: number }>();
   let sortOrder = 0;
 
@@ -91,7 +91,7 @@ export function vizorPlanToTemplate(plan2Blocks: VizorBlock[], planName: string)
           row_label: String(row.rowNumber),
           sort_order: entry.section.rows.length,
           seat_labels: seatLabels,
-        });
+        } satisfies TemplateSectionRow);
       }
     }
   }

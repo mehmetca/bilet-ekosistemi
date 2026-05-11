@@ -156,9 +156,13 @@ export interface Artist {
   name_tr?: string | null;
   name_de?: string | null;
   name_en?: string | null;
+  name_ku?: string | null;
+  name_ckb?: string | null;
   bio_tr?: string | null;
   bio_de?: string | null;
   bio_en?: string | null;
+  bio_ku?: string | null;
+  bio_ckb?: string | null;
 }
 
 export interface News {

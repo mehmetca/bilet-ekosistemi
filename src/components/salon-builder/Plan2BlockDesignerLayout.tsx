@@ -13,6 +13,12 @@ import {
   SegmentedRowPreview,
 } from "./Plan2BlockDesignerShared";
 
+function safePositiveInt(raw: string, fallback: number): number {
+  const n = Number.parseInt(raw.replace(/\s/g, ""), 10);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return n;
+}
+
 export type Plan2LayoutProps = {
   blocks: Block[];
   orientation: BlockOrientation;
@@ -132,9 +138,13 @@ export function Plan2Layout(props: Plan2LayoutProps) {
                         <input
                           type="number"
                           min={1}
-                          value={presetByBlockId[block.id]?.rowCount ?? block.rows.length}
+                          value={
+                            Number.isFinite(presetByBlockId[block.id]?.rowCount)
+                              ? presetByBlockId[block.id]!.rowCount
+                              : block.rows.length
+                          }
                           onChange={(e) => {
-                            const rowCount = Math.max(1, parseInt(e.target.value || "1", 10));
+                            const rowCount = safePositiveInt(e.target.value, block.rows.length || 1);
                             setPresetByBlockId((prev) => ({
                               ...prev,
                               [block.id]: {
@@ -151,9 +161,13 @@ export function Plan2Layout(props: Plan2LayoutProps) {
                         <input
                           type="number"
                           min={1}
-                          value={presetByBlockId[block.id]?.seatsPerRow ?? block.rows[0]?.totalSeats ?? 20}
+                          value={
+                            Number.isFinite(presetByBlockId[block.id]?.seatsPerRow)
+                              ? presetByBlockId[block.id]!.seatsPerRow
+                              : block.rows[0]?.totalSeats ?? 20
+                          }
                           onChange={(e) => {
-                            const seatsPerRow = Math.max(1, parseInt(e.target.value || "1", 10));
+                            const seatsPerRow = safePositiveInt(e.target.value, block.rows[0]?.totalSeats ?? 20);
                             setPresetByBlockId((prev) => ({
                               ...prev,
                               [block.id]: {
@@ -167,13 +181,17 @@ export function Plan2Layout(props: Plan2LayoutProps) {
                       </label>
                       <button
                         type="button"
-                        onClick={() =>
+                        onClick={() => {
+                          const rowFallback = Math.max(1, block.rows.length || 1);
+                          const seatFallback = Math.max(1, block.rows[0]?.totalSeats ?? 20);
+                          const rawRows = presetByBlockId[block.id]?.rowCount ?? rowFallback;
+                          const rawSeats = presetByBlockId[block.id]?.seatsPerRow ?? seatFallback;
                           applyRowsPreset(
                             block.id,
-                            presetByBlockId[block.id]?.rowCount ?? block.rows.length,
-                            presetByBlockId[block.id]?.seatsPerRow ?? block.rows[0]?.totalSeats ?? 20
-                          )
-                        }
+                            Number.isFinite(rawRows) && rawRows >= 1 ? rawRows : rowFallback,
+                            Number.isFinite(rawSeats) && rawSeats >= 1 ? rawSeats : seatFallback
+                          );
+                        }}
                         className="rounded bg-indigo-600 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-700"
                       >
                         Uygula (mevcut sıraları yeniler)

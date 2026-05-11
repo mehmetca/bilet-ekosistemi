@@ -14,9 +14,13 @@ interface City {
   name_tr: string | null;
   name_de: string | null;
   name_en: string | null;
+  name_ku: string | null;
+  name_ckb: string | null;
   description_tr: string | null;
   description_de: string | null;
   description_en: string | null;
+  description_ku: string | null;
+  description_ckb: string | null;
   image_url: string | null;
   sort_order: number;
   is_active: boolean;
@@ -27,9 +31,13 @@ const EMPTY_CITY = {
   name_tr: "",
   name_de: "",
   name_en: "",
+  name_ku: "",
+  name_ckb: "",
   description_tr: "",
   description_de: "",
   description_en: "",
+  description_ku: "",
+  description_ckb: "",
   image_url: "",
   sort_order: 0,
   is_active: true,
@@ -81,9 +89,13 @@ function SehirlerContent() {
       name_tr: city.name_tr || "",
       name_de: city.name_de || "",
       name_en: city.name_en || "",
+      name_ku: city.name_ku || "",
+      name_ckb: city.name_ckb || "",
       description_tr: city.description_tr || "",
       description_de: city.description_de || "",
       description_en: city.description_en || "",
+      description_ku: city.description_ku || "",
+      description_ckb: city.description_ckb || "",
       image_url: city.image_url || "",
       sort_order: city.sort_order ?? 0,
       is_active: city.is_active ?? true,
@@ -111,9 +123,13 @@ function SehirlerContent() {
         name_tr: form.name_tr?.trim() || null,
         name_de: form.name_de?.trim() || null,
         name_en: form.name_en?.trim() || null,
+        name_ku: form.name_ku?.trim() || null,
+        name_ckb: form.name_ckb?.trim() || null,
         description_tr: form.description_tr?.trim() || null,
         description_de: form.description_de?.trim() || null,
         description_en: form.description_en?.trim() || null,
+        description_ku: form.description_ku?.trim() || null,
+        description_ckb: form.description_ckb?.trim() || null,
         image_url: form.image_url?.trim() || null,
         sort_order: form.sort_order ?? 0,
         is_active: form.is_active ?? true,
@@ -207,7 +223,7 @@ function SehirlerContent() {
                 </p>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-700">Ad (TR)</label>
                   <input
@@ -238,6 +254,27 @@ function SehirlerContent() {
                     className="w-full rounded-lg border border-slate-300 px-3 py-2"
                   />
                 </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Nav (KU – Kurmancî)</label>
+                  <input
+                    type="text"
+                    value={form.name_ku}
+                    onChange={(e) => setForm((p) => ({ ...p, name_ku: e.target.value }))}
+                    placeholder="Stenbol"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">ناو (CKB – Soranî)</label>
+                  <input
+                    type="text"
+                    value={form.name_ckb}
+                    onChange={(e) => setForm((p) => ({ ...p, name_ckb: e.target.value }))}
+                    placeholder="ئەستەنبوڵ"
+                    dir="rtl"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
               </div>
 
               <div>
@@ -250,7 +287,7 @@ function SehirlerContent() {
               </div>
 
               <div className="space-y-3">
-                <h3 className="text-sm font-semibold text-slate-700">Açıklama (3 dil)</h3>
+                <h3 className="text-sm font-semibold text-slate-700">Açıklama (5 dil)</h3>
                 <div>
                   <label className="mb-1 block text-xs text-slate-500">TR</label>
                   <RichTextEditor
@@ -273,6 +310,22 @@ function SehirlerContent() {
                     value={form.description_en}
                     onChange={(v) => setForm((p) => ({ ...p, description_en: v }))}
                     placeholder="Information about the city..."
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">KU (Kurmancî)</label>
+                  <RichTextEditor
+                    value={form.description_ku}
+                    onChange={(v) => setForm((p) => ({ ...p, description_ku: v }))}
+                    placeholder="Agahî li ser bajêr..."
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs text-slate-500">CKB (Soranî)</label>
+                  <RichTextEditor
+                    value={form.description_ckb}
+                    onChange={(v) => setForm((p) => ({ ...p, description_ckb: v }))}
+                    placeholder="زانیاری دەربارەی شار..."
                   />
                 </div>
               </div>
