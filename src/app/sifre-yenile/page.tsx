@@ -13,6 +13,7 @@ import { supabase } from "@/lib/supabase-client";
 import Header from "@/components/Header";
 
 type Step = "email" | "sending" | "sent" | "set_password" | "updating" | "done";
+const APP_LOCALES = new Set(["tr", "de", "en", "ku", "ckb"]);
 
 function formatAuthUserMessage(err: unknown): string {
   const msg = err instanceof Error ? err.message : String(err);
@@ -20,6 +21,11 @@ function formatAuthUserMessage(err: unknown): string {
     return "Çok sık şifre sıfırlama isteği gönderildi. Lütfen birkaç dakika bekleyip tekrar deneyin.";
   }
   return msg;
+}
+
+function resolveLocaleFromPath(pathname: string): string {
+  const firstSegment = pathname.split("/").filter(Boolean)[0] || "";
+  return APP_LOCALES.has(firstSegment) ? firstSegment : "tr";
 }
 
 export default function SifreYenilePage() {
@@ -58,6 +64,41 @@ export default function SifreYenilePage() {
         return;
       }
 
+      const tokenHash = searchParams.get("token_hash");
+      const tokenType = searchParams.get("type");
+      if (tokenHash && tokenType === "recovery") {
+        const { data, error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: tokenHash,
+          type: "recovery",
+        });
+        if (!mounted) return;
+        if (!verifyError && data?.session) {
+          setStep("set_password");
+          setRecoveryChecked(true);
+          return;
+        }
+      }
+
+      if (typeof window !== "undefined" && window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+        const hashType = hashParams.get("type");
+        const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        if (hashType === "recovery" && accessToken && refreshToken) {
+          const { data, error: setSessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (!mounted) return;
+          if (!setSessionError && data?.session) {
+            setStep("set_password");
+            window.history.replaceState({}, "", `${window.location.pathname}${window.location.search}`);
+            setRecoveryChecked(true);
+            return;
+          }
+        }
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (mounted && session?.user) {
         setStep("set_password");
@@ -89,7 +130,16 @@ export default function SifreYenilePage() {
     }
     setStep("sending");
     try {
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/sifre-yenile` : "";
+      const redirectTo =
+        typeof window !== "undefined"
+          ? (() => {
+              const locale = resolveLocaleFromPath(window.location.pathname);
+              const callbackUrl = new URL("/auth/callback", window.location.origin);
+              callbackUrl.searchParams.set("next", `/${locale}/sifre-yenile`);
+              callbackUrl.searchParams.set("locale", locale);
+              return callbackUrl.toString();
+            })()
+          : "";
       const { error: err } = await supabase.auth.resetPasswordForEmail(trimmed, {
         redirectTo,
       });

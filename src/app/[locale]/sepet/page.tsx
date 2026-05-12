@@ -61,6 +61,7 @@ const SafeEmbeddedCheckout = (EmbeddedCheckout ?? (() => null)) as typeof Embedd
 const SafeTicketPrint = (TicketPrint ?? (() => null)) as typeof TicketPrint;
 
 const PENDING_STRIPE_CHECKOUT_KEY = "pendingStripeCheckoutData";
+const CHECKOUT_SUCCESS_SNAPSHOT_KEY = "checkoutSuccessSnapshot";
 
 type PendingStripeCheckoutData = {
   buyerName: string;
@@ -229,6 +230,50 @@ export default function CheckoutPage() {
   >([]);
   const [completedItems, setCompletedItems] = useState<typeof items>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (items.length > 0 || results.length > 0 || hasSuccessfulCheckout) return;
+    try {
+      const raw = sessionStorage.getItem(CHECKOUT_SUCCESS_SNAPSHOT_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        results?: unknown;
+        completedItems?: unknown;
+      };
+      if (!Array.isArray(parsed?.results) || !Array.isArray(parsed?.completedItems)) return;
+      const restoredResults = parsed.results as typeof results;
+      if (restoredResults.length === 0) return;
+      setResults(restoredResults);
+      setCompletedItems(parsed.completedItems as typeof items);
+      setHasSuccessfulCheckout(restoredResults.every((r) => r.success));
+    } catch {
+      /* ignore */
+    }
+  }, [hasSuccessfulCheckout, items.length, results.length]);
+
+  useEffect(() => {
+    if (!hasSuccessfulCheckout || results.length === 0) return;
+    try {
+      sessionStorage.setItem(
+        CHECKOUT_SUCCESS_SNAPSHOT_KEY,
+        JSON.stringify({
+          results,
+          completedItems,
+        })
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [completedItems, hasSuccessfulCheckout, results]);
+
+  useEffect(() => {
+    if (items.length === 0) return;
+    try {
+      sessionStorage.removeItem(CHECKOUT_SUCCESS_SNAPSHOT_KEY);
+    } catch {
+      /* ignore */
+    }
+  }, [items.length]);
 
   const processingFeesTotal = useMemo(() => {
     const byEvent = new Map<string, number>();
@@ -434,6 +479,11 @@ export default function CheckoutPage() {
     e.preventDefault();
     if (items.length === 0) return;
     setHasSuccessfulCheckout(false);
+    try {
+      sessionStorage.removeItem(CHECKOUT_SUCCESS_SNAPSHOT_KEY);
+    } catch {
+      /* ignore */
+    }
 
     const finalEmail = (buyerEmail.trim() || user?.email || "").trim();
     if (!user) {
