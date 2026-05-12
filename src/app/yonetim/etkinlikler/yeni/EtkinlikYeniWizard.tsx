@@ -832,7 +832,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
           existingByKey.set(keyOf(ex.name, ex.type), ex);
         }
 
-        const desiredTickets = hasExternalLink
+        const desiredTicketsRaw = hasExternalLink
           ? []
           : tickets
               .filter((t) => t.quantity > 0)
@@ -855,6 +855,23 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   description: desc.trim(),
                 };
               });
+
+        /** Aynı isim+tür iki kez gelirse (ör. çift VIP satırı) tek satırda toplar; DB'de yinelenen bilet oluşmasın. */
+        const desiredTicketsMergeMap = new Map<
+          string,
+          { name: string; type: "normal" | "vip"; price: number; quantity: number; description: string }
+        >();
+        for (const d of desiredTicketsRaw) {
+          const k = keyOf(d.name, d.type);
+          const prev = desiredTicketsMergeMap.get(k);
+          if (!prev) {
+            desiredTicketsMergeMap.set(k, { ...d });
+          } else {
+            prev.quantity += d.quantity;
+            if (!prev.description && d.description) prev.description = d.description;
+          }
+        }
+        const desiredTickets = Array.from(desiredTicketsMergeMap.values());
 
         const matchedExistingIds = new Set<string>();
 
@@ -934,7 +951,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
 
       if (!insertedEventId) throw lastInsertError || new Error("Etkinlik oluşturulamadı.");
 
-      const ticketRows = hasExternalLink
+      const ticketRowsRaw = hasExternalLink
         ? []
         : tickets
             .filter((t) => t.quantity > 0)
@@ -956,6 +973,24 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
             description: desc.trim(),
           };
         });
+
+      const keyOfInsert = (name: string, type: string) =>
+        `${type}::${(name || "").trim().toLocaleLowerCase("tr-TR")}`;
+      const ticketRowsMerge = new Map<
+        string,
+        { event_id: string; name: string; type: string; price: number; quantity: number; available: number; description: string }
+      >();
+      for (const row of ticketRowsRaw) {
+        const k = keyOfInsert(row.name, row.type);
+        const prev = ticketRowsMerge.get(k);
+        if (!prev) ticketRowsMerge.set(k, { ...row });
+        else {
+          prev.quantity += row.quantity;
+          prev.available = prev.quantity;
+          if (!prev.description && row.description) prev.description = row.description;
+        }
+      }
+      const ticketRows = Array.from(ticketRowsMerge.values());
 
       if (ticketRows.length > 0) {
         const { error: ticketsError } = await supabase.from("tickets").insert(ticketRows);
@@ -1138,7 +1173,10 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç fiyatı</label>
                   <input type="number" min={0} step={0.01} value={priceFromInput === "" ? "" : priceFromInput} onChange={(e) => { const v = e.target.value; setPriceFromInput(v === "" ? "" : Math.max(0, Number(v) || 0)); }} placeholder="Boş bırakırsanız ücretsiz veya bilet fiyatlarından türetilir" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-                  <p className="mt-1 text-xs text-slate-500">Tüm dillerde aynı rakam gösterilir. Boş = Ücretsiz.</p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Yalnızca etkinlik kartı ve sayfada &quot;ab …&quot; göstergesi içindir; <strong>bilet kategorisi oluşturmaz</strong>. Satılacak
+                    kategorileri aşağıdaki bilet adımlarından tanımlayın.
+                  </p>
                 </div>
               </div>
               <div>

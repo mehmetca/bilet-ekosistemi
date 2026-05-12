@@ -982,7 +982,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const { addItem, removeSeatItem, totalItems, items: cartItems } = useCart();
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
-  const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
+  /** Stoklu biletler (satın alma UI’si bunu kullanmalı; tükenmiş satırlar ayrı kategori gibi görünmesin). */
+  const availableTickets = useMemo(
+    () => ticketState.filter((ticket) => Number(ticket.available || 0) > 0),
+    [ticketState]
+  );
   const hasSeatingPlan = !!(event as Event & { seating_plan_id?: string }).seating_plan_id;
   const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
   const parsedDescription = useMemo(() => parseEventDescription(localized.description || event.description), [localized.description, event.description]);
@@ -1128,6 +1132,18 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     const minQ = Math.min(selectedMinQ, selectedMaxQ);
     if (minQ > 1 && ticketCount < minQ) setTicketCount(minQ);
   }, [selectedTicketType, selectedMinQ, selectedMaxQ]);
+
+  /** Seçili bilet satırı artık stokta yoksa (ör. tükenmiş eski "VIP Bilet") geçerli ilk satıra sıçar. */
+  useEffect(() => {
+    if (availableTickets.length === 0) {
+      if (selectedTicketType !== "") setSelectedTicketType("");
+      return;
+    }
+    if (!availableTickets.some((t) => t.id === selectedTicketType)) {
+      setSelectedTicketType(availableTickets[0]!.id);
+      setTicketCount(1);
+    }
+  }, [availableTickets, selectedTicketType]);
 
   const seatingPlanId = (event as Event & { seating_plan_id?: string }).seating_plan_id;
 
@@ -2519,7 +2535,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               {!isExternalOnlyEvent && bookingMode === "price" && (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
                   <div>
-                    {ticketState.length === 0 ? (
+                    {availableTickets.length === 0 ? (
                       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
                         {t("noTicketsAvailable")}
                       </div>
@@ -2531,7 +2547,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           <span className="text-right">{t("quantity")}</span>
                         </div>
                         <div className="divide-y divide-slate-200">
-                          {ticketState.map((ticketType) => {
+                          {availableTickets.map((ticketType) => {
                             const availableAmount = Number(ticketType.available || 0);
                             const isSoldOut = availableAmount <= 0;
                             if (isSoldOut) {
