@@ -134,10 +134,7 @@ export default function SifreYenilePage() {
         typeof window !== "undefined"
           ? (() => {
               const locale = resolveLocaleFromPath(window.location.pathname);
-              const callbackUrl = new URL("/auth/callback", window.location.origin);
-              callbackUrl.searchParams.set("next", `/${locale}/sifre-yenile`);
-              callbackUrl.searchParams.set("locale", locale);
-              return callbackUrl.toString();
+              return new URL(`/${locale}/sifre-yenile`, window.location.origin).toString();
             })()
           : "";
       const { error: err } = await supabase.auth.resetPasswordForEmail(trimmed, {
@@ -257,19 +254,6 @@ export default function SifreYenilePage() {
                 kontrol edin ve bağlantıya tıklayın. Gelen kutusunda göremiyorsanız spam klasörüne
                 bakın.
               </p>
-
-              <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 text-sm text-slate-700 mb-6">
-                <p className="font-medium text-slate-800 mb-2">KurdEvents</p>
-                <p className="mb-2">
-                  Bu e-posta, KurdEvents hesabınız için şifre sıfırlama talebiniz üzerine gönderilmiştir.
-                  E-postadaki bağlantıya tıklayarak yeni şifrenizi belirleyebilirsiniz.
-                </p>
-                <p className="text-slate-600">
-                  <strong>Bu talebi siz yapmadıysanız</strong> e-postaya cevap vermeniz gerekmez;
-                  bağlantıyı kullanmadığınız sürece şifreniz değişmeyecektir. Hesabınızdan şüphelenirseniz
-                  giriş yapıp şifrenizi bilgilerim sayfasından değiştirebilirsiniz.
-                </p>
-              </div>
 
               <div className="text-center">
                 <button

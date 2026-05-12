@@ -9,7 +9,6 @@ import { Link } from "@/i18n/navigation";
 import Header from "@/components/Header";
 /** PKCE + çerez: @supabase/ssr createBrowserClient (SimpleAuth’taki `supabase` ile aynı singleton). */
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
-import { getOAuthRedirectOrigin } from "@/lib/site-url";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -230,7 +229,8 @@ export default function LoginPage() {
         setError(t("errorGeneric"));
         return;
       }
-      const oauthCallback = new URL("/auth/callback", getOAuthRedirectOrigin());
+      // PKCE verifier tarayıcı origin'ine bağlıdır; callback de aynı origin'de olmalı.
+      const oauthCallback = new URL("/auth/callback", window.location.origin);
       oauthCallback.searchParams.set("next", next);
       oauthCallback.searchParams.set("locale", locale);
       const redirectToUrl = oauthCallback.toString();
