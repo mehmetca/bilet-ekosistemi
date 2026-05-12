@@ -62,6 +62,15 @@ const SafeTicketPrint = (TicketPrint ?? (() => null)) as typeof TicketPrint;
 
 const PENDING_STRIPE_CHECKOUT_KEY = "pendingStripeCheckoutData";
 
+/**
+ * Başarılı ödeme sonrası bilet (TicketPrint) ekranı React state'inde tutuluyor; sayfa yenilenirse
+ * veya kullanıcı sekme değiştirip dönerse state kayboluyor ve "Sepetiniz boş" görünüyordu. Bunu
+ * önlemek için kalıcı snapshot (24 saat) localStorage'a yazıyoruz; sayfa yüklendiğinde sepet
+ * gerçekten boşsa snapshot'tan geri yüklüyoruz. Sepete yeni bilet eklendiğinde snapshot silinir.
+ */
+const LAST_CHECKOUT_SUCCESS_KEY = "lastCheckoutSuccess";
+const LAST_CHECKOUT_TTL_MS = 24 * 60 * 60 * 1000;
+
 type PendingStripeCheckoutData = {
   buyerName: string;
   buyerEmail: string;
@@ -164,6 +173,57 @@ export default function CheckoutPage() {
       /* ignore */
     }
   }, []);
+
+  /**
+   * Bilet ekranını sayfa yenilemesinden sonra da göster: localStorage snapshot'tan restore.
+   * 24 saatten eskiyse snapshot silinir.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.localStorage.getItem(LAST_CHECKOUT_SUCCESS_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        results?: typeof results;
+        completedItems?: typeof items;
+        ts?: number;
+      } | null;
+      if (!parsed || !parsed.ts || Date.now() - parsed.ts > LAST_CHECKOUT_TTL_MS) {
+        window.localStorage.removeItem(LAST_CHECKOUT_SUCCESS_KEY);
+        return;
+      }
+      if (Array.isArray(parsed.results) && parsed.results.length > 0) {
+        setResults(parsed.results);
+        setCompletedItems(parsed.completedItems || []);
+        setHasSuccessfulCheckout(true);
+      }
+    } catch {
+      try {
+        window.localStorage.removeItem(LAST_CHECKOUT_SUCCESS_KEY);
+      } catch {
+        /* ignore */
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /**
+   * Yeni bir bilet sepete eklendiğinde önceki başarı snapshot'ı geçersizdir — sil ki
+   * sepet UI'sı doğru çalışsın (boşken bilet ekranı, dolduğunda sepet adımları).
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (items.length > 0 && hasSuccessfulCheckout) {
+      try {
+        window.localStorage.removeItem(LAST_CHECKOUT_SUCCESS_KEY);
+      } catch {
+        /* ignore */
+      }
+      setHasSuccessfulCheckout(false);
+      setResults([]);
+      setCompletedItems([]);
+    }
+  }, [items.length, hasSuccessfulCheckout]);
 
   useEffect(() => {
     if (items.length > 0) {
@@ -364,7 +424,23 @@ export default function CheckoutPage() {
       const allSuccess = orderResults.every((r) => r.success);
       if (allSuccess) {
         setHasSuccessfulCheckout(true);
-        setCompletedItems([...items]);
+        const snapshotCompletedItems = [...items];
+        setCompletedItems(snapshotCompletedItems);
+        // Sayfa yenilense bile bilet ekranı tekrar görünebilsin diye kalıcı snapshot.
+        try {
+          if (typeof window !== "undefined") {
+            window.localStorage.setItem(
+              LAST_CHECKOUT_SUCCESS_KEY,
+              JSON.stringify({
+                results: orderResults,
+                completedItems: snapshotCompletedItems,
+                ts: Date.now(),
+              })
+            );
+          }
+        } catch {
+          /* ignore */
+        }
         clearCart();
         try {
           sessionStorage.removeItem(PENDING_STRIPE_CHECKOUT_KEY);
