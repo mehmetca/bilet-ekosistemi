@@ -552,7 +552,7 @@ export default function TicketPrint({
         </button>
       </div>
       <p className="text-center text-xs text-slate-500 print:hidden">
-        Yazdır: Her sayfada 2 bilet. İndir: Barkod ve QR kodu dosyaya gömülür; internet olmadan da salon girişinde gösterebilirsiniz. Bu e-posta, KurdEvents hesabınız için şifre sıfırlama talebiniz üzerine gönderilmiştir.
+        Yazdır: Her sayfada 2 bilet. İndir: Barkod ve QR kodu dosyaya gömülür; internet olmadan da salon girişinde gösterebilirsiniz. Bu bilet, KurdEvents üzerinden yapılan satın alma için oluşturulmuştur.
       </p>
     </div>
   );
