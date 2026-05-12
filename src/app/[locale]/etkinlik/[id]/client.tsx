@@ -1063,6 +1063,32 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     }
   }, [selectedSeatIds, event.id]);
 
+  /**
+   * Plan yüklendikten sonra: restore edilen ya da seçili olan koltuklardan PLANDA OLMAYANLARI at.
+   * (Salon değiştirildiyse, plan tamamen farklıysa veya bir koltuk sales_blocked yapıldıysa.)
+   * Bu hem dil değişimi sonrası restore edilen sahte ID'leri temizler hem de plan güncellemelerinde
+   * tutarlılığı korur.
+   */
+  useEffect(() => {
+    if (!seatingPlanData || seatingPlanData.length === 0) return;
+    const validIds = new Set<string>();
+    for (const sec of seatingPlanData) {
+      for (const row of sec.rows) {
+        for (const seat of row.seats) validIds.add(seat.id);
+      }
+    }
+    setSelectedSeatIds((prev) => {
+      if (prev.size === 0) return prev;
+      let dirty = false;
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (validIds.has(id)) next.add(id);
+        else dirty = true;
+      });
+      return dirty ? next : prev;
+    });
+  }, [seatingPlanData]);
+
   const cartSeatIdsForEvent = useMemo(() => {
     const s = new Set<string>();
     for (const it of cartItems) {
@@ -1247,7 +1273,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     }
     let cancelled = false;
     setSeatingPlanLoading(true);
-    setSelectedSeatIds(new Set());
+    // NOT: selectedSeatIds'i burada sıfırlamıyoruz. Aksi halde dil değişiminde bileşen remount
+    // olduğunda sessionStorage'dan geri yüklenen seçim hemen siliniyordu. Planda olmayan ID'ler
+    // aşağıdaki filtre useEffect'i ile temizlenir.
     (async () => {
       try {
         const [planRes, sectionsRes] = await Promise.all([
