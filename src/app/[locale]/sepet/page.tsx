@@ -62,15 +62,6 @@ const SafeTicketPrint = (TicketPrint ?? (() => null)) as typeof TicketPrint;
 
 const PENDING_STRIPE_CHECKOUT_KEY = "pendingStripeCheckoutData";
 
-/**
- * Başarılı ödeme sonrası bilet (TicketPrint) ekranı React state'inde tutuluyor; sayfa yenilenirse
- * veya kullanıcı sekme değiştirip dönerse state kayboluyor ve "Sepetiniz boş" görünüyordu. Bunu
- * önlemek için kalıcı snapshot (24 saat) localStorage'a yazıyoruz; sayfa yüklendiğinde sepet
- * gerçekten boşsa snapshot'tan geri yüklüyoruz. Sepete yeni bilet eklendiğinde snapshot silinir.
- */
-const LAST_CHECKOUT_SUCCESS_KEY = "lastCheckoutSuccess";
-const LAST_CHECKOUT_TTL_MS = 24 * 60 * 60 * 1000;
-
 type PendingStripeCheckoutData = {
   buyerName: string;
   buyerEmail: string;
@@ -93,7 +84,6 @@ export default function CheckoutPage() {
   const {
     items,
     removeItem,
-    removeSeatItem,
     updateQuantity,
     updateItemAvailable,
     clearCart,
@@ -109,10 +99,6 @@ export default function CheckoutPage() {
   const [seatHoldSessionId, setSeatHoldSessionId] = useState<string | null>(null);
   const processedStripeSessionsRef = useRef<Set<string>>(new Set());
   const isPollingStripeRef = useRef(false);
-  /** Stripe embedded onComplete ile polling aynı anda finalize çağırmasın — tek sıraya alır. */
-  const finalizeChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
-  /** Stripe EmbeddedCheckoutProvider onComplete prop'u mount sonrası değiştirilemez; stable callback ref'i. */
-  const embeddedCheckoutCompleteRef = useRef<() => void>(() => {});
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
 
@@ -177,44 +163,6 @@ export default function CheckoutPage() {
       /* ignore */
     }
   }, []);
-
-  /**
-   * Bilet ekranını sayfa yenilemesinden sonra da göster: localStorage snapshot'tan restore.
-   * 24 saatten eskiyse snapshot silinir.
-   */
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    try {
-      const raw = window.localStorage.getItem(LAST_CHECKOUT_SUCCESS_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as {
-        results?: typeof results;
-        completedItems?: typeof items;
-        ts?: number;
-      } | null;
-      if (!parsed || !parsed.ts || Date.now() - parsed.ts > LAST_CHECKOUT_TTL_MS) {
-        window.localStorage.removeItem(LAST_CHECKOUT_SUCCESS_KEY);
-        return;
-      }
-      if (Array.isArray(parsed.results) && parsed.results.length > 0) {
-        setResults(parsed.results);
-        setCompletedItems(parsed.completedItems || []);
-        setHasSuccessfulCheckout(true);
-      }
-    } catch {
-      try {
-        window.localStorage.removeItem(LAST_CHECKOUT_SUCCESS_KEY);
-      } catch {
-        /* ignore */
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // NOT: "items > 0 olduğunda state'i sıfırla" mantığını kullanmıyoruz; bu, finalize sırasında
-  // clearCart() henüz işlenmemişken hasSuccessfulCheckout=true olduğu an tetiklenip race
-  // condition yarattı. Bunun yerine allSuccess hesabını items.length===0 koşuluyla bağlıyoruz:
-  // yeni bilet sepete eklendiğinde otomatik olarak normal sepet akışına döner.
 
   useEffect(() => {
     if (items.length > 0) {
@@ -304,7 +252,6 @@ export default function CheckoutPage() {
     pendingData?: PendingStripeCheckoutData | null,
     stripeSessionId?: string | null
   ) => {
-    const next = finalizeChainRef.current.then(async (): Promise<boolean> => {
     const finalEmail = (
       pendingData?.buyerEmail?.trim() ||
       buyerEmail.trim() ||
@@ -416,27 +363,8 @@ export default function CheckoutPage() {
       const allSuccess = orderResults.every((r) => r.success);
       if (allSuccess) {
         setHasSuccessfulCheckout(true);
-        const snapshotCompletedItems = [...items];
-        setCompletedItems(snapshotCompletedItems);
-        // Sayfa yenilense bile bilet ekranı tekrar görünebilsin diye kalıcı snapshot.
-        try {
-          if (typeof window !== "undefined") {
-            window.localStorage.setItem(
-              LAST_CHECKOUT_SUCCESS_KEY,
-              JSON.stringify({
-                results: orderResults,
-                completedItems: snapshotCompletedItems,
-                ts: Date.now(),
-              })
-            );
-          }
-        } catch {
-          /* ignore */
-        }
+        setCompletedItems([...items]);
         clearCart();
-        setCurrentStep(1);
-        setCheckoutClientSecret(null);
-        setCheckoutSessionId(null);
         try {
           sessionStorage.removeItem(PENDING_STRIPE_CHECKOUT_KEY);
         } catch {
@@ -454,12 +382,6 @@ export default function CheckoutPage() {
     } finally {
       setIsPending(false);
     }
-    });
-    finalizeChainRef.current = next.catch((err) => {
-      console.error("[checkout] finalize sırası hatası:", err);
-      return false;
-    });
-    return next;
   }, [
     buyerAddress,
     buyerCity,
@@ -615,7 +537,7 @@ export default function CheckoutPage() {
   }, [searchParams, results.length, isPending, items.length, finalizePaidOrder, router, locale, currentStep]);
 
   const handleEmbeddedCheckoutComplete = useCallback(async () => {
-    if (!checkoutSessionId) return;
+    if (!checkoutSessionId || isPending) return;
     try {
       setIsPending(true);
       let pendingData: PendingStripeCheckoutData | null = null;
@@ -643,28 +565,7 @@ export default function CheckoutPage() {
     } finally {
       setIsPending(false);
     }
-  }, [checkoutSessionId, finalizePaidOrder]);
-
-  useEffect(() => {
-    embeddedCheckoutCompleteRef.current = () => {
-      void handleEmbeddedCheckoutComplete();
-    };
-  }, [handleEmbeddedCheckoutComplete]);
-
-  const handleStableEmbeddedCheckoutComplete = useCallback(() => {
-    embeddedCheckoutCompleteRef.current();
-  }, []);
-
-  const embeddedCheckoutOptions = useMemo(
-    () =>
-      checkoutClientSecret
-        ? {
-            clientSecret: checkoutClientSecret,
-            onComplete: handleStableEmbeddedCheckoutComplete,
-          }
-        : null,
-    [checkoutClientSecret, handleStableEmbeddedCheckoutComplete]
-  );
+  }, [checkoutSessionId, finalizePaidOrder, isPending]);
 
   // Bazı Stripe sürümlerinde embedded teşekkür ekranı gösterilip onComplete her zaman tetiklenmeyebiliyor.
   // Bu yüzden ödeme adımında session durumunu kısa aralıkla doğrulayıp başarılıysa siparişi finalize et.
@@ -710,15 +611,7 @@ export default function CheckoutPage() {
   ]);
 
   const isStripeReturning = searchParams.get("stripe_success") === "1";
-  /**
-   * Bilet (TicketPrint) ekranını sadece sepet boşsa göster. Kullanıcı sonradan yeni bilet
-   * eklerse otomatik olarak normal sepet akışına döner — snapshot temizlemeye gerek yok.
-   * Snapshot 24 saat TTL ile localStorage'da kalır ve sepet boş olduğu sürece bilet ekranı
-   * yenilemeden sonra da görünür.
-   */
-  const allSuccess =
-    items.length === 0 &&
-    (hasSuccessfulCheckout || (results.length > 0 && results.every((r) => r.success)));
+  const allSuccess = hasSuccessfulCheckout || (results.length > 0 && results.every((r) => r.success));
   const shouldShowEmptyCart =
     items.length === 0 &&
     results.length === 0 &&
@@ -809,7 +702,7 @@ export default function CheckoutPage() {
         </div>
         ) : null}
 
-        {!showExpiredFullPage && !allSuccess && currentStep === 1 && items.length > 0 && reservationExpiresAt && reservationSecLeft > 0 ? (
+        {!showExpiredFullPage && !allSuccess && items.length > 0 && reservationExpiresAt && reservationSecLeft > 0 ? (
           <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-950 shadow-sm">
             <Clock className="h-6 w-6 shrink-0 text-emerald-700" aria-hidden />
             <p className="text-sm font-semibold sm:text-base">
@@ -1018,63 +911,18 @@ export default function CheckoutPage() {
                           <p className="text-xs font-semibold text-slate-700">
                             {t("seatsInCart", { count: item.seatIds.length })}
                           </p>
-                          {/*
-                            Her koltuk satırının yanında "×" → ödemeye gitmeden tek tek koltuk
-                            kaldırılabilsin (ekstra koltuk satışa açılır, fiyat günceller).
-                            Tüm koltukları silmek ürünü sepetten çıkarır.
-                          */}
                           <ul className="mt-1 list-none space-y-0.5 pl-0 text-xs text-slate-600">
                             {item.seatIds.map((seatId, idx) => {
                               const line = item.seatCaptions?.[idx]?.trim() || t("seatLineFallback", { n: idx + 1 });
                               return (
-                                <li
-                                  key={`${item.ticketId}-seat-${seatId}`}
-                                  className="flex items-center justify-between gap-2 rounded border border-slate-100 bg-slate-50/60 px-2 py-1"
-                                >
-                                  <span className="truncate" title={line}>
-                                    {line}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeSeatItem(item.eventId, seatId)}
-                                    className="flex-shrink-0 rounded p-0.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                                    aria-label={
-                                      locale === "de"
-                                        ? "Platz entfernen"
-                                        : locale === "en"
-                                        ? "Remove seat"
-                                        : "Koltuğu kaldır"
-                                    }
-                                    title={
-                                      locale === "de"
-                                        ? "Diesen Platz aus dem Warenkorb entfernen"
-                                        : locale === "en"
-                                        ? "Remove this seat from cart"
-                                        : "Bu koltuğu sepetten kaldır"
-                                    }
-                                  >
-                                    ×
-                                  </button>
+                                <li key={`${item.ticketId}-seat-${seatId}`} className="truncate" title={line}>
+                                  {line}
                                 </li>
                               );
                             })}
                           </ul>
                         </div>
                       ) : null}
-                      {/* Daha fazla koltuk eklemek için etkinliğe dön */}
-                      <div className="mt-2">
-                        <SafeNextLink
-                          href={`/${locale}/etkinlik/${item.eventId}`}
-                          className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-800 hover:underline"
-                        >
-                          <ArrowLeft className="h-3 w-3" aria-hidden />
-                          {locale === "de"
-                            ? "Weiter einkaufen"
-                            : locale === "en"
-                            ? "Continue shopping"
-                            : "Alışverişe devam et"}
-                        </SafeNextLink>
-                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <div className="flex items-center gap-2">
@@ -1259,12 +1107,17 @@ export default function CheckoutPage() {
                   <Lock className="h-4 w-4" />
                   {t("securePayment")}
                 </p>
-                {embeddedCheckoutOptions && stripePromise ? (
+                {checkoutClientSecret && stripePromise ? (
                   <div className="mt-4 px-0 md:px-1">
                     <div className="w-full rounded-lg border border-slate-200 bg-white p-2 md:p-3 lg:p-4">
                       <SafeEmbeddedCheckoutProvider
                         stripe={stripePromise}
-                        options={embeddedCheckoutOptions}
+                        options={{
+                          clientSecret: checkoutClientSecret,
+                          onComplete: () => {
+                            void handleEmbeddedCheckoutComplete();
+                          },
+                        }}
                       >
                         <SafeEmbeddedCheckout />
                       </SafeEmbeddedCheckoutProvider>
@@ -1279,7 +1132,6 @@ export default function CheckoutPage() {
               </div>
 
               <div className="flex justify-between">
-                {!(isPending || isStripeReturning) ? (
                 <button
                   type="button"
                   onClick={() => setCurrentStep(1)}
@@ -1287,9 +1139,6 @@ export default function CheckoutPage() {
                 >
                   {t("stepBack")}
                 </button>
-                ) : (
-                  <span />
-                )}
               </div>
             </div>
             )}
