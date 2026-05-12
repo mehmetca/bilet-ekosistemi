@@ -1174,6 +1174,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    /** Aynı Stripe oturumu + bilet satırı için sipariş zaten oluşturulmuşsa (çift finalize / polling): tekrar stok düşmeden başarı döner. */
+    const { data: existingCompletedOrder } = await supabase
+      .from("orders")
+      .select("id, ticket_code, quantity, total_price")
+      .eq("stripe_session_id", stripeSessionId)
+      .eq("ticket_id", ticketId)
+      .eq("status", "completed")
+      .maybeSingle();
+
+    if (existingCompletedOrder?.id && existingCompletedOrder.ticket_code) {
+      const seatDetailsReplay: SeatDetail[] = [];
+      if (seatIds.length > 0) {
+        const { data: osRows } = await supabase
+          .from("order_seats")
+          .select("section_name, row_label, seat_label")
+          .eq("order_id", existingCompletedOrder.id)
+          .in("seat_id", seatIds);
+        for (const row of osRows || []) {
+          seatDetailsReplay.push({
+            section_name: String((row as { section_name?: string }).section_name ?? ""),
+            row_label: String((row as { row_label?: string }).row_label ?? ""),
+            seat_label: String((row as { seat_label?: string }).seat_label ?? ""),
+          });
+        }
+      }
+      const ticketTypeDisplayReplay =
+        seatDetailsReplay.length > 0
+          ? [...new Set(seatDetailsReplay.map((s) => s.section_name))].join(", ")
+          : (ticket.name || ticket.ticket_type || "Standart");
+      const replayQty = Number(existingCompletedOrder.quantity ?? quantity);
+      const replayPrice = Number(existingCompletedOrder.total_price ?? totalPrice);
+      return NextResponse.json({
+        success: true,
+        message: "Siparişiniz başarıyla oluşturuldu!",
+        ticketCode: existingCompletedOrder.ticket_code,
+        emailSent: true,
+        orderDetails: {
+          buyerName,
+          quantity: replayQty,
+          ticketType: ticketTypeDisplayReplay,
+          price: replayPrice,
+          seatDetails: seatDetailsReplay.length > 0 ? seatDetailsReplay : undefined,
+        },
+      });
+    }
+
     const alreadyAllocatedCents = (sessionOrders || []).reduce(
       (sum, order) => sum + Math.round(Number(order.total_price || 0) * 100),
       0

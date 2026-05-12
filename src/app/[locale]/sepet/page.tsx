@@ -109,6 +109,8 @@ export default function CheckoutPage() {
   const [seatHoldSessionId, setSeatHoldSessionId] = useState<string | null>(null);
   const processedStripeSessionsRef = useRef<Set<string>>(new Set());
   const isPollingStripeRef = useRef(false);
+  /** Stripe embedded onComplete ile polling aynı anda finalize çağırmasın — tek sıraya alır. */
+  const finalizeChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
 
@@ -300,6 +302,7 @@ export default function CheckoutPage() {
     pendingData?: PendingStripeCheckoutData | null,
     stripeSessionId?: string | null
   ) => {
+    const next = finalizeChainRef.current.then(async (): Promise<boolean> => {
     const finalEmail = (
       pendingData?.buyerEmail?.trim() ||
       buyerEmail.trim() ||
@@ -429,6 +432,9 @@ export default function CheckoutPage() {
           /* ignore */
         }
         clearCart();
+        setCurrentStep(1);
+        setCheckoutClientSecret(null);
+        setCheckoutSessionId(null);
         try {
           sessionStorage.removeItem(PENDING_STRIPE_CHECKOUT_KEY);
         } catch {
@@ -446,6 +452,12 @@ export default function CheckoutPage() {
     } finally {
       setIsPending(false);
     }
+    });
+    finalizeChainRef.current = next.catch((err) => {
+      console.error("[checkout] finalize sırası hatası:", err);
+      return false;
+    });
+    return next;
   }, [
     buyerAddress,
     buyerCity,
@@ -601,7 +613,7 @@ export default function CheckoutPage() {
   }, [searchParams, results.length, isPending, items.length, finalizePaidOrder, router, locale, currentStep]);
 
   const handleEmbeddedCheckoutComplete = useCallback(async () => {
-    if (!checkoutSessionId || isPending) return;
+    if (!checkoutSessionId) return;
     try {
       setIsPending(true);
       let pendingData: PendingStripeCheckoutData | null = null;
@@ -629,7 +641,7 @@ export default function CheckoutPage() {
     } finally {
       setIsPending(false);
     }
-  }, [checkoutSessionId, finalizePaidOrder, isPending]);
+  }, [checkoutSessionId, finalizePaidOrder]);
 
   // Bazı Stripe sürümlerinde embedded teşekkür ekranı gösterilip onComplete her zaman tetiklenmeyebiliyor.
   // Bu yüzden ödeme adımında session durumunu kısa aralıkla doğrulayıp başarılıysa siparişi finalize et.
@@ -774,7 +786,7 @@ export default function CheckoutPage() {
         </div>
         ) : null}
 
-        {!showExpiredFullPage && !allSuccess && items.length > 0 && reservationExpiresAt && reservationSecLeft > 0 ? (
+        {!showExpiredFullPage && !allSuccess && currentStep === 1 && items.length > 0 && reservationExpiresAt && reservationSecLeft > 0 ? (
           <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-950 shadow-sm">
             <Clock className="h-6 w-6 shrink-0 text-emerald-700" aria-hidden />
             <p className="text-sm font-semibold sm:text-base">
@@ -1249,6 +1261,7 @@ export default function CheckoutPage() {
               </div>
 
               <div className="flex justify-between">
+                {!(isPending || isStripeReturning) ? (
                 <button
                   type="button"
                   onClick={() => setCurrentStep(1)}
@@ -1256,6 +1269,9 @@ export default function CheckoutPage() {
                 >
                   {t("stepBack")}
                 </button>
+                ) : (
+                  <span />
+                )}
               </div>
             </div>
             )}
