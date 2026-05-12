@@ -111,6 +111,8 @@ export default function CheckoutPage() {
   const isPollingStripeRef = useRef(false);
   /** Stripe embedded onComplete ile polling aynı anda finalize çağırmasın — tek sıraya alır. */
   const finalizeChainRef = useRef<Promise<boolean>>(Promise.resolve(true));
+  /** Stripe EmbeddedCheckoutProvider onComplete prop'u mount sonrası değiştirilemez; stable callback ref'i. */
+  const embeddedCheckoutCompleteRef = useRef<() => void>(() => {});
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
 
@@ -642,6 +644,27 @@ export default function CheckoutPage() {
       setIsPending(false);
     }
   }, [checkoutSessionId, finalizePaidOrder]);
+
+  useEffect(() => {
+    embeddedCheckoutCompleteRef.current = () => {
+      void handleEmbeddedCheckoutComplete();
+    };
+  }, [handleEmbeddedCheckoutComplete]);
+
+  const handleStableEmbeddedCheckoutComplete = useCallback(() => {
+    embeddedCheckoutCompleteRef.current();
+  }, []);
+
+  const embeddedCheckoutOptions = useMemo(
+    () =>
+      checkoutClientSecret
+        ? {
+            clientSecret: checkoutClientSecret,
+            onComplete: handleStableEmbeddedCheckoutComplete,
+          }
+        : null,
+    [checkoutClientSecret, handleStableEmbeddedCheckoutComplete]
+  );
 
   // Bazı Stripe sürümlerinde embedded teşekkür ekranı gösterilip onComplete her zaman tetiklenmeyebiliyor.
   // Bu yüzden ödeme adımında session durumunu kısa aralıkla doğrulayıp başarılıysa siparişi finalize et.
@@ -1236,17 +1259,12 @@ export default function CheckoutPage() {
                   <Lock className="h-4 w-4" />
                   {t("securePayment")}
                 </p>
-                {checkoutClientSecret && stripePromise ? (
+                {embeddedCheckoutOptions && stripePromise ? (
                   <div className="mt-4 px-0 md:px-1">
                     <div className="w-full rounded-lg border border-slate-200 bg-white p-2 md:p-3 lg:p-4">
                       <SafeEmbeddedCheckoutProvider
                         stripe={stripePromise}
-                        options={{
-                          clientSecret: checkoutClientSecret,
-                          onComplete: () => {
-                            void handleEmbeddedCheckoutComplete();
-                          },
-                        }}
+                        options={embeddedCheckoutOptions}
                       >
                         <SafeEmbeddedCheckout />
                       </SafeEmbeddedCheckoutProvider>
