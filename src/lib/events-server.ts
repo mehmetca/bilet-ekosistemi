@@ -5,6 +5,7 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import { eventMatchesCityRow } from "@/lib/city-event-sort";
 import type { Event, Ticket, Venue } from "@/types/database";
+import { TICKET_DISPLAY_ORDER, getTicketSortRank } from "@/lib/ticket-sort";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SAFE_ROUTE_SLUG_REGEX = /^[a-zA-Z0-9.-]+$/;
@@ -13,7 +14,7 @@ function isSafeRouteSlug(value: string): boolean {
   return SAFE_ROUTE_SLUG_REGEX.test(value) && !value.includes("..");
 }
 
-export { TICKET_DISPLAY_ORDER, getTicketSortRank } from "@/lib/ticket-sort";
+export { TICKET_DISPLAY_ORDER, getTicketSortRank };
 
 export async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {
   try {
