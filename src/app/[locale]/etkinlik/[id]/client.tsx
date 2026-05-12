@@ -201,15 +201,40 @@ function getTicketForSection(
   if (!availableTickets.length) return { ticket: { id: "", name: "", price: 0, available: 0 }, matchedBy: "index" };
   const label = (section.ticket_type_label ?? "").trim();
   const sectionName = (section.name ?? "").trim();
-  const byLabel = label
-    ? availableTickets.find((t) => (t.name || "").trim().toLowerCase() === label.toLowerCase())
+  const norm = (s: string) => s.trim().toLowerCase();
+  const lowLabel = norm(label);
+  const lowSection = norm(sectionName);
+
+  // 1) Birebir ticket adı = ticket_type_label
+  const byLabel = lowLabel
+    ? availableTickets.find((t) => norm(t.name || "") === lowLabel)
     : null;
   if (byLabel) return { ticket: byLabel, matchedBy: "name" };
-  const bySectionName =
-    !label && sectionName
-      ? availableTickets.find((t) => (t.name || "").trim().toLowerCase() === sectionName.toLowerCase())
-      : null;
+
+  // 2) Birebir ticket adı = section.name (örn. "Orta salon - VIP")
+  const bySectionName = lowSection
+    ? availableTickets.find((t) => norm(t.name || "") === lowSection)
+    : null;
   if (bySectionName) return { ticket: bySectionName, matchedBy: "name" };
+
+  // 3) ticket adı, ticket_type_label ile bitsin (örn. ticket="Orta salon - VIP", label="VIP")
+  //    Bu sayede tekrar etmiş adlardan ("Orta salon - VIP VIP") veya kullanıcı tarafından
+  //    serbest düzenlenmiş adlardan da doğru eşleşme yakalanır.
+  if (lowLabel) {
+    const bySuffix = availableTickets.find((t) => {
+      const n = norm(t.name || "");
+      if (!n) return false;
+      return (
+        n === lowLabel ||
+        n.endsWith(" - " + lowLabel) ||
+        n.endsWith(" " + lowLabel) ||
+        n.endsWith("-" + lowLabel)
+      );
+    });
+    if (bySuffix) return { ticket: bySuffix, matchedBy: "name" };
+  }
+
+  // 4) Son çare: sıra (index) eşlemesi.
   const byIndex = availableTickets[sectionIndex];
   return { ticket: byIndex ?? availableTickets[0], matchedBy: "index" };
 }
@@ -227,12 +252,24 @@ function getTicketForRow(
   if (rowL) {
     const byRow = availableTickets.find((t) => norm(t.name || "") === norm(rowL));
     if (byRow) return { ticket: byRow, matchedBy: "name" };
+    const rl = norm(rowL);
+    // Ad sonu eşleşmesi: ticket="Orta salon - VIP" / rowL="VIP" gibi durumlar.
+    const byRowSuffix = availableTickets.find((t) => {
+      const n = norm(t.name || "");
+      if (!n) return false;
+      return (
+        n === rl ||
+        n.endsWith(" - " + rl) ||
+        n.endsWith(" " + rl) ||
+        n.endsWith("-" + rl)
+      );
+    });
+    if (byRowSuffix) return { ticket: byRowSuffix, matchedBy: "name" };
     if (sectionName) {
       const composite = `${sectionName} ${rowL}`.trim();
       const byComposite = availableTickets.find((t) => norm(t.name || "") === norm(composite));
       if (byComposite) return { ticket: byComposite, matchedBy: "name" };
       const sn = norm(sectionName);
-      const rl = norm(rowL);
       const bySectionPlus = availableTickets.find((t) => {
         const n = norm(t.name || "");
         return n === `${sn} ${rl}` || (n.startsWith(`${sn} `) && (n.endsWith(` ${rl}`) || n.endsWith(rl)));
