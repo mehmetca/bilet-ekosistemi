@@ -55,6 +55,8 @@ import { formatEventDateDMY } from "@/lib/date-utils";
 import { getTicketCategoryColorHex, lightenHex } from "@/lib/seating-plans/ticket-category-colors";
 
 const SEAT_HOLD_LS_KEY = "seatHoldSessionId";
+/** Dil değişimi / sekme yenileme: aktif "yeni seçim" sessionStorage'da event-bazlı saklanır. */
+const SEAT_SELECTION_SS_PREFIX = "eventSeatSelection:";
 
 /** localStorage kapalı / hata: yine de koltuk seçimi çalışsın (oturum boyunca bellekte). */
 function ensureSeatHoldSessionId(existing: string | null): string {
@@ -1007,6 +1009,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     availableTickets[0]?.id || ""
   );
   const [ticketCount, setTicketCount] = useState<number>(1);
+  /**
+   * Fiyat modunda her bilet kategorisinin adedi ayrı tutulur — kullanıcı 2 VIP + 2 Kategori 2
+   * gibi karışık sepet oluşturabilsin. "Sepete ekle"ye basınca tüm pozitif satırlar sepete eklenir
+   * ve bu Map sıfırlanır. selectedTicketType / ticketCount alanları artık sadece koltuk-modu
+   * fallback'i (sıra > bilet eşlemesi) için tutuluyor; fiyat modu UI'sında kullanılmaz.
+   */
+  const [ticketCountsByType, setTicketCountsByType] = useState<Record<string, number>>({});
   /** Kullanıcı hangi akıştan ilerleyeceğine kendisi karar verir (başlangıçta ikisi de kapalı). */
   const [bookingMode, setBookingMode] = useState<"price" | "seat" | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -1015,6 +1024,44 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [seatingPlanName, setSeatingPlanName] = useState("");
   const [seatingPlanLoading, setSeatingPlanLoading] = useState(false);
   const [selectedSeatIds, setSelectedSeatIds] = useState<Set<string>>(new Set());
+
+  /**
+   * Dil değişimi / sekme yenilemesinden sonra "Yeni seçim" kaybolmasın diye sessionStorage'a
+   * koltuk ID'lerini yazıyoruz. Mount'ta geri yüklenir; satın alma sonrası ya da kullanıcı seçimi
+   * sıfırladığında temizlenir. Seat-hold session id zaten localStorage'da olduğu için aynı
+   * oturumun holdları sunucuda hâlâ geçerli kalır.
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = window.sessionStorage.getItem(SEAT_SELECTION_SS_PREFIX + event.id);
+      if (!raw) return;
+      const arr = JSON.parse(raw) as unknown;
+      if (Array.isArray(arr) && arr.every((v) => typeof v === "string")) {
+        setSelectedSeatIds(new Set(arr as string[]));
+      }
+    } catch {
+      /* ignore */
+    }
+    // event.id değişmediği sürece bir kere çalışsın
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event.id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (selectedSeatIds.size === 0) {
+        window.sessionStorage.removeItem(SEAT_SELECTION_SS_PREFIX + event.id);
+      } else {
+        window.sessionStorage.setItem(
+          SEAT_SELECTION_SS_PREFIX + event.id,
+          JSON.stringify(Array.from(selectedSeatIds))
+        );
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [selectedSeatIds, event.id]);
 
   const cartSeatIdsForEvent = useMemo(() => {
     const s = new Set<string>();
@@ -1144,6 +1191,30 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       setTicketCount(1);
     }
   }, [availableTickets, selectedTicketType]);
+
+  /** Çoklu kategori adedi: stoktan fazla seçilemesin / kaldırılan kategori temizlensin. */
+  useEffect(() => {
+    setTicketCountsByType((prev) => {
+      const next: Record<string, number> = {};
+      let changed = false;
+      for (const [tid, n] of Object.entries(prev)) {
+        const tk = availableTickets.find((x) => x.id === tid);
+        if (!tk) {
+          changed = true;
+          continue;
+        }
+        const cap = Math.min(Number(tk.available || 0), maxTicketsPerOrder);
+        const clamped = Math.max(0, Math.min(cap, n || 0));
+        if (clamped <= 0) {
+          changed = true;
+          continue;
+        }
+        if (clamped !== n) changed = true;
+        next[tid] = clamped;
+      }
+      return changed ? next : prev;
+    });
+  }, [availableTickets, maxTicketsPerOrder]);
 
   const seatingPlanId = (event as Event & { seating_plan_id?: string }).seating_plan_id;
 
@@ -2518,30 +2589,23 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               );
                             }
 
-                            const isSelected = selectedTicketType === ticketType.id;
                             const minSelectable = getMinQuantityFromDescription(ticketType.description);
                             const maxSelectable = Math.min(availableAmount, maxTicketsPerOrder);
-                            const effectiveMin = Math.min(minSelectable, maxSelectable);
-                            const selectedRowCount = isSelected ? ticketCount : 0;
                             const cartQtyForTicket = cartItems
                               .filter((it) => it.eventId === event.id && it.ticketId === ticketType.id)
                               .reduce((sum, it) => sum + it.quantity, 0);
-                            // Kullanıcıya tutarlı görünmesi için, varsa sepetteki gerçek adedi göster.
-                            const rowCount = cartQtyForTicket > 0 ? cartQtyForTicket : selectedRowCount;
+                            // Bu satır için seçili "yeni" adet (henüz sepete eklenmemiş).
+                            const pendingCount = ticketCountsByType[ticketType.id] || 0;
+                            const isSelected = pendingCount > 0;
+                            // Görsel sayaç: tek tipli olduğundan yeni seçim varsa onu, yoksa sepetteki adedi göster.
+                            const rowCount = pendingCount > 0 ? pendingCount : cartQtyForTicket;
 
                             return (
                               <div
                                 key={ticketType.id}
-                                className={`cursor-pointer px-5 py-4 transition-colors ${
+                                className={`px-5 py-4 transition-colors ${
                                   isSelected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
                                 }`}
-                                onClick={() => {
-                                  setSelectedTicketType(ticketType.id);
-                                  setTicketCount((current) => {
-                                    if (!isSelected) return effectiveMin;
-                                    return Math.min(Math.max(effectiveMin, current), maxSelectable || effectiveMin);
-                                  });
-                                }}
                               >
                                 <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_120px_170px]">
                                   <div>
@@ -2551,6 +2615,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       {minSelectable > 1 && (
                                         <span className="ml-1 text-primary-600"> · Min. {minSelectable} adet</span>
                                       )}
+                                      {cartQtyForTicket > 0 && pendingCount > 0 && (
+                                        <span className="ml-1 text-emerald-600"> · Sepette: {cartQtyForTicket}</span>
+                                      )}
                                     </p>
                                   </div>
                                   <p className="text-lg font-bold text-primary-700">{formatPrice(ticketType.price, event.currency)}</p>
@@ -2559,13 +2626,17 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setSelectedTicketType(ticketType.id);
-                                        setTicketCount((current) => {
-                                          if (!isSelected) return effectiveMin;
-                                          return Math.max(effectiveMin, current - 1);
+                                        setTicketCountsByType((prev) => {
+                                          const cur = prev[ticketType.id] || 0;
+                                          if (cur <= 0) return prev;
+                                          const next = cur - 1;
+                                          const copy = { ...prev };
+                                          if (next <= 0) delete copy[ticketType.id];
+                                          else copy[ticketType.id] = next;
+                                          return copy;
                                         });
                                       }}
-                                      disabled={availableAmount <= 0 || isPastEvent || selectedRowCount <= effectiveMin}
+                                      disabled={availableAmount <= 0 || isPastEvent || pendingCount <= 0}
                                       className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       -
@@ -2575,13 +2646,16 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        setSelectedTicketType(ticketType.id);
-                                        setTicketCount((current) => {
-                                          if (!isSelected) return effectiveMin;
-                                          return Math.min(maxSelectable || effectiveMin, current + 1);
+                                        setTicketCountsByType((prev) => {
+                                          const cur = prev[ticketType.id] || 0;
+                                          // İlk artışta grup biletindeki minimum adedi tek seferde aç (örn. min 10).
+                                          const step = cur === 0 && minSelectable > 1 ? minSelectable : 1;
+                                          const next = Math.min(maxSelectable, cur + step);
+                                          if (next <= 0) return prev;
+                                          return { ...prev, [ticketType.id]: next };
                                         });
                                       }}
-                                      disabled={availableAmount <= 0 || isPastEvent || selectedRowCount >= maxSelectable}
+                                      disabled={availableAmount <= 0 || isPastEvent || pendingCount >= maxSelectable}
                                       className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       +
@@ -2596,94 +2670,163 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     )}
 
                     <div className="border-t pt-6">
-                      <div className="mb-6 flex items-center justify-between">
-                        <span className="text-lg font-semibold text-slate-900">{t("totalPrice")}</span>
-                        <span className="text-3xl font-bold text-primary-700">
-                          {formatPrice(totalPrice, event.currency)}
-                        </span>
-                      </div>
+                      {(() => {
+                        // Tüm seçili kategorilerin toplam fiyatı (yalnızca "yeni" eklenmek üzere bekleyenler).
+                        const pendingEntries = Object.entries(ticketCountsByType).filter(
+                          ([, n]) => (n || 0) > 0
+                        );
+                        const pendingTotal = pendingEntries.reduce((sum, [tid, n]) => {
+                          const tk = availableTickets.find((x) => x.id === tid);
+                          return sum + Number(tk?.price || 0) * Number(n || 0);
+                        }, 0);
+                        const pendingCount = pendingEntries.reduce((s, [, n]) => s + (n || 0), 0);
+                        const canSubmit =
+                          !isUnapproved && !isPastEvent && pendingCount > 0;
+                        return (
+                          <>
+                            <div className="mb-6 flex items-center justify-between">
+                              <span className="text-lg font-semibold text-slate-900">{t("totalPrice")}</span>
+                              <span className="text-3xl font-bold text-primary-700">
+                                {formatPrice(pendingTotal, event.currency)}
+                              </span>
+                            </div>
 
-                      {isPastEvent && (
-                        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
-                          {t("eventEnded")}
-                        </p>
-                      )}
+                            {isPastEvent && (
+                              <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
+                                {t("eventEnded")}
+                              </p>
+                            )}
 
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (!selectedTicket || isPastEvent || isUnapproved) return;
-                          const minQ = Math.min(selectedMinQ, selectedMaxQ);
-                          if (ticketCount < minQ) return;
-                          addItem({
-                            ticketId: selectedTicket.id,
-                            eventId: event.id,
-                            eventTitle: localized.title || event.title,
-                            eventDate: event.date,
-                            eventTime: event.time || "20:00",
-                            venue: localized.venue || event.venue,
-                            location: event.location,
-                            imageUrl: event.image_url,
-                            ticketName: selectedTicket.name || selectedTicket.ticket_type || "Standart",
-                            price: Number(selectedTicket.price || 0),
-                            currency: event.currency,
-                            eventCheckoutFee:
-                              typeof event.checkout_processing_fee === "number" &&
-                              event.checkout_processing_fee > 0
-                                ? event.checkout_processing_fee
-                                : undefined,
-                            quantity: ticketCount,
-                            available: Number(selectedTicket.available || 0),
-                          });
-                          setActionMessage(tCheckout("addedToCart"));
-                        }}
-                        disabled={
-                          isUnapproved ||
-                          !selectedTicket ||
-                          isPastEvent ||
-                          ticketCount < Math.min(selectedMinQ, selectedMaxQ)
-                        }
-                        className="w-full rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
-                      >
-                        {tCheckout("addToCart")}
-                      </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!canSubmit) return;
+                                const eventPayload = {
+                                  eventId: event.id,
+                                  eventTitle: localized.title || event.title,
+                                  eventDate: event.date,
+                                  eventTime: event.time || "20:00",
+                                  venue: localized.venue || event.venue,
+                                  location: event.location,
+                                  imageUrl: event.image_url,
+                                  currency: event.currency,
+                                  eventCheckoutFee:
+                                    typeof event.checkout_processing_fee === "number" &&
+                                    event.checkout_processing_fee > 0
+                                      ? event.checkout_processing_fee
+                                      : undefined,
+                                };
+                                for (const [tid, qty] of pendingEntries) {
+                                  const tk = availableTickets.find((x) => x.id === tid);
+                                  if (!tk) continue;
+                                  addItem({
+                                    ...eventPayload,
+                                    ticketId: tk.id,
+                                    ticketName: tk.name || tk.ticket_type || "Standart",
+                                    price: Number(tk.price || 0),
+                                    quantity: Number(qty || 0),
+                                    available: Number(tk.available || 0),
+                                  });
+                                }
+                                setTicketCountsByType({});
+                                setActionMessage(tCheckout("addedToCart"));
+                              }}
+                              disabled={!canSubmit}
+                              className="w-full rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
+                            >
+                              {tCheckout("addToCart")}
+                              {pendingCount > 0 ? ` (${pendingCount})` : ""}
+                            </button>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
 
                   <aside className="rounded-2xl border border-slate-200 bg-white p-5 h-fit">
                     <h3 className="mb-4 text-lg font-bold text-slate-900">{t("deinePlatze")}</h3>
-                    {currentEventCartSummary.length > 0 ? (
-                      <div className="space-y-2">
-                        <ul className="space-y-1 text-sm text-slate-700">
-                          {currentEventCartSummary.map((item, idx) => (
-                            <li key={`price-cat-cart-side-${item.name}-${idx}`}>
-                              {idx + 1}. {item.name} x {item.quantity}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : selectedTicket ? (
-                      <div className="space-y-2">
-                        <p className="text-xs text-slate-600">
-                          Bilet kategorisi: <strong>{shortenTicketDisplayName(selectedTicket.name || selectedTicket.ticket_type || "Standart")}</strong>
-                        </p>
-                        <ul className="space-y-1 text-sm text-slate-700">
-                          {Array.from({ length: ticketCount }).map((_, idx) => (
-                            <li key={`price-cat-selected-side-${idx}`}>
-                              {idx + 1}. {shortenTicketDisplayName(selectedTicket.name || selectedTicket.ticket_type || "Standart")} x 1
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : (
-                      <p className="text-sm text-slate-500">
-                        {locale === "de"
-                          ? "Wählen Sie eine Ticketkategorie und Menge."
-                          : locale === "en"
-                            ? "Select a ticket category and quantity."
-                            : "Bir bilet kategorisi ve adet seçin."}
-                      </p>
-                    )}
+                    {(() => {
+                      // "Yeni seçim" = bu turda eklenmek üzere bekleyenler; ayrıca sepetteki adet.
+                      const pendingRows = Object.entries(ticketCountsByType)
+                        .map(([tid, n]) => {
+                          const tk = availableTickets.find((x) => x.id === tid);
+                          if (!tk || (n || 0) <= 0) return null;
+                          return {
+                            name: shortenTicketDisplayName(tk.name || tk.ticket_type || "Standart"),
+                            quantity: Number(n || 0),
+                            price: Number(tk.price || 0),
+                          };
+                        })
+                        .filter((x): x is { name: string; quantity: number; price: number } => x !== null);
+
+                      const hasPending = pendingRows.length > 0;
+                      const hasCart = currentEventCartSummary.length > 0;
+                      if (!hasPending && !hasCart) {
+                        return (
+                          <p className="text-sm text-slate-500">
+                            {locale === "de"
+                              ? "Wählen Sie eine Ticketkategorie und Menge."
+                              : locale === "en"
+                                ? "Select a ticket category and quantity."
+                                : "Bir bilet kategorisi ve adet seçin."}
+                          </p>
+                        );
+                      }
+                      return (
+                        <div className="space-y-4">
+                          {hasPending && (
+                            <section>
+                              <div className="mb-2 flex items-center justify-between">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-800">
+                                  {locale === "de"
+                                    ? "Neue Auswahl"
+                                    : locale === "en"
+                                      ? "New selection"
+                                      : "Yeni seçim"}{" "}
+                                  ({pendingRows.reduce((s, r) => s + r.quantity, 0)})
+                                </span>
+                                <span className="text-xs font-semibold text-slate-700">
+                                  {formatPrice(
+                                    pendingRows.reduce((s, r) => s + r.price * r.quantity, 0),
+                                    event.currency
+                                  )}
+                                </span>
+                              </div>
+                              <ul className="space-y-1 text-sm text-slate-700">
+                                {pendingRows.map((row, idx) => (
+                                  <li key={`pending-${idx}`} className="flex justify-between gap-2">
+                                    <span className="truncate">{row.name}</span>
+                                    <span className="font-semibold">x {row.quantity}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </section>
+                          )}
+                          {hasCart && (
+                            <section className={hasPending ? "border-t border-slate-200 pt-3" : ""}>
+                              <div className="mb-2 flex items-center justify-between">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                                  {locale === "de"
+                                    ? "Im Warenkorb"
+                                    : locale === "en"
+                                      ? "In cart"
+                                      : "Sepette"}{" "}
+                                  ({currentEventCartCount})
+                                </span>
+                              </div>
+                              <ul className="space-y-1 text-sm text-slate-700">
+                                {currentEventCartSummary.map((item, idx) => (
+                                  <li key={`cart-summary-${item.name}-${idx}`} className="flex justify-between gap-2">
+                                    <span className="truncate">{item.name}</span>
+                                    <span className="font-semibold">x {item.quantity}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </section>
+                          )}
+                        </div>
+                      );
+                    })()}
 
                     {currentEventCartCount > 0 ? (
                       <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
