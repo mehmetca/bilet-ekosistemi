@@ -832,7 +832,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
           existingByKey.set(keyOf(ex.name, ex.type), ex);
         }
 
-        const desiredTicketsRaw = hasExternalLink
+        const desiredTickets = hasExternalLink
           ? []
           : tickets
               .filter((t) => t.quantity > 0)
@@ -856,22 +856,27 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 };
               });
 
-        /** Aynı isim+tür iki kez gelirse (ör. çift VIP satırı) tek satırda toplar; DB'de yinelenen bilet oluşmasın. */
-        const desiredTicketsMergeMap = new Map<
-          string,
-          { name: string; type: "normal" | "vip"; price: number; quantity: number; description: string }
-        >();
-        for (const d of desiredTicketsRaw) {
-          const k = keyOf(d.name, d.type);
-          const prev = desiredTicketsMergeMap.get(k);
-          if (!prev) {
-            desiredTicketsMergeMap.set(k, { ...d });
-          } else {
-            prev.quantity += d.quantity;
-            if (!prev.description && d.description) prev.description = d.description;
+        /**
+         * Yinelenenleri BİRLEŞTİRMİYORUZ: Aynı isim+türde iki satır olması fiyat kaymasına yol açar
+         * (ör. VIP 50€/100 + VIP 100€/32 birleşince tek fiyat seçilirdi). Kullanıcı uyarısı veriyoruz.
+         */
+        {
+          const seen = new Set<string>();
+          const dupes: string[] = [];
+          for (const d of desiredTickets) {
+            const k = keyOf(d.name, d.type);
+            if (seen.has(k)) dupes.push(`${d.name} (${d.type})`);
+            else seen.add(k);
+          }
+          if (dupes.length > 0) {
+            alert(
+              "Aynı bilet türü birden fazla kez tanımlanmış:\n• " +
+                Array.from(new Set(dupes)).join("\n• ") +
+                "\n\nLütfen tekrar eden satırı silin veya farklı bir isim verin. Aksi halde fiyatlar karışabilir."
+            );
+            return;
           }
         }
-        const desiredTickets = Array.from(desiredTicketsMergeMap.values());
 
         const matchedExistingIds = new Set<string>();
 
@@ -951,7 +956,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
 
       if (!insertedEventId) throw lastInsertError || new Error("Etkinlik oluşturulamadı.");
 
-      const ticketRowsRaw = hasExternalLink
+      const ticketRows = hasExternalLink
         ? []
         : tickets
             .filter((t) => t.quantity > 0)
@@ -974,23 +979,28 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
           };
         });
 
-      const keyOfInsert = (name: string, type: string) =>
-        `${type}::${(name || "").trim().toLocaleLowerCase("tr-TR")}`;
-      const ticketRowsMerge = new Map<
-        string,
-        { event_id: string; name: string; type: string; price: number; quantity: number; available: number; description: string }
-      >();
-      for (const row of ticketRowsRaw) {
-        const k = keyOfInsert(row.name, row.type);
-        const prev = ticketRowsMerge.get(k);
-        if (!prev) ticketRowsMerge.set(k, { ...row });
-        else {
-          prev.quantity += row.quantity;
-          prev.available = prev.quantity;
-          if (!prev.description && row.description) prev.description = row.description;
+      /**
+       * Yeni etkinlik kaydında da aynı isim+türde iki satır engellenir; fiyat karışıklığı yerine kullanıcı düzeltsin.
+       */
+      {
+        const seen = new Set<string>();
+        const dupes: string[] = [];
+        for (const row of ticketRows) {
+          const k = `${row.type}::${(row.name || "").trim().toLocaleLowerCase("tr-TR")}`;
+          if (seen.has(k)) dupes.push(`${row.name} (${row.type})`);
+          else seen.add(k);
+        }
+        if (dupes.length > 0) {
+          alert(
+            "Aynı bilet türü birden fazla kez tanımlanmış:\n• " +
+              Array.from(new Set(dupes)).join("\n• ") +
+              "\n\nLütfen tekrar eden satırı silin veya farklı bir isim verin."
+          );
+          // Etkinlik zaten oluşturuldu ama bilet eklenmedi; kullanıcı düzenleme sihirbazına dönüp tekrar deneyebilir.
+          router.push(`/yonetim/etkinlikler/yeni?id=${insertedEventId}`);
+          return;
         }
       }
-      const ticketRows = Array.from(ticketRowsMerge.values());
 
       if (ticketRows.length > 0) {
         const { error: ticketsError } = await supabase.from("tickets").insert(ticketRows);
