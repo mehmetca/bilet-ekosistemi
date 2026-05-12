@@ -31,8 +31,17 @@ export const TICKET_DISPLAY_ORDER = [
 ] as const;
 
 export function getTicketSortRank(name?: string): number {
-  const idx = TICKET_DISPLAY_ORDER.findIndex((item) => item === (name || "").trim());
-  return idx === -1 ? 999 : idx;
+  const trimmed = (name || "").trim();
+  const idx = TICKET_DISPLAY_ORDER.findIndex((item) => item === trimmed);
+  if (idx !== -1) return idx;
+  const low = trimmed.toLowerCase();
+  if (/\bvip\b/.test(low)) return 0;
+  const m = low.match(/kategori\s*([0-9]{1,2})/i);
+  if (m) {
+    const n = Number.parseInt(m[1]!, 10);
+    if (Number.isFinite(n) && n >= 1 && n <= 10) return n;
+  }
+  return 999;
 }
 
 export async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {

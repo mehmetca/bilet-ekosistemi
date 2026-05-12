@@ -388,7 +388,7 @@ export default function CheckoutPage() {
           orderResults.push({
             success: true,
             ticketCode: data.ticketCode,
-            message: data.message,
+            message: t("orderCreatedSuccess"),
             emailSent: data.emailSent !== false,
             orderDetails: {
               buyerName: finalName,
@@ -439,6 +439,7 @@ export default function CheckoutPage() {
     deliveryChoice,
     items,
     seatHoldSessionId,
+    t,
     tEvent,
     user,
     authAccessToken,
@@ -714,18 +715,8 @@ export default function CheckoutPage() {
 
   const showExpiredFullPage =
     showReservationExpired && items.length === 0 && results.length === 0 && !allSuccess;
-  const successPageTitle =
-    locale === "de"
-      ? "TICKETS"
-      : locale === "en"
-        ? "TICKETS"
-        : "BILETLER";
-  const emailSentSuccessText =
-    locale === "de"
-      ? "Deine Tickets wurden an deine E-Mail-Adresse gesendet."
-      : locale === "en"
-        ? "Your tickets were sent to your e-mail address."
-        : "Biletlerin e-posta adresine gonderilmistir.";
+  const successPageTitle = t("ticketsPageTitle");
+  const emailSentSuccessText = t("ticketsSentSuccess");
 
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
@@ -809,7 +800,7 @@ export default function CheckoutPage() {
           <div className="space-y-6">
             <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">
               <h1 className="text-center text-3xl font-bold text-slate-900 md:text-4xl">
-                {locale === "tr" ? "Biletler" : successPageTitle}
+                {successPageTitle}
               </h1>
               {results.every((r) => r.success && r.emailSent !== false) ? (
                 <p className="mt-1 text-sm">{emailSentSuccessText}</p>

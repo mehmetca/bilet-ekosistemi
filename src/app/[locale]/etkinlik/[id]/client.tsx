@@ -126,6 +126,93 @@ function shortenTicketDisplayName(name: string): string {
   return cleaned;
 }
 
+function ticketDisplayKey(name: string): string {
+  return shortenTicketDisplayName(name).trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function ticketTimestampValue(ticket: TicketLike): number {
+  const t = ticket as TicketLike & { updated_at?: string | null; created_at?: string | null };
+  const raw = t.updated_at || t.created_at || "";
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : -1;
+}
+
+function choosePreferredTicket(existing: TicketLike, candidate: TicketLike): TicketLike {
+  const existingTs = ticketTimestampValue(existing);
+  const candidateTs = ticketTimestampValue(candidate);
+  if (candidateTs > existingTs) return candidate;
+  if (candidateTs < existingTs) return existing;
+  const existingPrice = Number(existing.price || 0);
+  const candidatePrice = Number(candidate.price || 0);
+  if (candidatePrice !== existingPrice) return candidatePrice > existingPrice ? candidate : existing;
+  const existingAvail = Number(existing.available || 0);
+  const candidateAvail = Number(candidate.available || 0);
+  if (candidateAvail !== existingAvail) return candidateAvail > existingAvail ? candidate : existing;
+  return existing;
+}
+
+function normalizeTicketMatchText(value: string): string {
+  return dedupeRepeatedTail(value).trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function buildTicketLabelVariants(raw: string): string[] {
+  const cleaned = dedupeRepeatedTail(raw || "").trim();
+  if (!cleaned) return [];
+  const out = new Set<string>();
+  const short = shortenTicketDisplayName(cleaned);
+  const dashIdx = cleaned.lastIndexOf(" - ");
+  const dashTail = dashIdx > 0 ? cleaned.slice(dashIdx + 3).trim() : "";
+  for (const part of [cleaned, short, dashTail]) {
+    const n = normalizeTicketMatchText(part);
+    if (n) out.add(n);
+  }
+  return Array.from(out);
+}
+
+function findTicketByLabels(labels: string[], availableTickets: TicketLike[]): TicketLike | null {
+  if (!labels.length || !availableTickets.length) return null;
+  const normalizedLabels = Array.from(
+    new Set(
+      labels
+        .flatMap((l) => buildTicketLabelVariants(l))
+        .map((x) => normalizeTicketMatchText(x))
+        .filter(Boolean)
+    )
+  );
+  if (!normalizedLabels.length) return null;
+
+  let best: { ticket: TicketLike; score: number } | null = null;
+  for (const t of availableTickets) {
+    const rawName = String(t.name || "").trim();
+    if (!rawName) continue;
+    const full = normalizeTicketMatchText(rawName);
+    const short = normalizeTicketMatchText(shortenTicketDisplayName(rawName));
+    let score: number | null = null;
+
+    if (normalizedLabels.includes(full)) {
+      score = 0;
+    } else if (short && normalizedLabels.includes(short)) {
+      score = 1;
+    } else if (
+      normalizedLabels.some((l) =>
+        (short && (short.endsWith(` ${l}`) || l.endsWith(` ${short}`))) ||
+        full.endsWith(` ${l}`) ||
+        l.endsWith(` ${full}`)
+      )
+    ) {
+      score = 2;
+    } else if (
+      normalizedLabels.some((l) => l.length >= 4 && (full.includes(l) || (short && short.includes(l))))
+    ) {
+      score = 3;
+    }
+
+    if (score === null) continue;
+    if (!best || score < best.score) best = { ticket: t, score };
+  }
+  return best?.ticket ?? null;
+}
+
 /**
  * Bilet listesi sıralama anahtarı: VIP en başta, ardından Kategori 1, 2, 3, … sayısal sırayla.
  * Bilinmeyen kategoriler en sona düşer.
@@ -201,15 +288,11 @@ function getTicketForSection(
   if (!availableTickets.length) return { ticket: { id: "", name: "", price: 0, available: 0 }, matchedBy: "index" };
   const label = (section.ticket_type_label ?? "").trim();
   const sectionName = (section.name ?? "").trim();
-  const byLabel = label
-    ? availableTickets.find((t) => (t.name || "").trim().toLowerCase() === label.toLowerCase())
-    : null;
+  const byLabel = findTicketByLabels(
+    [label, sectionName, shortenTicketDisplayName(sectionName)].filter(Boolean),
+    availableTickets
+  );
   if (byLabel) return { ticket: byLabel, matchedBy: "name" };
-  const bySectionName =
-    !label && sectionName
-      ? availableTickets.find((t) => (t.name || "").trim().toLowerCase() === sectionName.toLowerCase())
-      : null;
-  if (bySectionName) return { ticket: bySectionName, matchedBy: "name" };
   const byIndex = availableTickets[sectionIndex];
   return { ticket: byIndex ?? availableTickets[0], matchedBy: "index" };
 }
@@ -222,24 +305,18 @@ function getTicketForRow(
 ): { ticket: TicketLike; matchedBy: "name" | "index" } {
   const rowL = (row?.ticket_type_label || "").trim();
   const sectionName = (section.name ?? "").trim();
-  const norm = (s: string) => s.trim().toLowerCase();
-
-  if (rowL) {
-    const byRow = availableTickets.find((t) => norm(t.name || "") === norm(rowL));
-    if (byRow) return { ticket: byRow, matchedBy: "name" };
-    if (sectionName) {
-      const composite = `${sectionName} ${rowL}`.trim();
-      const byComposite = availableTickets.find((t) => norm(t.name || "") === norm(composite));
-      if (byComposite) return { ticket: byComposite, matchedBy: "name" };
-      const sn = norm(sectionName);
-      const rl = norm(rowL);
-      const bySectionPlus = availableTickets.find((t) => {
-        const n = norm(t.name || "");
-        return n === `${sn} ${rl}` || (n.startsWith(`${sn} `) && (n.endsWith(` ${rl}`) || n.endsWith(rl)));
-      });
-      if (bySectionPlus) return { ticket: bySectionPlus, matchedBy: "name" };
-    }
-  }
+  const byRow = findTicketByLabels(
+    [
+      rowL,
+      section.ticket_type_label || "",
+      sectionName,
+      shortenTicketDisplayName(sectionName),
+      rowL && sectionName ? `${sectionName} ${rowL}` : "",
+      rowL && sectionName ? `${sectionName} - ${rowL}` : "",
+    ].filter(Boolean),
+    availableTickets
+  );
+  if (byRow) return { ticket: byRow, matchedBy: "name" };
   return getTicketForSection(section, sectionIndex, availableTickets);
 }
 
@@ -771,6 +848,27 @@ function SeatMapWithZoom({
   const dynamicFrameMinHeight = Math.round(
     Math.min(820, Math.max(340, 180 + maxRowsInSection * 24 + Math.ceil(sections.length / 2) * 64))
   );
+  const seatCategoryOptions = useMemo(() => {
+    const byDisplay = new Map<string, TicketLike>();
+    const sorted = [...availableTickets].sort((a, b) => {
+      const ka = ticketCategorySortKey(a.name || "");
+      const kb = ticketCategorySortKey(b.name || "");
+      if (ka !== kb) return ka - kb;
+      return Number(b.price || 0) - Number(a.price || 0);
+    });
+    for (const tk of sorted) {
+      const display = shortenTicketDisplayName((tk.name || "Bilet").trim());
+      const current = byDisplay.get(display);
+      if (!current) {
+        byDisplay.set(display, tk);
+        continue;
+      }
+      if (Number(tk.price || 0) > Number(current.price || 0)) {
+        byDisplay.set(display, tk);
+      }
+    }
+    return Array.from(byDisplay.entries()).map(([display, tk]) => ({ display, ticket: tk }));
+  }, [availableTickets]);
 
   return (
     <div className="space-y-2">
@@ -817,24 +915,14 @@ function SeatMapWithZoom({
                   {locale === "de" ? "Alle Kategorien" : locale === "en" ? "All categories" : "Tüm kategoriler"}
                 </span>
               </button>
-              {[...availableTickets]
-                .sort((a, b) => {
-                  const ka = ticketCategorySortKey(a.name || "");
-                  const kb = ticketCategorySortKey(b.name || "");
-                  if (ka !== kb) return ka - kb;
-                  /** Bilinmeyen kategoriler için fiyatı yüksekten düşüğe yedek sıralama. */
-                  return Number(b.price || 0) - Number(a.price || 0);
-                })
-                .map((tk) => {
-                const name = (tk.name || "Bilet").trim();
-                const display = shortenTicketDisplayName(name);
-                const active = selectedSeatCategory === name;
+              {seatCategoryOptions.map(({ display, ticket: tk }) => {
+                const active = selectedSeatCategory === display;
                 return (
                   <button
                     key={tk.id}
                     type="button"
                     onClick={() => {
-                      onSelectSeatCategory(name);
+                      onSelectSeatCategory(display);
                       setCategoryOpen(false);
                     }}
                       className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm ${
@@ -945,7 +1033,21 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const { addItem, removeSeatItem, totalItems, items: cartItems } = useCart();
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
-  const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
+  const sortedTicketState = useMemo(() => {
+    return [...ticketState].sort((a, b) => {
+      const ka = ticketCategorySortKey(a.name || a.ticket_type || "");
+      const kb = ticketCategorySortKey(b.name || b.ticket_type || "");
+      if (ka !== kb) return ka - kb;
+      const pa = Number(a.price || 0);
+      const pb = Number(b.price || 0);
+      if (pa !== pb) return pb - pa;
+      return (a.name || "").localeCompare(b.name || "", "tr");
+    });
+  }, [ticketState]);
+  const availableTickets = useMemo(
+    () => sortedTicketState.filter((ticket) => Number(ticket.available || 0) > 0),
+    [sortedTicketState]
+  );
   const hasSeatingPlan = !!(event as Event & { seating_plan_id?: string }).seating_plan_id;
   const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
   const parsedDescription = useMemo(() => parseEventDescription(localized.description || event.description), [localized.description, event.description]);
@@ -965,7 +1067,17 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [selectedTicketType, setSelectedTicketType] = useState<string>(
     availableTickets[0]?.id || ""
   );
-  const [ticketCount, setTicketCount] = useState<number>(1);
+  useEffect(() => {
+    if (availableTickets.length === 0) {
+      if (selectedTicketType) setSelectedTicketType("");
+      return;
+    }
+    if (!availableTickets.some((t) => t.id === selectedTicketType)) {
+      setSelectedTicketType(availableTickets[0]!.id);
+    }
+  }, [availableTickets, selectedTicketType]);
+
+  const [ticketCountsByType, setTicketCountsByType] = useState<Record<string, number>>({});
   /** Kullanıcı hangi akıştan ilerleyeceğine kendisi karar verir (başlangıçta ikisi de kapalı). */
   const [bookingMode, setBookingMode] = useState<"price" | "seat" | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -1059,18 +1171,46 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     const id = ensureSeatHoldSessionId(null);
     if (id) setSeatHoldSessionId(id);
   }, []);
-  const selectedTicket = availableTickets.find((t) => t.id === selectedTicketType);
-  const selectedMinQ = selectedTicket ? getMinQuantityFromDescription(selectedTicket.description) : 1;
-  const selectedMaxQ = selectedTicket
-    ? Math.min(Number(selectedTicket.available || 0), maxTicketsPerOrder)
-    : 1;
-  const totalPrice = selectedTicket ? selectedTicket.price * ticketCount : 0;
-  const cartItemForSelectedPriceTicket = useMemo(() => {
-    if (!selectedTicket) return null;
-    return (
-      cartItems.find((it) => it.eventId === event.id && it.ticketId === selectedTicket.id) || null
-    );
-  }, [cartItems, event.id, selectedTicket]);
+  const priceModeTickets = useMemo(() => {
+    const byDisplay = new Map<string, TicketLike>();
+    for (const ticket of availableTickets) {
+      const key = ticketDisplayKey(String(ticket.name || ticket.ticket_type || ""));
+      if (!key) continue;
+      const current = byDisplay.get(key);
+      if (!current) {
+        byDisplay.set(key, ticket);
+        continue;
+      }
+      byDisplay.set(key, choosePreferredTicket(current, ticket));
+    }
+    return Array.from(byDisplay.values()).sort((a, b) => {
+      const ka = ticketCategorySortKey(a.name || "");
+      const kb = ticketCategorySortKey(b.name || "");
+      if (ka !== kb) return ka - kb;
+      const pa = Number(a.price || 0);
+      const pb = Number(b.price || 0);
+      if (pa !== pb) return pb - pa;
+      return (a.name || "").localeCompare(b.name || "", "tr");
+    });
+  }, [availableTickets]);
+  const selectedPriceTicketEntries = useMemo(
+    () =>
+      priceModeTickets
+        .map((ticket) => ({
+          ticket,
+          count: Math.max(0, Number(ticketCountsByType[ticket.id] || 0)),
+        }))
+        .filter((row) => row.count > 0),
+    [priceModeTickets, ticketCountsByType]
+  );
+  const selectedPriceTicketTotalCount = useMemo(
+    () => selectedPriceTicketEntries.reduce((sum, row) => sum + row.count, 0),
+    [selectedPriceTicketEntries]
+  );
+  const totalPrice = useMemo(
+    () => selectedPriceTicketEntries.reduce((sum, row) => sum + Number(row.ticket.price || 0) * row.count, 0),
+    [selectedPriceTicketEntries]
+  );
   const currentEventCartCount = useMemo(() => {
     return cartItems
       .filter((it) => it.eventId === event.id)
@@ -1086,11 +1226,25 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     return Array.from(grouped.entries()).map(([name, quantity]) => ({ name, quantity }));
   }, [cartItems, event.id]);
 
-  // Grup biletinde adet minimumun altındaysa yukarı çek (sayfa ilk yüklendiğinde veya bilet türü değişince)
   useEffect(() => {
-    const minQ = Math.min(selectedMinQ, selectedMaxQ);
-    if (minQ > 1 && ticketCount < minQ) setTicketCount(minQ);
-  }, [selectedTicketType, selectedMinQ, selectedMaxQ]);
+    if (priceModeTickets.length === 0) {
+      setTicketCountsByType({});
+      return;
+    }
+    const validTicketIds = new Set(priceModeTickets.map((t) => t.id));
+    setTicketCountsByType((prev) => {
+      const next: Record<string, number> = {};
+      for (const [ticketId, countRaw] of Object.entries(prev)) {
+        if (!validTicketIds.has(ticketId)) continue;
+        const tk = priceModeTickets.find((t) => t.id === ticketId);
+        if (!tk) continue;
+        const maxSelectable = Math.min(Number(tk.available || 0), maxTicketsPerOrder);
+        const count = Math.max(0, Math.min(Number(countRaw || 0), maxSelectable));
+        if (count > 0) next[ticketId] = count;
+      }
+      return next;
+    });
+  }, [priceModeTickets, maxTicketsPerOrder]);
 
   const seatingPlanId = (event as Event & { seating_plan_id?: string }).seating_plan_id;
 
@@ -1368,7 +1522,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     const ids = new Set<string>();
     seatMetaById.forEach((meta, seatId) => {
       const tName = String(meta.ticket?.name || "").trim();
-      if (tName === selectedSeatCategory) ids.add(seatId);
+      const display = shortenTicketDisplayName(tName);
+      if (display === selectedSeatCategory) ids.add(seatId);
     });
     return ids;
   }, [seatMetaById, selectedSeatCategory]);
@@ -2410,7 +2565,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               {!isExternalOnlyEvent && bookingMode === "price" && (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
                   <div>
-                    {ticketState.length === 0 ? (
+                    {availableTickets.length === 0 ? (
                       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
                         {t("noTicketsAvailable")}
                       </div>
@@ -2422,57 +2577,29 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           <span className="text-right">{t("quantity")}</span>
                         </div>
                         <div className="divide-y divide-slate-200">
-                          {ticketState.map((ticketType) => {
+                          {availableTickets.map((ticketType) => {
                             const availableAmount = Number(ticketType.available || 0);
-                            const isSoldOut = availableAmount <= 0;
-                            if (isSoldOut) {
-                              return (
-                                <div
-                                  key={ticketType.id}
-                                  className="flex items-center justify-between gap-4 bg-slate-50 px-5 py-4 cursor-default"
-                                >
-                                  <div>
-                                    <p className="text-sm font-semibold text-slate-700">{ticketType.name}</p>
-                                    <p className="text-xs text-slate-500">{t("remaining")}: 0</p>
-                                  </div>
-                                  <p className="text-lg font-bold text-slate-400">{formatPrice(ticketType.price, event.currency)}</p>
-                                  <div className="flex min-w-[100px] items-center justify-end">
-                                    <span className="text-lg font-bold uppercase tracking-wider text-red-600" aria-label={t("soldOut")}>
-                                      {t("soldOut")}
-                                    </span>
-                                  </div>
-                                </div>
-                              );
-                            }
-
-                            const isSelected = selectedTicketType === ticketType.id;
                             const minSelectable = getMinQuantityFromDescription(ticketType.description);
                             const maxSelectable = Math.min(availableAmount, maxTicketsPerOrder);
                             const effectiveMin = Math.min(minSelectable, maxSelectable);
-                            const selectedRowCount = isSelected ? ticketCount : 0;
-                            const cartQtyForTicket = cartItems
-                              .filter((it) => it.eventId === event.id && it.ticketId === ticketType.id)
-                              .reduce((sum, it) => sum + it.quantity, 0);
-                            // Kullanıcıya tutarlı görünmesi için, varsa sepetteki gerçek adedi göster.
-                            const rowCount = cartQtyForTicket > 0 ? cartQtyForTicket : selectedRowCount;
+                            const rowCount = Math.max(0, Number(ticketCountsByType[ticketType.id] || 0));
+                            const rowSelected = rowCount > 0;
 
                             return (
                               <div
                                 key={ticketType.id}
                                 className={`cursor-pointer px-5 py-4 transition-colors ${
-                                  isSelected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
+                                  rowSelected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
                                 }`}
                                 onClick={() => {
                                   setSelectedTicketType(ticketType.id);
-                                  setTicketCount((current) => {
-                                    if (!isSelected) return effectiveMin;
-                                    return Math.min(Math.max(effectiveMin, current), maxSelectable || effectiveMin);
-                                  });
                                 }}
                               >
                                 <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_120px_170px]">
                                   <div>
-                                    <p className="text-sm font-semibold text-slate-900">{ticketType.name}</p>
+                                    <p className="text-sm font-semibold text-slate-900">
+                                      {shortenTicketDisplayName(ticketType.name || ticketType.ticket_type || "Standart")}
+                                    </p>
                                     <p className="text-xs text-slate-500">
                                       {t("remaining")}: {availableAmount}
                                       {minSelectable > 1 && (
@@ -2487,12 +2614,17 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedTicketType(ticketType.id);
-                                        setTicketCount((current) => {
-                                          if (!isSelected) return effectiveMin;
-                                          return Math.max(effectiveMin, current - 1);
+                                        setTicketCountsByType((prev) => {
+                                          const current = Math.max(0, Number(prev[ticketType.id] || 0));
+                                          const nextValue =
+                                            current <= 0 ? 0 : current <= effectiveMin ? 0 : current - 1;
+                                          const next = { ...prev };
+                                          if (nextValue > 0) next[ticketType.id] = nextValue;
+                                          else delete next[ticketType.id];
+                                          return next;
                                         });
                                       }}
-                                      disabled={availableAmount <= 0 || isPastEvent || selectedRowCount <= effectiveMin}
+                                      disabled={availableAmount <= 0 || isPastEvent || rowCount <= 0}
                                       className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       -
@@ -2503,12 +2635,29 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedTicketType(ticketType.id);
-                                        setTicketCount((current) => {
-                                          if (!isSelected) return effectiveMin;
-                                          return Math.min(maxSelectable || effectiveMin, current + 1);
+                                        setTicketCountsByType((prev) => {
+                                          const current = Math.max(0, Number(prev[ticketType.id] || 0));
+                                          const totalSelected = Object.values(prev).reduce(
+                                            (sum, value) => sum + Math.max(0, Number(value || 0)),
+                                            0
+                                          );
+                                          const totalWithoutCurrent = totalSelected - current;
+                                          const globalLimitForThisRow = Math.max(0, maxTicketsPerOrder - totalWithoutCurrent);
+                                          const allowedMax = Math.min(maxSelectable || effectiveMin, globalLimitForThisRow);
+                                          if (allowedMax <= 0) {
+                                            return prev;
+                                          }
+                                          const nextValue =
+                                            current <= 0
+                                              ? Math.max(1, effectiveMin)
+                                              : Math.min(allowedMax, current + 1);
+                                          const next = { ...prev };
+                                          if (nextValue > 0) next[ticketType.id] = nextValue;
+                                          else delete next[ticketType.id];
+                                          return next;
                                         });
                                       }}
-                                      disabled={availableAmount <= 0 || isPastEvent || selectedRowCount >= maxSelectable}
+                                      disabled={availableAmount <= 0 || isPastEvent || rowCount >= maxSelectable}
                                       className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       +
@@ -2539,65 +2688,69 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <button
                         type="button"
                         onClick={() => {
-                          if (!selectedTicket || isPastEvent || isUnapproved) return;
-                          const minQ = Math.min(selectedMinQ, selectedMaxQ);
-                          if (ticketCount < minQ) return;
-                          addItem({
-                            ticketId: selectedTicket.id,
-                            eventId: event.id,
-                            eventTitle: localized.title || event.title,
-                            eventDate: event.date,
-                            eventTime: event.time || "20:00",
-                            venue: localized.venue || event.venue,
-                            location: event.location,
-                            imageUrl: event.image_url,
-                            ticketName: selectedTicket.name || selectedTicket.ticket_type || "Standart",
-                            price: Number(selectedTicket.price || 0),
-                            currency: event.currency,
-                            eventCheckoutFee:
-                              typeof event.checkout_processing_fee === "number" &&
-                              event.checkout_processing_fee > 0
-                                ? event.checkout_processing_fee
-                                : undefined,
-                            quantity: ticketCount,
-                            available: Number(selectedTicket.available || 0),
+                          if (isPastEvent || isUnapproved || selectedPriceTicketEntries.length === 0) return;
+                          selectedPriceTicketEntries.forEach(({ ticket, count }) => {
+                            addItem({
+                              ticketId: ticket.id,
+                              eventId: event.id,
+                              eventTitle: localized.title || event.title,
+                              eventDate: event.date,
+                              eventTime: event.time || "20:00",
+                              venue: localized.venue || event.venue,
+                              location: event.location,
+                              imageUrl: event.image_url,
+                              ticketName: ticket.name || "Standart",
+                              price: Number(ticket.price || 0),
+                              currency: event.currency,
+                              eventCheckoutFee:
+                                typeof event.checkout_processing_fee === "number" &&
+                                event.checkout_processing_fee > 0
+                                  ? event.checkout_processing_fee
+                                  : undefined,
+                              quantity: count,
+                              available: Number(ticket.available || 0),
+                            });
                           });
+                          setTicketCountsByType({});
                           setActionMessage(tCheckout("addedToCart"));
                         }}
                         disabled={
                           isUnapproved ||
-                          !selectedTicket ||
                           isPastEvent ||
-                          ticketCount < Math.min(selectedMinQ, selectedMaxQ)
+                          selectedPriceTicketEntries.length === 0
                         }
                         className="w-full rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
                       >
-                        {tCheckout("addToCart")}
+                        {tCheckout("addToCart")} ({selectedPriceTicketTotalCount})
                       </button>
                     </div>
                   </div>
 
                   <aside className="rounded-2xl border border-slate-200 bg-white p-5 h-fit">
                     <h3 className="mb-4 text-lg font-bold text-slate-900">{t("deinePlatze")}</h3>
-                    {currentEventCartSummary.length > 0 ? (
+                    {selectedPriceTicketEntries.length > 0 ? (
+                      <div className="space-y-2">
+                        <p className="text-xs text-slate-600">
+                          {locale === "de"
+                            ? "Neue Auswahl"
+                            : locale === "en"
+                              ? "New selection"
+                              : "Yeni seçim"}
+                        </p>
+                        <ul className="space-y-1 text-sm text-slate-700">
+                          {selectedPriceTicketEntries.map(({ ticket, count }, idx) => (
+                            <li key={`price-cat-selected-side-${ticket.id}`}>
+                              {idx + 1}. {shortenTicketDisplayName(ticket.name || "Standart")} x {count}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : currentEventCartSummary.length > 0 ? (
                       <div className="space-y-2">
                         <ul className="space-y-1 text-sm text-slate-700">
                           {currentEventCartSummary.map((item, idx) => (
                             <li key={`price-cat-cart-side-${item.name}-${idx}`}>
                               {idx + 1}. {item.name} x {item.quantity}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ) : selectedTicket ? (
-                      <div className="space-y-2">
-                        <p className="text-xs text-slate-600">
-                          Bilet kategorisi: <strong>{shortenTicketDisplayName(selectedTicket.name || selectedTicket.ticket_type || "Standart")}</strong>
-                        </p>
-                        <ul className="space-y-1 text-sm text-slate-700">
-                          {Array.from({ length: ticketCount }).map((_, idx) => (
-                            <li key={`price-cat-selected-side-${idx}`}>
-                              {idx + 1}. {shortenTicketDisplayName(selectedTicket.name || selectedTicket.ticket_type || "Standart")} x 1
                             </li>
                           ))}
                         </ul>
@@ -2611,25 +2764,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             : "Bir bilet kategorisi ve adet seçin."}
                       </p>
                     )}
-
-                    {currentEventCartCount > 0 ? (
-                      <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
-                        <p className="text-sm font-semibold text-emerald-800">
-                          {locale === "de"
-                            ? "Für diese Veranstaltung befinden sich bereits Tickets in Ihrem Warenkorb."
-                            : locale === "en"
-                              ? "You already have tickets for this event in your cart."
-                              : "Bu etkinlik için sepetinizde biletler bulunmaktadır."}
-                        </p>
-                        <p className="mt-1 text-xs text-emerald-700">
-                          {locale === "de"
-                            ? "Gehen Sie zum Warenkorb, um die Zahlung abzuschließen. Sie können weitere Tickets hinzufügen, sofern Ihr Limit es zulässt."
-                            : locale === "en"
-                              ? "Go to your cart to complete payment. You can add more tickets if your order limit allows."
-                              : "Ödemeyi tamamlamak için sepete gidin. Kotanız uygunsa ek bilet de seçebilirsiniz."}
-                        </p>
-                      </div>
-                    ) : null}
 
                     {totalItems > 0 && (
                       <NextLink
