@@ -84,6 +84,7 @@ export default function CheckoutPage() {
   const {
     items,
     removeItem,
+    removeSeatItem,
     updateQuantity,
     updateItemAvailable,
     clearCart,
@@ -911,18 +912,63 @@ export default function CheckoutPage() {
                           <p className="text-xs font-semibold text-slate-700">
                             {t("seatsInCart", { count: item.seatIds.length })}
                           </p>
+                          {/*
+                            Her koltuk satırının yanında "×" → ödemeye gitmeden tek tek koltuk
+                            kaldırılabilsin (ekstra koltuk satışa açılır, fiyat günceller).
+                            Tüm koltukları silmek ürünü sepetten çıkarır.
+                          */}
                           <ul className="mt-1 list-none space-y-0.5 pl-0 text-xs text-slate-600">
                             {item.seatIds.map((seatId, idx) => {
                               const line = item.seatCaptions?.[idx]?.trim() || t("seatLineFallback", { n: idx + 1 });
                               return (
-                                <li key={`${item.ticketId}-seat-${seatId}`} className="truncate" title={line}>
-                                  {line}
+                                <li
+                                  key={`${item.ticketId}-seat-${seatId}`}
+                                  className="flex items-center justify-between gap-2 rounded border border-slate-100 bg-slate-50/60 px-2 py-1"
+                                >
+                                  <span className="truncate" title={line}>
+                                    {line}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSeatItem(item.eventId, seatId)}
+                                    className="flex-shrink-0 rounded p-0.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                                    aria-label={
+                                      locale === "de"
+                                        ? "Platz entfernen"
+                                        : locale === "en"
+                                        ? "Remove seat"
+                                        : "Koltuğu kaldır"
+                                    }
+                                    title={
+                                      locale === "de"
+                                        ? "Diesen Platz aus dem Warenkorb entfernen"
+                                        : locale === "en"
+                                        ? "Remove this seat from cart"
+                                        : "Bu koltuğu sepetten kaldır"
+                                    }
+                                  >
+                                    ×
+                                  </button>
                                 </li>
                               );
                             })}
                           </ul>
                         </div>
                       ) : null}
+                      {/* Daha fazla koltuk eklemek için etkinliğe dön */}
+                      <div className="mt-2">
+                        <SafeNextLink
+                          href={`/${locale}/etkinlik/${item.eventId}`}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-800 hover:underline"
+                        >
+                          <ArrowLeft className="h-3 w-3" aria-hidden />
+                          {locale === "de"
+                            ? "Weiter einkaufen"
+                            : locale === "en"
+                            ? "Continue shopping"
+                            : "Alışverişe devam et"}
+                        </SafeNextLink>
+                      </div>
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <div className="flex items-center gap-2">

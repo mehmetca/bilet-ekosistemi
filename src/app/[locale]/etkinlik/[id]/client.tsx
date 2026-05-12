@@ -1901,6 +1901,47 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               )}
 
+              {/*
+                Sepet hatırlatma banner'ı: bu etkinlikten sepete eklenmiş biletleri bir bakışta göster
+                ve "Sepete git" eylemine yönlendir. Sidebar'daki "Sepette" listesinin yerine geçer;
+                böylece sidebar yalnızca "Yeni seçim + tek Sepete ekle" CTA'sını barındırır.
+              */}
+              {(() => {
+                const totalInCart = cartItems
+                  .filter((i) => i.eventId === event.id)
+                  .reduce(
+                    (sum, i) => sum + (i.seatIds && i.seatIds.length > 0 ? i.seatIds.length : i.quantity),
+                    0
+                  );
+                if (totalInCart <= 0) return null;
+                const bannerText =
+                  locale === "de"
+                    ? `Sie haben ${totalInCart} Ticket${totalInCart > 1 ? "s" : ""} dieser Veranstaltung im Warenkorb.`
+                    : locale === "en"
+                    ? `You have ${totalInCart} ticket${totalInCart > 1 ? "s" : ""} from this event in your cart.`
+                    : `Bu etkinlikten sepetinizde ${totalInCart} bilet bekliyor.`;
+                const goToCartLabel =
+                  locale === "de" ? "Zum Warenkorb" : locale === "en" ? "Go to cart" : "Sepete git";
+                return (
+                  <div className="mb-6 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex items-start gap-3">
+                      <Ticket className="mt-0.5 h-5 w-5 flex-shrink-0 text-emerald-700" aria-hidden />
+                      <p className="text-sm font-semibold text-emerald-900 sm:text-base">
+                        {bannerText}
+                      </p>
+                    </div>
+                    <NextLink
+                      href={`/${locale}/sepet`}
+                      prefetch={false}
+                      className="inline-flex flex-shrink-0 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
+                    >
+                      {goToCartLabel} ({totalInCart})
+                      <ChevronRight className="h-4 w-4" aria-hidden />
+                    </NextLink>
+                  </div>
+                );
+              })()}
+
               {/* Bestplatzbuchung / Saalplanbuchung – ikonlu seçim */}
               {!isExternalOnlyEvent && (
                 <div className="mb-8 grid sm:grid-cols-2 gap-4">
@@ -2199,12 +2240,10 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         )}
                       </div>
                       {/*
-                        Sağ: Deine Plätze sidebar
-                        İki bölümlü tasarım — dil değişimi, sayfa yenileme veya sepet zaten doluyken
-                        kullanıcının kafası karışmasın diye:
-                          1) [Sepette]    → bu etkinlik için sepetteki koltuklar (her zaman görünür)
-                          2) [Yeni seçim] → şu anda planda seçilen ama henüz sepete eklenmemiş koltuklar
-                        Hiçbiri yoksa "Plandan koltuk seçin" mesajı çıkar.
+                        Sağ: "Yeni seçim" sidebar — yalnızca şu anda plandan seçilen ama henüz sepete
+                        eklenmemiş koltukları gösterir. Tek bir "Sepete ekle" CTA'sı vardır.
+                        Sepette zaten bulunan biletler için sayfanın üstündeki yeşil banner ile
+                        "Sepete git" yönlendirmesi sağlanır (iki ana eylem yan yana durmasın diye).
                       */}
                       <aside className="lg:sticky lg:top-6 self-start rounded-xl border border-slate-200 bg-slate-50/80 p-4 h-fit">
                         <h3 className="text-sm font-bold text-slate-800 mb-3">{t("deinePlatze")}</h3>
@@ -2249,33 +2288,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             };
                           };
 
-                          // Yeni seçim listesi (henüz sepete eklenmemiş)
                           const selectedSeatsList: SeatLine[] = Array.from(selectedSeatIds).map(buildSeatLine);
-                          // Sepetteki koltukların listesi (cart kaynağı tek doğruluk; etiketleri yerinde alır)
-                          const cartSeatLineMap = new Map<string, SeatLine>();
-                          for (const it of cartItems) {
-                            if (it.eventId !== event.id) continue;
-                            for (let i = 0; i < (it.seatIds || []).length; i++) {
-                              const id = it.seatIds![i]!;
-                              if (cartSeatLineMap.has(id)) continue;
-                              const built = buildSeatLine(id);
-                              cartSeatLineMap.set(id, {
-                                ...built,
-                                price:
-                                  Number(it.price || 0) || built.price,
-                                ticketName: (it.ticketName || built.ticketName) as string,
-                                venueLine:
-                                  (it.seatCaptions || [])[i] || built.venueLine,
-                              });
-                            }
-                          }
-                          const cartSeatsList: SeatLine[] = Array.from(cartSeatLineMap.values());
-
                           const selectedTotal = selectedSeatsList.reduce(
-                            (sum, s) => sum + s.price,
-                            0
-                          );
-                          const cartTotal = cartSeatsList.reduce(
                             (sum, s) => sum + s.price,
                             0
                           );
@@ -2294,7 +2308,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             seatIdsByTicketId.set(s.ticketId, arr);
                           });
 
-                          if (cartSeatsList.length === 0 && selectedSeatsList.length === 0) {
+                          if (selectedSeatsList.length === 0) {
                             return (
                               <p className="text-sm text-slate-500 py-4">
                                 {locale === "de"
@@ -2306,83 +2320,17 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             );
                           }
 
-                          const cartBadge =
-                            locale === "de" ? "Im Warenkorb" : locale === "en" ? "In cart" : "Sepette";
                           const newSelectionBadge =
                             locale === "de"
                               ? "Neue Auswahl"
                               : locale === "en"
                               ? "New selection"
                               : "Yeni seçim";
-                          const goToCart =
-                            locale === "de"
-                              ? "Zum Warenkorb"
-                              : locale === "en"
-                              ? "Go to cart"
-                              : "Sepete git";
 
                           return (
                             <>
-                              {cartSeatsList.length > 0 && (
-                                <section className="mb-4">
-                                  <div className="mb-2 flex items-center justify-between gap-2">
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                                      {cartBadge} ({cartSeatsList.length})
-                                    </span>
-                                    <span className="text-xs font-semibold text-slate-700">
-                                      {formatPrice(cartTotal, event.currency)}
-                                    </span>
-                                  </div>
-                                  <ul className="space-y-2">
-                                    {cartSeatsList.map((item) => (
-                                      <li
-                                        key={`cart-${item.seatId}`}
-                                        className="flex items-center justify-between gap-2 rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 py-2 text-sm"
-                                      >
-                                        <span className="text-slate-700 truncate" title={item.venueLine}>
-                                          {item.venueLine}
-                                        </span>
-                                        <span className="font-semibold text-emerald-700 flex-shrink-0">
-                                          {formatPrice(item.price, event.currency)}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            void handleSeatToggle(item.seatId);
-                                          }}
-                                          className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
-                                          aria-label="Kaldır"
-                                          title={
-                                            locale === "de"
-                                              ? "Aus Warenkorb entfernen"
-                                              : locale === "en"
-                                              ? "Remove from cart"
-                                              : "Sepetten çıkar"
-                                          }
-                                        >
-                                          ×
-                                        </button>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                  <NextLink
-                                    href={`/${locale}/sepet`}
-                                    prefetch={false}
-                                    className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                                  >
-                                    {goToCart} ({cartSeatsList.length})
-                                  </NextLink>
-                                </section>
-                              )}
-
                               {selectedSeatsList.length > 0 && (
-                                <section
-                                  className={
-                                    cartSeatsList.length > 0
-                                      ? "border-t border-slate-200 pt-4"
-                                      : ""
-                                  }
-                                >
+                                <section>
                                   <div className="mb-2 flex items-center justify-between gap-2">
                                     <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-800">
                                       {newSelectionBadge} ({selectedSeatsList.length})
