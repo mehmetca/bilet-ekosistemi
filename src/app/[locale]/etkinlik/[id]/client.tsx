@@ -201,40 +201,15 @@ function getTicketForSection(
   if (!availableTickets.length) return { ticket: { id: "", name: "", price: 0, available: 0 }, matchedBy: "index" };
   const label = (section.ticket_type_label ?? "").trim();
   const sectionName = (section.name ?? "").trim();
-  const norm = (s: string) => s.trim().toLowerCase();
-  const lowLabel = norm(label);
-  const lowSection = norm(sectionName);
-
-  // 1) Birebir ticket adı = ticket_type_label
-  const byLabel = lowLabel
-    ? availableTickets.find((t) => norm(t.name || "") === lowLabel)
+  const byLabel = label
+    ? availableTickets.find((t) => (t.name || "").trim().toLowerCase() === label.toLowerCase())
     : null;
   if (byLabel) return { ticket: byLabel, matchedBy: "name" };
-
-  // 2) Birebir ticket adı = section.name (örn. "Orta salon - VIP")
-  const bySectionName = lowSection
-    ? availableTickets.find((t) => norm(t.name || "") === lowSection)
-    : null;
+  const bySectionName =
+    !label && sectionName
+      ? availableTickets.find((t) => (t.name || "").trim().toLowerCase() === sectionName.toLowerCase())
+      : null;
   if (bySectionName) return { ticket: bySectionName, matchedBy: "name" };
-
-  // 3) ticket adı, ticket_type_label ile bitsin (örn. ticket="Orta salon - VIP", label="VIP")
-  //    Bu sayede tekrar etmiş adlardan ("Orta salon - VIP VIP") veya kullanıcı tarafından
-  //    serbest düzenlenmiş adlardan da doğru eşleşme yakalanır.
-  if (lowLabel) {
-    const bySuffix = availableTickets.find((t) => {
-      const n = norm(t.name || "");
-      if (!n) return false;
-      return (
-        n === lowLabel ||
-        n.endsWith(" - " + lowLabel) ||
-        n.endsWith(" " + lowLabel) ||
-        n.endsWith("-" + lowLabel)
-      );
-    });
-    if (bySuffix) return { ticket: bySuffix, matchedBy: "name" };
-  }
-
-  // 4) Son çare: sıra (index) eşlemesi.
   const byIndex = availableTickets[sectionIndex];
   return { ticket: byIndex ?? availableTickets[0], matchedBy: "index" };
 }
@@ -252,24 +227,12 @@ function getTicketForRow(
   if (rowL) {
     const byRow = availableTickets.find((t) => norm(t.name || "") === norm(rowL));
     if (byRow) return { ticket: byRow, matchedBy: "name" };
-    const rl = norm(rowL);
-    // Ad sonu eşleşmesi: ticket="Orta salon - VIP" / rowL="VIP" gibi durumlar.
-    const byRowSuffix = availableTickets.find((t) => {
-      const n = norm(t.name || "");
-      if (!n) return false;
-      return (
-        n === rl ||
-        n.endsWith(" - " + rl) ||
-        n.endsWith(" " + rl) ||
-        n.endsWith("-" + rl)
-      );
-    });
-    if (byRowSuffix) return { ticket: byRowSuffix, matchedBy: "name" };
     if (sectionName) {
       const composite = `${sectionName} ${rowL}`.trim();
       const byComposite = availableTickets.find((t) => norm(t.name || "") === norm(composite));
       if (byComposite) return { ticket: byComposite, matchedBy: "name" };
       const sn = norm(sectionName);
+      const rl = norm(rowL);
       const bySectionPlus = availableTickets.find((t) => {
         const n = norm(t.name || "");
         return n === `${sn} ${rl}` || (n.startsWith(`${sn} `) && (n.endsWith(` ${rl}`) || n.endsWith(rl)));
@@ -982,11 +945,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const { addItem, removeSeatItem, totalItems, items: cartItems } = useCart();
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
-  /** Stoklu biletler (satın alma UI’si bunu kullanmalı; tükenmiş satırlar ayrı kategori gibi görünmesin). */
-  const availableTickets = useMemo(
-    () => ticketState.filter((ticket) => Number(ticket.available || 0) > 0),
-    [ticketState]
-  );
+  const availableTickets = ticketState.filter((ticket) => Number(ticket.available || 0) > 0);
   const hasSeatingPlan = !!(event as Event & { seating_plan_id?: string }).seating_plan_id;
   const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
   const parsedDescription = useMemo(() => parseEventDescription(localized.description || event.description), [localized.description, event.description]);
@@ -1132,18 +1091,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     const minQ = Math.min(selectedMinQ, selectedMaxQ);
     if (minQ > 1 && ticketCount < minQ) setTicketCount(minQ);
   }, [selectedTicketType, selectedMinQ, selectedMaxQ]);
-
-  /** Seçili bilet satırı artık stokta yoksa (ör. tükenmiş eski "VIP Bilet") geçerli ilk satıra sıçar. */
-  useEffect(() => {
-    if (availableTickets.length === 0) {
-      if (selectedTicketType !== "") setSelectedTicketType("");
-      return;
-    }
-    if (!availableTickets.some((t) => t.id === selectedTicketType)) {
-      setSelectedTicketType(availableTickets[0]!.id);
-      setTicketCount(1);
-    }
-  }, [availableTickets, selectedTicketType]);
 
   const seatingPlanId = (event as Event & { seating_plan_id?: string }).seating_plan_id;
 
@@ -2198,17 +2145,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           </div>
                         )}
                       </div>
-                      {/*
-                        Sağ: Deine Plätze sidebar
-                        İki bölümlü tasarım — dil değişimi, sayfa yenileme veya sepet zaten doluyken
-                        kullanıcının kafası karışmasın diye:
-                          1) [Sepette]    → bu etkinlik için sepetteki koltuklar (her zaman görünür)
-                          2) [Yeni seçim] → şu anda planda seçilen ama henüz sepete eklenmemiş koltuklar
-                        Hiçbiri yoksa "Plandan koltuk seçin" mesajı çıkar.
-                      */}
+                      {/* Sağ: Deine Platze sidebar */}
                       <aside className="lg:sticky lg:top-6 self-start rounded-xl border border-slate-200 bg-slate-50/80 p-4 h-fit">
                         <h3 className="text-sm font-bold text-slate-800 mb-3">{t("deinePlatze")}</h3>
-                        {(() => {
+                        {selectedSeatIds.size > 0 && seatingPlanData ? (
+                          availableTickets.length > 0 ? (() => {
                           const seatToSection = new Map<string, SeatPlanSection>();
                           const seatToRow = new Map<string, SeatPlanRow>();
                           seatingPlanData.forEach((sec) =>
@@ -2219,310 +2160,244 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               })
                             )
                           );
-
-                          type SeatLine = {
-                            seatId: string;
-                            venueLine: string;
-                            price: number;
-                            ticketId: string;
-                            ticketName: string;
-                          };
-
-                          const buildSeatLine = (seatId: string): SeatLine => {
+                          let totalCents = 0;
+                          selectedSeatIds.forEach((seatId) => {
+                            const sec = seatToSection.get(seatId);
+                            const row = seatToRow.get(seatId);
+                            const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
+                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, availableTickets);
+                            totalCents += Number(tk.price || 0) * 100;
+                          });
+                          const totalPrice = totalCents / 100;
+                          const selectedSeatsList = Array.from(selectedSeatIds).map((seatId) => {
                             const sec = seatToSection.get(seatId);
                             const row = seatToRow.get(seatId);
                             const seat = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
                             const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
-                            const { ticket: tk } = getTicketForRow(
-                              sec ?? { id: "", name: "", rows: [] },
-                              row,
-                              sectionIdx,
-                              availableTickets
-                            );
+                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, availableTickets);
                             const fallbackLine = `${sec?.name ?? "—"} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${seat?.seat_label ?? "—"}`;
                             return {
                               seatId,
+                              sectionName: sec?.name ?? "—",
+                              rowLabel: row?.row_label ?? "—",
+                              seatLabel: seat?.seat_label ?? "—",
                               venueLine: duisburgSeatCaptionById.get(seatId) ?? fallbackLine,
                               price: Number(tk.price || 0),
-                              ticketId: tk.id || "",
                               ticketName: tk.name || "Bilet",
                             };
-                          };
-
-                          // Yeni seçim listesi (henüz sepete eklenmemiş)
-                          const selectedSeatsList: SeatLine[] = Array.from(selectedSeatIds).map(buildSeatLine);
-                          // Sepetteki koltukların listesi (cart kaynağı tek doğruluk; etiketleri yerinde alır)
-                          const cartSeatLineMap = new Map<string, SeatLine>();
-                          for (const it of cartItems) {
-                            if (it.eventId !== event.id) continue;
-                            for (let i = 0; i < (it.seatIds || []).length; i++) {
-                              const id = it.seatIds![i]!;
-                              if (cartSeatLineMap.has(id)) continue;
-                              const built = buildSeatLine(id);
-                              cartSeatLineMap.set(id, {
-                                ...built,
-                                price:
-                                  Number(it.price || 0) || built.price,
-                                ticketName: (it.ticketName || built.ticketName) as string,
-                                venueLine:
-                                  (it.seatCaptions || [])[i] || built.venueLine,
-                              });
-                            }
-                          }
-                          const cartSeatsList: SeatLine[] = Array.from(cartSeatLineMap.values());
-
-                          const selectedTotal = selectedSeatsList.reduce(
-                            (sum, s) => sum + s.price,
-                            0
-                          );
-                          const cartTotal = cartSeatsList.reduce(
-                            (sum, s) => sum + s.price,
-                            0
-                          );
+                          });
+                          const seatIdsByTicketId = new Map<string, string[]>();
+                          selectedSeatIds.forEach((seatId) => {
+                            const sec = seatToSection.get(seatId);
+                            const row = seatToRow.get(seatId);
+                            const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
+                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, availableTickets);
+                            const arr = seatIdsByTicketId.get(tk.id) ?? [];
+                            arr.push(seatId);
+                            seatIdsByTicketId.set(tk.id, arr);
+                          });
+                          const atSeatLimit = selectedSeatIds.size >= maxTicketsPerOrder;
                           const processingFee =
-                            typeof event.checkout_processing_fee === "number" &&
-                            event.checkout_processing_fee > 0
+                            typeof event.checkout_processing_fee === "number" && event.checkout_processing_fee > 0
                               ? Number(event.checkout_processing_fee)
                               : 0;
-                          const atSeatLimit = selectedSeatIds.size >= maxTicketsPerOrder;
-
-                          const seatIdsByTicketId = new Map<string, string[]>();
-                          selectedSeatsList.forEach((s) => {
-                            if (!s.ticketId) return;
-                            const arr = seatIdsByTicketId.get(s.ticketId) ?? [];
-                            arr.push(s.seatId);
-                            seatIdsByTicketId.set(s.ticketId, arr);
-                          });
-
-                          if (cartSeatsList.length === 0 && selectedSeatsList.length === 0) {
-                            return (
-                              <p className="text-sm text-slate-500 py-4">
-                                {locale === "de"
-                                  ? "Wählen Sie Plätze im Plan."
-                                  : locale === "en"
-                                  ? "Select seats from the seating plan."
-                                  : "Plandan koltuk seçin."}
-                              </p>
-                            );
-                          }
-
-                          const cartBadge =
-                            locale === "de" ? "Im Warenkorb" : locale === "en" ? "In cart" : "Sepette";
-                          const newSelectionBadge =
-                            locale === "de"
-                              ? "Neue Auswahl"
-                              : locale === "en"
-                              ? "New selection"
-                              : "Yeni seçim";
-                          const goToCart =
-                            locale === "de"
-                              ? "Zum Warenkorb"
-                              : locale === "en"
-                              ? "Go to cart"
-                              : "Sepete git";
-
+                          const grandTotal = totalPrice + processingFee;
                           return (
                             <>
-                              {cartSeatsList.length > 0 && (
-                                <section className="mb-4">
-                                  <div className="mb-2 flex items-center justify-between gap-2">
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-                                      {cartBadge} ({cartSeatsList.length})
+                              <ul className="mb-4 space-y-2">
+                                {selectedSeatsList.map((item) => (
+                                  <li key={item.seatId} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-slate-100 px-3 py-2 text-sm shadow-sm">
+                                    <span className="text-slate-700 truncate" title={item.venueLine}>
+                                      {item.venueLine}
                                     </span>
-                                    <span className="text-xs font-semibold text-slate-700">
-                                      {formatPrice(cartTotal, event.currency)}
-                                    </span>
-                                  </div>
-                                  <ul className="space-y-2">
-                                    {cartSeatsList.map((item) => (
-                                      <li
-                                        key={`cart-${item.seatId}`}
-                                        className="flex items-center justify-between gap-2 rounded-lg border border-emerald-100 bg-emerald-50/70 px-3 py-2 text-sm"
-                                      >
-                                        <span className="text-slate-700 truncate" title={item.venueLine}>
-                                          {item.venueLine}
-                                        </span>
-                                        <span className="font-semibold text-emerald-700 flex-shrink-0">
-                                          {formatPrice(item.price, event.currency)}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            void handleSeatToggle(item.seatId);
-                                          }}
-                                          className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
-                                          aria-label="Kaldır"
-                                          title={
-                                            locale === "de"
-                                              ? "Aus Warenkorb entfernen"
-                                              : locale === "en"
-                                              ? "Remove from cart"
-                                              : "Sepetten çıkar"
-                                          }
-                                        >
-                                          ×
-                                        </button>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                  <NextLink
-                                    href={`/${locale}/sepet`}
-                                    prefetch={false}
-                                    className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700"
-                                  >
-                                    {goToCart} ({cartSeatsList.length})
-                                  </NextLink>
-                                </section>
+                                    <span className="font-semibold text-primary-600 flex-shrink-0">{formatPrice(item.price, event.currency)}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        void handleSeatToggle(item.seatId);
+                                      }}
+                                      className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
+                                      aria-label="Kaldır"
+                                    >
+                                      ×
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                              {atSeatLimit && (
+                                <p className="text-xs text-amber-600 mb-2">
+                                  {locale === "de" ? `Max. ${maxTicketsPerOrder} Plätze pro Bestellung.` : `Sipariş başına en fazla ${maxTicketsPerOrder} bilet.`}
+                                </p>
                               )}
-
-                              {selectedSeatsList.length > 0 && (
-                                <section
-                                  className={
-                                    cartSeatsList.length > 0
-                                      ? "border-t border-slate-200 pt-4"
-                                      : ""
-                                  }
-                                >
-                                  <div className="mb-2 flex items-center justify-between gap-2">
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 text-xs font-semibold text-primary-800">
-                                      {newSelectionBadge} ({selectedSeatsList.length})
-                                    </span>
-                                    <span className="text-xs font-semibold text-slate-700">
-                                      {formatPrice(selectedTotal, event.currency)}
-                                    </span>
-                                  </div>
-                                  <ul className="space-y-2">
-                                    {selectedSeatsList.map((item) => (
-                                      <li
-                                        key={`sel-${item.seatId}`}
-                                        className="flex items-center justify-between gap-2 rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm shadow-sm"
-                                      >
-                                        <span className="text-slate-700 truncate" title={item.venueLine}>
-                                          {item.venueLine}
-                                        </span>
-                                        <span className="font-semibold text-primary-600 flex-shrink-0">
-                                          {formatPrice(item.price, event.currency)}
-                                        </span>
-                                        <button
-                                          type="button"
-                                          onClick={() => {
-                                            void handleSeatToggle(item.seatId);
-                                          }}
-                                          className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
-                                          aria-label="Kaldır"
-                                        >
-                                          ×
-                                        </button>
-                                      </li>
-                                    ))}
-                                  </ul>
-                                  {availableTickets.length > 0 ? (
-                                    <>
-                                      {atSeatLimit && (
-                                        <p className="mt-2 text-xs text-amber-600">
-                                          {locale === "de"
-                                            ? `Max. ${maxTicketsPerOrder} Plätze pro Bestellung.`
-                                            : `Sipariş başına en fazla ${maxTicketsPerOrder} bilet.`}
-                                        </p>
-                                      )}
-                                      <div className="mt-3 mb-3 space-y-1 text-sm text-slate-700">
-                                        <p>
-                                          <strong>{selectedSeatIds.size}</strong>{" "}
-                                          {locale === "de"
-                                            ? "Platze Gewahlt"
-                                            : locale === "en"
-                                            ? "Seats Selected"
-                                            : "Koltuk Seçildi"}{" "}
-                                          <strong>
-                                            {locale === "de"
-                                              ? "Gesamt"
-                                              : locale === "en"
-                                              ? "Total"
-                                              : "Toplam"}{" "}
-                                            {formatPrice(selectedTotal, event.currency)}
-                                          </strong>
-                                        </p>
-                                        <p>
-                                          {locale === "de"
-                                            ? "Bearbeitungsgebuhr"
-                                            : locale === "en"
-                                            ? "Processing Fee"
-                                            : "İşlem Ücreti"}{" "}
-                                          <strong>{formatPrice(processingFee, event.currency)}</strong>
-                                        </p>
-                                        <p className="font-semibold text-slate-900">
-                                          {locale === "de"
-                                            ? "Gesamtsumme"
-                                            : locale === "en"
-                                            ? "Grand Total"
-                                            : "Genel Toplam"}{" "}
-                                          {formatPrice(selectedTotal + processingFee, event.currency)}
-                                        </p>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          if (isPastEvent || isUnapproved) return;
-                                          const eventPayload = {
-                                            eventId: event.id,
-                                            eventTitle: localized.title || event.title,
-                                            eventDate: event.date,
-                                            eventTime: event.time || "20:00",
-                                            venue: localized.venue || event.venue,
-                                            location: event.location,
-                                            imageUrl: event.image_url,
-                                            currency: event.currency,
-                                            eventCheckoutFee:
-                                              typeof event.checkout_processing_fee === "number" &&
-                                              event.checkout_processing_fee > 0
-                                                ? event.checkout_processing_fee
-                                                : undefined,
-                                          };
-                                          seatIdsByTicketId.forEach((seatIds, ticketId) => {
-                                            const tk = availableTickets.find((x) => x.id === ticketId);
-                                            if (!tk) return;
-                                            const seatCaptions = seatIds.map(
-                                              (id) =>
-                                                duisburgSeatCaptionById.get(id) ??
-                                                (() => {
-                                                  const sec = seatToSection.get(id);
-                                                  const row = seatToRow.get(id);
-                                                  const st = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === id);
-                                                  return `${sec?.name ?? ""} · ${rowLabelWord} ${row?.row_label ?? ""} · ${seatLabelWord} ${st?.seat_label ?? id}`;
-                                                })()
-                                            );
-                                            addItem({
-                                              ...eventPayload,
-                                              ticketId: tk.id,
-                                              ticketName: tk.name || "Bilet",
-                                              price: Number(tk.price || 0),
-                                              quantity: seatIds.length,
-                                              seatIds,
-                                              seatCaptions,
-                                              available: Number(tk.available || 0),
-                                            });
-                                          });
-                                          setActionMessage(tCheckout("addedToCart"));
-                                          setSelectedSeatIds(new Set());
-                                          setHasSeatSelectionAddedToCart(true);
-                                        }}
-                                        disabled={isPastEvent || isUnapproved || selectedSeatIds.size > maxTicketsPerOrder}
-                                        className="w-full rounded-xl bg-primary-600 px-4 py-3 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
-                                      >
-                                        {tCheckout("addToCart")} ({selectedSeatIds.size})
-                                      </button>
-                                    </>
-                                  ) : (
-                                    <p className="mt-3 text-sm text-rose-800 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
-                                      Satışta bilet yok; sepete eklenemez. Yönetimden bilet stoğu açın veya
-                                      &quot;Fiyat kategorisine göre&quot; modunu kullanın.
-                                    </p>
-                                  )}
-                                </section>
-                              )}
+                              <div className="mb-3 space-y-1 text-sm text-slate-700">
+                                <p>
+                                  <strong>{selectedSeatIds.size}</strong>{" "}
+                                  {locale === "de" ? "Platze Gewahlt" : locale === "en" ? "Seats Selected" : "Koltuk Seçildi"}{" "}
+                                  <strong>{locale === "de" ? "Gesamt" : locale === "en" ? "Total" : "Toplam"} {formatPrice(totalPrice, event.currency)}</strong>
+                                </p>
+                                <p>
+                                  {locale === "de" ? "Bearbeitungsgebuhr" : locale === "en" ? "Processing Fee" : "İşlem Ücreti"}{" "}
+                                  <strong>{formatPrice(processingFee, event.currency)}</strong>
+                                </p>
+                                <p className="font-semibold text-slate-900">
+                                  {locale === "de" ? "Gesamtsumme" : locale === "en" ? "Grand Total" : "Genel Toplam"}{" "}
+                                  {formatPrice(grandTotal, event.currency)}
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isPastEvent || isUnapproved) return;
+                                  const eventPayload = {
+                                    eventId: event.id,
+                                    eventTitle: localized.title || event.title,
+                                    eventDate: event.date,
+                                    eventTime: event.time || "20:00",
+                                    venue: localized.venue || event.venue,
+                                    location: event.location,
+                                    imageUrl: event.image_url,
+                                    currency: event.currency,
+                                    eventCheckoutFee:
+                                      typeof event.checkout_processing_fee === "number" &&
+                                      event.checkout_processing_fee > 0
+                                        ? event.checkout_processing_fee
+                                        : undefined,
+                                  };
+                                  seatIdsByTicketId.forEach((seatIds, ticketId) => {
+                                    const tk = availableTickets.find((x) => x.id === ticketId);
+                                    if (!tk) return;
+                                    const seatCaptions = seatIds.map(
+                                      (id) =>
+                                        duisburgSeatCaptionById.get(id) ??
+                                        (() => {
+                                          const sec = seatToSection.get(id);
+                                          const row = seatToRow.get(id);
+                                          const st = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === id);
+                                          return `${sec?.name ?? ""} · ${rowLabelWord} ${row?.row_label ?? ""} · ${seatLabelWord} ${st?.seat_label ?? id}`;
+                                        })()
+                                    );
+                                    addItem({
+                                      ...eventPayload,
+                                      ticketId: tk.id,
+                                      ticketName: tk.name || "Bilet",
+                                      price: Number(tk.price || 0),
+                                      quantity: seatIds.length,
+                                      seatIds,
+                                      seatCaptions,
+                                      available: Number(tk.available || 0),
+                                    });
+                                  });
+                                  setActionMessage(tCheckout("addedToCart"));
+                                  setSelectedSeatIds(new Set());
+                                  setHasSeatSelectionAddedToCart(true);
+                                }}
+                                disabled={isPastEvent || isUnapproved || selectedSeatIds.size > maxTicketsPerOrder}
+                                className="w-full rounded-xl bg-primary-600 px-4 py-3 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
+                              >
+                                {tCheckout("addToCart")} ({selectedSeatIds.size})
+                              </button>
                             </>
                           );
-                        })()}
+                        })() : (() => {
+                          const seatToSection = new Map<string, SeatPlanSection>();
+                          const seatToRow = new Map<string, SeatPlanRow>();
+                          seatingPlanData.forEach((sec) =>
+                            sec.rows.forEach((row) =>
+                              row.seats.forEach((seat) => {
+                                seatToSection.set(seat.id, sec);
+                                seatToRow.set(seat.id, row);
+                              })
+                            )
+                          );
+                          const selectedSeatsList = Array.from(selectedSeatIds).map((seatId) => {
+                            const sec = seatToSection.get(seatId);
+                            const row = seatToRow.get(seatId);
+                            const seat = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
+                            const fallbackLine = `${sec?.name ?? "—"} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${seat?.seat_label ?? "—"}`;
+                            return {
+                              seatId,
+                              sectionName: sec?.name ?? "—",
+                              rowLabel: row?.row_label ?? "—",
+                              seatLabel: seat?.seat_label ?? "—",
+                              venueLine: duisburgSeatCaptionById.get(seatId) ?? fallbackLine,
+                            };
+                          });
+                          return (
+                            <div className="space-y-3">
+                              <p className="text-sm text-rose-800 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2">
+                                Satışta bilet yok; sepete eklenemez. Yönetimden bilet stoğu açın veya &quot;Fiyat kategorisine göre&quot; modunu kullanın.
+                              </p>
+                              <ul className="space-y-2">
+                                {selectedSeatsList.map((item) => (
+                                  <li key={item.seatId} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-slate-100 px-3 py-2 text-sm shadow-sm">
+                                    <span className="text-slate-700 truncate" title={item.venueLine}>
+                                      {item.venueLine}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        void handleSeatToggle(item.seatId);
+                                      }}
+                                      className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
+                                      aria-label="Kaldır"
+                                    >
+                                      ×
+                                    </button>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        })()
+                        ) : (
+                          hasSeatSelectionAddedToCart || cartSeatIdsForEvent.size > 0 ? (
+                            <div className="space-y-3 py-4">
+                              <p className="text-sm text-slate-700">
+                                {hasSeatSelectionAddedToCart
+                                  ? locale === "de"
+                                    ? "Ihre ausgewählten Plätze wurden in den Warenkorb gelegt."
+                                    : locale === "en"
+                                      ? "Your selected seats have been added to the shopping cart."
+                                      : "Seçtiğiniz koltuklar alışveriş sepetinize eklendi."
+                                  : locale === "de"
+                                    ? "Für diese Veranstaltung befinden sich bereits Plätze in Ihrem Warenkorb."
+                                    : locale === "en"
+                                      ? "You already have seats for this event in your shopping cart."
+                                      : "Bu etkinlik için sepetinizde koltuklar bulunmaktadır."}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {hasSeatSelectionAddedToCart
+                                  ? locale === "de"
+                                    ? "Bitte gehen Sie zum Warenkorb, um Ihre Buchung abzuschließen."
+                                    : locale === "en"
+                                      ? "Please go to your shopping cart to complete the payment."
+                                      : "Lütfen alışveriş sepetine gidip ödemenizi tamamlayın."
+                                  : locale === "de"
+                                    ? "Bitte gehen Sie zum Warenkorb, um die Zahlung abzuschließen. Weitere Plätze können Sie im Plan auswählen, sofern Ihr Limit es zulässt."
+                                    : locale === "en"
+                                      ? "Go to your cart to complete payment. You can add more seats from the plan if your order limit allows."
+                                      : "Ödemeyi tamamlamak için sepete gidin. Kotanız uygunsa plandan ek koltuk da seçebilirsiniz."}
+                              </p>
+                              <div className="flex flex-col gap-2">
+                                <NextLink
+                                  href={`/${locale}/sepet`}
+                                  prefetch={false}
+                                  className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+                                >
+                                  {tCheckout("goToCheckout")}
+                                </NextLink>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-sm text-slate-500 py-4">
+                              {locale === "de"
+                                ? "Wählen Sie Plätze im Plan."
+                                : locale === "en"
+                                  ? "Select seats from the seating plan."
+                                  : "Plandan koltuk seçin."}
+                            </p>
+                          )
+                        )}
                       </aside>
                     </div>
                   ) : (
@@ -2535,7 +2410,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               {!isExternalOnlyEvent && bookingMode === "price" && (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
                   <div>
-                    {availableTickets.length === 0 ? (
+                    {ticketState.length === 0 ? (
                       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
                         {t("noTicketsAvailable")}
                       </div>
@@ -2547,7 +2422,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           <span className="text-right">{t("quantity")}</span>
                         </div>
                         <div className="divide-y divide-slate-200">
-                          {availableTickets.map((ticketType) => {
+                          {ticketState.map((ticketType) => {
                             const availableAmount = Number(ticketType.available || 0);
                             const isSoldOut = availableAmount <= 0;
                             if (isSoldOut) {

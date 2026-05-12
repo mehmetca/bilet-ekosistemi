@@ -28,7 +28,6 @@ import {
 import { buildEventDescription, parseEventDescription } from "@/lib/eventMeta";
 import AdminImageUpload from "@/components/AdminImageUpload";
 import { formatPrice } from "@/lib/formatPrice";
-import { getTicketSortRank } from "@/lib/ticket-sort";
 
 const STEPS = [
   { id: 1, label: "Temel bilgiler" },
@@ -52,13 +51,7 @@ const BILET_TURU_SECENEKLERI = [
 
 const SALON_PLAN_VALUE_PREFIX = "salon_plan|";
 
-/**
- * Sihirbaz / etkinlik eşlemesi: bilet adını bölüm adı + kategoriden üretir.
- * Tekrarı önler:
- *   - Bölüm adı zaten kategori ile bitiyorsa (örn. "Orta salon - VIP"), kategoriyi tekrar EKLEMEZ → "Orta salon - VIP"
- *   - Bölüm adı kategoriden başlıyorsa (örn. "VIP Blok A"), olduğu gibi bırakır → "VIP Blok A"
- *   - Aksi halde bölüm adı + kategoriyi birleştirir (örn. "Blok A" + "vip" → "Blok A vip")
- */
+/** Sihirbaz / etkinlik eşlemesi: sırada sadece "vip" yazılmışsa bölüm adı ile birleştirir (örn. Blok A + vip → Blok A vip). */
 function expandPlanTicketDisplayName(
   sectionName: string,
   rowTicketType: string | null | undefined,
@@ -72,11 +65,7 @@ function expandPlanTicketDisplayName(
   if (!sn) return base;
   const lowBase = base.toLowerCase();
   const lowSn = sn.toLowerCase();
-  if (lowBase === lowSn) return sn;
-  if (lowBase.startsWith(lowSn + " ")) return base;
-  if (lowSn.endsWith(" - " + lowBase) || lowSn.endsWith(" " + lowBase) || lowSn.endsWith("-" + lowBase)) {
-    return sn;
-  }
+  if (lowBase.startsWith(lowSn + " ") || lowBase === lowSn) return base;
   if (rt) return `${sn} ${rt}`.trim();
   if (st) return `${sn} ${st}`.trim();
   return base;
@@ -469,45 +458,31 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
     })();
   }, [selectedSeatingPlanId]);
 
-  /**
-   * Oturum planındaki koltuk etiketlerine göre bilet satırlarını yeniden oluşturur.
-   * - resetPrices=false (varsayılan): aynı isimdeki biletin mevcut fiyatını korur. Yeni etkinlik açılışında kullanılır.
-   * - resetPrices=true: tüm fiyatları 0'a sıfırlar, biletleri VIP → Kategori 1..10 → diğer sırasıyla diziyor.
-   *   "Tek Tıkla Sırala" butonu bu modu kullanır; kaydedildiğinde DB'deki eski biletler de silinir.
-   */
-  const fillTicketsFromPlan = useCallback((resetPrices = false) => {
+  /** Oturum planındaki koltuk etiketlerine göre bilet satırları; mevcut fiyatları aynı isimde korur */
+  const fillTicketsFromPlan = useCallback(() => {
     setTickets((prev) => {
       const breakdown = planTicketBreakdown;
       if (breakdown.length === 0) return prev;
       const priceByNorm = new Map<string, number>();
-      if (!resetPrices) {
-        for (const t of prev) {
-          const k = (t.name || "").trim().toLowerCase();
-          if (k) priceByNorm.set(k, t.price);
-        }
+      for (const t of prev) {
+        const k = (t.name || "").trim().toLowerCase();
+        if (k) priceByNorm.set(k, t.price);
       }
-      const rows = breakdown.map((row) => {
+      return breakdown.map((row) => {
         const k = row.label.trim().toLowerCase();
-        const prevPrice = resetPrices ? undefined : priceByNorm.get(k);
+        const prevPrice = priceByNorm.get(k);
         return {
-          row,
-          ticket: {
-            id: crypto.randomUUID(),
-            presetKey: "salon_plan" as const,
-            name: row.label,
-            type: "normal" as const,
-            price: prevPrice !== undefined ? prevPrice : 0,
-            quantity: row.seatCount,
-            description: "",
-            discountRules: "",
-            groupMinQuantity: undefined,
-          } as WizardTicket,
+          id: crypto.randomUUID(),
+          presetKey: "salon_plan" as const,
+          name: row.label,
+          type: "normal" as const,
+          price: prevPrice !== undefined ? prevPrice : 0,
+          quantity: row.seatCount,
+          description: "",
+          discountRules: "",
+          groupMinQuantity: undefined,
         };
       });
-      if (resetPrices) {
-        rows.sort((a, b) => getTicketSortRank(a.ticket.name) - getTicketSortRank(b.ticket.name));
-      }
-      return rows.map((r) => r.ticket);
     });
   }, [planTicketBreakdown]);
 
@@ -856,28 +831,6 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 };
               });
 
-        /**
-         * Yinelenenleri BİRLEŞTİRMİYORUZ: Aynı isim+türde iki satır olması fiyat kaymasına yol açar
-         * (ör. VIP 50€/100 + VIP 100€/32 birleşince tek fiyat seçilirdi). Kullanıcı uyarısı veriyoruz.
-         */
-        {
-          const seen = new Set<string>();
-          const dupes: string[] = [];
-          for (const d of desiredTickets) {
-            const k = keyOf(d.name, d.type);
-            if (seen.has(k)) dupes.push(`${d.name} (${d.type})`);
-            else seen.add(k);
-          }
-          if (dupes.length > 0) {
-            alert(
-              "Aynı bilet türü birden fazla kez tanımlanmış:\n• " +
-                Array.from(new Set(dupes)).join("\n• ") +
-                "\n\nLütfen tekrar eden satırı silin veya farklı bir isim verin. Aksi halde fiyatlar karışabilir."
-            );
-            return;
-          }
-        }
-
         const matchedExistingIds = new Set<string>();
 
         for (const desired of desiredTickets) {
@@ -978,29 +931,6 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
             description: desc.trim(),
           };
         });
-
-      /**
-       * Yeni etkinlik kaydında da aynı isim+türde iki satır engellenir; fiyat karışıklığı yerine kullanıcı düzeltsin.
-       */
-      {
-        const seen = new Set<string>();
-        const dupes: string[] = [];
-        for (const row of ticketRows) {
-          const k = `${row.type}::${(row.name || "").trim().toLocaleLowerCase("tr-TR")}`;
-          if (seen.has(k)) dupes.push(`${row.name} (${row.type})`);
-          else seen.add(k);
-        }
-        if (dupes.length > 0) {
-          alert(
-            "Aynı bilet türü birden fazla kez tanımlanmış:\n• " +
-              Array.from(new Set(dupes)).join("\n• ") +
-              "\n\nLütfen tekrar eden satırı silin veya farklı bir isim verin."
-          );
-          // Etkinlik zaten oluşturuldu ama bilet eklenmedi; kullanıcı düzenleme sihirbazına dönüp tekrar deneyebilir.
-          router.push(`/yonetim/etkinlikler/yeni?id=${insertedEventId}`);
-          return;
-        }
-      }
 
       if (ticketRows.length > 0) {
         const { error: ticketsError } = await supabase.from("tickets").insert(ticketRows);
@@ -1183,10 +1113,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Başlangıç fiyatı</label>
                   <input type="number" min={0} step={0.01} value={priceFromInput === "" ? "" : priceFromInput} onChange={(e) => { const v = e.target.value; setPriceFromInput(v === "" ? "" : Math.max(0, Number(v) || 0)); }} placeholder="Boş bırakırsanız ücretsiz veya bilet fiyatlarından türetilir" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-                  <p className="mt-1 text-xs text-slate-500">
-                    Yalnızca etkinlik kartı ve sayfada &quot;ab …&quot; göstergesi içindir; <strong>bilet kategorisi oluşturmaz</strong>. Satılacak
-                    kategorileri aşağıdaki bilet adımlarından tanımlayın.
-                  </p>
+                  <p className="mt-1 text-xs text-slate-500">Tüm dillerde aynı rakam gösterilir. Boş = Ücretsiz.</p>
                 </div>
               </div>
               <div>
@@ -1416,40 +1343,18 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                       </table>
                     </div>
                   )}
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  {isEditMode && (
                     <button
                       type="button"
                       onClick={() => {
-                        if (!planTicketBreakdown.length) return;
-                        const ok = window.confirm(
-                          "Tek Tıkla Sırala (VIP → Kategori 1..N):\n\n" +
-                            "Mevcut tüm bilet türleri ve fiyatları silinecek, salon planındaki bölümlerden " +
-                            "yeni bilet satırları VIP en başta olacak şekilde yeniden oluşturulacak. " +
-                            "Fiyatlar 0'dan başlayacak; siz tek tek girip 'Kaydet' dediğinizde DB'deki eski " +
-                            "bilet satırları silinip yenileri yazılacak.\n\nDevam edilsin mi?"
-                        );
-                        if (!ok) return;
                         ticketsAutoFilledForPlanRef.current = selectedSeatingPlanId || null;
-                        fillTicketsFromPlan(true);
+                        fillTicketsFromPlan();
                       }}
-                      disabled={!planTicketBreakdown.length}
-                      className="rounded-lg border border-primary-600 bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
+                      className="rounded-lg border border-primary-600 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-800 hover:bg-primary-100"
                     >
-                      Tek Tıkla Sırala (VIP → Kategori 1..N)
+                      Plana göre bilet satırlarını yeniden oluştur (fiyatları aynı isimde korur)
                     </button>
-                    {isEditMode && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          ticketsAutoFilledForPlanRef.current = selectedSeatingPlanId || null;
-                          fillTicketsFromPlan(false);
-                        }}
-                        className="rounded-lg border border-primary-600 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-800 hover:bg-primary-100"
-                      >
-                        Plandan tazele (aynı isimdeki fiyatları korur)
-                      </button>
-                    )}
-                  </div>
+                  )}
                 </div>
               )}
               {selectedSeatingPlanId && planDerivedTicketLabels.length > 0 && (
