@@ -98,6 +98,8 @@ export default function CheckoutPage() {
   const [buyerCity, setBuyerCity] = useState("");
   const [seatHoldSessionId, setSeatHoldSessionId] = useState<string | null>(null);
   const processedStripeSessionsRef = useRef<Set<string>>(new Set());
+  const finalizeInFlightStripeSessionsRef = useRef<Map<string, Promise<boolean>>>(new Map());
+  const finalizedStripeSessionsRef = useRef<Set<string>>(new Set());
   const isPollingStripeRef = useRef(false);
   const [checkoutClientSecret, setCheckoutClientSecret] = useState<string | null>(null);
   const [checkoutSessionId, setCheckoutSessionId] = useState<string | null>(null);
@@ -248,7 +250,7 @@ export default function CheckoutPage() {
   const grandTotal = totalPrice + processingFeesTotal + shippingFeeOnce;
   const displayGrandTotal = grandTotal;
 
-  const finalizePaidOrder = useCallback(async (
+  const runFinalizePaidOrder = useCallback(async (
     pendingData?: PendingStripeCheckoutData | null,
     stripeSessionId?: string | null
   ) => {
@@ -396,6 +398,37 @@ export default function CheckoutPage() {
     user,
     authAccessToken,
   ]);
+
+  const finalizePaidOrder = useCallback(
+    async (pendingData?: PendingStripeCheckoutData | null, stripeSessionId?: string | null) => {
+      const normalizedSessionId = stripeSessionId?.trim();
+      if (normalizedSessionId && finalizedStripeSessionsRef.current.has(normalizedSessionId)) {
+        return true;
+      }
+
+      const existingInFlight = normalizedSessionId
+        ? finalizeInFlightStripeSessionsRef.current.get(normalizedSessionId)
+        : undefined;
+      if (existingInFlight) return existingInFlight;
+
+      const finalizeTask = runFinalizePaidOrder(pendingData, stripeSessionId);
+      if (normalizedSessionId) {
+        finalizeInFlightStripeSessionsRef.current.set(normalizedSessionId, finalizeTask);
+      }
+      try {
+        const ok = await finalizeTask;
+        if (normalizedSessionId && ok) {
+          finalizedStripeSessionsRef.current.add(normalizedSessionId);
+        }
+        return ok;
+      } finally {
+        if (normalizedSessionId) {
+          finalizeInFlightStripeSessionsRef.current.delete(normalizedSessionId);
+        }
+      }
+    },
+    [runFinalizePaidOrder]
+  );
 
   async function handleCompleteOrder(e: React.FormEvent) {
     e.preventDefault();

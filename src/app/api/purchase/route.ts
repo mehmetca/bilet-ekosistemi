@@ -1185,6 +1185,93 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Aynı oturum+aynı bilet kombinasyonu daha önce tamamlandıysa tekrar sipariş üretme.
+    const { data: existingCompletedOrders, error: existingCompletedOrdersError } = await supabase
+      .from("orders")
+      .select("id, quantity, total_price, ticket_code, buyer_name")
+      .eq("stripe_session_id", stripeSessionId)
+      .eq("ticket_id", ticketId)
+      .eq("status", "completed")
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (existingCompletedOrdersError) {
+      console.error("Existing order lookup failed:", existingCompletedOrdersError);
+      return NextResponse.json(
+        { success: false, message: "Ödeme oturumu kontrol edilemedi." },
+        { status: 500 }
+      );
+    }
+
+    const existingOrder = existingCompletedOrders?.[0] as
+      | {
+          id: string;
+          quantity: number;
+          total_price: number | string;
+          ticket_code: string | null;
+          buyer_name: string | null;
+        }
+      | undefined;
+
+    if (existingOrder) {
+      if (seatIds.length > 0) {
+        const { data: existingSeatRows, error: existingSeatRowsError } = await supabase
+          .from("order_seats")
+          .select("seat_id, section_name, row_label, seat_label, ticket_code")
+          .eq("order_id", existingOrder.id);
+        if (existingSeatRowsError) {
+          console.error("Existing seat order lookup failed:", existingSeatRowsError);
+          return NextResponse.json(
+            { success: false, message: "Ödeme oturumu kontrol edilemedi." },
+            { status: 500 }
+          );
+        }
+
+        const existingSeatIds = new Set((existingSeatRows || []).map((row) => row.seat_id));
+        const requestedSeatIds = new Set(seatIds);
+        const seatsMatch =
+          existingSeatIds.size === requestedSeatIds.size &&
+          [...requestedSeatIds].every((id) => existingSeatIds.has(id));
+
+        if (seatsMatch) {
+          const existingSeatDetails = (existingSeatRows || []).map((s) => ({
+            section_name: s.section_name ?? "",
+            row_label: s.row_label ?? "",
+            seat_label: s.seat_label ?? "",
+            ticket_code: s.ticket_code ?? "",
+          }));
+          return NextResponse.json({
+            success: true,
+            message: "Siparişiniz başarıyla oluşturuldu!",
+            ticketCode: existingOrder.ticket_code || "",
+            emailSent: true,
+            orderDetails: {
+              buyerName: existingOrder.buyer_name || buyerName,
+              quantity: Number(existingOrder.quantity || 0),
+              ticketType: existingSeatDetails.length > 0
+                ? [...new Set(existingSeatDetails.map((s) => s.section_name))].join(", ")
+                : (ticket.name || ticket.ticket_type || "Standart"),
+              price: Number(existingOrder.total_price),
+              seatDetails: existingSeatDetails.length > 0 ? existingSeatDetails : undefined,
+            },
+          });
+        }
+      } else if (Number(existingOrder.quantity || 0) === quantity) {
+        return NextResponse.json({
+          success: true,
+          message: "Siparişiniz başarıyla oluşturuldu!",
+          ticketCode: existingOrder.ticket_code || "",
+          emailSent: true,
+          orderDetails: {
+            buyerName: existingOrder.buyer_name || buyerName,
+            quantity: Number(existingOrder.quantity || 0),
+            ticketType: ticket.name || ticket.ticket_type || "Standart",
+            price: Number(existingOrder.total_price),
+          },
+        });
+      }
+    }
+
     // Yer seçerek bilet: koltukların daha önce satılmamış olduğunu kontrol et (bir bilet bir defa satılır)
     if (seatIds.length > 0) {
       // Aktif hold varsa, sadece hold sahibi bu koltuğu satin alabilsin.
