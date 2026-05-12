@@ -207,23 +207,10 @@ export default function CheckoutPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /**
-   * Yeni bir bilet sepete eklendiğinde önceki başarı snapshot'ı geçersizdir — sil ki
-   * sepet UI'sı doğru çalışsın (boşken bilet ekranı, dolduğunda sepet adımları).
-   */
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (items.length > 0 && hasSuccessfulCheckout) {
-      try {
-        window.localStorage.removeItem(LAST_CHECKOUT_SUCCESS_KEY);
-      } catch {
-        /* ignore */
-      }
-      setHasSuccessfulCheckout(false);
-      setResults([]);
-      setCompletedItems([]);
-    }
-  }, [items.length, hasSuccessfulCheckout]);
+  // NOT: "items > 0 olduğunda state'i sıfırla" mantığını kullanmıyoruz; bu, finalize sırasında
+  // clearCart() henüz işlenmemişken hasSuccessfulCheckout=true olduğu an tetiklenip race
+  // condition yarattı. Bunun yerine allSuccess hesabını items.length===0 koşuluyla bağlıyoruz:
+  // yeni bilet sepete eklendiğinde otomatik olarak normal sepet akışına döner.
 
   useEffect(() => {
     if (items.length > 0) {
@@ -688,7 +675,15 @@ export default function CheckoutPage() {
   ]);
 
   const isStripeReturning = searchParams.get("stripe_success") === "1";
-  const allSuccess = hasSuccessfulCheckout || (results.length > 0 && results.every((r) => r.success));
+  /**
+   * Bilet (TicketPrint) ekranını sadece sepet boşsa göster. Kullanıcı sonradan yeni bilet
+   * eklerse otomatik olarak normal sepet akışına döner — snapshot temizlemeye gerek yok.
+   * Snapshot 24 saat TTL ile localStorage'da kalır ve sepet boş olduğu sürece bilet ekranı
+   * yenilemeden sonra da görünür.
+   */
+  const allSuccess =
+    items.length === 0 &&
+    (hasSuccessfulCheckout || (results.length > 0 && results.every((r) => r.success)));
   const shouldShowEmptyCart =
     items.length === 0 &&
     results.length === 0 &&
