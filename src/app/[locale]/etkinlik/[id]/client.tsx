@@ -32,7 +32,7 @@ import { formatEventVenueAddressCityLine } from "@/lib/event-venue-display";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent, type Locale } from "@/lib/i18n-content";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/lib/supabase-client";
 import { fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
@@ -980,7 +980,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const tCat = useTranslations("categories");
   const locale = ((useLocale() as Locale) || localeProp) as Locale;
   const searchParams = useSearchParams();
-  const router = useRouter();
   const showSeatGridDebug = searchParams.get("seatDebug") === "1";
   const { addItem, removeSeatItem, totalItems, items: cartItems } = useCart();
 
@@ -2409,6 +2408,41 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           });
 
                           if (selectedSeatsList.length === 0) {
+                            // Sepete az önce eklendi veya bu etkinlikten zaten sepette item var:
+                            // boş kalan alana doğrudan "Ödemeye geç" butonu çıkar — fiyat modundaki
+                            // davranışla simetrik (sayfa değişmesin, sidebar'daki CTA değişsin).
+                            const totalInCartForEvent = cartItems
+                              .filter((it) => it.eventId === event.id)
+                              .reduce(
+                                (sum, it) =>
+                                  sum + (it.seatIds && it.seatIds.length > 0 ? it.seatIds.length : it.quantity),
+                                0
+                              );
+                            if (totalInCartForEvent > 0) {
+                              return (
+                                <div>
+                                  <p className="mb-3 text-sm text-emerald-800 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                                    {locale === "de"
+                                      ? `${totalInCartForEvent} Ticket${totalInCartForEvent > 1 ? "s" : ""} im Warenkorb.`
+                                      : locale === "en"
+                                      ? `${totalInCartForEvent} ticket${totalInCartForEvent > 1 ? "s" : ""} in cart.`
+                                      : `${totalInCartForEvent} bilet sepete eklendi.`}
+                                  </p>
+                                  <NextLink
+                                    href={`/${locale}/sepet`}
+                                    prefetch={false}
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700"
+                                  >
+                                    {locale === "de"
+                                      ? "Zur Kasse"
+                                      : locale === "en"
+                                      ? "Proceed to checkout"
+                                      : "Ödemeye geç"}
+                                    <ChevronRight className="h-4 w-4" aria-hidden />
+                                  </NextLink>
+                                </div>
+                              );
+                            }
                             return (
                               <p className="text-sm text-slate-500 py-4">
                                 {locale === "de"
@@ -2553,7 +2587,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                           setActionMessage(tCheckout("addedToCart"));
                                           setSelectedSeatIds(new Set());
                                           setHasSeatSelectionAddedToCart(true);
-                                          router.push(`/${locale}/sepet`);
                                         }}
                                         disabled={isPastEvent || isUnapproved || selectedSeatIds.size > maxTicketsPerOrder}
                                         className="w-full rounded-xl bg-primary-600 px-4 py-3 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
@@ -2760,7 +2793,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 }
                                 setTicketCountsByType({});
                                 setActionMessage(tCheckout("addedToCart"));
-                                router.push(`/${locale}/sepet`);
                               }}
                               disabled={!canSubmit}
                               className="w-full rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
