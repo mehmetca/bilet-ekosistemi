@@ -331,7 +331,8 @@
     "ticketPricesLink": "Bilet fiyatları",
     "soldOutCta": "TÜKENDİ",
     "priceCategorySoldOut": "SOLD OUT",
-    "organizerLine": "Organizasyon: {name}"
+    "organizerLine": "Organizasyon: {name}",
+    "priceSidebarBasketMixedHint": "Listede gösterilen adetler hem sepetteki biletleri hem de seçiciden girdiğiniz yeni adetleri toplar. Yeni seçimi sepete geçirmek için «Sepete ekle» kullanın."
   },
   "checkout": {
     "title": "Alışveriş Sepeti",

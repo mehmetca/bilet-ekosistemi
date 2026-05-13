@@ -51,6 +51,7 @@ import {
   buildTheaterDuisburgSeatItemsWithCoords,
 } from "@/lib/seating-plans/theaterduisburg";
 import { planSectionsMatchMusensaalTemplate } from "@/lib/seating-plans/musensaal-structure-match";
+import { collapseDuplicateAdjacentTicketLabel } from "@/lib/collapse-duplicate-ticket-label";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import { getTicketCategoryColorHex, lightenHex } from "@/lib/seating-plans/ticket-category-colors";
 import { findTicketByLabels, shortenTicketDisplayName } from "@/lib/ticket-seating-match";
@@ -933,6 +934,66 @@ function getMinQuantityFromDescription(description: string | null | undefined): 
   return n > 0 ? n : 1;
 }
 
+function defaultProductLabelNextToCategory(ticket: EventTicket, locale: Locale): string {
+  const nm = (ticket.name || "").toLowerCase();
+  const byType = String(ticket.type || ticket.ticket_type || "").toLowerCase() === "vip";
+  const isVip = byType || /\bvip\b/.test(nm);
+  switch (locale) {
+    case "de":
+      return isVip ? "VIP-Ticket" : "Standard-Ticket";
+    case "en":
+      return isVip ? "VIP ticket" : "Standard ticket";
+    default:
+      return isVip ? "Vip Bilet" : "Standart Bilet";
+  }
+}
+
+/**
+ * „Seçilen koltuklar“ (yalnız fiyat-kategorisi modu seçim özeti): Blok · bilet ürün adı · fiyat; sonra × adet.
+ * Örn. Parket - Kategori 1   Standart Bilet €80,00 × 2
+ */
+function formatDeinePlatzPriceCategoryLine(ticket: EventTicket, currency: Event["currency"], locale: Locale): string {
+  const raw = collapseDuplicateAdjacentTicketLabel((ticket.name || ticket.ticket_type || "Standart").trim());
+  const priceStr = formatPrice(Number(ticket.price || 0), currency);
+  const parts = raw.split(/\s*-\s*/).map((p) => p.trim()).filter(Boolean);
+
+  if (parts.length >= 3) {
+    const head = `${parts[0]} - ${parts[1]}`;
+    const tailProduct = parts.slice(2).join(" - ").trim();
+    return `${head}   ${tailProduct} ${priceStr}`.replace(/\s{3,}/g, "   ");
+  }
+  if (parts.length === 2) {
+    const segment2 = parts[1]!;
+    const head = `${parts[0]} - ${segment2}`;
+    const secondHasProductWord = /\b(standart|standard|vip|bilet|ticket)\b/i.test(segment2);
+    if (secondHasProductWord) {
+      return `${head}   ${priceStr}`.replace(/\s{3,}/g, "   ");
+    }
+    return `${head}   ${defaultProductLabelNextToCategory(ticket, locale)} ${priceStr}`.replace(/\s{3,}/g, "   ");
+  }
+  return `${raw}   ${priceStr}`.replace(/\s{3,}/g, "   ");
+}
+
+/** Sepette kalan satır için katalog bileti silinmişse: biçimlendirici için asgari kart verisi */
+function sidebarTicketFallbackFromCart(
+  item: { ticketId: string; ticketName: string; price: number },
+  eventId: string
+): EventTicket {
+  const cleaned = collapseDuplicateAdjacentTicketLabel((item.ticketName || "").trim());
+  const nameFinal = cleaned || "Standart";
+  const isVip = /\bvip\b/i.test(nameFinal);
+  return {
+    id: item.ticketId,
+    event_id: eventId,
+    name: nameFinal,
+    type: isVip ? "vip" : "normal",
+    price: Number(item.price ?? 0),
+    quantity: 0,
+    available: 0,
+    sort_order: 9999,
+  };
+}
+
 export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr", isUnapproved = false }: EventDetailClientProps): React.ReactElement {
   const t = useTranslations("eventDetail");
   const tCheckout = useTranslations("checkout");
@@ -940,7 +1001,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const locale = ((useLocale() as Locale) || localeProp) as Locale;
   const searchParams = useSearchParams();
   const showSeatGridDebug = searchParams.get("seatDebug") === "1";
-  const { addItem, removeSeatItem, totalItems, items: cartItems } = useCart();
+  const { addItem, addItemsBatch, removeSeatItem, totalItems, items: cartItems } = useCart();
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const sortedTicketState = useMemo(() => {
@@ -1083,6 +1144,16 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       })
       .catch(() => {});
   }, []);
+
+  /** Sipariş tavanına göre sepet geneli (koltuksuz ve koltuklu satırların quantity toplamı) */
+  const cartTotalTicketsCount = useMemo(
+    () => cartItems.reduce((sum, i) => sum + Math.max(0, Number(i.quantity ?? 0)), 0),
+    [cartItems]
+  );
+
+  /** Katalog seçicide vb. kullanılabilir kalan bilet kotası */
+  const orderTicketsRemainingBudget = Math.max(0, maxTicketsPerOrder - cartTotalTicketsCount);
+
   useEffect(() => {
     const id = ensureSeatHoldSessionId(null);
     if (id) setSeatHoldSessionId(id);
@@ -1105,20 +1176,62 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     () => selectedPriceTicketEntries.reduce((sum, row) => sum + Number(row.ticket.price || 0) * row.count, 0),
     [selectedPriceTicketEntries]
   );
-  const currentEventCartCount = useMemo(() => {
-    return cartItems
-      .filter((it) => it.eventId === event.id)
-      .reduce((sum, it) => sum + it.quantity, 0);
-  }, [cartItems, event.id]);
-  const currentEventCartSummary = useMemo(() => {
-    const grouped = new Map<string, number>();
+  /** Fiyat-kategorisi sepet kalemleri (koltuksuz satırlar); dil değişse de satırları `ticketId` ile tutarız. */
+  const hasPriceCatalogInCartForEvent = useMemo(
+    () => cartItems.some((it) => it.eventId === event.id && !it.seatIds?.length),
+    [cartItems, event.id]
+  );
+
+  const priceCategorySidebarMergedRows = useMemo(() => {
+    const cartQtyById = new Map<string, number>();
+    const cartAnchorById = new Map<string, (typeof cartItems)[number]>();
+
     for (const it of cartItems) {
       if (it.eventId !== event.id) continue;
-      const name = (it.ticketName || "Standart").trim() || "Standart";
-      grouped.set(name, (grouped.get(name) || 0) + Number(it.quantity || 0));
+      if (it.seatIds?.length) continue;
+      const q = Number(it.quantity || 0);
+      cartQtyById.set(it.ticketId, (cartQtyById.get(it.ticketId) ?? 0) + q);
+      if (!cartAnchorById.has(it.ticketId)) cartAnchorById.set(it.ticketId, it);
     }
-    return Array.from(grouped.entries()).map(([name, quantity]) => ({ name, quantity }));
-  }, [cartItems, event.id]);
+
+    const pendingById = new Map<string, number>();
+    for (const { ticket, count } of selectedPriceTicketEntries) {
+      pendingById.set(ticket.id, Math.max(0, Number(count || 0)));
+    }
+
+    const ids = new Set<string>([...cartQtyById.keys(), ...pendingById.keys()]);
+    const rows: Array<{
+      ticketId: string;
+      ticket: EventTicket;
+      displayQty: number;
+    }> = [];
+
+    for (const ticketId of ids) {
+      const inCartQty = cartQtyById.get(ticketId) ?? 0;
+      const pendingQty = pendingById.get(ticketId) ?? 0;
+      if (inCartQty <= 0 && pendingQty <= 0) continue;
+
+      const fromCatalog = sortedTicketState.find((tkt) => tkt.id === ticketId);
+      const anchor = cartAnchorById.get(ticketId);
+      const ticketRow =
+        fromCatalog ??
+        (anchor ? sidebarTicketFallbackFromCart(anchor, event.id) : null);
+
+      if (!ticketRow) continue;
+
+      rows.push({
+        ticketId,
+        ticket: ticketRow,
+        displayQty: inCartQty + pendingQty,
+      });
+    }
+
+    rows.sort((a, b) => compareTicketsForCatalog(a.ticket, b.ticket));
+    return rows;
+  }, [cartItems, event.id, selectedPriceTicketEntries, sortedTicketState]);
+
+  const showPriceSidebarBasketMixedHint =
+    selectedPriceTicketEntries.length > 0 && hasPriceCatalogInCartForEvent;
 
   const seatingPlanId = (event as Event & { seating_plan_id?: string }).seating_plan_id;
 
@@ -1426,19 +1539,29 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       return;
     }
     const validTicketIds = new Set(priceModeTickets.map((t) => t.id));
+    const orderBudget = Math.max(0, maxTicketsPerOrder - cartTotalTicketsCount);
     setTicketCountsByType((prev) => {
+      let remaining = orderBudget;
+      const sortedCatalog = [...priceModeTickets].sort(compareTicketsForCatalog);
       const next: Record<string, number> = {};
-      for (const [ticketId, countRaw] of Object.entries(prev)) {
+      for (const tk of sortedCatalog) {
+        const ticketId = tk.id;
         if (!validTicketIds.has(ticketId)) continue;
-        const tk = priceModeTickets.find((t) => t.id === ticketId);
-        if (!tk) continue;
-        const maxSelectable = Math.min(effectiveAvailabilityForTicket(tk), maxTicketsPerOrder);
-        const count = Math.max(0, Math.min(Number(countRaw || 0), maxSelectable));
-        if (count > 0) next[ticketId] = count;
+        const prevQty = Math.max(0, Number(prev[ticketId] || 0));
+        if (prevQty <= 0) continue;
+        const minSelectable = getMinQuantityFromDescription(tk.description);
+        const avail = effectiveAvailabilityForTicket(tk);
+        const ceil = Math.min(avail, remaining);
+        let count = Math.min(prevQty, ceil);
+        if (count > 0 && count < minSelectable) count = 0;
+        if (count > 0) {
+          next[ticketId] = count;
+          remaining -= count;
+        }
       }
       return next;
     });
-  }, [priceModeTickets, maxTicketsPerOrder, effectiveAvailabilityForTicket]);
+  }, [priceModeTickets, maxTicketsPerOrder, effectiveAvailabilityForTicket, cartTotalTicketsCount]);
 
   const seatCategoryHexBySeatId = useMemo(() => {
     const m = new Map<string, string>();
@@ -1633,7 +1756,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           return;
         }
 
-        if (heldSeatIds.size >= maxTicketsPerOrder) {
+        if (cartTotalTicketsCount >= maxTicketsPerOrder) {
           setActionMessage(
             locale === "de"
               ? `Max. ${maxTicketsPerOrder} Platze pro Bestellung.`
@@ -1728,8 +1851,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       addItem,
       catalogTickets,
       cartSeatIdsForEvent,
+      cartTotalTicketsCount,
       event,
-      heldSeatIds,
       heldByOthersSeatIds,
       locale,
       localized.title,
@@ -2252,7 +2375,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                                   : isHeld
                                                     ? "text-slate-900 cursor-pointer ring-0 shadow-none border-0"
                                                     : "text-slate-900 ring-0 border-0 hover:bg-[#39ff14] hover:text-slate-900"
-                                              } ${!isHeld && !isSold && !isBlocked && heldSeatIds.size >= maxTicketsPerOrder ? "opacity-50 cursor-not-allowed" : ""}`}
+                                              } ${!isHeld && !isSold && !isBlocked && cartTotalTicketsCount >= maxTicketsPerOrder ? "opacity-50 cursor-not-allowed" : ""}`}
                                               style={
                                                 isSold || isBlocked || (selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seat.id))
                                                   ? undefined
@@ -2340,7 +2463,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             arr.push(seatId);
                             seatIdsByTicketId.set(tk.id, arr);
                           });
-                          const atSeatLimit = selectedSeatIds.size >= maxTicketsPerOrder;
+                          const atSeatLimit = cartTotalTicketsCount >= maxTicketsPerOrder;
                           const processingFeePerTicket =
                             typeof event.checkout_processing_fee === "number" && event.checkout_processing_fee > 0
                               ? Number(event.checkout_processing_fee)
@@ -2446,7 +2569,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   setSelectedSeatIds(new Set());
                                   setHasSeatSelectionAddedToCart(true);
                                 }}
-                                disabled={isPastEvent || isUnapproved || selectedSeatIds.size > maxTicketsPerOrder}
+                                disabled={isPastEvent || isUnapproved || cartTotalTicketsCount >= maxTicketsPerOrder}
                                 className="w-full rounded-xl bg-primary-600 px-4 py-3 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
                               >
                                 {tCheckout("addToCart")} ({selectedSeatIds.size})
@@ -2581,7 +2704,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             const availableAmount = effectiveAvailabilityForTicket(ticketType);
                             const isSoldOutRow = availableAmount <= 0;
                             const minSelectable = getMinQuantityFromDescription(ticketType.description);
-                            const maxSelectable = Math.min(availableAmount, maxTicketsPerOrder);
+                            const maxSelectable = Math.min(availableAmount, orderTicketsRemainingBudget);
                             const effectiveMin =
                               maxSelectable <= 0 ? minSelectable : Math.min(minSelectable, maxSelectable);
                             const rowCount = Math.max(0, Number(ticketCountsByType[ticketType.id] || 0));
@@ -2658,7 +2781,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                             0
                                           );
                                           const totalWithoutCurrent = totalSelected - current;
-                                          const globalLimitForThisRow = Math.max(0, maxTicketsPerOrder - totalWithoutCurrent);
+                                          const globalLimitForThisRow = Math.max(0, orderTicketsRemainingBudget - totalWithoutCurrent);
                                           const allowedMax = Math.min(maxSelectable || effectiveMin, globalLimitForThisRow);
                                           if (allowedMax <= 0) {
                                             return prev;
@@ -2707,8 +2830,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         type="button"
                         onClick={() => {
                           if (isPastEvent || isUnapproved || selectedPriceTicketEntries.length === 0) return;
-                          selectedPriceTicketEntries.forEach(({ ticket, count }) => {
-                            addItem({
+                          addItemsBatch(
+                            selectedPriceTicketEntries.map(({ ticket, count }) => ({
                               ticketId: ticket.id,
                               eventId: event.id,
                               eventTitle: localized.title || event.title,
@@ -2727,8 +2850,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   : undefined,
                               quantity: count,
                               available: Number(ticket.available || 0),
-                            });
-                          });
+                            }))
+                          );
                           setTicketCountsByType({});
                           setActionMessage(tCheckout("addedToCart"));
                         }}
@@ -2746,32 +2869,21 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
                   <aside className="rounded-2xl border border-slate-200 bg-white p-5 h-fit">
                     <h3 className="mb-4 text-lg font-bold text-slate-900">{t("deinePlatze")}</h3>
-                    {selectedPriceTicketEntries.length > 0 ? (
-                      <div className="space-y-2">
-                        <p className="text-xs text-slate-600">
-                          {locale === "de"
-                            ? "Neue Auswahl"
-                            : locale === "en"
-                              ? "New selection"
-                              : "Yeni seçim"}
-                        </p>
+                    {priceCategorySidebarMergedRows.length > 0 ? (
+                      <div>
                         <ul className="space-y-1 text-sm text-slate-700">
-                          {selectedPriceTicketEntries.map(({ ticket, count }, idx) => (
-                            <li key={`price-cat-selected-side-${ticket.id}`}>
-                              {idx + 1}. {shortenTicketDisplayName(ticket.name || "Standart")} x {count}
+                          {priceCategorySidebarMergedRows.map((row, idx) => (
+                            <li key={`price-cat-merged-${row.ticketId}`}>
+                              {idx + 1}. {formatDeinePlatzPriceCategoryLine(row.ticket, event.currency, locale)} ×{" "}
+                              {row.displayQty}
                             </li>
                           ))}
                         </ul>
-                      </div>
-                    ) : currentEventCartSummary.length > 0 ? (
-                      <div className="space-y-2">
-                        <ul className="space-y-1 text-sm text-slate-700">
-                          {currentEventCartSummary.map((item, idx) => (
-                            <li key={`price-cat-cart-side-${item.name}-${idx}`}>
-                              {idx + 1}. {item.name} x {item.quantity}
-                            </li>
-                          ))}
-                        </ul>
+                        {showPriceSidebarBasketMixedHint ? (
+                          <p className="mt-3 text-xs leading-relaxed text-slate-600">
+                            {t("priceSidebarBasketMixedHint")}
+                          </p>
+                        ) : null}
                       </div>
                     ) : (
                       <p className="text-sm text-slate-500">
@@ -2789,7 +2901,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         prefetch={false}
                         className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"
                       >
-                        {tCheckout("goToCheckout")} ({currentEventCartCount > 0 ? currentEventCartCount : totalItems})
+                        {tCheckout("goToCheckout")}
                       </NextLink>
                     )}
                   </aside>

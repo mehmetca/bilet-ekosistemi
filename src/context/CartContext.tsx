@@ -37,7 +37,9 @@ interface CartContextValue {
   items: CartItem[];
   /** Sepet rezervasyonunun bittiği epoch ms; yoksa süre yok. */
   reservationExpiresAt: number | null;
-  addItem: (item: Omit<CartItem, "quantity"> & { quantity?: number }) => void;
+  addItem: (item: CartItemAddPayload) => void;
+  /** Birden fazla satırı tek `setItems` güncellemesinde işler (çift tik / çift yüklemede adet yanlış ikiye çıkmasını önler). */
+  addItemsBatch: (items: CartItemAddPayload[]) => void;
   removeItem: (ticketId: string) => void;
   removeSeatItem: (eventId: string, seatId: string) => void;
   updateQuantity: (ticketId: string, quantity: number) => void;
@@ -67,6 +69,155 @@ function captionsAlignedWithSeatIds(
     if (!byId.has(id) && newCaps?.[i]) byId.set(id, newCaps[i]!);
   });
   return seatIds.map((id, idx) => byId.get(id) ?? `Koltuk ${idx + 1}`);
+}
+
+/** Sepette satır birleştirme: yalnızca aynı etkinlik + aynı bilet kaydı. `ticketName` ile eşleme yapılmaz (farklı fiyat kategorileri aynı ada düşünce tek satırda üst üste binip adet tavanında kalıyordu). */
+function isSameCatalogLine(
+  a: Pick<CartItem, "eventId" | "ticketId">,
+  b: Pick<CartItem, "eventId" | "ticketId">
+): boolean {
+  return a.eventId === b.eventId && a.ticketId === b.ticketId;
+}
+
+export type CartItemAddPayload = Omit<CartItem, "quantity"> & { quantity?: number };
+
+function sumQtyExcludingSKU(prev: CartItem[], rawItem: CartItemAddPayload): number {
+  return prev.reduce((acc, i) => acc + (isSameCatalogLine(i, rawItem) ? 0 : i.quantity), 0);
+}
+
+/**
+ * Tek satır güncellemesi. `quantity` için üst sınır:
+ * hem satır bazlı `max_ticket_quantity` hem de **tüm sepetteki biletlere** uygulanan toplam tavan (aynı değişken).
+ */
+function upsertCartItem(
+  prev: CartItem[],
+  rawItem: CartItemAddPayload,
+  maxTicketQuantity: number,
+  now: number
+): CartItem[] {
+  const cap = Math.max(1, maxTicketQuantity);
+  const incomingQty = Math.max(1, Math.min(cap, rawItem.quantity ?? 1));
+  const seatIds = rawItem.seatIds && rawItem.seatIds.length > 0 ? rawItem.seatIds : undefined;
+  const seatCaptions =
+    rawItem.seatCaptions && rawItem.seatCaptions.length > 0 ? rawItem.seatCaptions : undefined;
+
+  const existing = prev.find((i) => isSameCatalogLine(i, rawItem));
+  /** Aynı bilet/satır SKU’su (event+ticketId) dışındaki kalemlerin quantity toplamı */
+  const qtyOtherLines = sumQtyExcludingSKU(prev, rawItem);
+  /** Bu satırda nihai quantity en fazla ne olabilir (tüm sepet ≤ cap)? */
+  const maxQtyThisLine = Math.max(0, cap - qtyOtherLines);
+
+  if (existing) {
+    const prevIds = existing.seatIds || [];
+
+    if (seatIds) {
+      const mergedOrderUnique: string[] = [...prevIds];
+      for (const id of seatIds) {
+        if (!mergedOrderUnique.includes(id)) mergedOrderUnique.push(id);
+      }
+      const clippedIds = mergedOrderUnique.slice(0, Math.min(mergedOrderUnique.length, maxQtyThisLine || 0));
+      const clippedCaptions = captionsAlignedWithSeatIds(
+        clippedIds,
+        prevIds,
+        existing.seatCaptions,
+        seatCaptions,
+        seatIds
+      );
+      const newQty = clippedIds.length;
+      if (newQty <= 0) return prev.filter((i) => !isSameCatalogLine(i, rawItem));
+      return prev.map((i) =>
+        isSameCatalogLine(i, rawItem)
+          ? {
+              ...i,
+              quantity: newQty,
+              seatIds: clippedIds,
+              seatCaptions: clippedCaptions,
+              available: Math.max(i.available, rawItem.available),
+              eventCheckoutFee: rawItem.eventCheckoutFee ?? i.eventCheckoutFee,
+              addedAt: now,
+            }
+          : i
+      );
+    }
+
+    /** Mevcut koltuk satırı — yeni koltuk eklenmemişse (ör. toplam tavan düştü) yalnızca kırpma */
+    if (prevIds.length > 0) {
+      const clippedIds = [...prevIds].slice(0, Math.min(prevIds.length, maxQtyThisLine || 0));
+      const clippedCaptions = captionsAlignedWithSeatIds(
+        clippedIds,
+        prevIds,
+        existing.seatCaptions,
+        undefined,
+        []
+      );
+      const newQty = clippedIds.length;
+      if (newQty <= 0) return prev.filter((i) => !isSameCatalogLine(i, rawItem));
+      return prev.map((i) =>
+        isSameCatalogLine(i, rawItem)
+          ? {
+              ...i,
+              quantity: newQty,
+              seatIds: clippedIds,
+              seatCaptions: clippedCaptions,
+              available: Math.max(i.available, rawItem.available),
+              eventCheckoutFee: rawItem.eventCheckoutFee ?? i.eventCheckoutFee,
+              addedAt: now,
+            }
+          : i
+      );
+    }
+
+    /** Koltuksuz satırda adet birleştirme */
+    const mergedProposalQty = Math.min(cap, existing.quantity + incomingQty);
+    const finalQty = Math.min(mergedProposalQty, maxQtyThisLine);
+    if (finalQty <= 0) return prev.filter((i) => !isSameCatalogLine(i, rawItem));
+    return prev.map((i) =>
+      isSameCatalogLine(i, rawItem)
+        ? {
+            ...i,
+            quantity: finalQty,
+            seatIds: existing.seatIds,
+            seatCaptions: existing.seatCaptions,
+            available: Math.max(i.available, rawItem.available),
+            eventCheckoutFee: rawItem.eventCheckoutFee ?? i.eventCheckoutFee,
+            addedAt: now,
+          }
+        : i
+    );
+  }
+
+  /** Yeni kalem */
+  if (maxQtyThisLine <= 0) return prev;
+
+  const cappedSeatIds =
+    seatIds && seatIds.length > 0
+      ? [...seatIds].slice(0, Math.min(cap, seatIds.length, maxQtyThisLine))
+      : undefined;
+  const qtyCatalogNew =
+    cappedSeatIds && cappedSeatIds.length > 0
+      ? 0
+      : Math.min(cap, incomingQty, maxQtyThisLine);
+  const captionsNew =
+    cappedSeatIds && cappedSeatIds.length > 0
+      ? captionsAlignedWithSeatIds(cappedSeatIds, [], undefined, seatCaptions, cappedSeatIds)
+      : undefined;
+
+  const outQty =
+    cappedSeatIds && cappedSeatIds.length > 0 ? cappedSeatIds.length : qtyCatalogNew;
+
+  if (outQty <= 0) return prev;
+
+  return [
+    ...prev,
+    {
+      ...(rawItem as CartItem),
+      quantity: outQty,
+      seatIds: cappedSeatIds && cappedSeatIds.length > 0 ? cappedSeatIds : undefined,
+      seatCaptions:
+        cappedSeatIds && cappedSeatIds.length > 0 ? captionsNew : undefined,
+      addedAt: now,
+    },
+  ];
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -230,9 +381,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const addItem = useCallback((item: Omit<CartItem, "quantity"> & { quantity?: number }) => {
-    const cap = Math.max(1, maxTicketQuantity);
-    const qty = Math.max(1, Math.min(cap, item.quantity ?? 1));
+  const addItem = useCallback((item: CartItemAddPayload) => {
     const now = Date.now();
     bumpReservation();
     try {
@@ -242,65 +391,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* ignore */
     }
-    const seatIds = item.seatIds && item.seatIds.length > 0 ? item.seatIds : undefined;
-    const seatCaptions =
-      item.seatCaptions && item.seatCaptions.length > 0 ? item.seatCaptions : undefined;
-    setItems((prev) => {
-      const existing = prev.find(
-        (i) =>
-          i.ticketId === item.ticketId ||
-          (i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim())
-      );
-      if (existing) {
-        const prevIds = existing.seatIds || [];
-        const mergedSeatIds = seatIds
-          ? Array.from(new Set([...prevIds, ...seatIds])).slice(0, cap)
-          : existing.seatIds;
-        const mergedCaptions =
-          mergedSeatIds && mergedSeatIds.length > 0
-            ? captionsAlignedWithSeatIds(
-                mergedSeatIds,
-                prevIds,
-                existing.seatCaptions,
-                seatCaptions,
-                seatIds || []
-              )
-            : undefined;
-        // Fiyat kategorisi akışında `available` bazı etkinliklerde 1 gelebiliyor ve
-        // header sayacını 1'de kilitliyor; adet artışını sepete ekleme davranışına göre tut.
-        const newQty = mergedSeatIds ? mergedSeatIds.length : Math.min(cap, existing.quantity + qty);
-        if (newQty <= 0) return prev.filter((i) => !(i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()));
-        return prev.map((i) =>
-          (i.ticketId === item.ticketId ||
-            (i.eventId === item.eventId && (i.ticketName || "").trim() === (item.ticketName || "").trim()))
-            ? {
-                ...i,
-                quantity: newQty,
-                seatIds: mergedSeatIds,
-                seatCaptions: mergedCaptions,
-                available: Math.max(i.available, item.available),
-                eventCheckoutFee: item.eventCheckoutFee ?? i.eventCheckoutFee,
-                addedAt: now,
-              }
-            : i
-        );
+    setItems((prev) => upsertCartItem(prev, item, maxTicketQuantity, now));
+  }, [maxTicketQuantity, bumpReservation]);
+
+  const addItemsBatch = useCallback((batch: CartItemAddPayload[]) => {
+    if (batch.length === 0) return;
+    const now = Date.now();
+    bumpReservation();
+    try {
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem(CART_EXPIRED_SNAPSHOT_KEY);
       }
-      const cappedSeatIds = seatIds ? seatIds.slice(0, cap) : undefined;
-      const captionsNew =
-        cappedSeatIds && cappedSeatIds.length > 0
-          ? captionsAlignedWithSeatIds(cappedSeatIds, [], undefined, seatCaptions, cappedSeatIds)
-          : undefined;
-      return [
-        ...prev,
-        {
-          ...item,
-          quantity: cappedSeatIds ? cappedSeatIds.length : Math.min(cap, qty),
-          seatIds: cappedSeatIds,
-          seatCaptions: captionsNew,
-          addedAt: now,
-        },
-      ];
-    });
+    } catch {
+      /* ignore */
+    }
+    const capUsed = Math.max(1, maxTicketQuantity);
+    setItems((prev) => batch.reduce((acc, payload) => upsertCartItem(acc, payload, capUsed, now), prev));
   }, [maxTicketQuantity, bumpReservation]);
 
   const removeItem = useCallback((ticketId: string) => {
@@ -357,15 +463,26 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     ]);
   }, [releaseSeatHoldsForItems]);
 
-  const updateQuantity = useCallback((ticketId: string, quantity: number) => {
-    setItems((prev) =>
-      prev.map((i) => {
-        if (i.ticketId !== ticketId) return i;
-        const qty = Math.max(0, Math.min(i.available, quantity));
-        return qty === 0 ? i : { ...i, quantity: qty };
-      }).filter((i) => i.quantity > 0)
-    );
-  }, []);
+  const updateQuantity = useCallback(
+    (ticketId: string, quantity: number) => {
+      setItems((prev) => {
+        const cap = Math.max(1, maxTicketQuantity);
+        const rowIndex = prev.findIndex(
+          (i) => i.ticketId === ticketId && !(i.seatIds && i.seatIds.length > 0)
+        );
+        if (rowIndex < 0) return prev;
+        const row = prev[rowIndex]!;
+        const othersSum = prev.reduce((s, x, idx) => s + (idx === rowIndex ? 0 : x.quantity), 0);
+        const maxForRow = Math.max(0, cap - othersSum);
+        const qty = Math.max(0, Math.min(Number(quantity), row.available, maxForRow));
+        if (qty <= 0) {
+          return prev.filter((_, idx) => idx !== rowIndex);
+        }
+        return prev.map((x, idx) => (idx === rowIndex ? { ...x, quantity: qty, addedAt: Date.now() } : x));
+      });
+    },
+    [maxTicketQuantity]
+  );
 
   const updateItemAvailable = useCallback(
     (ticketId: string, available: number) => {
@@ -427,6 +544,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         items,
         reservationExpiresAt,
         addItem,
+        addItemsBatch,
         removeItem,
         removeSeatItem,
         updateQuantity,

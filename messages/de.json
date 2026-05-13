@@ -331,7 +331,8 @@
     "ticketPricesLink": "Ticketpreise",
     "soldOutCta": "AUSVERKAUFT",
     "priceCategorySoldOut": "AUSVERKAUFT",
-    "organizerLine": "Veranstalter: {name}"
+    "organizerLine": "Veranstalter: {name}",
+    "priceSidebarBasketMixedHint": "Die oben angezeigten Zahlen umfassen Tickets im Warenkorb plus die eben gewählten Mengen in der Liste. Neue Auswahl wird mit „In den Warenkorb“ gespeichert."
   },
   "checkout": {
     "title": "Warenkorb",

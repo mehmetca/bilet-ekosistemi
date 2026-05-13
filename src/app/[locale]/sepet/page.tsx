@@ -9,6 +9,7 @@ import { useCart } from "@/context/CartContext";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import Header from "@/components/Header";
+import { collapseDuplicateAdjacentTicketLabel } from "@/lib/collapse-duplicate-ticket-label";
 import { formatPrice } from "@/lib/formatPrice";
 import { formatEventDateDMY, formatCartEventWhen } from "@/lib/date-utils";
 import {
@@ -994,7 +995,9 @@ export default function CheckoutPage() {
                       </div>
                       <div className="mt-2 flex items-center gap-2">
                         <Ticket className="h-4 w-4 text-primary-600" />
-                        <span className="text-sm font-medium text-slate-700">{item.ticketName}</span>
+                        <span className="text-sm font-medium text-slate-700">
+                          {collapseDuplicateAdjacentTicketLabel(item.ticketName || "")}
+                        </span>
                       </div>
                       {item.seatIds && item.seatIds.length > 0 ? (
                         <div className="mt-2">
@@ -1243,7 +1246,7 @@ export default function CheckoutPage() {
                     <div key={item.ticketId} className="text-sm">
                       <div className="flex justify-between gap-3 font-semibold text-slate-900">
                         <span>
-                          {item.quantity} × {item.ticketName}
+                          {item.quantity} × {collapseDuplicateAdjacentTicketLabel(item.ticketName || "")}
                         </span>
                         <span className="shrink-0">
                           {formatPrice(

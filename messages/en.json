@@ -331,7 +331,8 @@
     "ticketPricesLink": "Ticket prices",
     "soldOutCta": "SOLD OUT",
     "priceCategorySoldOut": "SOLD OUT",
-    "organizerLine": "Organizer: {name}"
+    "organizerLine": "Organizer: {name}",
+    "priceSidebarBasketMixedHint": "The totals above combine tickets already in your basket and quantities you entered in the selector. Use Add to cart to confirm new additions."
   },
   "checkout": {
     "title": "Shopping Cart",

@@ -469,7 +469,8 @@
     "ticketPricesLink": "bihayên bilêtan",
     "soldOutCta": "HATE FIROTIN",
     "priceCategorySoldOut": "SOLD OUT",
-    "organizerLine": "Rêxistin: {name}"
+    "organizerLine": "Rêxistin: {name}",
+    "priceSidebarBasketMixedHint": "Hejmara li jor hem bilêtên di sepetê de û hem jî wê yên ku te nû hilbijartî pêk dike. Bijareyên nû bi «Sepête zêde bike» pêşkeş bikin."
   },
   "city": {
     "resultsCount": "{count} encam ji bo {city} hatin dîtin.",

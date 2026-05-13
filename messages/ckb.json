@@ -469,7 +469,8 @@
     "ticketPricesLink": "نرخی بلیتەکان",
     "soldOutCta": "فرشتی",
     "priceCategorySoldOut": "SOLD OUT",
-    "organizerLine": "ڕێکخراو: {name}"
+    "organizerLine": "ڕێکخراو: {name}",
+    "priceSidebarBasketMixedHint": "ژمارەکان لە خوارەوە بلیتەکان لە بازنیدا و ژمارەکانی هەڵبژاردنی نوێ دەگرنەوە بۆ گواستنی نوێ بۆ بازنەکە کلیک لە « زیادکردن بۆ سەپەت» بکە."
   },
   "city": {
     "resultsCount": "ئەنجامەکانی {count} بۆ {city} دۆزرایەوە.",
