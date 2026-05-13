@@ -23,33 +23,22 @@ function dedupeRepeatedTail(name: string): string {
   return name.trim();
 }
 
-/**
- * Pazarlama / katalog metinleri: tekrarlayan blok ("Kategori 1 Kategori 1") sonra token‑kuyruk temizliği.
- */
-export function cleanTicketMarketingName(raw: string): string {
-  let s = (raw || "").trim();
-  s = s.replace(/\b((?:Kategorie|Kategori)\s*\d+)\s+\1\b/gi, "$1");
-  s = s.replace(/\b(Standart|Standard|VIP|Vip)\s+\1\b/gi, "$1");
-  s = dedupeRepeatedTail(s);
-  return s.trim();
-}
-
 export function shortenTicketDisplayName(name: string): string {
-  const normalized = cleanTicketMarketingName(name);
-  const dashIdx = normalized.lastIndexOf(" - ");
+  const cleaned = dedupeRepeatedTail(name);
+  const dashIdx = cleaned.lastIndexOf(" - ");
   if (dashIdx > 0) {
-    const tail = normalized.slice(dashIdx + 3).trim();
+    const tail = cleaned.slice(dashIdx + 3).trim();
     if (tail) return tail;
   }
-  return normalized;
+  return cleaned;
 }
 
 export function normalizeTicketMatchText(value: string): string {
-  return cleanTicketMarketingName(value).trim().toLowerCase().replace(/\s+/g, " ");
+  return dedupeRepeatedTail(value).trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 export function buildTicketLabelVariants(raw: string): string[] {
-  const cleaned = cleanTicketMarketingName(raw || "").trim();
+  const cleaned = dedupeRepeatedTail(raw || "").trim();
   if (!cleaned) return [];
   const out = new Set<string>();
   const short = shortenTicketDisplayName(cleaned);

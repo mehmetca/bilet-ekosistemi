@@ -53,12 +53,8 @@ import {
 import { planSectionsMatchMusensaalTemplate } from "@/lib/seating-plans/musensaal-structure-match";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import { getTicketCategoryColorHex, lightenHex } from "@/lib/seating-plans/ticket-category-colors";
-import { findTicketByLabels, shortenTicketDisplayName, cleanTicketMarketingName } from "@/lib/ticket-seating-match";
+import { findTicketByLabels, shortenTicketDisplayName } from "@/lib/ticket-seating-match";
 import type { TicketLike } from "@/lib/ticket-seating-match";
-import {
-  compareTicketsPriceCategoryShelf,
-  formatPriceCategoryShelfLabel,
-} from "@/lib/ticket-catalog-display";
 
 const SEAT_HOLD_LS_KEY = "seatHoldSessionId";
 
@@ -775,11 +771,11 @@ function SeatMapWithZoom({
         : locale === "en"
           ? "All categories"
           : "Tüm kategoriler"
-      : (() => {
-          const tk = catalogTickets.find((x) => x.id === selectedSeatCategory);
-          if (tk) return formatPriceCategoryShelfLabel(tk as EventTicket, currency);
-          return shortenTicketDisplayName(selectedSeatCategory || "Bilet");
-        })();
+      : shortenTicketDisplayName(
+          catalogTickets.find((x) => x.id === selectedSeatCategory)?.name?.trim() ||
+            selectedSeatCategory ||
+            "Bilet"
+        );
 
   return (
     <div className="space-y-2">
@@ -841,16 +837,15 @@ function SeatMapWithZoom({
                       className="h-3.5 w-3.5 rounded-[4px] shrink-0"
                       style={{ backgroundColor: getTicketCategoryColorHex(display) }}
                     />
-                    <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
-                      <span className={soldOut ? "line-through opacity-60" : undefined}>
-                        {formatPriceCategoryShelfLabel(tk as EventTicket, currency)}
-                      </span>
+                    <span className="min-w-0 flex-1 truncate text-slate-800">{display}</span>
+                    <span className="shrink-0 font-semibold text-slate-700">
                       {soldOut ? (
-                        <span className="ml-2 text-xs font-bold uppercase tracking-wide text-red-600">
-                          {" "}
+                        <span className="text-xs font-bold uppercase tracking-wide text-red-600">
                           {t("priceCategorySoldOut")}
                         </span>
-                      ) : null}
+                      ) : (
+                        formatPrice(Number(tk.price || 0), currency)
+                      )}
                     </span>
                   </button>
                 );
@@ -961,11 +956,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     [catalogTickets]
   );
   const priceModeTickets = catalogTickets;
-  /** Preis-Kategorie-Tabellenreihenfolge: VIP vor Standard, dann Zone, dann Kategori-Nummer. */
-  const catalogTicketsPriceShelfSorted = useMemo(
-    () => [...catalogTickets].sort(compareTicketsPriceCategoryShelf),
-    [catalogTickets]
-  );
   const hasSeatingPlan = !!(event as Event & { seating_plan_id?: string }).seating_plan_id;
   const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
   const parsedDescription = useMemo(() => parseEventDescription(localized.description || event.description), [localized.description, event.description]);
@@ -1106,13 +1096,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         }))
         .filter((row) => row.count > 0),
     [priceModeTickets, ticketCountsByType]
-  );
-  const selectedPriceTicketEntriesShelfSorted = useMemo(
-    () =>
-      [...selectedPriceTicketEntries].sort((a, b) =>
-        compareTicketsPriceCategoryShelf(a.ticket as EventTicket, b.ticket as EventTicket)
-      ),
-    [selectedPriceTicketEntries]
   );
   const selectedPriceTicketTotalCount = useMemo(
     () => selectedPriceTicketEntries.reduce((sum, row) => sum + row.count, 0),
@@ -1391,7 +1374,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       const st = sec.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
       const secIdx = seatingPlanData ? seatingPlanData.indexOf(sec) : 0;
       const { ticket } = getTicketForRow(sec, row, secIdx, catalogTickets);
-      const fallbackLine = `${cleanTicketMarketingName(sec?.name ?? "—")} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${st?.seat_label ?? "—"}`;
+      const fallbackLine = `${sec?.name ?? "—"} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${st?.seat_label ?? "—"}`;
       meta.set(seatId, {
         ticket,
         venueLine: duisburgSeatCaptionById.get(seatId) ?? fallbackLine,
@@ -1696,13 +1679,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         const seatMeta = seatMetaById.get(seatId);
         const fallbackTicket = catalogTickets.find((t) => t.id === selectedTicketType) || catalogTickets[0];
         const ticketForCart = seatMeta?.ticket?.id ? seatMeta.ticket : fallbackTicket;
-        const fullTicketRow =
-          (ticketForCart?.id ? catalogTickets.find((t) => t.id === ticketForCart!.id) : null) ??
-          fallbackTicket ??
-          null;
-        if (fullTicketRow?.id) {
+        if (ticketForCart?.id) {
           addItem({
-            ticketId: fullTicketRow.id,
+            ticketId: ticketForCart.id,
             eventId: event.id,
             eventTitle: localized.title || event.title,
             eventDate: event.date,
@@ -1710,8 +1689,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             venue: localized.venue || event.venue,
             location: event.location,
             imageUrl: event.image_url,
-            ticketName: formatPriceCategoryShelfLabel(fullTicketRow, event.currency),
-            price: Number(fullTicketRow.price || 0),
+            ticketName: ticketForCart.name || "Bilet",
+            price: Number(ticketForCart.price || 0),
             currency: event.currency,
             eventCheckoutFee:
               typeof event.checkout_processing_fee === "number" &&
@@ -1719,12 +1698,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 ? event.checkout_processing_fee
                 : undefined,
             quantity: 1,
-            available: Number(fullTicketRow.available || 0),
+            available: Number(ticketForCart.available || 0),
             seatIds: [seatId],
             seatCaptions: [seatMeta?.venueLine || seatId],
           });
           setHasSeatSelectionAddedToCart(true);
-          const priceText = formatPrice(Number(fullTicketRow.price || 0), event.currency);
+          const priceText = formatPrice(Number(ticketForCart.price || 0), event.currency);
           setActionMessage(
             locale === "de"
               ? `Ticketpreis: ${priceText} - zum Warenkorb hinzugefügt.`
@@ -2340,7 +2319,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             const seat = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
                             const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
                             const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, catalogTickets);
-                            const fallbackLine = `${cleanTicketMarketingName(sec?.name ?? "—")} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${seat?.seat_label ?? "—"}`;
+                            const fallbackLine = `${sec?.name ?? "—"} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${seat?.seat_label ?? "—"}`;
                             return {
                               seatId,
                               sectionName: sec?.name ?? "—",
@@ -2449,13 +2428,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                           const sec = seatToSection.get(id);
                                           const row = seatToRow.get(id);
                                           const st = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === id);
-                                          return `${cleanTicketMarketingName(sec?.name || "") || "—"} · ${rowLabelWord} ${row?.row_label ?? ""} · ${seatLabelWord} ${st?.seat_label ?? id}`;
+                                          return `${sec?.name ?? ""} · ${rowLabelWord} ${row?.row_label ?? ""} · ${seatLabelWord} ${st?.seat_label ?? id}`;
                                         })()
                                     );
                                     addItem({
                                       ...eventPayload,
                                       ticketId: tk.id,
-                                      ticketName: formatPriceCategoryShelfLabel(tk as EventTicket, event.currency),
+                                      ticketName: tk.name || "Bilet",
                                       price: Number(tk.price || 0),
                                       quantity: seatIds.length,
                                       seatIds,
@@ -2489,7 +2468,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             const sec = seatToSection.get(seatId);
                             const row = seatToRow.get(seatId);
                             const seat = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
-                            const fallbackLine = `${cleanTicketMarketingName(sec?.name ?? "—")} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${seat?.seat_label ?? "—"}`;
+                            const fallbackLine = `${sec?.name ?? "—"} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${seat?.seat_label ?? "—"}`;
                             return {
                               seatId,
                               sectionName: sec?.name ?? "—",
@@ -2592,12 +2571,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       </div>
                     ) : (
                       <div className="mb-8 overflow-hidden rounded-xl border border-slate-200">
-                        <div className="hidden bg-slate-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid md:grid-cols-[minmax(0,1fr)_170px]">
+                        <div className="hidden bg-slate-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid md:grid-cols-[minmax(0,1fr)_120px_170px]">
                           <span>{t("ticketType")}</span>
+                          <span>{t("price")}</span>
                           <span className="text-right">{t("quantity")}</span>
                         </div>
                         <div className="divide-y divide-slate-200">
-                          {catalogTicketsPriceShelfSorted.map((ticketType) => {
+                          {catalogTickets.map((ticketType) => {
                             const availableAmount = effectiveAvailabilityForTicket(ticketType);
                             const isSoldOutRow = availableAmount <= 0;
                             const minSelectable = getMinQuantityFromDescription(ticketType.description);
@@ -2617,10 +2597,10 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   setSelectedTicketType(ticketType.id);
                                 }}
                               >
-                                <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_170px]">
+                                <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_120px_170px]">
                                   <div>
-                                    <p className={`text-sm font-semibold ${isSoldOutRow ? "text-slate-500 line-through" : "text-slate-900"}`}>
-                                      {formatPriceCategoryShelfLabel(ticketType, event.currency)}
+                                    <p className="text-sm font-semibold text-slate-900">
+                                      {shortenTicketDisplayName(ticketType.name || ticketType.ticket_type || "Standart")}
                                     </p>
                                     <p className="text-xs text-slate-500">
                                       {isSoldOutRow ? (
@@ -2637,6 +2617,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       )}
                                     </p>
                                   </div>
+                                  <p className="text-lg font-bold text-primary-700">{formatPrice(ticketType.price, event.currency)}</p>
                                   <div className="flex items-center justify-end gap-2">
                                     {isSoldOutRow ? (
                                       <span className="text-right text-xs font-extrabold uppercase tracking-wide text-red-600">
@@ -2736,7 +2717,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               venue: localized.venue || event.venue,
                               location: event.location,
                               imageUrl: event.image_url,
-                              ticketName: formatPriceCategoryShelfLabel(ticket, event.currency),
+                              ticketName: ticket.name || "Standart",
                               price: Number(ticket.price || 0),
                               currency: event.currency,
                               eventCheckoutFee:
@@ -2775,9 +2756,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               : "Yeni seçim"}
                         </p>
                         <ul className="space-y-1 text-sm text-slate-700">
-                          {selectedPriceTicketEntriesShelfSorted.map(({ ticket, count }, idx) => (
+                          {selectedPriceTicketEntries.map(({ ticket, count }, idx) => (
                             <li key={`price-cat-selected-side-${ticket.id}`}>
-                              {idx + 1}. {formatPriceCategoryShelfLabel(ticket, event.currency)} × {count}
+                              {idx + 1}. {shortenTicketDisplayName(ticket.name || "Standart")} x {count}
                             </li>
                           ))}
                         </ul>
