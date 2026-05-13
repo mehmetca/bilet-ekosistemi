@@ -11,6 +11,7 @@ import { createSupabaseServerClient } from "@/lib/supabase-ssr";
 import { getSiteUrl } from "@/lib/site-url";
 import { getStripe } from "@/lib/stripe-server";
 import type { TicketType } from "@/types/database";
+import { planLabelsMatchTicketCatalogName, shortenTicketDisplayName } from "@/lib/ticket-seating-match";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -77,42 +78,53 @@ async function assignBestAvailableSeats(
   ticketTypeName: string,
   quantity: number
 ): Promise<string[]> {
-  let sections: { id: string; name?: string; sort_order?: number }[] | null = null;
   const hasTicketType = (ticketTypeName || "").trim().length > 0;
 
+  const { data: allSections } = await supabase
+    .from("seating_plan_sections")
+    .select("id, name, sort_order, ticket_type_label")
+    .eq("seating_plan_id", seatingPlanId)
+    .order("sort_order", { ascending: true });
+
+  if (!allSections?.length) return [];
+
+  let sections: typeof allSections;
+
   if (hasTicketType) {
-    const { data: sectionsExact } = await supabase
-      .from("seating_plan_sections")
-      .select("id, name, sort_order")
-      .eq("seating_plan_id", seatingPlanId)
-      .ilike("ticket_type_label", ticketTypeName);
-    if (sectionsExact?.length) {
-      sections = sectionsExact;
-    } else {
-      const { data: sectionsContains } = await supabase
-        .from("seating_plan_sections")
-        .select("id, name, sort_order, ticket_type_label")
-        .eq("seating_plan_id", seatingPlanId)
-        .ilike("ticket_type_label", `%${ticketTypeName}%`);
-      if (sectionsContains?.length) {
-        const exact = sectionsContains.filter(
-          (s: { ticket_type_label?: string }) =>
-            (s.ticket_type_label || "").trim().toLowerCase() === ticketTypeName.toLowerCase()
-        );
-        sections = exact.length ? exact : sectionsContains;
+    const { data: rowsLite } = await supabase
+      .from("seating_plan_rows")
+      .select("section_id, ticket_type_label")
+      .in(
+        "section_id",
+        allSections.map((s) => s.id)
+      );
+
+    const matchedSectionIds = new Set<string>();
+
+    for (const s of allSections) {
+      const name = String(s.name || "").trim();
+      const lbl = String((s as { ticket_type_label?: string | null }).ticket_type_label || "").trim();
+      const candidates = [lbl, name, name ? shortenTicketDisplayName(name) : ""].filter(Boolean) as string[];
+      if (candidates.length && planLabelsMatchTicketCatalogName(candidates, ticketTypeName)) {
+        matchedSectionIds.add(s.id);
       }
     }
+
+    for (const r of rowsLite || []) {
+      const rl = String((r as { ticket_type_label?: string | null }).ticket_type_label || "").trim();
+      if (!rl) continue;
+      if (planLabelsMatchTicketCatalogName([rl], ticketTypeName)) {
+        matchedSectionIds.add(String((r as { section_id: string }).section_id));
+      }
+    }
+
+    if (matchedSectionIds.size === 0) return [];
+
+    sections = allSections.filter((s) => matchedSectionIds.has(s.id));
+  } else {
+    sections = allSections;
   }
 
-  if (!sections?.length) {
-    // Bilet türü eşleşmedi veya boş: planın tüm bölümlerinden müsait koltuk ata
-    const { data: allSections } = await supabase
-      .from("seating_plan_sections")
-      .select("id, name, sort_order")
-      .eq("seating_plan_id", seatingPlanId)
-      .order("sort_order", { ascending: true });
-    sections = allSections?.length ? allSections : null;
-  }
   if (!sections?.length) return [];
 
   const sectionIds = sections.map((s: { id: string }) => s.id);
@@ -1548,6 +1560,26 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           );
         }
+      }
+      if (seatDetails.length !== seatIds.length) {
+        console.error("[purchase] order_seats eksik:", {
+          expected: seatIds.length,
+          inserted: seatDetails.length,
+          orderId: orderData.id,
+        });
+        await supabase.from("orders").delete().eq("id", orderData.id);
+        await supabase.rpc("release_ticket_stock", {
+          p_ticket_id: ticketId,
+          p_quantity: quantity,
+        });
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Koltuk kayıtları tamamlanamadı. Lütfen tekrar deneyin veya yer seçerek bilet alın.",
+          },
+          { status: 500 }
+        );
       }
     }
 

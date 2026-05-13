@@ -53,6 +53,8 @@ import {
 import { planSectionsMatchMusensaalTemplate } from "@/lib/seating-plans/musensaal-structure-match";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import { getTicketCategoryColorHex, lightenHex } from "@/lib/seating-plans/ticket-category-colors";
+import { findTicketByLabels, shortenTicketDisplayName } from "@/lib/ticket-seating-match";
+import type { TicketLike } from "@/lib/ticket-seating-match";
 
 const SEAT_HOLD_LS_KEY = "seatHoldSessionId";
 
@@ -93,100 +95,7 @@ type SeatPlanSection = {
   rows: SeatPlanRow[];
 };
 
-type TicketLike = { id: string; name?: string | null; price?: number | null; available?: number | null };
 const MUSENSAAL_PREFIXES = ["P", "EML", "EMR", "SEL", "SER", "EH"] as const;
-
-/**
- * Bilet türü adında peş peşe aynı kelime grubunun tekrar etmesini kaldırır.
- * Örn. "Orta salon - VIP VIP" → "Orta salon - VIP"
- *      "Orta salon - Kategori 1 Kategori 1" → "Orta salon - Kategori 1"
- *      "VIP" → "VIP" (değişmez)
- */
-function dedupeRepeatedTail(name: string): string {
-  const tokens = name.trim().split(/\s+/).filter(Boolean);
-  if (tokens.length < 2) return name.trim();
-  for (let k = 1; k <= Math.floor(tokens.length / 2); k++) {
-    const tail = tokens.slice(-k).join(" ").toLowerCase();
-    const before = tokens.slice(-2 * k, -k).join(" ").toLowerCase();
-    if (tail && before && tail === before) {
-      return tokens.slice(0, -k).join(" ").trim();
-    }
-  }
-  return name.trim();
-}
-
-/** Görünen kısa kategori adı: "Orta salon - VIP VIP" → "VIP"; bilinmeyen format için temizlenmiş tam ad. */
-function shortenTicketDisplayName(name: string): string {
-  const cleaned = dedupeRepeatedTail(name);
-  const dashIdx = cleaned.lastIndexOf(" - ");
-  if (dashIdx > 0) {
-    const tail = cleaned.slice(dashIdx + 3).trim();
-    if (tail) return tail;
-  }
-  return cleaned;
-}
-
-function normalizeTicketMatchText(value: string): string {
-  return dedupeRepeatedTail(value).trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function buildTicketLabelVariants(raw: string): string[] {
-  const cleaned = dedupeRepeatedTail(raw || "").trim();
-  if (!cleaned) return [];
-  const out = new Set<string>();
-  const short = shortenTicketDisplayName(cleaned);
-  const dashIdx = cleaned.lastIndexOf(" - ");
-  const dashTail = dashIdx > 0 ? cleaned.slice(dashIdx + 3).trim() : "";
-  for (const part of [cleaned, short, dashTail]) {
-    const n = normalizeTicketMatchText(part);
-    if (n) out.add(n);
-  }
-  return Array.from(out);
-}
-
-function findTicketByLabels(labels: string[], availableTickets: TicketLike[]): TicketLike | null {
-  if (!labels.length || !availableTickets.length) return null;
-  const normalizedLabels = Array.from(
-    new Set(
-      labels
-        .flatMap((l) => buildTicketLabelVariants(l))
-        .map((x) => normalizeTicketMatchText(x))
-        .filter(Boolean)
-    )
-  );
-  if (!normalizedLabels.length) return null;
-
-  let best: { ticket: TicketLike; score: number } | null = null;
-  for (const t of availableTickets) {
-    const rawName = String(t.name || "").trim();
-    if (!rawName) continue;
-    const full = normalizeTicketMatchText(rawName);
-    const short = normalizeTicketMatchText(shortenTicketDisplayName(rawName));
-    let score: number | null = null;
-
-    if (normalizedLabels.includes(full)) {
-      score = 0;
-    } else if (short && normalizedLabels.includes(short)) {
-      score = 1;
-    } else if (
-      normalizedLabels.some((l) =>
-        (short && (short.endsWith(` ${l}`) || l.endsWith(` ${short}`))) ||
-        full.endsWith(` ${l}`) ||
-        l.endsWith(` ${full}`)
-      )
-    ) {
-      score = 2;
-    } else if (
-      normalizedLabels.some((l) => l.length >= 4 && (full.includes(l) || (short && short.includes(l))))
-    ) {
-      score = 3;
-    }
-
-    if (score === null) continue;
-    if (!best || score < best.score) best = { ticket: t, score };
-  }
-  return best?.ticket ?? null;
-}
 
 /**
  * Bilet listesi sıralama anahtarı: VIP en başta, ardından Kategori 1, 2, 3, … sayısal sırayla.
@@ -754,6 +663,7 @@ function SeatMapWithZoom({
   stageLabel,
   seatLabelWord,
   catalogTickets,
+  ticketEffectiveAvailableById,
   selectedSeatCategory,
   onSelectSeatCategory,
   locale,
@@ -770,6 +680,7 @@ function SeatMapWithZoom({
   stageLabel: string;
   seatLabelWord: string;
   catalogTickets: TicketLike[];
+  ticketEffectiveAvailableById: Map<string, number>;
   selectedSeatCategory: string;
   onSelectSeatCategory: (value: string) => void;
   locale: Locale;
@@ -907,7 +818,9 @@ function SeatMapWithZoom({
               </button>
               {seatCategoryOptions.map(({ display, ticket: tk }) => {
                 const active = selectedSeatCategory === tk.id;
-                const soldOut = Number(tk.available ?? 0) <= 0;
+                const effectiveAvail =
+                  ticketEffectiveAvailableById.get(tk.id) ?? Number(tk.available ?? 0);
+                const soldOut = effectiveAvail <= 0;
                 return (
                   <button
                     key={tk.id}
@@ -1207,26 +1120,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     return Array.from(grouped.entries()).map(([name, quantity]) => ({ name, quantity }));
   }, [cartItems, event.id]);
 
-  useEffect(() => {
-    if (priceModeTickets.length === 0) {
-      setTicketCountsByType({});
-      return;
-    }
-    const validTicketIds = new Set(priceModeTickets.map((t) => t.id));
-    setTicketCountsByType((prev) => {
-      const next: Record<string, number> = {};
-      for (const [ticketId, countRaw] of Object.entries(prev)) {
-        if (!validTicketIds.has(ticketId)) continue;
-        const tk = priceModeTickets.find((t) => t.id === ticketId);
-        if (!tk) continue;
-        const maxSelectable = Math.min(Number(tk.available || 0), maxTicketsPerOrder);
-        const count = Math.max(0, Math.min(Number(countRaw || 0), maxSelectable));
-        if (count > 0) next[ticketId] = count;
-      }
-      return next;
-    });
-  }, [priceModeTickets, maxTicketsPerOrder]);
-
   const seatingPlanId = (event as Event & { seating_plan_id?: string }).seating_plan_id;
 
   /** Ara render’da Musensaal şablonu “kapalı” kalıp planın kaybolması engellenir (state yerine veriden türetilir). */
@@ -1250,7 +1143,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     seatingPlanLooksLikeGermanTheaterButNotImage(seatingPlanData);
 
   useEffect(() => {
-    if (!seatingPlanId || bookingMode !== "seat") {
+    if (!seatingPlanId) {
       setSeatingPlanData(null);
       setSeatingPlanName("");
       setSeatingPlanLoading(false);
@@ -1346,7 +1239,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     return () => {
       cancelled = true;
     };
-  }, [seatingPlanId, bookingMode]);
+  }, [seatingPlanId]);
 
   const fetchSoldSeats = useCallback(() => {
     if (!event?.id || !hasSeatingPlan) return;
@@ -1490,6 +1383,63 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     return meta;
   }, [seatingPlanData, catalogTickets, duisburgSeatCaptionById, rowLabelWord, seatLabelWord]);
 
+  /** Plana eşlenen, hâlâ satılabilir koltuk sayısı / bilet satırı (katalog available ile kesiştirilecek). */
+  const remainingSeatSlotsByTicketId = useMemo(() => {
+    const m = new Map<string, number>();
+    if (!hasSeatingPlan || !seatingPlanData?.length) return m;
+    seatingPlanData.forEach((sec) =>
+      sec.rows.forEach((row) =>
+        row.seats.forEach((seat) => {
+          if (seat.sales_blocked) return;
+          if (soldSeatIds.has(seat.id)) return;
+          const meta = seatMetaById.get(seat.id);
+          const tid = meta?.ticket?.id;
+          if (!tid) return;
+          m.set(tid, (m.get(tid) || 0) + 1);
+        })
+      )
+    );
+    return m;
+  }, [hasSeatingPlan, seatingPlanData, soldSeatIds, seatMetaById]);
+
+  const effectiveAvailabilityForTicket = useCallback(
+    (tk: EventTicket): number => {
+      const catalogAvail = Number(tk.available || 0);
+      if (!hasSeatingPlan || !seatingPlanData?.length) return catalogAvail;
+      const seatBacked = remainingSeatSlotsByTicketId.get(tk.id) ?? 0;
+      return Math.min(catalogAvail, seatBacked);
+    },
+    [hasSeatingPlan, seatingPlanData, remainingSeatSlotsByTicketId]
+  );
+
+  const ticketEffectiveAvailableById = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const tk of catalogTickets) {
+      m.set(tk.id, effectiveAvailabilityForTicket(tk));
+    }
+    return m;
+  }, [catalogTickets, effectiveAvailabilityForTicket]);
+
+  useEffect(() => {
+    if (priceModeTickets.length === 0) {
+      setTicketCountsByType({});
+      return;
+    }
+    const validTicketIds = new Set(priceModeTickets.map((t) => t.id));
+    setTicketCountsByType((prev) => {
+      const next: Record<string, number> = {};
+      for (const [ticketId, countRaw] of Object.entries(prev)) {
+        if (!validTicketIds.has(ticketId)) continue;
+        const tk = priceModeTickets.find((t) => t.id === ticketId);
+        if (!tk) continue;
+        const maxSelectable = Math.min(effectiveAvailabilityForTicket(tk), maxTicketsPerOrder);
+        const count = Math.max(0, Math.min(Number(countRaw || 0), maxSelectable));
+        if (count > 0) next[ticketId] = count;
+      }
+      return next;
+    });
+  }, [priceModeTickets, maxTicketsPerOrder, effectiveAvailabilityForTicket]);
+
   const seatCategoryHexBySeatId = useMemo(() => {
     const m = new Map<string, string>();
     if (!seatingPlanData) return m;
@@ -1531,10 +1481,19 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const seatMapSoldLikeIds = useMemo(() => {
     const s = new Set(soldSeatIds);
     seatMetaById.forEach((meta, seatId) => {
-      if (Number(meta.ticket?.available ?? 0) <= 0) s.add(seatId);
+      const tid = meta.ticket?.id;
+      const catalogAvail = Number(meta.ticket?.available ?? 0);
+      if (catalogAvail <= 0) {
+        s.add(seatId);
+        return;
+      }
+      if (hasSeatingPlan && seatingPlanData?.length && tid) {
+        const seatBacked = remainingSeatSlotsByTicketId.get(tid) ?? 0;
+        if (Math.min(catalogAvail, seatBacked) <= 0) s.add(seatId);
+      }
     });
     return s;
-  }, [soldSeatIds, seatMetaById]);
+  }, [soldSeatIds, seatMetaById, hasSeatingPlan, seatingPlanData?.length, remainingSeatSlotsByTicketId]);
 
   const seatTitleById = useMemo(() => {
     const m = new Map<string, string>();
@@ -1590,15 +1549,18 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         return;
       }
       const seatMetaPreview = seatMetaById.get(seatId);
-      if (seatMetaPreview && Number(seatMetaPreview.ticket?.available ?? 0) <= 0) {
-        setActionMessage(
-          locale === "de"
-            ? "In dieser Kategorie sind keine Tickets mehr verfugbar."
-            : locale === "en"
-            ? "This ticket category is sold out."
-            : "Bu bilet kategorisinde satis kalmadi."
-        );
-        return;
+      if (seatMetaPreview?.ticket?.id) {
+        const tk = catalogTickets.find((t) => t.id === seatMetaPreview.ticket!.id);
+        if (tk && effectiveAvailabilityForTicket(tk) <= 0) {
+          setActionMessage(
+            locale === "de"
+              ? "In dieser Kategorie sind keine Tickets mehr verfugbar."
+              : locale === "en"
+                ? "This ticket category is sold out."
+                : "Bu bilet kategorisinde satis kalmadi."
+          );
+          return;
+        }
       }
       const sessionId = ensureSeatHoldSessionId(seatHoldSessionId);
       if (!sessionId) {
@@ -1780,6 +1742,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       selectedSeatIds,
       selectedTicketType,
       tCheckout,
+      effectiveAvailabilityForTicket,
     ]
   );
 
@@ -2222,6 +2185,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 stageLabel={stageLabel}
                                 seatLabelWord={seatLabelWord}
                                 catalogTickets={catalogTickets}
+                                ticketEffectiveAvailableById={ticketEffectiveAvailableById}
                                 selectedSeatCategory={selectedSeatCategory}
                                 onSelectSeatCategory={setSelectedSeatCategory}
                                 locale={locale}
@@ -2614,7 +2578,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         </div>
                         <div className="divide-y divide-slate-200">
                           {catalogTickets.map((ticketType) => {
-                            const availableAmount = Number(ticketType.available || 0);
+                            const availableAmount = effectiveAvailabilityForTicket(ticketType);
                             const isSoldOutRow = availableAmount <= 0;
                             const minSelectable = getMinQuantityFromDescription(ticketType.description);
                             const maxSelectable = Math.min(availableAmount, maxTicketsPerOrder);
