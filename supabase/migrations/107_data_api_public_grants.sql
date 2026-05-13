@@ -14,50 +14,13 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
 -- SERIAL / identity sıraları (INSERT sırasında nextval gerekebilir)
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO authenticated, service_role;
 
--- Bundan sonra bu roller tarafından oluşturulacak tablolar için varsayılan haklar.
--- Hosted Supabase’de sık görülen sahipler: postgres, supabase_admin
-DO $$
-DECLARE
-  creator TEXT;
-BEGIN
-  FOREACH creator IN ARRAY ARRAY['postgres', 'supabase_admin']::text[]
-  LOOP
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = creator) THEN
-      EXECUTE format(
-        $f$
-          ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public
-            GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
-        $f$,
-        creator
-      );
-      EXECUTE format(
-        $f$
-          ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public
-            GRANT SELECT ON TABLES TO anon;
-        $f$,
-        creator
-      );
-      EXECUTE format(
-        $f$
-          ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public
-            GRANT ALL ON TABLES TO service_role;
-        $f$,
-        creator
-      );
-      EXECUTE format(
-        $f$
-          ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public
-            GRANT USAGE, SELECT ON SEQUENCES TO authenticated;
-        $f$,
-        creator
-      );
-      EXECUTE format(
-        $f$
-          ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public
-            GRANT USAGE, SELECT ON SEQUENCES TO service_role;
-        $f$,
-        creator
-      );
-    END IF;
-  END LOOP;
-END $$;
+-- İleriye dönük: migration’ı/submit eden kullanıcının public’te oluşturacağı tablo/sıra için varsayılan
+-- haklar (FOR ROLE supabase_admin yazılmaz — Dashboard/çoğu bağlantı bunu yapma yetkisine sahip değildir).
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT SELECT ON TABLES TO anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT ALL ON TABLES TO service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  GRANT USAGE, SELECT ON SEQUENCES TO authenticated, service_role;
