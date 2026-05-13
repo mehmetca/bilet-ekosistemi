@@ -217,7 +217,7 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
       });
       const data = (await res.json().catch(() => ({}))) as Profile | { error?: string };
       if (!res.ok) {
-        setError((data as { error?: string }).error || "errorSaveFailed");
+        setError("errorSaveFailed");
         return;
       }
       setProfile(data as Profile);
@@ -244,7 +244,7 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
       });
       const data = (await res.json().catch(() => ({}))) as OrganizerRequest | { error?: string };
       if (!res.ok) {
-        setOrgError((data as { error?: string }).error || "errorSaveFailed");
+        setOrgError("errorSaveFailed");
         return;
       }
       setOrganizerRequest(data as OrganizerRequest);
@@ -283,7 +283,14 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
       });
       const data = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) {
-        setPwdError(data.error || "errorPasswordUpdateFailed");
+        const backendError = String(data.error || "").toLowerCase();
+        if (backendError.includes("eşleş")) {
+          setPwdError("errorPasswordsDontMatch");
+        } else if (backendError.includes("en az 6")) {
+          setPwdError("errorPasswordMinLength");
+        } else {
+          setPwdError("errorPasswordUpdateFailed");
+        }
         return;
       }
       setPwdSuccess("successPasswordUpdated");

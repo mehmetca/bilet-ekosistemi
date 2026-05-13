@@ -19,6 +19,7 @@ type OrderRow = {
   events?: { title?: string; date?: string; time?: string; venue?: string; location?: string; currency?: string } | null;
   tickets?: { name?: string; type?: string; price?: number } | null;
   seatDetails?: SeatDetail[];
+  ticketCodes?: string[];
 };
 
 /** PostgREST şemasında orders→tickets FK yoksa gömülü `tickets(...)` tüm sorguyu düşürür; yönetim /api/orders gibi ticket ayrı çekilir. */
@@ -129,6 +130,29 @@ async function fetchOrdersForUser(
     }
     for (const o of merged) {
       o.seatDetails = seatsByOrder.get(o.id) || undefined;
+    }
+
+    const { data: unitRows, error: unitsErr } = await supabase
+      .from("order_ticket_units")
+      .select("order_id, ticket_code, created_at")
+      .in("order_id", ids)
+      .order("created_at", { ascending: true });
+    if (unitsErr) {
+      if (!/order_ticket_units|schema cache|PGRST/i.test(String(unitsErr.message || ""))) {
+        console.error("user orders order_ticket_units:", unitsErr.message);
+      }
+    } else {
+      const unitsByOrder = new Map<string, string[]>();
+      for (const row of unitRows || []) {
+        const list = unitsByOrder.get(row.order_id) || [];
+        const code = String(row.ticket_code || "").trim();
+        if (code.length > 0) list.push(code);
+        unitsByOrder.set(row.order_id, list);
+      }
+      for (const o of merged) {
+        const codes = unitsByOrder.get(o.id) || [];
+        o.ticketCodes = codes.length > 0 ? codes : undefined;
+      }
     }
   }
 

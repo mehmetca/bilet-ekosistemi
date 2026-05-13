@@ -150,9 +150,14 @@ export async function getEventTickets(eventId: string): Promise<Ticket[]> {
     const { data, error } = await supabase
       .from("tickets")
       .select("*")
-      .eq("event_id", eventId);
+      .eq("event_id", eventId)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: true });
     if (error) return [];
     return ((data || []) as Ticket[]).sort((a, b) => {
+      const ai = typeof a.sort_order === "number" ? a.sort_order : 0;
+      const bi = typeof b.sort_order === "number" ? b.sort_order : 0;
+      if (ai !== bi) return ai - bi;
       const rankDiff = getTicketSortRank(a.name) - getTicketSortRank(b.name);
       if (rankDiff !== 0) return rankDiff;
       return (a.name || "").localeCompare(b.name || "", "tr");

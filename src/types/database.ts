@@ -12,7 +12,7 @@ export interface Event {
   venue: string;
   venue_id?: string | null;
   price_from: number;
-  /** Sepette / ödemede etkinlik başına en fazla bir kez uygulanan isteğe bağlı işlem ücreti (para birimi = currency). */
+  /** Checkout’ta her bilet adedi için eklenen isteğe bağlı işlem ücreti — birim × adet (para birimi = currency). Kargo sipariş başına ayrıdır. */
   checkout_processing_fee?: number | null;
   currency?: EventCurrency | null;
   image_url?: string;
@@ -248,6 +248,8 @@ export interface Ticket {
   price: number;
   quantity: number;
   available: number;
+  /** Görünüm sırası (sihirbaz / oturum planı bileşeni ile aynı) */
+  sort_order?: number;
   description?: string | null;
   is_active?: boolean;
   created_at?: string;

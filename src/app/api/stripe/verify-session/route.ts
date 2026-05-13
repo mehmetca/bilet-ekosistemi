@@ -13,11 +13,15 @@ export async function POST(request: NextRequest) {
 
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.retrieve(cleanSessionId);
-    const paid = session.payment_status === "paid";
+    /** Yalnızca oturum tamamlandığında siparişe izin ver; açık (embedded yüklü) oturumu yanlışlıkla ödenmiş sanma */
+    const paid =
+      session.status === "complete" &&
+      (session.payment_status === "paid" || session.payment_status === "no_payment_required");
 
     return NextResponse.json({
       success: true,
       paid,
+      status: session.status,
       paymentStatus: session.payment_status,
       currency: session.currency,
       amountTotal: session.amount_total,

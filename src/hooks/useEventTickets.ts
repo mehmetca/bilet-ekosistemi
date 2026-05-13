@@ -7,9 +7,8 @@ async function fetcher([, eventId]: [string, string]): Promise<Ticket[]> {
   const { supabase } = await import("@/lib/supabase-client");
   const { data, error } = await supabase
     .from("tickets")
-    .select("id,event_id,name,type,price,quantity,available,description,is_active,created_at,updated_at")
-    .eq("event_id", eventId)
-    .gt("available", 0);
+    .select("id,event_id,name,type,price,quantity,available,description,is_active,created_at,updated_at,sort_order")
+    .eq("event_id", eventId);
   if (error) throw error;
   return (data ?? []) as Ticket[];
 }

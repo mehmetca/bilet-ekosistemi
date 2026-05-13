@@ -3,7 +3,7 @@
 import { Printer, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import TicketPrint from "@/components/TicketPrint";
-import type { EventCurrency } from "@/types/database";
+import type { EventCurrency, TicketType } from "@/types/database";
 import type { SeatDetail } from "@/types/seat-detail";
 
 export type BiletlerimOrderRow = {
@@ -19,6 +19,7 @@ export type BiletlerimOrderRow = {
   events?: { title?: string; date?: string; time?: string; venue?: string; location?: string; currency?: string } | null;
   tickets?: { name?: string; type?: string; price?: number } | null;
   seatDetails?: SeatDetail[];
+  ticketCodes?: string[];
 };
 
 type Props = {
@@ -57,7 +58,7 @@ export default function BiletlerimOrderList({
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <span className="text-slate-600">
-                {order.tickets?.name || order.tickets?.type || "Bilet"} × {order.quantity}
+                {order.tickets?.name || order.tickets?.type || t("ticket")} × {order.quantity}
               </span>
               <span className="font-medium text-slate-900">
                 €{Number(order.total_price).toFixed(2)}
@@ -77,7 +78,7 @@ export default function BiletlerimOrderList({
                     ? t("cancelled")
                     : t("pending")}
               </span>
-              {order.status === "completed" && order.ticket_code && (
+              {order.status === "completed" && (order.ticket_code || (order.ticketCodes && order.ticketCodes.length > 0)) && (
                 <button
                   type="button"
                   onClick={() => onTogglePrint(order.id)}
@@ -99,10 +100,10 @@ export default function BiletlerimOrderList({
               </button>
             </div>
           </div>
-          {printOrderId === order.id && order.ticket_code && order.status === "completed" && (
+          {printOrderId === order.id && (order.ticket_code || (order.ticketCodes && order.ticketCodes.length > 0)) && order.status === "completed" && (
             <div className="border-t border-slate-100 bg-slate-50 p-4">
               <TicketPrint
-                ticketCode={order.ticket_code}
+                ticketCode={order.ticket_code || order.ticketCodes?.[0] || ""}
                 eventTitle={order.events?.title || "—"}
                 eventDate={order.events?.date || ""}
                 eventTime={order.events?.time || ""}
@@ -110,10 +111,11 @@ export default function BiletlerimOrderList({
                 location={order.events?.location || "—"}
                 buyerName={order.buyer_name || "—"}
                 quantity={order.quantity}
-                ticketType={order.tickets?.name || order.tickets?.type || "Bilet"}
+                ticketTier={(order.tickets?.type as TicketType | undefined) ?? undefined}
                 price={order.total_price}
                 currency={(order.events?.currency as EventCurrency) || "EUR"}
                 seatDetails={order.seatDetails}
+                ticketCodes={order.ticketCodes}
               />
             </div>
           )}

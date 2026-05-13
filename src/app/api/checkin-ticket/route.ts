@@ -119,6 +119,74 @@ export async function POST(request: NextRequest) {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
+    // Önce adet-bazlı bilet birimi (koltuksuz çoklu alım) kontrolü
+    const { data: ticketUnit, error: unitFetchError } = await supabase
+      .from("order_ticket_units")
+      .select("id, order_id, checked_at")
+      .ilike("ticket_code", ticketCode)
+      .maybeSingle();
+
+    if (!unitFetchError && ticketUnit) {
+      if (ticketUnit.checked_at) {
+        return NextResponse.json(
+          { success: false, message: "Bu bilet daha önce giriş yapılmış." },
+          { status: 400 }
+        );
+      }
+
+      const { data: parentOrder, error: parentOrderError } = await supabase
+        .from("orders")
+        .select("id, event_id, status, events(created_by_user_id)")
+        .eq("id", ticketUnit.order_id)
+        .maybeSingle();
+
+      if (parentOrderError) {
+        console.error("checkin-ticket ticket_unit parent fetch error:", parentOrderError);
+        return NextResponse.json(
+          { success: false, message: "Bilet sorgulanamadı." },
+          { status: 500 }
+        );
+      }
+
+      if (!parentOrder) {
+        return NextResponse.json(
+          { success: false, message: "Bilet bulunamadı." },
+          { status: 404 }
+        );
+      }
+
+      if (!isCheckinEligibleStatus(parentOrder.status as string | undefined)) {
+        return NextResponse.json(
+          { success: false, message: "Bilet onaylanmamış; check-in yapılamaz." },
+          { status: 400 }
+        );
+      }
+
+      const parentEvent = parentOrder.events as { created_by_user_id?: string } | null;
+      const scopeError = await requireCheckinScope(
+        supabase,
+        auth,
+        parentEvent?.created_by_user_id ?? null
+      );
+      if (scopeError) return scopeError;
+
+      const { error: unitUpdateError } = await supabase
+        .from("order_ticket_units")
+        .update({ checked_at: new Date().toISOString() })
+        .eq("id", ticketUnit.id);
+      if (unitUpdateError) {
+        console.error("checkin-ticket ticket_unit update error:", unitUpdateError);
+        return NextResponse.json(
+          { success: false, message: "Giriş işaretlenemedi." },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json({
+        success: true,
+        message: "Giriş işaretlendi.",
+      });
+    }
+
     // Önce koltuk bazlı bilet kodunu kontrol et (order_seats) – her koltuk ayrı kod
     const { data: orderSeat, error: seatFetchError } = await supabase
       .from("order_seats")
@@ -186,7 +254,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Koltuk kodu yoksa sipariş bazlı kodu dene (eski tek bilet / yer seçilmeyen)
+    // Koltuk/tekil birim kodu yoksa sipariş bazlı kodu dene (yalnızca legacy tek bilet)
     const { data: order, error: fetchError } = await supabase
       .from("orders")
       .select("id, event_id, checked_at, status, events(created_by_user_id)")
@@ -205,6 +273,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, message: "Bilet bulunamadı." },
         { status: 404 }
+      );
+    }
+
+    const [{ data: linkedSeats }, { data: linkedUnits }] = await Promise.all([
+      supabase.from("order_seats").select("id").eq("order_id", order.id).limit(1),
+      supabase.from("order_ticket_units").select("id").eq("order_id", order.id).limit(1),
+    ]);
+    if ((linkedSeats && linkedSeats.length > 0) || (linkedUnits && linkedUnits.length > 0)) {
+      return NextResponse.json(
+        { success: false, message: "Bu siparişte her bilet için ayrı kod var. Lütfen tekil bilet kodunu okutun." },
+        { status: 400 }
       );
     }
 

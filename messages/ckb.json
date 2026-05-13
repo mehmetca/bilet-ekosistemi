@@ -195,7 +195,38 @@
     "cancelled": "هەڵوەشێنراوە",
     "printTicket": "بلیتەکەم چاپ بکە",
     "deleteTicket": "سڕینەوەی بلیت",
-    "deleteTicketConfirm": "دڵنیای کە دەتەوێت ئەم بلیتە بسڕیتەوە؟ ئەم کردارە ناگەڕێتەوە."
+    "deleteTicketConfirm": "دڵنیای کە دەتەوێت ئەم بلیتە بسڕیتەوە؟ ئەم کردارە ناگەڕێتەوە.",
+    "sessionNotFound": "دانیشتن نەدۆزرایەوە. تکایە بچۆرە دەرەوە و دووبارە بچۆ ژوورەوە.",
+    "sessionExpired": "کاتی دانیشتن کۆتایی هات. تکایە بچۆرە دەرەوە و دووبارە بچۆ ژوورەوە.",
+    "ordersLoadFailed": "داواکارییەکان بارنەکرا.",
+    "retry": "دووبارە هەوڵبدە",
+    "refresh": "نوێکردنەوە",
+    "deleteFailed": "بلیتەکە نەسڕایەوە."
+  },
+  "ticketPrint": {
+    "fallbackEventTitle": "بۆنە",
+    "ticketSubtitle": "بلیتی کڕیار/بۆنە",
+    "ticketType": "جۆری بلیت",
+    "seat": "کورسی",
+    "quantity": "کەس/ژمارە",
+    "ticketClassStandard": "بلیتی ستاندارد",
+    "ticketClassVip": "بلیتی VIP",
+    "personOnly": "کەس",
+    "total": "کۆی گشتی",
+    "tearOffSection": "بەشی دابڕاو",
+    "ticketCode": "کۆدی بلیت",
+    "entryPoint": "خاڵی چوونەژوورەوە",
+    "entryPointValue": "EINGANG X",
+    "qrHint": "کۆدی QR لە دەرگادا پیشان بدە",
+    "barcodeAlt": "بارکۆدی بلیت",
+    "qrAlt": "QR کۆدی بلیت",
+    "print": "چاپکردن",
+    "download": "داگرتن",
+    "downloading": "لە داگرتندایە…",
+    "printDownloadHint": "چاپ: لە هەر پەڕەیەکدا 2 بلیت. داگرتن: Barcode و QR code لە فایلەکەدا دەخرێنە ناوەوە؛ بەو شێوەیە دەتوانیت بێ ئینتەرنێت لە دەرگای هۆڵەکە پیشانی بدەیت. ئەم ئیمەیڵە بۆ کڕینی بلیت لە ڕێگەی KurdEvents نێردراوە.",
+    "printDocumentTitle": "بلیتی KurdEvents بۆ چاپ",
+    "downloadHtmlFilename": "kurdevents-e-bilet.html",
+    "seatLine": "{section} · ڕیز {row} · ژمارە {seat}"
   },
   "common": {
     "backToHome": "گەڕانەوە بۆ ماڵپەڕی سەرەکی",
@@ -437,6 +468,7 @@
     "fromPricesCta": "نرخەکان لە {نرخ}ەوە دەست پێدەکات",
     "ticketPricesLink": "نرخی بلیتەکان",
     "soldOutCta": "فرشتی",
+    "priceCategorySoldOut": "SOLD OUT",
     "organizerLine": "ڕێکخراو: {name}"
   },
   "city": {

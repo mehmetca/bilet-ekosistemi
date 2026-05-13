@@ -28,7 +28,7 @@ import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
 import { parseEventDescription } from "@/lib/eventMeta";
-import { formatEventVenueAddressCityLine } from "@/lib/event-venue-display";
+import { formatEventVenueAddressCityLine, stripLegacyVenueReservationAreaNote } from "@/lib/event-venue-display";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent, type Locale } from "@/lib/i18n-content";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
@@ -126,31 +126,6 @@ function shortenTicketDisplayName(name: string): string {
   return cleaned;
 }
 
-function ticketDisplayKey(name: string): string {
-  return shortenTicketDisplayName(name).trim().toLowerCase().replace(/\s+/g, " ");
-}
-
-function ticketTimestampValue(ticket: TicketLike): number {
-  const t = ticket as TicketLike & { updated_at?: string | null; created_at?: string | null };
-  const raw = t.updated_at || t.created_at || "";
-  const parsed = Date.parse(raw);
-  return Number.isFinite(parsed) ? parsed : -1;
-}
-
-function choosePreferredTicket(existing: TicketLike, candidate: TicketLike): TicketLike {
-  const existingTs = ticketTimestampValue(existing);
-  const candidateTs = ticketTimestampValue(candidate);
-  if (candidateTs > existingTs) return candidate;
-  if (candidateTs < existingTs) return existing;
-  const existingPrice = Number(existing.price || 0);
-  const candidatePrice = Number(candidate.price || 0);
-  if (candidatePrice !== existingPrice) return candidatePrice > existingPrice ? candidate : existing;
-  const existingAvail = Number(existing.available || 0);
-  const candidateAvail = Number(candidate.available || 0);
-  if (candidateAvail !== existingAvail) return candidateAvail > existingAvail ? candidate : existing;
-  return existing;
-}
-
 function normalizeTicketMatchText(value: string): string {
   return dedupeRepeatedTail(value).trim().toLowerCase().replace(/\s+/g, " ");
 }
@@ -227,6 +202,28 @@ function ticketCategorySortKey(name: string): number {
     if (Number.isFinite(n) && n > 0) return n;
   }
   return 9999;
+}
+
+/** Sihirbaz / DB sort_order ile aynı sıra (stok sıfır olsa da satır görünür). */
+function compareTicketsForCatalog(a: EventTicket, b: EventTicket): number {
+  const ao = typeof a.sort_order === "number" ? a.sort_order : 9999;
+  const bo = typeof b.sort_order === "number" ? b.sort_order : 9999;
+  if (ao !== bo) return ao - bo;
+  const ka = ticketCategorySortKey(a.name || a.ticket_type || "");
+  const kb = ticketCategorySortKey(b.name || b.ticket_type || "");
+  if (ka !== kb) return ka - kb;
+  const pa = Number(a.price || 0);
+  const pb = Number(b.price || 0);
+  if (pa !== pb) return pb - pa;
+  return (a.name || "").localeCompare(b.name || "", "tr");
+}
+
+function initialTicketCatalogSelection(list: EventTicket[]): string {
+  const active = list.filter((t) => t.is_active !== false && Number(t.quantity || 0) > 0);
+  if (!active.length) return "";
+  const sorted = [...active].sort(compareTicketsForCatalog);
+  const firstBuy = sorted.find((t) => Number(t.available || 0) > 0);
+  return (firstBuy ?? sorted[0])!.id;
 }
 
 function pad2(n: number) {
@@ -756,7 +753,7 @@ function SeatMapWithZoom({
   seatTitleById,
   stageLabel,
   seatLabelWord,
-  availableTickets,
+  catalogTickets,
   selectedSeatCategory,
   onSelectSeatCategory,
   locale,
@@ -772,12 +769,13 @@ function SeatMapWithZoom({
   seatTitleById?: Map<string, string>;
   stageLabel: string;
   seatLabelWord: string;
-  availableTickets: TicketLike[];
+  catalogTickets: TicketLike[];
   selectedSeatCategory: string;
   onSelectSeatCategory: (value: string) => void;
   locale: Locale;
   currency: Event["currency"];
 }) {
+  const t = useTranslations("eventDetail");
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -849,26 +847,24 @@ function SeatMapWithZoom({
     Math.min(820, Math.max(340, 180 + maxRowsInSection * 24 + Math.ceil(sections.length / 2) * 64))
   );
   const seatCategoryOptions = useMemo(() => {
-    const byDisplay = new Map<string, TicketLike>();
-    const sorted = [...availableTickets].sort((a, b) => {
-      const ka = ticketCategorySortKey(a.name || "");
-      const kb = ticketCategorySortKey(b.name || "");
-      if (ka !== kb) return ka - kb;
-      return Number(b.price || 0) - Number(a.price || 0);
-    });
-    for (const tk of sorted) {
-      const display = shortenTicketDisplayName((tk.name || "Bilet").trim());
-      const current = byDisplay.get(display);
-      if (!current) {
-        byDisplay.set(display, tk);
-        continue;
-      }
-      if (Number(tk.price || 0) > Number(current.price || 0)) {
-        byDisplay.set(display, tk);
-      }
-    }
-    return Array.from(byDisplay.entries()).map(([display, tk]) => ({ display, ticket: tk }));
-  }, [availableTickets]);
+    return catalogTickets.map((tk) => ({
+      ticket: tk,
+      display: shortenTicketDisplayName((tk.name || "Bilet").trim()),
+    }));
+  }, [catalogTickets]);
+
+  const categoryButtonLabel =
+    selectedSeatCategory === "all"
+      ? locale === "de"
+        ? "Alle Kategorien"
+        : locale === "en"
+          ? "All categories"
+          : "Tüm kategoriler"
+      : shortenTicketDisplayName(
+          catalogTickets.find((x) => x.id === selectedSeatCategory)?.name?.trim() ||
+            selectedSeatCategory ||
+            "Bilet"
+        );
 
   return (
     <div className="space-y-2">
@@ -880,13 +876,7 @@ function SeatMapWithZoom({
             className="inline-flex w-[320px] max-w-[86vw] items-center justify-between rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             <span className="truncate text-left">
-              {selectedSeatCategory === "all"
-                ? locale === "de"
-                  ? "Alle Kategorien"
-                  : locale === "en"
-                  ? "All categories"
-                  : "Tüm kategoriler"
-                : shortenTicketDisplayName(selectedSeatCategory)}
+              {categoryButtonLabel}
             </span>
             {categoryOpen ? (
               <ChevronUp className="h-4 w-4 shrink-0 text-slate-500" />
@@ -916,13 +906,14 @@ function SeatMapWithZoom({
                 </span>
               </button>
               {seatCategoryOptions.map(({ display, ticket: tk }) => {
-                const active = selectedSeatCategory === display;
+                const active = selectedSeatCategory === tk.id;
+                const soldOut = Number(tk.available ?? 0) <= 0;
                 return (
                   <button
                     key={tk.id}
                     type="button"
                     onClick={() => {
-                      onSelectSeatCategory(display);
+                      onSelectSeatCategory(tk.id);
                       setCategoryOpen(false);
                     }}
                       className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm ${
@@ -935,7 +926,13 @@ function SeatMapWithZoom({
                     />
                     <span className="min-w-0 flex-1 truncate text-slate-800">{display}</span>
                     <span className="shrink-0 font-semibold text-slate-700">
-                      {formatPrice(Number(tk.price || 0), currency)}
+                      {soldOut ? (
+                        <span className="text-xs font-bold uppercase tracking-wide text-red-600">
+                          {t("priceCategorySoldOut")}
+                        </span>
+                      ) : (
+                        formatPrice(Number(tk.price || 0), currency)
+                      )}
                     </span>
                   </button>
                 );
@@ -1034,20 +1031,18 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const sortedTicketState = useMemo(() => {
-    return [...ticketState].sort((a, b) => {
-      const ka = ticketCategorySortKey(a.name || a.ticket_type || "");
-      const kb = ticketCategorySortKey(b.name || b.ticket_type || "");
-      if (ka !== kb) return ka - kb;
-      const pa = Number(a.price || 0);
-      const pb = Number(b.price || 0);
-      if (pa !== pb) return pb - pa;
-      return (a.name || "").localeCompare(b.name || "", "tr");
-    });
+    return [...ticketState].sort(compareTicketsForCatalog);
   }, [ticketState]);
-  const availableTickets = useMemo(
-    () => sortedTicketState.filter((ticket) => Number(ticket.available || 0) > 0),
+  /** Etkinlikte listelenen bilet satırları (stok bitse de sihirbazdakiyle aynı liste). */
+  const catalogTickets = useMemo(
+    () => sortedTicketState.filter((t) => t.is_active !== false && Number(t.quantity || 0) > 0),
     [sortedTicketState]
   );
+  const purchasableTickets = useMemo(
+    () => catalogTickets.filter((t) => Number(t.available || 0) > 0),
+    [catalogTickets]
+  );
+  const priceModeTickets = catalogTickets;
   const hasSeatingPlan = !!(event as Event & { seating_plan_id?: string }).seating_plan_id;
   const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
   const parsedDescription = useMemo(() => parseEventDescription(localized.description || event.description), [localized.description, event.description]);
@@ -1063,19 +1058,19 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     () => formatEventVenueAddressCityLine(event, localized.venue || event.venue || ""),
     [event, localized.venue]
   );
-  const isExternalOnlyEvent = Boolean(externalTicketUrl) && availableTickets.length === 0;
-  const [selectedTicketType, setSelectedTicketType] = useState<string>(
-    availableTickets[0]?.id || ""
+  const isExternalOnlyEvent = Boolean(externalTicketUrl) && catalogTickets.length === 0;
+  const [selectedTicketType, setSelectedTicketType] = useState<string>(() =>
+    initialTicketCatalogSelection(tickets)
   );
   useEffect(() => {
-    if (availableTickets.length === 0) {
+    if (catalogTickets.length === 0) {
       if (selectedTicketType) setSelectedTicketType("");
       return;
     }
-    if (!availableTickets.some((t) => t.id === selectedTicketType)) {
-      setSelectedTicketType(availableTickets[0]!.id);
+    if (!catalogTickets.some((t) => t.id === selectedTicketType)) {
+      setSelectedTicketType((purchasableTickets[0] ?? catalogTickets[0])!.id);
     }
-  }, [availableTickets, selectedTicketType]);
+  }, [catalogTickets, purchasableTickets, selectedTicketType]);
 
   const [ticketCountsByType, setTicketCountsByType] = useState<Record<string, number>>({});
   /** Kullanıcı hangi akıştan ilerleyeceğine kendisi karar verir (başlangıçta ikisi de kapalı). */
@@ -1135,6 +1130,14 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       .filter((u) => u.length > 0);
   }, [venue]);
 
+  const venueEntranceRulesDisplay = useMemo(() => {
+    if (!venue) return { entranceInfo: "", rules: "" };
+    return {
+      entranceInfo: stripLegacyVenueReservationAreaNote(venue.entrance_info),
+      rules: stripLegacyVenueReservationAreaNote(venue.rules),
+    };
+  }, [venue]);
+
   useEffect(() => {
     if (venueGalleryIndex === null || venuePhotoUrls.length === 0) return;
     const onKey = (e: KeyboardEvent) => {
@@ -1171,28 +1174,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     const id = ensureSeatHoldSessionId(null);
     if (id) setSeatHoldSessionId(id);
   }, []);
-  const priceModeTickets = useMemo(() => {
-    const byDisplay = new Map<string, TicketLike>();
-    for (const ticket of availableTickets) {
-      const key = ticketDisplayKey(String(ticket.name || ticket.ticket_type || ""));
-      if (!key) continue;
-      const current = byDisplay.get(key);
-      if (!current) {
-        byDisplay.set(key, ticket);
-        continue;
-      }
-      byDisplay.set(key, choosePreferredTicket(current, ticket));
-    }
-    return Array.from(byDisplay.values()).sort((a, b) => {
-      const ka = ticketCategorySortKey(a.name || "");
-      const kb = ticketCategorySortKey(b.name || "");
-      if (ka !== kb) return ka - kb;
-      const pa = Number(a.price || 0);
-      const pb = Number(b.price || 0);
-      if (pa !== pb) return pb - pa;
-      return (a.name || "").localeCompare(b.name || "", "tr");
-    });
-  }, [availableTickets]);
   const selectedPriceTicketEntries = useMemo(
     () =>
       priceModeTickets
@@ -1419,9 +1400,29 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     if (!event?.id || !hasSeatingPlan) return;
     const id = window.setInterval(() => {
       void fetchHeldByOthersSeats();
+      fetchSoldSeats();
     }, 7000);
     return () => window.clearInterval(id);
-  }, [event?.id, hasSeatingPlan, fetchHeldByOthersSeats]);
+  }, [event?.id, hasSeatingPlan, fetchHeldByOthersSeats, fetchSoldSeats]);
+
+  /** Canlı bilet stoku (satış devam ederken sayfa yenilenmeden güncellenir). */
+  useEffect(() => {
+    if (!event?.id || isExternalOnlyEvent) return;
+    const refreshTickets = () => {
+      const end = new Date(`${event.date} ${event.time || "23:59"}`);
+      if (end < new Date()) return;
+      void fetch(`/api/event-tickets?event_id=${encodeURIComponent(event.id)}`)
+        .then((r) => r.json())
+        .then((data: { tickets?: EventTicket[] }) => {
+          if (Array.isArray(data?.tickets)) setTicketState(data.tickets);
+        })
+        .catch(() => {});
+    };
+    refreshTickets();
+    const ms = hasSeatingPlan ? 12000 : 20000;
+    const id = window.setInterval(refreshTickets, ms);
+    return () => window.clearInterval(id);
+  }, [event?.id, event.date, event.time, hasSeatingPlan, isExternalOnlyEvent]);
 
   const musensaalIdMaps = useMemo(() => {
     if (!isMusensaalPlan || !seatingPlanData?.length) return null;
@@ -1479,7 +1480,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       const row = seatToRow.get(seatId);
       const st = sec.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
       const secIdx = seatingPlanData ? seatingPlanData.indexOf(sec) : 0;
-      const { ticket } = getTicketForRow(sec, row, secIdx, availableTickets);
+      const { ticket } = getTicketForRow(sec, row, secIdx, catalogTickets);
       const fallbackLine = `${sec?.name ?? "—"} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${st?.seat_label ?? "—"}`;
       meta.set(seatId, {
         ticket,
@@ -1487,7 +1488,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       });
     });
     return meta;
-  }, [seatingPlanData, availableTickets, duisburgSeatCaptionById, rowLabelWord, seatLabelWord]);
+  }, [seatingPlanData, catalogTickets, duisburgSeatCaptionById, rowLabelWord, seatLabelWord]);
 
   const seatCategoryHexBySeatId = useMemo(() => {
     const m = new Map<string, string>();
@@ -1521,12 +1522,19 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     if (selectedSeatCategory === "all") return undefined;
     const ids = new Set<string>();
     seatMetaById.forEach((meta, seatId) => {
-      const tName = String(meta.ticket?.name || "").trim();
-      const display = shortenTicketDisplayName(tName);
-      if (display === selectedSeatCategory) ids.add(seatId);
+      const tid = String(meta.ticket?.id || "").trim();
+      if (tid && tid === selectedSeatCategory) ids.add(seatId);
     });
     return ids;
   }, [seatMetaById, selectedSeatCategory]);
+
+  const seatMapSoldLikeIds = useMemo(() => {
+    const s = new Set(soldSeatIds);
+    seatMetaById.forEach((meta, seatId) => {
+      if (Number(meta.ticket?.available ?? 0) <= 0) s.add(seatId);
+    });
+    return s;
+  }, [soldSeatIds, seatMetaById]);
 
   const seatTitleById = useMemo(() => {
     const m = new Map<string, string>();
@@ -1578,6 +1586,17 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             : locale === "en"
             ? "The selected seat is currently blocked."
             : "Sectiginiz koltuk su anda bloke durumda."
+        );
+        return;
+      }
+      const seatMetaPreview = seatMetaById.get(seatId);
+      if (seatMetaPreview && Number(seatMetaPreview.ticket?.available ?? 0) <= 0) {
+        setActionMessage(
+          locale === "de"
+            ? "In dieser Kategorie sind keine Tickets mehr verfugbar."
+            : locale === "en"
+            ? "This ticket category is sold out."
+            : "Bu bilet kategorisinde satis kalmadi."
         );
         return;
       }
@@ -1696,7 +1715,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           return next;
         });
         const seatMeta = seatMetaById.get(seatId);
-        const fallbackTicket = availableTickets.find((t) => t.id === selectedTicketType) || availableTickets[0];
+        const fallbackTicket = catalogTickets.find((t) => t.id === selectedTicketType) || catalogTickets[0];
         const ticketForCart = seatMeta?.ticket?.id ? seatMeta.ticket : fallbackTicket;
         if (ticketForCart?.id) {
           addItem({
@@ -1745,7 +1764,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     },
     [
       addItem,
-      availableTickets,
+      catalogTickets,
       cartSeatIdsForEvent,
       event,
       heldSeatIds,
@@ -1936,9 +1955,15 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               <div className="mt-5">
                 <p className="text-sm text-slate-600">{t("tickets")}</p>
                 <p className="text-2xl font-bold text-primary-700">
-                  {availableTickets.length > 0
-                    ? `${t("from")} ${formatPrice(Math.min(...availableTickets.map((t) => Number(t.price || 0))), event.currency)}`
-                    : isExternalOnlyEvent
+                  {purchasableTickets.length > 0
+                    ? `${t("from")} ${formatPrice(Math.min(...purchasableTickets.map((tk) => Number(tk.price || 0))), event.currency)}`
+                    : catalogTickets.length > 0
+                      ? (
+                        <span className="text-lg font-extrabold uppercase tracking-wide text-red-600">
+                          {t("priceCategorySoldOut")}
+                        </span>
+                      )
+                      : isExternalOnlyEvent
                       ? `${t("from")} ${formatPrice(Number(event.price_from || 0), event.currency)}`
                       : t("comingSoon")}
                 </p>
@@ -2094,7 +2119,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
                       {/* Sol: Plan + harita/liste */}
                       <div className="min-w-0">
-                        {availableTickets.length === 0 && (
+                        {catalogTickets.length === 0 && (
                           <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
                             <strong>Bilet stoku yok.</strong> Koltukları işaretleyebilirsiniz; sepete eklemek için yönetimde bu etkinlik için en az bir bilet türü tanımlayıp adedi 0&apos;dan büyük yapın.
                           </div>
@@ -2147,7 +2172,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   Array.from(heldSeatIds).map((id) => musensaalIdMaps.dbIdToLogical.get(id)).filter(Boolean) as string[]
                                 )}
                                 soldIds={new Set(
-                                  Array.from(soldSeatIds).map((id) => musensaalIdMaps.dbIdToLogical.get(id)).filter(Boolean) as string[]
+                                  Array.from(seatMapSoldLikeIds).map((id) => musensaalIdMaps.dbIdToLogical.get(id)).filter(Boolean) as string[]
                                 )}
                                 selectableIds={musensaalSelectableIds}
                                 onToggle={(logicalId) => {
@@ -2167,7 +2192,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 seats={imagePlanSeats}
                                 getCoord={getTheaterDuisburgCoord}
                                 selectedSeatIds={heldSeatIds}
-                                soldSeatIds={soldSeatIds}
+                                soldSeatIds={seatMapSoldLikeIds}
                                 blockedSeatIds={salesBlockedSeatIds}
                                 onSeatToggle={(seatId) => void handleSeatToggle(seatId)}
                               />
@@ -2188,7 +2213,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               <SeatMapWithZoom
                                 sections={seatingPlanData}
                                 heldSeatIds={heldSeatIds}
-                                soldSeatIds={soldSeatIds}
+                                soldSeatIds={seatMapSoldLikeIds}
                                 onSeatToggle={(seatId) => void handleSeatToggle(seatId)}
                                 seatCategoryHexBySeatId={seatCategoryHexBySeatId}
                                 selectableSeatIds={selectableSeatIdsByCategory}
@@ -2196,7 +2221,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 seatTitleById={seatTitleById}
                                 stageLabel={stageLabel}
                                 seatLabelWord={seatLabelWord}
-                                availableTickets={availableTickets}
+                                catalogTickets={catalogTickets}
                                 selectedSeatCategory={selectedSeatCategory}
                                 onSelectSeatCategory={setSelectedSeatCategory}
                                 locale={locale}
@@ -2209,7 +2234,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         {seatMapView === "list" && (
                           <div className="space-y-4 max-h-[min(52vh,520px)] overflow-y-auto">
                             {seatingPlanData.map((section, sectionIdx) => {
-                              const { ticket: sectionTicket, matchedBy } = getTicketForSection(section, sectionIdx, availableTickets);
+                              const { ticket: sectionTicket, matchedBy } = getTicketForSection(section, sectionIdx, catalogTickets);
                               return (
                                 <div key={section.id} className="border border-slate-200 rounded-lg p-4">
                                   <h4 className="font-semibold text-slate-900 mb-1">{section.name}</h4>
@@ -2220,7 +2245,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                     )}
                                   </p>
                                   {section.rows.map((row) => {
-                                    const { ticket: rowTk } = getTicketForRow(section, row, sectionIdx, availableTickets);
+                                    const { ticket: rowTk } = getTicketForRow(section, row, sectionIdx, catalogTickets);
                                     return (
                                     <div key={row.id} className="mb-3">
                                       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-1.5">
@@ -2233,7 +2258,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       <div className="flex flex-wrap gap-1 pl-0 sm:pl-16">
                                         {row.seats.map((seat) => {
                                           const isHeld = heldSeatIds.has(seat.id);
-                                          const isSold = soldSeatIds.has(seat.id);
+                                          const isSold = seatMapSoldLikeIds.has(seat.id);
                                           const isBlocked = salesBlockedSeatIds.has(seat.id);
                                           const handleClick = async () => {
                                             if (isSold || isBlocked) return;
@@ -2304,7 +2329,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <aside className="lg:sticky lg:top-6 self-start rounded-xl border border-slate-200 bg-slate-50/80 p-4 h-fit">
                         <h3 className="text-sm font-bold text-slate-800 mb-3">{t("deinePlatze")}</h3>
                         {selectedSeatIds.size > 0 && seatingPlanData ? (
-                          availableTickets.length > 0 ? (() => {
+                          catalogTickets.length > 0 ? (() => {
                           const seatToSection = new Map<string, SeatPlanSection>();
                           const seatToRow = new Map<string, SeatPlanRow>();
                           seatingPlanData.forEach((sec) =>
@@ -2320,7 +2345,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             const sec = seatToSection.get(seatId);
                             const row = seatToRow.get(seatId);
                             const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
-                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, availableTickets);
+                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, catalogTickets);
                             totalCents += Number(tk.price || 0) * 100;
                           });
                           const totalPrice = totalCents / 100;
@@ -2329,7 +2354,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             const row = seatToRow.get(seatId);
                             const seat = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === seatId);
                             const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
-                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, availableTickets);
+                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, catalogTickets);
                             const fallbackLine = `${sec?.name ?? "—"} · ${rowLabelWord} ${row?.row_label ?? "—"} · ${seatLabelWord} ${seat?.seat_label ?? "—"}`;
                             return {
                               seatId,
@@ -2346,17 +2371,19 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             const sec = seatToSection.get(seatId);
                             const row = seatToRow.get(seatId);
                             const sectionIdx = sec ? seatingPlanData.indexOf(sec) : 0;
-                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, availableTickets);
+                            const { ticket: tk } = getTicketForRow(sec ?? { id: "", name: "", rows: [] }, row, sectionIdx, catalogTickets);
                             const arr = seatIdsByTicketId.get(tk.id) ?? [];
                             arr.push(seatId);
                             seatIdsByTicketId.set(tk.id, arr);
                           });
                           const atSeatLimit = selectedSeatIds.size >= maxTicketsPerOrder;
-                          const processingFee =
+                          const processingFeePerTicket =
                             typeof event.checkout_processing_fee === "number" && event.checkout_processing_fee > 0
                               ? Number(event.checkout_processing_fee)
                               : 0;
-                          const grandTotal = totalPrice + processingFee;
+                          const seatCountForFee = selectedSeatIds.size;
+                          const processingFeeTotal = processingFeePerTicket * seatCountForFee;
+                          const grandTotal = totalPrice + processingFeeTotal;
                           return (
                             <>
                               <ul className="mb-4 space-y-2">
@@ -2391,8 +2418,17 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   <strong>{locale === "de" ? "Gesamt" : locale === "en" ? "Total" : "Toplam"} {formatPrice(totalPrice, event.currency)}</strong>
                                 </p>
                                 <p>
-                                  {locale === "de" ? "Bearbeitungsgebuhr" : locale === "en" ? "Processing Fee" : "İşlem Ücreti"}{" "}
-                                  <strong>{formatPrice(processingFee, event.currency)}</strong>
+                                  {locale === "de" ? "Bearbeitungsgebühr" : locale === "en" ? "Processing Fee" : "İşlem Ücreti"}{" "}
+                                  {processingFeePerTicket > 0 && seatCountForFee > 0 ? (
+                                    <>
+                                      <span className="text-slate-600">
+                                        ({formatPrice(processingFeePerTicket, event.currency)} × {seatCountForFee}){" "}
+                                      </span>
+                                      <strong>{formatPrice(processingFeeTotal, event.currency)}</strong>
+                                    </>
+                                  ) : (
+                                    <strong>{formatPrice(0, event.currency)}</strong>
+                                  )}
                                 </p>
                                 <p className="font-semibold text-slate-900">
                                   {locale === "de" ? "Gesamtsumme" : locale === "en" ? "Grand Total" : "Genel Toplam"}{" "}
@@ -2419,7 +2455,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                         : undefined,
                                   };
                                   seatIdsByTicketId.forEach((seatIds, ticketId) => {
-                                    const tk = availableTickets.find((x) => x.id === ticketId);
+                                    const tk = catalogTickets.find((x) => x.id === ticketId);
                                     if (!tk) return;
                                     const seatCaptions = seatIds.map(
                                       (id) =>
@@ -2565,7 +2601,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               {!isExternalOnlyEvent && bookingMode === "price" && (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
                   <div>
-                    {availableTickets.length === 0 ? (
+                    {catalogTickets.length === 0 ? (
                       <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
                         {t("noTicketsAvailable")}
                       </div>
@@ -2577,11 +2613,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           <span className="text-right">{t("quantity")}</span>
                         </div>
                         <div className="divide-y divide-slate-200">
-                          {availableTickets.map((ticketType) => {
+                          {catalogTickets.map((ticketType) => {
                             const availableAmount = Number(ticketType.available || 0);
+                            const isSoldOutRow = availableAmount <= 0;
                             const minSelectable = getMinQuantityFromDescription(ticketType.description);
                             const maxSelectable = Math.min(availableAmount, maxTicketsPerOrder);
-                            const effectiveMin = Math.min(minSelectable, maxSelectable);
+                            const effectiveMin =
+                              maxSelectable <= 0 ? minSelectable : Math.min(minSelectable, maxSelectable);
                             const rowCount = Math.max(0, Number(ticketCountsByType[ticketType.id] || 0));
                             const rowSelected = rowCount > 0;
 
@@ -2601,14 +2639,28 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       {shortenTicketDisplayName(ticketType.name || ticketType.ticket_type || "Standart")}
                                     </p>
                                     <p className="text-xs text-slate-500">
-                                      {t("remaining")}: {availableAmount}
-                                      {minSelectable > 1 && (
-                                        <span className="ml-1 text-primary-600"> · Min. {minSelectable} adet</span>
+                                      {isSoldOutRow ? (
+                                        <span className="font-extrabold uppercase tracking-wide text-red-600">
+                                          {t("priceCategorySoldOut")}
+                                        </span>
+                                      ) : (
+                                        <>
+                                          {t("remaining")}: {availableAmount}
+                                          {minSelectable > 1 && (
+                                            <span className="ml-1 text-primary-600"> · Min. {minSelectable} adet</span>
+                                          )}
+                                        </>
                                       )}
                                     </p>
                                   </div>
                                   <p className="text-lg font-bold text-primary-700">{formatPrice(ticketType.price, event.currency)}</p>
                                   <div className="flex items-center justify-end gap-2">
+                                    {isSoldOutRow ? (
+                                      <span className="text-right text-xs font-extrabold uppercase tracking-wide text-red-600">
+                                        {t("priceCategorySoldOut")}
+                                      </span>
+                                    ) : (
+                                    <>
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -2662,6 +2714,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                     >
                                       +
                                     </button>
+                                    </>
+                                    )}
                                   </div>
                                 </div>
                               </div>
@@ -2880,16 +2934,16 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             {/* Mekan Bilgisi – tek blokta düzen */}
             {venue && (
               <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-                <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div className="mb-6 border-b border-slate-100 pb-4">
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t("venueInfo")}</h2>
-                  <NextLink
-                    href={`/${locale}/mekanlar`}
-                    className="text-sm font-medium text-primary-600 hover:text-primary-700"
-                  >
-                    {t("allVenues")} →
-                  </NextLink>
                 </div>
-                <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+                <div
+                  className={`grid gap-6 ${
+                    venueEntranceRulesDisplay.entranceInfo !== "" || venueEntranceRulesDisplay.rules !== ""
+                      ? "lg:grid-cols-[minmax(0,1fr)_300px]"
+                      : ""
+                  }`}
+                >
                   <div className="space-y-5">
                     {venuePhotoUrls.length > 0 && (
                       <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
@@ -2985,32 +3039,25 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     )}
                   </div>
 
+                  {(venueEntranceRulesDisplay.entranceInfo !== "" || venueEntranceRulesDisplay.rules !== "") && (
                   <aside className="space-y-4">
-                    {venue.entrance_info && (
+                    {venueEntranceRulesDisplay.entranceInfo && (
                       <div className="rounded-xl border border-slate-200 bg-white p-4">
                         <div className="mb-1 flex items-center gap-2">
                           <DoorOpen className="h-4 w-4 text-primary-600" />
                           <h3 className="text-sm font-bold uppercase tracking-wide text-slate-800">{t("entranceInfo")}</h3>
                         </div>
-                        <p className="text-sm leading-6 text-slate-700">{venue.entrance_info}</p>
+                        <p className="text-sm leading-6 text-slate-700">{venueEntranceRulesDisplay.entranceInfo}</p>
                       </div>
                     )}
-                    {venue.rules && (
+                    {venueEntranceRulesDisplay.rules && (
                       <div className="rounded-xl border border-slate-200 bg-white p-4">
                         <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-slate-800">{t("entranceRules")}</h3>
-                        <p className="text-sm leading-6 text-slate-700">{venue.rules}</p>
+                        <p className="text-sm leading-6 text-slate-700">{venueEntranceRulesDisplay.rules}</p>
                       </div>
                     )}
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-xs leading-relaxed text-slate-600">
-                        {locale === "de"
-                          ? "Hinweis: Sitzplatzauswahl und Ticketkategorien finden Sie oben im Bereich Buchung."
-                          : locale === "en"
-                          ? "Note: Seat selection and ticket categories are available above in the booking area."
-                          : "Not: Koltuk seçimi ve bilet kategorileri sayfanın üstündeki rezervasyon alanındadır."}
-                      </p>
-                    </div>
                   </aside>
+                  )}
                 </div>
               </section>
             )}

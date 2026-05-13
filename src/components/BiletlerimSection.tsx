@@ -45,7 +45,7 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
         token = session?.access_token ?? null;
       }
       if (!token) {
-        setError("Oturum bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.");
+        setError(t("sessionNotFound"));
         setLoading(false);
         return;
       }
@@ -54,18 +54,18 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
         cache: "no-store",
       });
       if (res.status === 401) {
-        setError("Oturum süresi dolmuş. Lütfen çıkış yapıp tekrar giriş yapın.");
+        setError(t("sessionExpired"));
         setLoading(false);
         return;
       }
       if (!res.ok) {
-        setError("Siparişler yüklenemedi");
+        setError(t("ordersLoadFailed"));
         setLoading(false);
         return;
       }
       const raw = (await res.json()) as unknown;
       if (!Array.isArray(raw)) {
-        setError("Siparişler yüklenemedi");
+        setError(t("ordersLoadFailed"));
         setLoading(false);
         return;
       }
@@ -80,11 +80,11 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
       setOrders(data);
     } catch (e) {
       console.error("Biletlerim fetch error:", e);
-      setError("Siparişler yüklenemedi");
+      setError(t("ordersLoadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [user, authAccessToken]);
+  }, [user, authAccessToken, t]);
 
   useEffect(() => {
     if (user) fetchOrders();
@@ -110,12 +110,11 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
       if (res.ok) {
         setOrders((prev) => prev.filter((o) => o.id !== orderId));
       } else {
-        const err = (await res.json().catch(() => ({}))) as { error?: string };
-        alert(err.error || "Bilet silinemedi");
+        alert(t("deleteFailed"));
       }
     } catch (e) {
       console.error(e);
-      alert("Bilet silinemedi");
+      alert(t("deleteFailed"));
     } finally {
       setDeletingId(null);
     }
@@ -143,7 +142,7 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
             onClick={fetchOrders}
             className="text-primary-600 text-sm font-medium hover:underline"
           >
-            Tekrar dene
+            {t("retry")}
           </button>
         </div>
       ) : orders.length === 0 ? (
@@ -157,7 +156,7 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
               onClick={fetchOrders}
               className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 text-sm font-medium"
             >
-              Yenile
+              {t("refresh")}
             </button>
             <NextLink
               href={`/${locale}`}

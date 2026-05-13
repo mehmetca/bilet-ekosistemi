@@ -330,6 +330,7 @@
     "fromPricesCta": "Ab {price}",
     "ticketPricesLink": "Ticketpreise",
     "soldOutCta": "AUSVERKAUFT",
+    "priceCategorySoldOut": "AUSVERKAUFT",
     "organizerLine": "Veranstalter: {name}"
   },
   "checkout": {
@@ -647,7 +648,38 @@
     "cancelled": "Storniert",
     "printTicket": "Mein Ticket drucken",
     "deleteTicket": "Ticket löschen",
-    "deleteTicketConfirm": "Möchten Sie dieses Ticket wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
+    "deleteTicketConfirm": "Möchten Sie dieses Ticket wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "sessionNotFound": "Sitzung nicht gefunden. Bitte abmelden und erneut anmelden.",
+    "sessionExpired": "Sitzung abgelaufen. Bitte abmelden und erneut anmelden.",
+    "ordersLoadFailed": "Bestellungen konnten nicht geladen werden.",
+    "retry": "Erneut versuchen",
+    "refresh": "Aktualisieren",
+    "deleteFailed": "Ticket konnte nicht gelöscht werden."
+  },
+  "ticketPrint": {
+    "fallbackEventTitle": "Veranstaltung",
+    "ticketSubtitle": "KUNDEN/EVENT-TICKET",
+    "ticketType": "Ticketart",
+    "seat": "Platz",
+    "quantity": "Personen/Menge",
+    "ticketClassStandard": "Standard-Ticket",
+    "ticketClassVip": "VIP-Ticket",
+    "personOnly": "Person",
+    "total": "Gesamt",
+    "tearOffSection": "ABTRENNBARER ABSCHNITT",
+    "ticketCode": "Ticketcode",
+    "entryPoint": "Eingang",
+    "entryPointValue": "EINGANG X",
+    "qrHint": "QR-Code am Eingang vorzeigen",
+    "barcodeAlt": "Ticket-Barcode",
+    "qrAlt": "Ticket-QR-Code",
+    "print": "Drucken",
+    "download": "Herunterladen",
+    "downloading": "Wird heruntergeladen…",
+    "printDownloadHint": "Drucken: 2 Tickets pro Seite. Download: Barcode und QR-Code werden in die Datei eingebettet; dadurch können Sie das Ticket auch ohne Internet am Eingang vorzeigen. Diese E-Mail wurde für einen Ticketkauf über KurdEvents versendet.",
+    "printDocumentTitle": "Druckbare KurdEvents-Tickets",
+    "downloadHtmlFilename": "kurdevents-e-bilet.html",
+    "seatLine": "{section} · Reihe {row} · Nr {seat}"
   },
   "myInfo": {
     "title": "Meine Daten",

@@ -330,6 +330,7 @@
     "fromPricesCta": "{price} 'den başlayan fiyatlarla",
     "ticketPricesLink": "Bilet fiyatları",
     "soldOutCta": "TÜKENDİ",
+    "priceCategorySoldOut": "SOLD OUT",
     "organizerLine": "Organizasyon: {name}"
   },
   "checkout": {
@@ -647,7 +648,38 @@
     "cancelled": "İptal",
     "printTicket": "Biletimi Yazdır",
     "deleteTicket": "Bileti Sil",
-    "deleteTicketConfirm": "Bu bileti silmek istediğinize emin misiniz? Bu işlem geri alınamaz."
+    "deleteTicketConfirm": "Bu bileti silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+    "sessionNotFound": "Oturum bulunamadı. Lütfen çıkış yapıp tekrar giriş yapın.",
+    "sessionExpired": "Oturum süresi dolmuş. Lütfen çıkış yapıp tekrar giriş yapın.",
+    "ordersLoadFailed": "Siparişler yüklenemedi.",
+    "retry": "Tekrar dene",
+    "refresh": "Yenile",
+    "deleteFailed": "Bilet silinemedi."
+  },
+  "ticketPrint": {
+    "fallbackEventTitle": "Etkinlik",
+    "ticketSubtitle": "MÜŞTERİ/ETKİNLİK BİLETİ",
+    "ticketType": "Bilet Türü",
+    "seat": "Koltuk",
+    "quantity": "Kişi/Adet",
+    "ticketClassStandard": "Standart Bilet",
+    "ticketClassVip": "VIP Bilet",
+    "personOnly": "Kişi",
+    "total": "Toplam",
+    "tearOffSection": "KOPARILABİLİR BÖLÜM",
+    "ticketCode": "Bilet Kodu",
+    "entryPoint": "Giriş Noktası",
+    "entryPointValue": "GİRİŞ X",
+    "qrHint": "QR kodu girişte okutunuz",
+    "barcodeAlt": "Bilet Barkod",
+    "qrAlt": "Bilet QR Kodu",
+    "print": "Yazdır",
+    "download": "İndir",
+    "downloading": "İndiriliyor…",
+    "printDownloadHint": "Yazdır: Her sayfada 2 bilet. İndir: Barkod ve QR kodu dosyaya gömülür; internet olmadan da salon girişinde gösterebilirsiniz. Bu e-posta, KurdEvents üzerinden yapılan bilet satın alımı için gönderilmiştir.",
+    "printDocumentTitle": "Yazdırılabilir bilet",
+    "downloadHtmlFilename": "kurdevents-e-bilet.html",
+    "seatLine": "{section} · Sıra {row} · Nr {seat}"
   },
   "myInfo": {
     "title": "Bilgilerim",

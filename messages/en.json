@@ -330,6 +330,7 @@
     "fromPricesCta": "From {price}",
     "ticketPricesLink": "Ticket prices",
     "soldOutCta": "SOLD OUT",
+    "priceCategorySoldOut": "SOLD OUT",
     "organizerLine": "Organizer: {name}"
   },
   "checkout": {
@@ -647,7 +648,38 @@
     "cancelled": "Cancelled",
     "printTicket": "Print My Ticket",
     "deleteTicket": "Delete Ticket",
-    "deleteTicketConfirm": "Are you sure you want to delete this ticket? This action cannot be undone."
+    "deleteTicketConfirm": "Are you sure you want to delete this ticket? This action cannot be undone.",
+    "sessionNotFound": "Session not found. Please sign out and sign in again.",
+    "sessionExpired": "Session expired. Please sign out and sign in again.",
+    "ordersLoadFailed": "Orders could not be loaded.",
+    "retry": "Try again",
+    "refresh": "Refresh",
+    "deleteFailed": "Ticket could not be deleted."
+  },
+  "ticketPrint": {
+    "fallbackEventTitle": "Event",
+    "ticketSubtitle": "CUSTOMER/EVENT TICKET",
+    "ticketType": "Ticket type",
+    "seat": "Seat",
+    "quantity": "Person/Qty",
+    "ticketClassStandard": "Standard ticket",
+    "ticketClassVip": "VIP ticket",
+    "personOnly": "Guest",
+    "total": "Total",
+    "tearOffSection": "DETACHABLE SECTION",
+    "ticketCode": "Ticket code",
+    "entryPoint": "Entry point",
+    "entryPointValue": "ENTRANCE X",
+    "qrHint": "Scan the QR code at entrance",
+    "barcodeAlt": "Ticket barcode",
+    "qrAlt": "Ticket QR code",
+    "print": "Print",
+    "download": "Download",
+    "downloading": "Downloading…",
+    "printDownloadHint": "Print: 2 tickets per page. Download: Barcode and QR code are embedded in the file, so you can show your ticket at venue entry even without internet. This email was sent for a ticket purchase via KurdEvents.",
+    "printDocumentTitle": "Printable KurdEvents ticket",
+    "downloadHtmlFilename": "kurdevents-e-bilet.html",
+    "seatLine": "{section} · Row {row} · No {seat}"
   },
   "myInfo": {
     "title": "My Information",

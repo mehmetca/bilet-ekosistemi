@@ -71,6 +71,31 @@ function expandPlanTicketDisplayName(
   return base;
 }
 
+/** Kayıt eşlemesiyle uyumlu anahtar (name+type). */
+function wizardTicketKey(name: string, type: WizardTicket["type"]): string {
+  return `${type}::${(name || "").trim().toLocaleLowerCase("tr-TR")}`;
+}
+
+function isPristineDefaultTicketRow(t: WizardTicket, prevLength: number): boolean {
+  return (
+    prevLength === 1 &&
+    t.presetKey === "normal_standart" &&
+    (t.name || "").trim() === "Normal / Standart Bilet" &&
+    Number(t.quantity) === 100
+  );
+}
+
+/** Aynı etiket iki kez listelenmişse bile topları birleştirilen plan özeti haritası (norm.label → koltuk) */
+function planSeatMapFromBreakdown(rows: ReadonlyArray<{ label: string; seatCount: number }>): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const b of rows) {
+    const ln = (b.label || "").trim().toLocaleLowerCase("tr-TR");
+    const n = Math.max(0, Number(b.seatCount) || 0);
+    m.set(ln, (m.get(ln) ?? 0) + n);
+  }
+  return m;
+}
+
 function salonPlanSelectValue(label: string) {
   return `${SALON_PLAN_VALUE_PREFIX}${encodeURIComponent(label)}`;
 }
@@ -124,6 +149,8 @@ type WizardTicket = {
   type: "normal" | "vip";
   price: number;
   quantity: number;
+  /** Düzenlemede yüklendi: satılmış adet; plan kapasitesi düşüşünde güvenlik için kullanılır */
+  soldCount?: number;
   description: string;
   discountRules?: string;
   groupMinQuantity?: number;
@@ -187,12 +214,22 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const [planDerivedTicketLabels, setPlanDerivedTicketLabels] = useState<string[]>([]);
   /** Sıra+bölüm bazlı eşlenmiş etiketler ve koltuk sayıları (sihirbaz özet tablosu) */
   const [planTicketBreakdown, setPlanTicketBreakdown] = useState<{ label: string; seatCount: number }[]>([]);
+
+  /** Bir önceki commit'teki breakdown (aynı render içinde güncellenmeden önce; plan delta için) */
+  const planTicketBreakdownPrevRenderRef = useRef<readonly { label: string; seatCount: number }[] | undefined>(
+    undefined
+  );
+  const previousPlanTicketBreakdownForDelta = planTicketBreakdownPrevRenderRef.current;
+  planTicketBreakdownPrevRenderRef.current = planTicketBreakdown;
+
   /** Her fiziksel sıra için satır (bilet adı bölüm+sıra kategorisi ile genişletilmiş) */
   const [planTicketRowsDetail, setPlanTicketRowsDetail] = useState<
     { sectionName: string; rowLabel: string; label: string; seatCount: number }[]
   >([]);
   /** Yeni etkinlikte: bu plan için 3. adımda bilet satırları otomatik dolduruldu mu */
   const ticketsAutoFilledForPlanRef = useRef<string | null>(null);
+  /** Plandaki son "Plana göre güncelle" sonrası koltuk toplamları (etiket norm → sayı); artışları topluca eklemek için */
+  const planSeatLastAppliedSnapshotRef = useRef<Map<string, number> | null>(null);
 
   const [tickets, setTickets] = useState<WizardTicket[]>([
     { id: crypto.randomUUID(), presetKey: "normal_standart", name: "Normal / Standart Bilet", type: "normal", price: 0, quantity: 100, description: "", discountRules: "", groupMinQuantity: undefined },
@@ -310,13 +347,17 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         const mapped: WizardTicket[] = rows.map((r) => {
           const preset = BILET_TURU_SECENEKLERI.find((p) => p.label === r.name);
           const presetKey = preset ? preset.value : "salon_plan";
+          const q = Number(r.quantity ?? r.available ?? 0);
+          const av = Number(r.available ?? 0);
+          const soldCount = Math.max(0, q - av);
           return {
             id: crypto.randomUUID(),
             presetKey,
             name: r.name,
             type: (r.type === "vip" ? "vip" : "normal") as "normal" | "vip",
             price: Number(r.price) || 0,
-            quantity: Number(r.quantity ?? r.available ?? 0),
+            quantity: q,
+            soldCount,
             description: (r.description || "").replace(/^.*? - etkinlik bileti\.?\s*/i, "").trim(),
             discountRules: "",
             groupMinQuantity: undefined,
@@ -354,6 +395,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
 
   useEffect(() => {
     ticketsAutoFilledForPlanRef.current = null;
+    planSeatLastAppliedSnapshotRef.current = null;
   }, [selectedSeatingPlanId]);
 
   useEffect(() => {
@@ -458,33 +500,178 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
     })();
   }, [selectedSeatingPlanId]);
 
-  /** Oturum planındaki koltuk etiketlerine göre bilet satırları; mevcut fiyatları aynı isimde korur */
+  /**
+   * Plana göre senkron:
+   * - Önceki uygulanan plan anlık görüntüsüyle kıyaslanır; yeni koltuklar mevcut miktara **eklenir** (aynı biletleştirme etiketi).
+   * - Bu planda daha önce olmayan yeni bir etiket: satır sona tam plan adediyle eklenir.
+   * - Satılmış adet (`soldCount`) korunur; plan küçülürse kota satış tabanına göre sıkılır (uyarı gerekebilir).
+   */
   const fillTicketsFromPlan = useCallback(() => {
     setTickets((prev) => {
       const breakdown = planTicketBreakdown;
       if (breakdown.length === 0) return prev;
-      const priceByNorm = new Map<string, number>();
+
+      const normLabel = (s: string) => (s || "").trim().toLocaleLowerCase("tr-TR");
+
+      const aggregatedPlanSeat = planSeatMapFromBreakdown(breakdown);
+      const prevRenderedSeatMap = previousPlanTicketBreakdownForDelta?.length
+        ? planSeatMapFromBreakdown(previousPlanTicketBreakdownForDelta)
+        : null;
+
+      const priceByKey = new Map<string, number>();
+      const descByKey = new Map<string, string>();
       for (const t of prev) {
-        const k = (t.name || "").trim().toLowerCase();
-        if (k) priceByNorm.set(k, t.price);
+        const key = wizardTicketKey(t.name, t.type);
+        if (!priceByKey.has(key)) priceByKey.set(key, t.price);
+        const d = (t.description || "").trim();
+        if (d && !descByKey.has(key)) descByKey.set(key, t.description || "");
       }
-      return breakdown.map((row) => {
-        const k = row.label.trim().toLowerCase();
-        const prevPrice = priceByNorm.get(k);
+
+      const mkPlanRowTicket = (row: { label: string; seatCount: number }): WizardTicket => {
+        const inferredType: WizardTicket["type"] = /\bvip\b/i.test(row.label) ? "vip" : "normal";
+        const altType: WizardTicket["type"] = inferredType === "vip" ? "normal" : "vip";
+        let price =
+          priceByKey.get(wizardTicketKey(row.label, inferredType)) ??
+          priceByKey.get(wizardTicketKey(row.label, altType));
+        if (price === undefined) {
+          const first = prev[0];
+          price = first ? first.price : 0;
+        }
+        const desc =
+          descByKey.get(wizardTicketKey(row.label, inferredType)) ||
+          descByKey.get(wizardTicketKey(row.label, altType)) ||
+          "";
         return {
           id: crypto.randomUUID(),
           presetKey: "salon_plan" as const,
-          name: row.label,
-          type: "normal" as const,
-          price: prevPrice !== undefined ? prevPrice : 0,
-          quantity: row.seatCount,
-          description: "",
+          name: row.label.trim(),
+          type: inferredType,
+          price: price ?? 0,
+          quantity: Math.max(0, Number(row.seatCount) || 0),
+          description: desc,
           discountRules: "",
           groupMinQuantity: undefined,
         };
-      });
+      };
+
+      type PlanAgg = { label: string; seatCount: number };
+      const planByNorm = new Map<string, PlanAgg>();
+      for (const b of breakdown) {
+        const ln = normLabel(b.label);
+        const existing = planByNorm.get(ln);
+        const seatN = Math.max(0, Number(b.seatCount) || 0);
+        if (existing) {
+          planByNorm.set(ln, {
+            label: existing.label,
+            seatCount: existing.seatCount + seatN,
+          });
+        } else {
+          planByNorm.set(ln, {
+            label: (b.label || "").trim(),
+            seatCount: seatN,
+          });
+        }
+      }
+
+      const prevFiltered =
+        breakdown.length > 0
+          ? prev.filter((t) => !(breakdown.length > 0 && isPristineDefaultTicketRow(t, prev.length)))
+          : prev;
+
+      const capacityClampLabels: string[] = [];
+
+      /** Yalnızca şablon satır kaldıysa: plandan komple oluştur (ilk kurulum) */
+      if (prevFiltered.length === 0) {
+        const seen = new Set<string>();
+        const created: WizardTicket[] = [];
+        for (const row of breakdown) {
+          const ln = normLabel(row.label);
+          if (seen.has(ln)) continue;
+          seen.add(ln);
+          const full = aggregatedPlanSeat.get(ln) ?? Math.max(0, Number(row.seatCount) || 0);
+          created.push(mkPlanRowTicket({ ...row, seatCount: full }));
+        }
+        planSeatLastAppliedSnapshotRef.current = new Map(aggregatedPlanSeat);
+        return created;
+      }
+
+      const planLabelConsumedPrimary = new Set<string>();
+      const next: WizardTicket[] = [];
+
+      for (const t of prevFiltered) {
+        const tn = normLabel(t.name || "");
+        const pb = planByNorm.get(tn);
+
+        if (pb && !planLabelConsumedPrimary.has(tn)) {
+          planLabelConsumedPrimary.add(tn);
+          const planQty = pb.seatCount;
+          const sold = Math.max(0, Number(t.soldCount ?? 0));
+          const canonName = pb.label;
+          const curQty = Math.max(0, Number(t.quantity) || 0);
+          const was =
+            planSeatLastAppliedSnapshotRef.current?.get(tn) ??
+            prevRenderedSeatMap?.get(tn) ??
+            aggregatedPlanSeat.get(tn) ??
+            planQty;
+          const incr = Math.max(0, planQty - was);
+
+          let newQty = curQty + incr;
+
+          /** Plan küçüdüğünde: plandan yukarı çıkmayı satışlarla çakıştırmamak için aşağı çek */
+          if (planQty < newQty) {
+            const floorBySales = Math.max(planQty, sold);
+            if (floorBySales > planQty) {
+              capacityClampLabels.push(pb.label);
+            }
+            newQty = floorBySales;
+          }
+
+          if (canonName === (t.name || "").trim() && newQty === curQty) {
+            next.push(t);
+            continue;
+          }
+
+          next.push({
+            ...t,
+            presetKey: "salon_plan" as const,
+            name: canonName,
+            quantity: newQty,
+          });
+          continue;
+        }
+
+        if (pb && planLabelConsumedPrimary.has(tn)) {
+          next.push({ ...t });
+          continue;
+        }
+
+        next.push(t);
+      }
+
+      /** Planda olup daha önce eşlenmemiş biletleştirilmiş etiketler (ör. yeni bölüm) — breakdown sırasıyla sona eklenir */
+      const appended: WizardTicket[] = [];
+      const already = new Set(planLabelConsumedPrimary);
+      for (const row of breakdown) {
+        const ln = normLabel(row.label);
+        if (already.has(ln)) continue;
+        already.add(ln);
+        const fullCount = aggregatedPlanSeat.get(ln) ?? Math.max(0, Number(row.seatCount) || 0);
+        appended.push(mkPlanRowTicket({ ...row, seatCount: fullCount }));
+      }
+
+      planSeatLastAppliedSnapshotRef.current = new Map(aggregatedPlanSeat);
+
+      if (capacityClampLabels.length > 0) {
+        queueMicrotask(() => {
+          const uniq = [...new Set(capacityClampLabels)].join(", ");
+          alert(
+            `Plandaki kapasite azaltması, satılmış bilet yüzünden tam uygulanamadı (${uniq}). Miktar, satışı aşmayacak şekilde bırakıldı (kayıtta da güvenlik aynı).`
+          );
+        });
+      }
+      return appended.length === 0 ? next : [...next, ...appended];
     });
-  }, [planTicketBreakdown]);
+  }, [planTicketBreakdown, previousPlanTicketBreakdownForDelta]);
 
   useEffect(() => {
     if (isEditMode) return;
@@ -784,7 +971,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         if (!updateSucceeded) throw lastUpdateError;
         const { data: existingTicketsData, error: existingTicketsError } = await supabase
           .from("tickets")
-          .select("id, name, type, price, quantity, available, description")
+          .select("id, name, type, price, quantity, available, description, sort_order")
           .eq("event_id", eventId);
         if (existingTicketsError) throw existingTicketsError;
 
@@ -831,9 +1018,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 };
               });
 
+        /** Güvenli güncelleme: satılmış adet (quantity−available) korunur; fiyat değişse yeni fiyat yalnızca kalan stoğa uygulanır. Tamamlanmış siparişler orders.total_price ile ayrı tutulur. */
         const matchedExistingIds = new Set<string>();
 
-        for (const desired of desiredTickets) {
+        for (let idx = 0; idx < desiredTickets.length; idx++) {
+          const desired = desiredTickets[idx]!;
           const ex = existingByKey.get(keyOf(desired.name, desired.type));
           if (ex) {
             matchedExistingIds.add(ex.id);
@@ -849,6 +1038,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 quantity: safeQuantity,
                 available: safeAvailable,
                 description: desired.description,
+                sort_order: idx,
               })
               .eq("id", ex.id);
             if (updErr) throw updErr;
@@ -861,6 +1051,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
               quantity: desired.quantity,
               available: desired.quantity,
               description: desired.description,
+              sort_order: idx,
             });
             if (insErr) throw insErr;
           }
@@ -913,7 +1104,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         ? []
         : tickets
             .filter((t) => t.quantity > 0)
-            .map((t) => {
+            .map((t, index) => {
           const displayName = getTicketDisplayName(t);
           let desc = t.description.trim();
           if (t.presetKey === "grup") {
@@ -929,6 +1120,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
             quantity: t.quantity,
             available: t.quantity,
             description: desc.trim(),
+            sort_order: index,
           };
         });
 
@@ -1117,7 +1309,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">İşlem ücreti (sipariş başına, opsiyonel)</label>
+                <label className="block text-sm font-medium text-slate-700 mb-1">İşlem ücreti (bilet başına, opsiyonel)</label>
                 <input
                   type="number"
                   min={0}
@@ -1131,7 +1323,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
                 />
                 <p className="mt-1 text-xs text-slate-500">
-                  Aynı etkinlikten birden fazla kalem olsa bile ödeme özeti ve tahsilatta bu tutar yalnızca bir kez eklenir.
+                  Her satılan bilet için ayrı eklenir (ör. 10 bilet = bu rakam × 10). Kargo ücreti fiziksel gönderimde sipariş başına yalnızca bir kez eklenir.
                 </p>
               </div>
               <div>
@@ -1352,7 +1544,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                       }}
                       className="rounded-lg border border-primary-600 bg-primary-50 px-3 py-2 text-sm font-medium text-primary-800 hover:bg-primary-100"
                     >
-                      Plana göre bilet satırlarını yeniden oluştur (fiyatları aynı isimde korur)
+                      <span className="block">Plana göre bilet satırlarını güncelle</span>
+                      <span className="mt-1 block text-xs font-normal text-primary-800/90">
+                        Salon tasarını değiştirdikçe eklenen yeni koltuklar, mevcut miktara eklenir; yeni biletleştirme adları sona tam adetleriyle yazılır.
+                        Satılmış bilet miktarına dokunulmaz; kota düşmezse uyarı çıkarır.
+                      </span>
                     </button>
                   )}
                 </div>

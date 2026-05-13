@@ -37,6 +37,7 @@ import {
   type CartExpiredSnapshot,
 } from "@/lib/cart-reservation";
 import TicketPrint from "@/components/TicketPrint";
+import type { TicketType } from "@/types/database";
 import { stripePromise } from "@/lib/stripe-client";
 
 const EmbeddedCheckoutProvider = dynamic(
@@ -222,9 +223,10 @@ export default function CheckoutPage() {
       orderDetails?: {
         buyerName: string;
         quantity: number;
-        ticketType: string;
+        ticketTier?: TicketType;
         price: number;
         seatDetails?: Array<{ section_name: string; row_label: string; seat_label: string }>;
+        ticketCodes?: string[];
       };
     }>
   >([]);
@@ -276,13 +278,11 @@ export default function CheckoutPage() {
   }, [items.length]);
 
   const processingFeesTotal = useMemo(() => {
-    const byEvent = new Map<string, number>();
+    let sum = 0;
     for (const i of items) {
       const f = i.eventCheckoutFee;
-      if (f != null && f > 0 && !byEvent.has(i.eventId)) byEvent.set(i.eventId, f);
+      if (f != null && f > 0) sum += f * i.quantity;
     }
-    let sum = 0;
-    for (const v of byEvent.values()) sum += v;
     return sum;
   }, [items]);
 
@@ -335,7 +335,6 @@ export default function CheckoutPage() {
       const headers: Record<string, string> = {};
       if (token) headers.Authorization = `Bearer ${token}`;
 
-      const feeChargedForEventId = new Set<string>();
       let shippingApplied = false;
       for (const item of items) {
         const formData = new FormData();
@@ -366,8 +365,7 @@ export default function CheckoutPage() {
           }
         }
         const fee = item.eventCheckoutFee;
-        const shouldApplyProcessingFee =
-          fee != null && fee > 0 && !feeChargedForEventId.has(item.eventId);
+        const shouldApplyProcessingFee = fee != null && fee > 0;
         if (shouldApplyProcessingFee) {
           formData.append("include_checkout_processing_fee", "true");
         }
@@ -381,9 +379,13 @@ export default function CheckoutPage() {
 
         if (data.success) {
           if (shouldApplyShippingForThisItem) shippingApplied = true;
-          if (shouldApplyProcessingFee) feeChargedForEventId.add(item.eventId);
           const od = data.orderDetails as
-            | { price?: number; seatDetails?: Array<{ section_name: string; row_label: string; seat_label: string }> }
+            | {
+                price?: number;
+                seatDetails?: Array<{ section_name: string; row_label: string; seat_label: string }>;
+                ticketCodes?: string[];
+                ticketTier?: TicketType;
+              }
             | undefined;
           orderResults.push({
             success: true,
@@ -393,9 +395,10 @@ export default function CheckoutPage() {
             orderDetails: {
               buyerName: finalName,
               quantity: purchaseQty,
-              ticketType: item.ticketName,
+              ticketTier: od?.ticketTier ?? "normal",
               price: typeof od?.price === "number" ? od.price : item.price * purchaseQty,
               seatDetails: od?.seatDetails,
+              ticketCodes: od?.ticketCodes,
             },
           });
         } else {
@@ -412,6 +415,9 @@ export default function CheckoutPage() {
         setHasSuccessfulCheckout(true);
         setCompletedItems([...items]);
         clearCart();
+        setCheckoutClientSecret(null);
+        setCheckoutSessionId(null);
+        setCurrentStep(1);
         try {
           sessionStorage.removeItem(PENDING_STRIPE_CHECKOUT_KEY);
         } catch {
@@ -479,12 +485,6 @@ export default function CheckoutPage() {
   async function handleCompleteOrder(e: React.FormEvent) {
     e.preventDefault();
     if (items.length === 0) return;
-    setHasSuccessfulCheckout(false);
-    try {
-      sessionStorage.removeItem(CHECKOUT_SUCCESS_SNAPSHOT_KEY);
-    } catch {
-      /* ignore */
-    }
 
     const finalEmail = (buyerEmail.trim() || user?.email || "").trim();
     if (!user) {
@@ -506,6 +506,18 @@ export default function CheckoutPage() {
     }
 
     setError(null);
+    setResults([]);
+    setCompletedItems([]);
+    setHasSuccessfulCheckout(false);
+    setCheckoutClientSecret(null);
+    setCheckoutSessionId(null);
+    setCurrentStep(1);
+    try {
+      sessionStorage.removeItem(CHECKOUT_SUCCESS_SNAPSHOT_KEY);
+    } catch {
+      /* ignore */
+    }
+
     setIsPending(true);
     try {
       try {
@@ -695,7 +707,10 @@ export default function CheckoutPage() {
   ]);
 
   const isStripeReturning = searchParams.get("stripe_success") === "1";
-  const allSuccess = hasSuccessfulCheckout || (results.length > 0 && results.every((r) => r.success));
+  /** Yeni sipariş sepetindeyken eski başarı kartını gösterme; yoksa Stripe oturumu "ödenmiş" sanılıp doğrudan finalize tetiklenebiliyor */
+  const allSuccess =
+    items.length === 0 &&
+    (hasSuccessfulCheckout || (results.length > 0 && results.every((r) => r.success)));
   const shouldShowEmptyCart =
     items.length === 0 &&
     results.length === 0 &&
@@ -823,7 +838,7 @@ export default function CheckoutPage() {
                     ticketCode={r.ticketCode}
                     buyerName={r.orderDetails.buyerName}
                     quantity={r.orderDetails.quantity}
-                    ticketType={r.orderDetails.ticketType}
+                    ticketTier={r.orderDetails.ticketTier}
                     price={r.orderDetails.price}
                     currency={completedItems[idx]?.currency as import("@/types/database").EventCurrency | undefined}
                     eventTitle={completedItems[idx]?.eventTitle}
@@ -832,6 +847,7 @@ export default function CheckoutPage() {
                     venue={completedItems[idx]?.venue}
                     location={completedItems[idx]?.location}
                     seatDetails={r.orderDetails.seatDetails}
+                    ticketCodes={r.orderDetails.ticketCodes}
                   />
                 </div>
               ) : null
