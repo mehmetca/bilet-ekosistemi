@@ -1,40 +1,13 @@
 /**
- * Preis-/Kategorie-Liste: einzeilige Beschriftung mit Wortstellung
- * VIP: „Vip Bilet Parket 100,00 €“ · Standard: „Parket Standart Bilet 80,00 €“
- * (ohne Mittelpunkt; Zahl hinten wie im deutschen Ticketjargon üblich).
+ * Preis-Kategorie Liste (Ticketauswahl ohne Sitzwahl): Reihenfolge und eine Zeilenbeschriftung
+ * („VIP · Parket · 100 €“ / „Parket · Kategorie 1 · 80 €“).
  */
 
 import type { EventCurrency, Ticket } from "@/types/database";
-import { CURRENCY_SYMBOLS } from "@/types/database";
+import { formatPrice } from "@/lib/formatPrice";
 import { cleanTicketMarketingName } from "@/lib/ticket-seating-match";
 
-const DEFAULT_CURRENCY: EventCurrency = "EUR";
-
-function localeForAmount(currency: EventCurrency): string {
-  switch (currency) {
-    case "EUR":
-      return "de-DE";
-    case "TL":
-      return "tr-TR";
-    case "USD":
-      return "en-US";
-    default:
-      return "de-DE";
-  }
-}
-
-/** Nur für diese Listenzeile: „100,00 €“ / „150,00 ₺“ (Symbol hinten). */
-function formatShelfTrailingPrice(amount: number, currency?: EventCurrency | null): string {
-  const curr =
-    currency && CURRENCY_SYMBOLS[currency as EventCurrency]
-      ? (currency as EventCurrency)
-      : DEFAULT_CURRENCY;
-  const n = Number(amount).toLocaleString(localeForAmount(curr), {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-  return `${n} ${CURRENCY_SYMBOLS[curr]}`.trim();
-}
+const DOT = "\u00b7";
 
 function effectiveTierIsVip(ticket: Pick<Ticket, "type" | "ticket_type" | "name">): boolean {
   const t = String(ticket.type || ticket.ticket_type || "").toLowerCase().trim();
@@ -42,7 +15,7 @@ function effectiveTierIsVip(ticket: Pick<Ticket, "type" | "ticket_type" | "name"
   return /\bvip\b/i.test(ticket.name || "");
 }
 
-/** „Parket – Vip Bilet“ → Zone + Sorte. */
+/** „Parket – VIP Bilet“ → zone + Stufennamen ohne Doppelungen. */
 export function ticketZoneAndTierLabel(name: string | null | undefined): { zone: string; tierLabel: string } {
   const cleaned = cleanTicketMarketingName((name || "").trim());
   const dashIdx = cleaned.lastIndexOf(" - ");
@@ -96,57 +69,26 @@ export function compareTicketsPriceCategoryShelf(a: Ticket, b: Ticket): number {
   return Number(b.price || 0) - Number(a.price || 0);
 }
 
-function normalizeVipWordCasing(s: string): string {
-  return s.replace(/\bvip\b/gi, "Vip");
-}
-
 /**
- * „Kategorie 1“ wirkt oft laienhaft → branchenüblichere Begriffe je UI-Sprache.
- * (Zuordnung der Nummer kommt weiter aus dem Wizard.)
- */
-export function professionalizeTierDisplay(tierRaw: string, localeHint?: string): string {
-  let s = cleanTicketMarketingName(tierRaw).trim();
-  s = normalizeVipWordCasing(s);
-
-  const root = ((localeHint || "tr").split("-")[0] || "tr").toLowerCase();
-
-  if (root === "de") {
-    s = s.replace(/\bKategorie\s*(\d+)\b/gi, "Preisgruppe $1");
-    s = s.replace(/\bKategorien\s*(\d+)\b/gi, "Preisgruppe $1");
-    s = s.replace(/\bKategori\s*(\d+)\b/gi, "Preisgruppe $1");
-    return s;
-  }
-  if (root === "tr") {
-    s = s.replace(/\bKategorie\s*(\d+)\b/gi, "$1. fiyat grubu");
-    s = s.replace(/\bKategori\s*(\d+)\b/gi, "$1. fiyat grubu");
-    return s;
-  }
-  if (root === "en") {
-    s = s.replace(/\bKategorie\s*(\d+)\b/gi, "Price tier $1");
-    s = s.replace(/\bKategori\s*(\d+)\b/gi, "Price tier $1");
-    return s;
-  }
-  s = s.replace(/\b(?:Kategorie|Kategori)\s*(\d+)\b/gi, "Price tier $1");
-  return s;
-}
-
-/**
- * Eine Zeile für Regal & Warenkorb:
- * - VIP: **Vip Bilet Parket 100,00 €** (Sorte · Zone · Preis)
- * - sonst: **Parket Standart Bilet 80,00 €** (Zone · Sorte · Preis)
+ * Eine konsistent formatierte Shelf-Zeile (DE/ TR / EN ohne Zwang „Euro“, Preis wird formatPrice geliefert).
+ * VIP: Stufe · Zone · Preis · … sonst Zone · Stufe · Preis …
  */
 export function formatPriceCategoryShelfLabel(
   ticket: Pick<Ticket, "name" | "type" | "ticket_type" | "price">,
-  currency?: EventCurrency | null,
-  localeHint?: string
+  currency?: EventCurrency | null
 ): string {
   const { zone, tierLabel } = ticketZoneAndTierLabel(ticket.name);
-  const rawTier = tierLabel || cleanTicketMarketingName(ticket.name || "");
-  const tier = professionalizeTierDisplay(rawTier, localeHint);
-  const z = zone ? cleanTicketMarketingName(zone) : "";
-  const priceTxt = formatShelfTrailingPrice(Number(ticket.price || 0), currency);
+  const tier = tierLabel || cleanTicketMarketingName(ticket.name || "");
+  const priceTxt = formatPrice(Number(ticket.price || 0), currency ?? undefined);
 
   const vip = effectiveTierIsVip(ticket);
-  const body = vip ? (z ? `${tier} ${z}` : tier) : z ? `${z} ${tier}` : tier;
-  return `${body} ${priceTxt}`.replace(/\s+/g, " ").trim();
+  let core = "";
+  if (vip && zone) {
+    core = `${tier} ${DOT} ${zone}`;
+  } else if (!vip && zone) {
+    core = `${zone} ${DOT} ${tier}`;
+  } else {
+    core = tier;
+  }
+  return `${core} ${DOT} ${priceTxt}`.replace(/\s+/g, " ").trim();
 }

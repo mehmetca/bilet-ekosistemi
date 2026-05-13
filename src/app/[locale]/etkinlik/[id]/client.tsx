@@ -777,7 +777,7 @@ function SeatMapWithZoom({
           : "Tüm kategoriler"
       : (() => {
           const tk = catalogTickets.find((x) => x.id === selectedSeatCategory);
-          if (tk) return formatPriceCategoryShelfLabel(tk as EventTicket, currency, locale);
+          if (tk) return formatPriceCategoryShelfLabel(tk as EventTicket, currency);
           return shortenTicketDisplayName(selectedSeatCategory || "Bilet");
         })();
 
@@ -843,7 +843,7 @@ function SeatMapWithZoom({
                     />
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">
                       <span className={soldOut ? "line-through opacity-60" : undefined}>
-                        {formatPriceCategoryShelfLabel(tk as EventTicket, currency, locale)}
+                        {formatPriceCategoryShelfLabel(tk as EventTicket, currency)}
                       </span>
                       {soldOut ? (
                         <span className="ml-2 text-xs font-bold uppercase tracking-wide text-red-600">
@@ -1710,7 +1710,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             venue: localized.venue || event.venue,
             location: event.location,
             imageUrl: event.image_url,
-            ticketName: formatPriceCategoryShelfLabel(fullTicketRow, event.currency, locale),
+            ticketName: formatPriceCategoryShelfLabel(fullTicketRow, event.currency),
             price: Number(fullTicketRow.price || 0),
             currency: event.currency,
             eventCheckoutFee:
@@ -2455,7 +2455,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                     addItem({
                                       ...eventPayload,
                                       ticketId: tk.id,
-                                      ticketName: formatPriceCategoryShelfLabel(tk as EventTicket, event.currency, locale),
+                                      ticketName: formatPriceCategoryShelfLabel(tk as EventTicket, event.currency),
                                       price: Number(tk.price || 0),
                                       quantity: seatIds.length,
                                       seatIds,
@@ -2620,7 +2620,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_170px]">
                                   <div>
                                     <p className={`text-sm font-semibold ${isSoldOutRow ? "text-slate-500 line-through" : "text-slate-900"}`}>
-                                      {formatPriceCategoryShelfLabel(ticketType, event.currency, locale)}
+                                      {formatPriceCategoryShelfLabel(ticketType, event.currency)}
                                     </p>
                                     <p className="text-xs text-slate-500">
                                       {isSoldOutRow ? (
@@ -2736,7 +2736,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               venue: localized.venue || event.venue,
                               location: event.location,
                               imageUrl: event.image_url,
-                              ticketName: formatPriceCategoryShelfLabel(ticket, event.currency, locale),
+                              ticketName: formatPriceCategoryShelfLabel(ticket, event.currency),
                               price: Number(ticket.price || 0),
                               currency: event.currency,
                               eventCheckoutFee:
@@ -2777,7 +2777,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         <ul className="space-y-1 text-sm text-slate-700">
                           {selectedPriceTicketEntriesShelfSorted.map(({ ticket, count }, idx) => (
                             <li key={`price-cat-selected-side-${ticket.id}`}>
-                              {idx + 1}. {formatPriceCategoryShelfLabel(ticket, event.currency, locale)} × {count}
+                              {idx + 1}. {formatPriceCategoryShelfLabel(ticket, event.currency)} × {count}
                             </li>
                           ))}
                         </ul>
