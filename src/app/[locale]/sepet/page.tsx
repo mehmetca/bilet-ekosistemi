@@ -834,7 +834,7 @@ export default function CheckoutPage() {
                   key={idx}
                   className="rounded-xl border border-green-200 bg-green-50 p-6"
                 >
-                  <p className="mb-4 font-medium text-green-800">{r.message}</p>
+                  <p className="mb-4 font-medium text-green-800">{t("orderCreatedSuccess")}</p>
                   <SafeTicketPrint
                     ticketCode={r.ticketCode}
                     buyerName={r.orderDetails.buyerName}
@@ -1219,7 +1219,7 @@ export default function CheckoutPage() {
                 ) : null}
                 {(isPending || isStripeReturning) ? (
                   <p className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
-                    İşleminiz devam ediyor. Lütfen bekleyiniz, sayfayı kapatmayın ve yenilemeyin.
+                    {t("paymentProcessingWait")}
                   </p>
                 ) : null}
               </div>

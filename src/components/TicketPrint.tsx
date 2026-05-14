@@ -1,29 +1,19 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
 import { Printer, Download } from "lucide-react";
 import type { EventCurrency, TicketType } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import type { SeatDetail } from "@/types/seat-detail";
+import deMessages from "../../messages/de.json";
 
 export type { SeatDetail };
 
-/** ClientIntlBridge getMessageFallback çıktısı (eksik çeviri); bu durumda düz metne düşülür. */
-const MISSING_PRINT_DOC_TITLE = "ticketPrint.printDocumentTitle";
-const MISSING_DOWNLOAD_FILENAME = "ticketPrint.downloadHtmlFilename";
-
-const PRINT_DOC_TITLE_FALLBACK: Record<string, string> = {
-  tr: "Yazdırılabilir bilet",
-  de: "Druckbare KurdEvents-Tickets",
-  en: "Printable KurdEvents ticket",
-  ku: "Bilêtên KurdEvents ên çapkirinê",
-  ckb: "بلیتی KurdEvents بۆ چاپ",
-};
-
-const DOWNLOAD_HTML_FALLBACK = "kurdevents-e-bilet.html";
+/** E-bilet kartındaki tüm sabit metinler (tablo başlıkları, QR ipucu, mavi şerit vb.) her zaman Almanca. */
+type TicketDocumentDe = (typeof deMessages)["ticketPrint"];
 
 /**
  * Bazı akışlarda etkinlik adı yerine "Bilet - BLT-…" veya yalın BLT kodu yanlışlıkla iletilebiliyor;
@@ -75,20 +65,15 @@ export default function TicketPrint({
   seatDetails,
   ticketCodes,
 }: TicketPrintProps) {
-  const t = useTranslations("ticketPrint");
-  const locale = useLocale();
-
-  const rawPrintDocTitle = t("printDocumentTitle");
-  const printDocumentTitleResolved =
-    rawPrintDocTitle === MISSING_PRINT_DOC_TITLE
-      ? PRINT_DOC_TITLE_FALLBACK[locale] ?? PRINT_DOC_TITLE_FALLBACK.en
-      : rawPrintDocTitle;
-
-  const rawDownloadFilename = t("downloadHtmlFilename");
-  const downloadHtmlFilenameResolved =
-    rawDownloadFilename === MISSING_DOWNLOAD_FILENAME
-      ? DOWNLOAD_HTML_FALLBACK
-      : rawDownloadFilename;
+  const tpDe = deMessages.ticketPrint;
+  const tTicket = useCallback(
+    (key: keyof TicketDocumentDe) => String(tpDe[key] ?? ""),
+    []
+  );
+  /** Sayfa dilinde: yazdır / indir butonları, ipucu, indirme dosya adı ve yazdırma sekmesi başlığı */
+  const tUi = useTranslations("ticketPrint");
+  const printDocumentTitleResolved = tUi("printDocumentTitle");
+  const downloadHtmlFilenameResolved = tUi("downloadHtmlFilename");
 
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   /** Her koltuk için ayrı bilet kodu olduğunda code -> QR data URL */
@@ -99,10 +84,10 @@ export default function TicketPrint({
   const eventDateText = eventDate ? formatEventDateDMY(eventDate) : "-";
   const timeText = eventTime || "--:--";
   const displayEventTitle = looksLikeTicketLabelInsteadOfEventTitle(eventTitle)
-    ? t("fallbackEventTitle")
-    : eventTitle.trim() || t("fallbackEventTitle");
+    ? tTicket("fallbackEventTitle")
+    : eventTitle.trim() || tTicket("fallbackEventTitle");
   const displayTicketTierLabel =
-    normalizedTicketTier(ticketTier) === "vip" ? t("ticketClassVip") : t("ticketClassStandard");
+    normalizedTicketTier(ticketTier) === "vip" ? tTicket("ticketClassVip") : tTicket("ticketClassStandard");
   const totalPriceNumber = Number(price);
   const normalizedTicketCodes = useMemo(
     () =>
@@ -125,8 +110,16 @@ export default function TicketPrint({
   const unitCount = quantity > 0 ? quantity : ticketItems.length;
   const unitPrice = Number((totalPriceNumber / Math.max(unitCount, 1)).toFixed(2));
 
-  const formatSeatLine = (seat: SeatDetail) =>
-    `${seat.section_name} · Sıra ${seat.row_label} · Nr ${seat.seat_label}`;
+  const formatSeatLine = useCallback(
+    (seat: SeatDetail) =>
+      tTicket("seatLine")
+        .replace("{section}", String(seat.section_name ?? ""))
+        .replace("{row}", String(seat.row_label ?? ""))
+        .replace("{seat}", String(seat.seat_label ?? "")),
+    [tTicket]
+  );
+
+  const printBannerTitle = tTicket("printBannerTitle");
 
   useEffect(() => {
     const generateQR = async () => {
@@ -136,10 +129,12 @@ export default function TicketPrint({
         const codesToGenerate = [...new Set(ticketItems.map((item) => item.code))];
 
         if (codesToGenerate.length === 1) {
-          // QR içeriği: sitemiz URL'i – cep kamerasıyla okutulunca bu sayfa açılır
+          // Tek satırda da gerçek okutma kodu kullanılmalı: order_ticket_units veya koltuk kodu,
+          // orders.ticket_code (ana sipariş kodu) ile ayrı olabilir; yanlış QR "tekil kod okutun" hatası verir.
+          const codeForQr = codesToGenerate[0]!;
           const qrData = origin
-            ? `${origin}/yonetim/bilet-kontrol?code=${encodeURIComponent(ticketCode)}`
-            : ticketCode;
+            ? `${origin}/yonetim/bilet-kontrol?code=${encodeURIComponent(codeForQr)}`
+            : codeForQr;
           const url = await QRCode.toDataURL(qrData, {
             width: 130,
             margin: 1,
@@ -186,17 +181,17 @@ export default function TicketPrint({
         .replace(/"/g, "&quot;");
 
     const L = {
-      subtitle: esc(t("ticketSubtitle")),
-      colTicketType: esc(t("ticketType")),
+      subtitle: esc(tTicket("ticketSubtitle")),
+      colTicketType: esc(tTicket("ticketType")),
       ticketClass: esc(displayTicketTierLabel),
-      seatCol: esc(t("seat")),
-      guestCol: esc(t("personOnly")),
-      totalCol: esc(t("total")),
-      tearOff: esc(t("tearOffSection")),
-      ticketCodeLbl: esc(t("ticketCode")),
-      qrHint: esc(t("qrHint")),
-      barcodeAltTxt: esc(t("barcodeAlt")),
-      qrAltTxt: esc(t("qrAlt")),
+      seatCol: esc(tTicket("seat")),
+      guestCol: esc(tTicket("personOnly")),
+      totalCol: esc(tTicket("total")),
+      tearOff: esc(tTicket("tearOffSection")),
+      ticketCodeLbl: esc(tTicket("ticketCode")),
+      qrHint: esc(tTicket("qrHint")),
+      barcodeAltTxt: esc(tTicket("barcodeAlt")),
+      qrAltTxt: esc(tTicket("qrAlt")),
     };
 
     const printItems = ticketItems;
@@ -221,7 +216,7 @@ export default function TicketPrint({
       return `
       <div style="max-width:900px;margin:0 auto;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#fff;">
         <div style="background:#003f8c;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;letter-spacing:.4px;">
-          KurdEvents E-TICKET
+          ${esc(printBannerTitle)}
         </div>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <tr>
@@ -336,7 +331,7 @@ export default function TicketPrint({
     const distinctCodes = [...new Set(downloadItems.map((item) => item.code))];
 
     const fallbackBarcode = "data:image/svg+xml," + encodeURIComponent(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="238" viewBox="0 0 36 238"><rect width="36" height="238" fill="#f1f5f9"/><text x="18" y="120" text-anchor="middle" font-size="10" fill="#64748b">Barkod</text></svg>`
+      `<svg xmlns="http://www.w3.org/2000/svg" width="36" height="238" viewBox="0 0 36 238"><rect width="36" height="238" fill="#f1f5f9"/><text x="18" y="120" text-anchor="middle" font-size="10" fill="#64748b">${tTicket("barcodeLoadingPlaceholder")}</text></svg>`
     );
     const barcodeDataUrls: Record<string, string> = {};
     for (const code of distinctCodes) {
@@ -365,17 +360,17 @@ export default function TicketPrint({
         .replace(/"/g, "&quot;");
 
     const LD = {
-      subtitle: esc(t("ticketSubtitle")),
-      colTicketType: esc(t("ticketType")),
+      subtitle: esc(tTicket("ticketSubtitle")),
+      colTicketType: esc(tTicket("ticketType")),
       ticketClass: esc(displayTicketTierLabel),
-      seatCol: esc(t("seat")),
-      guestCol: esc(t("personOnly")),
-      totalCol: esc(t("total")),
-      tearOff: esc(t("tearOffSection")),
-      ticketCodeLbl: esc(t("ticketCode")),
-      qrHint: esc(t("qrHint")),
-      barcodeAltTxt: esc(t("barcodeAlt")),
-      qrAltTxt: esc(t("qrAlt")),
+      seatCol: esc(tTicket("seat")),
+      guestCol: esc(tTicket("personOnly")),
+      totalCol: esc(tTicket("total")),
+      tearOff: esc(tTicket("tearOffSection")),
+      ticketCodeLbl: esc(tTicket("ticketCode")),
+      qrHint: esc(tTicket("qrHint")),
+      barcodeAltTxt: esc(tTicket("barcodeAlt")),
+      qrAltTxt: esc(tTicket("qrAlt")),
     };
 
     const makeTicketHtmlForSeat = (item: { seat: SeatDetail | null; code: string }) => {
@@ -399,7 +394,7 @@ export default function TicketPrint({
       return `
       <div style="max-width:900px;margin:0 auto;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;background:#fff;">
         <div style="background:#003f8c;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;letter-spacing:.4px;">
-          KurdEvents E-TICKET
+          ${esc(printBannerTitle)}
         </div>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
           <tr>
@@ -515,7 +510,7 @@ export default function TicketPrint({
             >
         {/* Header */}
         <div className="bg-[#003f8c] px-4 py-2.5 text-sm font-bold tracking-wide text-white">
-          KurdEvents E-TICKET
+          {printBannerTitle}
         </div>
 
         {/* Ana içerik */}
@@ -526,7 +521,7 @@ export default function TicketPrint({
               <div className="flex h-[250px] w-[42px] items-center justify-center overflow-hidden rounded border border-slate-200 bg-white">
                 <img
                   src={barcodeSrcForSeat}
-                  alt={t("barcodeAlt")}
+                  alt={tTicket("barcodeAlt")}
                   className="h-[238px] w-[36px] object-contain"
                 />
               </div>
@@ -537,7 +532,7 @@ export default function TicketPrint({
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold tracking-wide text-black">{t("ticketSubtitle")}</p>
+              <p className="text-[10px] font-bold tracking-wide text-black">{tTicket("ticketSubtitle")}</p>
               <p className="mt-1.5 truncate text-4xl font-black leading-tight text-black md:text-5xl">
                 {displayEventTitle}
               </p>
@@ -549,21 +544,21 @@ export default function TicketPrint({
               <table className="mt-3 w-full border-collapse text-xs text-black">
                 <tbody>
                   <tr>
-                    <td className="py-0.5">{t("ticketType")}</td>
+                    <td className="py-0.5">{tTicket("ticketType")}</td>
                     <td className="py-0.5 text-right font-bold">{displayTicketTierLabel}</td>
                   </tr>
                   {seatLine && (
                     <tr>
-                      <td className="py-0.5">{t("seat")}</td>
+                      <td className="py-0.5">{tTicket("seat")}</td>
                       <td className="py-0.5 text-right font-bold">{seatLine}</td>
                     </tr>
                   )}
                   <tr>
-                    <td className="py-0.5">{t("personOnly")}</td>
+                    <td className="py-0.5">{tTicket("personOnly")}</td>
                     <td className="py-0.5 text-right font-bold">{buyerName}</td>
                   </tr>
                   <tr>
-                    <td className="py-0.5">{t("total")}</td>
+                    <td className="py-0.5">{tTicket("total")}</td>
                     <td className="py-0.5 text-right font-extrabold">
                       {formatPrice(priceForThis, currency)}
                     </td>
@@ -584,20 +579,20 @@ export default function TicketPrint({
             className="flex w-[27%] flex-shrink-0 flex-col p-4"
             style={{ minWidth: "180px" }}
           >
-            <p className="text-[10px] font-bold tracking-wide text-black">{t("tearOffSection")}</p>
+            <p className="text-[10px] font-bold tracking-wide text-black">{tTicket("tearOffSection")}</p>
             <p className="font-medium text-slate-800 mb-2">kurdevents</p>
-            <p className="text-xs font-semibold text-black">{t("ticketCode")}</p>
+            <p className="text-xs font-semibold text-black">{tTicket("ticketCode")}</p>
             <p className="mt-0.5 font-mono text-lg font-extrabold tracking-wide text-black">
               {codeForSeat}
             </p>
             <div className="mt-2.5 flex justify-center">
               <img
                 src={qrUrlForSeat}
-                alt={t("qrAlt")}
+                alt={tTicket("qrAlt")}
                 className="h-[130px] w-[130px] rounded border border-slate-200 bg-white p-1.5"
               />
             </div>
-            <p className="mt-1.5 text-center text-[10px] text-black">{t("qrHint")}</p>
+            <p className="mt-1.5 text-center text-[10px] text-black">{tTicket("qrHint")}</p>
           </div>
         </div>
       </div>
@@ -612,7 +607,7 @@ export default function TicketPrint({
           className="flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-primary-700"
         >
           <Printer className="h-5 w-5" />
-          {t("print")}
+          {tUi("print")}
         </button>
         <button
           onClick={handleDownload}
@@ -620,11 +615,11 @@ export default function TicketPrint({
           className="flex items-center gap-2 rounded-lg border-2 border-primary-600 bg-white px-6 py-3 font-semibold text-primary-600 transition-colors hover:bg-primary-50 disabled:opacity-60"
         >
           <Download className="h-5 w-5" />
-          {downloading ? t("downloading") : t("download")}
+          {downloading ? tUi("downloading") : tUi("download")}
         </button>
       </div>
       <p className="text-center text-xs text-slate-500 print:hidden">
-        {t("printDownloadHint")}
+        {tUi("printDownloadHint")}
       </p>
     </div>
   );

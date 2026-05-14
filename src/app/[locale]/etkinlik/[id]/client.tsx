@@ -667,7 +667,6 @@ function SeatMapWithZoom({
   ticketEffectiveAvailableById,
   selectedSeatCategory,
   onSelectSeatCategory,
-  locale,
   currency,
 }: {
   sections: SeatPlanSection[];
@@ -684,7 +683,6 @@ function SeatMapWithZoom({
   ticketEffectiveAvailableById: Map<string, number>;
   selectedSeatCategory: string;
   onSelectSeatCategory: (value: string) => void;
-  locale: Locale;
   currency: Event["currency"];
 }) {
   const t = useTranslations("eventDetail");
@@ -767,11 +765,7 @@ function SeatMapWithZoom({
 
   const categoryButtonLabel =
     selectedSeatCategory === "all"
-      ? locale === "de"
-        ? "Alle Kategorien"
-        : locale === "en"
-          ? "All categories"
-          : "Tüm kategoriler"
+      ? t("allCategories")
       : shortenTicketDisplayName(
           catalogTickets.find((x) => x.id === selectedSeatCategory)?.name?.trim() ||
             selectedSeatCategory ||
@@ -814,7 +808,7 @@ function SeatMapWithZoom({
                   <span className="h-3 w-3 rounded-[3px] bg-[#10b981]" />
                 </span>
                 <span className="min-w-0 flex-1 truncate">
-                  {locale === "de" ? "Alle Kategorien" : locale === "en" ? "All categories" : "Tüm kategoriler"}
+                  {t("allCategories")}
                 </span>
               </button>
               {seatCategoryOptions.map(({ display, ticket: tk }) => {
@@ -859,8 +853,8 @@ function SeatMapWithZoom({
           type="button"
           onClick={zoomIn}
           className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          aria-label="Yakınlaştır"
-          title="Yakınlaştır"
+          aria-label={t("mapZoomIn")}
+          title={t("mapZoomIn")}
         >
           <ZoomIn className="h-5 w-5" aria-hidden />
         </button>
@@ -868,8 +862,8 @@ function SeatMapWithZoom({
           type="button"
           onClick={zoomOut}
           className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          aria-label="Uzaklaştır"
-          title="Uzaklaştır"
+          aria-label={t("mapZoomOut")}
+          title={t("mapZoomOut")}
         >
           <ZoomOut className="h-5 w-5" aria-hidden />
         </button>
@@ -878,7 +872,7 @@ function SeatMapWithZoom({
           onClick={resetView}
           className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
         >
-          Ortala
+          {t("mapResetView")}
         </button>
         </div>
       </div>
@@ -895,7 +889,7 @@ function SeatMapWithZoom({
         onMouseLeave={handleMouseUp}
         onMouseUp={handleMouseUp}
         role="application"
-        aria-label="Salon planı; zoom ve sürükleyerek koltuk seçin"
+        aria-label={t("seatMapAriaLabel")}
       >
         <div
           style={{
@@ -1094,9 +1088,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [reminderResult, setReminderResult] = useState<{ success: boolean; message: string } | null>(null);
   /** Site ayarı: sipariş başına max bilet (varsayılan 10) */
   const [maxTicketsPerOrder, setMaxTicketsPerOrder] = useState(10);
-  const stageLabel = locale === "de" ? "Bühne" : locale === "en" ? "Stage" : "Sahne";
-  const rowLabelWord = locale === "de" ? "Reihe" : locale === "en" ? "Row" : "Sıra";
-  const seatLabelWord = locale === "de" ? "Platz" : locale === "en" ? "Seat" : "Koltuk";
+  const stageLabel = t("stageLabel");
+  const rowLabelWord = t("rowLabel");
+  const seatLabelWord = t("seatLabel");
   const venuePhotoUrls = useMemo(() => {
     if (!venue) return [];
     return [venue.image_url_1, venue.image_url_2, venue.image_url_3, venue.image_url_4, venue.image_url_5]
@@ -1757,13 +1751,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         }
 
         if (cartTotalTicketsCount >= maxTicketsPerOrder) {
-          setActionMessage(
-            locale === "de"
-              ? `Max. ${maxTicketsPerOrder} Platze pro Bestellung.`
-              : locale === "en"
-              ? `Maximum ${maxTicketsPerOrder} tickets per order.`
-              : `Siparis basina en fazla ${maxTicketsPerOrder} bilet alabilirsiniz.`
-          );
+          setActionMessage(t("maxTicketsPerOrderExceeded", { max: maxTicketsPerOrder }));
           return;
         }
 
@@ -1827,13 +1815,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           });
           setHasSeatSelectionAddedToCart(true);
           const priceText = formatPrice(Number(ticketForCart.price || 0), event.currency);
-          setActionMessage(
-            locale === "de"
-              ? `Ticketpreis: ${priceText} - zum Warenkorb hinzugefügt.`
-              : locale === "en"
-              ? `Ticket price: ${priceText} - added to cart.`
-              : `Bilet fiyatı: ${priceText} - sepete eklendi.`
-          );
+          setActionMessage(t("ticketPriceAddedToCart", { price: priceText }));
         }
       } catch {
         setActionMessage(
@@ -1864,6 +1846,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       selectableSeatIdsByCategory,
       selectedSeatIds,
       selectedTicketType,
+      t,
       tCheckout,
       effectiveAvailabilityForTicket,
     ]
@@ -2200,7 +2183,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               {!isExternalOnlyEvent && bookingMode === "seat" && hasSeatingPlan && (
                 <div className="rounded-xl border border-slate-200 bg-white p-6">
                   {seatingPlanLoading && (!seatingPlanData || seatingPlanData.length === 0) ? (
-                    <p className="text-slate-500">Salon planı yükleniyor...</p>
+                    <p className="text-slate-500">{t("seatingPlanLoadingText")}</p>
                   ) : seatingPlanData && seatingPlanData.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
                       {/* Sol: Plan + harita/liste */}
@@ -2211,7 +2194,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           </div>
                         )}
                         <p className="text-sm text-slate-600 mb-3">
-                          Bölüm ve koltuk seçin. Renkler, etkinlik bilet adıyla eşleşen kategoriye göredir.
+                          {t("seatMapColorHint")}
                         </p>
                         <div className="flex gap-2 mb-4">
                           <button
@@ -2219,14 +2202,14 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             onClick={() => setSeatMapView("map")}
                             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "map" ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
                           >
-                            Salon planı
+                            {t("floorPlanViewTab")}
                           </button>
                           <button
                             type="button"
                             onClick={() => setSeatMapView("list")}
                             className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "list" ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
                           >
-                            Liste
+                            {t("listViewTab")}
                           </button>
                           {selectedSeatCategory !== "all" ? (
                             <button
@@ -2234,7 +2217,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               onClick={() => setSelectedSeatCategory("all")}
                               className="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
                             >
-                              {locale === "de" ? "Filter zurücksetzen" : locale === "en" ? "Reset filter" : "Filtreyi temizle"}
+                              {t("resetSeatFilter")}
                             </button>
                           ) : null}
                         </div>
@@ -2311,7 +2294,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 ticketEffectiveAvailableById={ticketEffectiveAvailableById}
                                 selectedSeatCategory={selectedSeatCategory}
                                 onSelectSeatCategory={setSelectedSeatCategory}
-                                locale={locale}
                                 currency={event.currency}
                               />
                               </>
@@ -2326,7 +2308,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 <div key={section.id} className="border border-slate-200 rounded-lg p-4">
                                   <h4 className="font-semibold text-slate-900 mb-1">{section.name}</h4>
                                   <p className="text-sm text-primary-600 mb-2">
-                                    {formatPrice(Number(sectionTicket.price || 0), event.currency)} / koltuk
+                                    {formatPrice(Number(sectionTicket.price || 0), event.currency)} {t("pricePerSeatSuffix")}
                                     {matchedBy === "index" && section.ticket_type_label && (
                                       <span className="ml-2 text-xs text-slate-500">({section.ticket_type_label} → {sectionTicket.name || "—"})</span>
                                     )}
@@ -2486,7 +2468,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                         void handleSeatToggle(item.seatId);
                                       }}
                                       className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
-                                      aria-label="Kaldır"
+                                      aria-label={tCheckout("remove")}
                                     >
                                       ×
                                     </button>
@@ -2495,17 +2477,18 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               </ul>
                               {atSeatLimit && (
                                 <p className="text-xs text-amber-600 mb-2">
-                                  {locale === "de" ? `Max. ${maxTicketsPerOrder} Plätze pro Bestellung.` : `Sipariş başına en fazla ${maxTicketsPerOrder} bilet.`}
+                                  {t("maxTicketsPerOrderSeatHint", { max: maxTicketsPerOrder })}
                                 </p>
                               )}
                               <div className="mb-3 space-y-1 text-sm text-slate-700">
                                 <p>
-                                  <strong>{selectedSeatIds.size}</strong>{" "}
-                                  {locale === "de" ? "Platze Gewahlt" : locale === "en" ? "Seats Selected" : "Koltuk Seçildi"}{" "}
-                                  <strong>{locale === "de" ? "Gesamt" : locale === "en" ? "Total" : "Toplam"} {formatPrice(totalPrice, event.currency)}</strong>
+                                  {t("seatsSelectedWithTotal", {
+                                    count: selectedSeatIds.size,
+                                    total: formatPrice(totalPrice, event.currency),
+                                  })}
                                 </p>
                                 <p>
-                                  {locale === "de" ? "Bearbeitungsgebühr" : locale === "en" ? "Processing Fee" : "İşlem Ücreti"}{" "}
+                                  {tCheckout("fees")}{" "}
                                   {processingFeePerTicket > 0 && seatCountForFee > 0 ? (
                                     <>
                                       <span className="text-slate-600">
@@ -2518,62 +2501,79 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   )}
                                 </p>
                                 <p className="font-semibold text-slate-900">
-                                  {locale === "de" ? "Gesamtsumme" : locale === "en" ? "Grand Total" : "Genel Toplam"}{" "}
-                                  {formatPrice(grandTotal, event.currency)}
+                                  {t("grandTotalLabel")} {formatPrice(grandTotal, event.currency)}
                                 </p>
                               </div>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (isPastEvent || isUnapproved) return;
-                                  const eventPayload = {
-                                    eventId: event.id,
-                                    eventTitle: localized.title || event.title,
-                                    eventDate: event.date,
-                                    eventTime: event.time || "20:00",
-                                    venue: localized.venue || event.venue,
-                                    location: event.location,
-                                    imageUrl: event.image_url,
-                                    currency: event.currency,
-                                    eventCheckoutFee:
-                                      typeof event.checkout_processing_fee === "number" &&
-                                      event.checkout_processing_fee > 0
-                                        ? event.checkout_processing_fee
-                                        : undefined,
-                                  };
-                                  seatIdsByTicketId.forEach((seatIds, ticketId) => {
-                                    const tk = catalogTickets.find((x) => x.id === ticketId);
-                                    if (!tk) return;
-                                    const seatCaptions = seatIds.map(
-                                      (id) =>
-                                        duisburgSeatCaptionById.get(id) ??
-                                        (() => {
-                                          const sec = seatToSection.get(id);
-                                          const row = seatToRow.get(id);
-                                          const st = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === id);
-                                          return `${sec?.name ?? ""} · ${rowLabelWord} ${row?.row_label ?? ""} · ${seatLabelWord} ${st?.seat_label ?? id}`;
-                                        })()
-                                    );
-                                    addItem({
-                                      ...eventPayload,
-                                      ticketId: tk.id,
-                                      ticketName: tk.name || "Bilet",
-                                      price: Number(tk.price || 0),
-                                      quantity: seatIds.length,
-                                      seatIds,
-                                      seatCaptions,
-                                      available: Number(tk.available || 0),
-                                    });
-                                  });
-                                  setActionMessage(tCheckout("addedToCart"));
-                                  setSelectedSeatIds(new Set());
-                                  setHasSeatSelectionAddedToCart(true);
-                                }}
-                                disabled={isPastEvent || isUnapproved || cartTotalTicketsCount >= maxTicketsPerOrder}
-                                className="w-full rounded-xl bg-primary-600 px-4 py-3 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
-                              >
-                                {tCheckout("addToCart")} ({selectedSeatIds.size})
-                              </button>
+                              {(() => {
+                                const seatSidebarHasCartForEvent = cartItems.some((it) => it.eventId === event.id);
+                                const blockSeatSale = isPastEvent || isUnapproved;
+                                const atCartTicketCap = cartTotalTicketsCount >= maxTicketsPerOrder;
+                                /** Kotayı dolduysanız Sepete Ekle zaten anlamsız; tek CTA olarak Ödemeye Geç (çift buton gösterme). */
+                                const checkoutOnlyDueToCap =
+                                  !blockSeatSale && seatSidebarHasCartForEvent && atCartTicketCap;
+                                return checkoutOnlyDueToCap ? (
+                                  <NextLink
+                                    href={`/${locale}/sepet`}
+                                    prefetch={false}
+                                    className="inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                                  >
+                                    {tCheckout("goToCheckout")}
+                                  </NextLink>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (isPastEvent || isUnapproved) return;
+                                      const eventPayload = {
+                                        eventId: event.id,
+                                        eventTitle: localized.title || event.title,
+                                        eventDate: event.date,
+                                        eventTime: event.time || "20:00",
+                                        venue: localized.venue || event.venue,
+                                        location: event.location,
+                                        imageUrl: event.image_url,
+                                        currency: event.currency,
+                                        eventCheckoutFee:
+                                          typeof event.checkout_processing_fee === "number" &&
+                                          event.checkout_processing_fee > 0
+                                            ? event.checkout_processing_fee
+                                            : undefined,
+                                      };
+                                      seatIdsByTicketId.forEach((seatIds, ticketId) => {
+                                        const tk = catalogTickets.find((x) => x.id === ticketId);
+                                        if (!tk) return;
+                                        const seatCaptions = seatIds.map(
+                                          (id) =>
+                                            duisburgSeatCaptionById.get(id) ??
+                                            (() => {
+                                              const sec = seatToSection.get(id);
+                                              const row = seatToRow.get(id);
+                                              const st = sec?.rows.flatMap((r) => r.seats).find((s) => s.id === id);
+                                              return `${sec?.name ?? ""} · ${rowLabelWord} ${row?.row_label ?? ""} · ${seatLabelWord} ${st?.seat_label ?? id}`;
+                                            })()
+                                        );
+                                        addItem({
+                                          ...eventPayload,
+                                          ticketId: tk.id,
+                                          ticketName: tk.name || "Bilet",
+                                          price: Number(tk.price || 0),
+                                          quantity: seatIds.length,
+                                          seatIds,
+                                          seatCaptions,
+                                          available: Number(tk.available || 0),
+                                        });
+                                      });
+                                      setActionMessage(tCheckout("addedToCart"));
+                                      setSelectedSeatIds(new Set());
+                                      setHasSeatSelectionAddedToCart(true);
+                                    }}
+                                    disabled={blockSeatSale || atCartTicketCap}
+                                    className="w-full rounded-xl bg-primary-600 px-4 py-3 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
+                                  >
+                                    {tCheckout("addToCart")} ({selectedSeatIds.size})
+                                  </button>
+                                );
+                              })()}
                             </>
                           );
                         })() : (() => {
@@ -2617,7 +2617,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                         void handleSeatToggle(item.seatId);
                                       }}
                                       className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
-                                      aria-label="Kaldır"
+                                      aria-label={tCheckout("remove")}
                                     >
                                       ×
                                     </button>
@@ -2668,11 +2668,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             </div>
                           ) : (
                             <p className="text-sm text-slate-500 py-4">
-                              {locale === "de"
-                                ? "Wählen Sie Plätze im Plan."
-                                : locale === "en"
-                                  ? "Select seats from the seating plan."
-                                  : "Plandan koltuk seçin."}
+                              {t("selectSeatsFromPlan")}
                             </p>
                           )
                         )}
@@ -2915,7 +2911,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t("aboutEvent")}</h2>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
-                    {locale === "de" ? "Information" : locale === "en" ? "Information" : "Bilgilendirme"}
+                    {t("informationBadge")}
                   </span>
                 </div>
                 <div className="prose prose-slate max-w-none">
@@ -2927,14 +2923,14 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
               <aside className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 h-fit">
                 <h3 className="mb-4 text-base font-bold text-slate-900">
-                  {locale === "de" ? "Auf einen Blick" : locale === "en" ? "At a glance" : "Hızlı Özet"}
+                  {t("atAGlance")}
                 </h3>
                 <div className="space-y-3">
                   <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
                     <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {locale === "de" ? "Datum" : locale === "en" ? "Date" : "Tarih"}
+                        {t("date")}
                       </p>
                       <p className="text-sm font-medium text-slate-800">{formatEventDateDMY(event.date)}</p>
                     </div>
@@ -2943,7 +2939,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     <Clock className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {locale === "de" ? "Uhrzeit" : locale === "en" ? "Time" : "Saat"}
+                        {t("time")}
                       </p>
                       <p className="text-sm font-medium text-slate-800">{event.time || "20:00"}</p>
                     </div>
@@ -2952,7 +2948,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                        {locale === "de" ? "Veranstaltungsort" : locale === "en" ? "Venue" : "Mekan"}
+                        {t("venue")}
                       </p>
                       <p className="text-sm font-medium text-slate-800">{localized.venue || event.venue}</p>
                     </div>
@@ -2962,7 +2958,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
                       <div className="min-w-0">
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          {locale === "de" ? "Adresse" : locale === "en" ? "Address" : "Adres"}
+                          {t("addressLabel")}
                         </p>
                         <p className="text-sm font-medium text-slate-800">{(event.address ?? "").trim()}</p>
                       </div>
@@ -2973,7 +2969,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
                       <div className="min-w-0">
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          {locale === "de" ? "Stadt" : locale === "en" ? "City" : "Şehir"}
+                          {t("city")}
                         </p>
                         <p className="text-sm font-medium text-slate-800">{(event.city ?? "").trim()}</p>
                       </div>
@@ -2986,7 +2982,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
                         <div className="min-w-0">
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            {locale === "de" ? "Standort" : locale === "en" ? "Location" : "Konum"}
+                            {t("location")}
                           </p>
                           <p className="text-sm font-medium text-slate-800">{(event.location ?? "").trim()}</p>
                         </div>
@@ -2997,7 +2993,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <Users className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
                       <div className="min-w-0">
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                          {locale === "de" ? "Veranstalter" : locale === "en" ? "Organizer" : "Organizatör"}
+                          {t("organizer")}
                         </p>
                         <p className="text-sm font-medium text-slate-800">{organizerDisplayName}</p>
                       </div>

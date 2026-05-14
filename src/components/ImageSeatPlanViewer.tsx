@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect, useLayoutEffect } from "react";
+import { useTranslations } from "next-intl";
 import type { GetSeatCoordFn, ImagePlanSectionGrid } from "@/lib/seating-plans/image-plan-types";
 
 export type ImageSeatItem = {
@@ -60,6 +61,7 @@ export default function ImageSeatPlanViewer({
   viewBoxWidth = 1207.56,
   seatDiameterViewUnits = 8.5,
 }: ImageSeatPlanViewerProps) {
+  const t = useTranslations("eventDetail");
   const containerRef = useRef<HTMLDivElement>(null);
   const aspectBoxRef = useRef<HTMLDivElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -305,32 +307,32 @@ export default function ImageSeatPlanViewer({
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-slate-600">Salon planı</span>
+        <span className="text-sm text-slate-600">{t("floorPlanViewTab")}</span>
         <button
           type="button"
           onClick={zoomIn}
           className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          aria-label="Yakınlaştır"
+          aria-label={t("mapZoomIn")}
         >
-          + Büyüt
+          {t("imageSeatZoomInLabel")}
         </button>
         <button
           type="button"
           onClick={zoomOut}
           className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
-          aria-label="Uzaklaştır"
+          aria-label={t("mapZoomOut")}
         >
-          − Küçült
+          {t("imageSeatZoomOutLabel")}
         </button>
         <button
           type="button"
           onClick={resetView}
           className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
-          Sıfırla
+          {t("imageSeatToolbarReset")}
         </button>
         <span className="text-xs text-slate-500 max-sm:block sm:inline">
-          Masaüstü: tekerlek + sürükle · Telefon: iki parmakla yakınlaştır / uzaklaştır, bir parmakla kaydır · Koltuklara dokunun
+          {t("imageSeatInteractionHint")}
         </span>
       </div>
       <div
@@ -342,7 +344,7 @@ export default function ImageSeatPlanViewer({
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         role="application"
-        aria-label="Salon planı görseli; koltuklara tıklayarak seçin"
+        aria-label={t("imageSeatMapAriaLabel")}
       >
         <div
           style={{
@@ -364,7 +366,7 @@ export default function ImageSeatPlanViewer({
               <img
                 ref={imgRef}
                 src={imageUrl}
-                alt="Salon planı"
+                alt={t("floorPlanViewTab")}
                 className="absolute inset-0 block h-full w-full object-contain bg-white pointer-events-none select-none"
                 draggable={false}
                 decoding="async"
@@ -378,7 +380,7 @@ export default function ImageSeatPlanViewer({
             <div className="relative inline-block max-w-full overflow-hidden rounded-md shadow-sm ring-1 ring-slate-200/90">
               <img
                 src={imageUrl}
-                alt="Salon planı"
+                alt={t("floorPlanViewTab")}
                 className="block h-auto max-h-[min(82vh,960px)] w-auto max-w-[min(100vw,920px)] min-w-[min(100%,560px)] pointer-events-none select-none"
                 draggable={false}
                 decoding="async"
