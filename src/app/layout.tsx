@@ -9,7 +9,7 @@ import { routing } from "@/i18n/routing";
 import { loadMessagesWithEnFallback } from "@/i18n/load-messages";
 import { getSiteUrl } from "@/lib/site-url";
 
-const inter = Inter({ subsets: ["latin", "latin-ext"] });
+const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap" });
 const LOCALES = ["tr", "de", "en", "ku", "ckb"] as const;
 
 export const dynamic = "force-dynamic";

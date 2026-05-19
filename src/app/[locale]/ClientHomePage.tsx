@@ -17,7 +17,8 @@ import {
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import HeroBackgroundSlider from "@/components/HeroBackgroundSlider";
-import type { Event, News } from "@/types/database";
+import type { Event } from "@/types/database";
+import type { HomeSliderAd } from "@/lib/home-slider-ads";
 import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
 import FeaturedEvents from "@/components/FeaturedEvents";
 import AnaHeroSlider from "@/components/AnaHeroSlider";
@@ -131,16 +132,16 @@ interface City {
 
 interface ClientHomePageProps {
   initialEvents?: Event[];
-  initialNews?: News[];
   initialHeroBackgrounds?: HeroBg[];
   initialCities?: City[];
+  initialSliderAds?: HomeSliderAd[];
 }
 
 export default function ClientHomePage({
   initialEvents = [],
-  initialNews = [],
   initialHeroBackgrounds = [],
   initialCities = [],
+  initialSliderAds,
 }: ClientHomePageProps) {
   const t = useTranslations("home");
   const tCalendar = useTranslations("calendar");
@@ -155,7 +156,6 @@ export default function ClientHomePage({
   const [eventDateInput, setEventDateInput] = useState(() => formatLocalDateDMY(new Date()));
   const [sortBy, setSortBy] = useState<"yaklasan" | "populer">("yaklasan");
   const [events, setEvents] = useState<Event[]>(initialEvents);
-  const [news, setNews] = useState<News[]>(initialNews);
   const [cities, setCities] = useState<City[]>(initialCities);
   const cityScrollRef = useRef<HTMLDivElement>(null);
   const [heroVariant, setHeroVariant] = useState<{
@@ -172,7 +172,7 @@ export default function ClientHomePage({
   const fetchData = useCallback(async () => {
     const { supabase } = await import("@/lib/supabase-client");
     try {
-      const [eventsRes, newsRes, citiesRes] = await Promise.all([
+      const [eventsRes, citiesRes] = await Promise.all([
         supabase
           .from("events")
           .select("*, venues(city)")
@@ -180,7 +180,6 @@ export default function ClientHomePage({
           .eq("is_approved", true)
           .eq("is_draft", false)
           .order("created_at", { ascending: false }),
-        supabase.from("news").select("*").eq("is_published", true).order("published_at", { ascending: false }).limit(5),
         supabase
           .from("cities")
           .select("id, slug, name_tr, name_de, name_en, image_url, sort_order")
@@ -194,7 +193,6 @@ export default function ClientHomePage({
             raw.map(({ venues: _v, ...rest }) => rest) as unknown as Event[]
           );
         }
-        if (!newsRes.error && Array.isArray(newsRes.data)) setNews(newsRes.data);
         if (!citiesRes.error && Array.isArray(citiesRes.data)) {
           const rawEv = (!eventsRes.error && Array.isArray(eventsRes.data)
             ? (eventsRes.data as Record<string, unknown>[])
@@ -207,48 +205,66 @@ export default function ClientHomePage({
     }
   }, []);
 
-  // A/B test: Hero varyantı (session bazlı cache)
+  // A/B test: yalnızca TR; kritik yolu bloklamadan sonra yükle
   useEffect(() => {
+    if (locale !== "tr") return;
     const key = "hero_ab_variant";
-    try {
-      const cached = sessionStorage.getItem(key);
-      if (cached) {
-        const parsed = JSON.parse(cached) as { variant: string; hero_title: string; hero_subtitle: string; cta_text: string };
-        setHeroVariant(parsed);
-        return;
-      }
-    } catch {
-      /* ignore */
-    }
-    fetch("/api/ab/variant")
-      .then(async (r) => {
-        if (!r.ok) throw new Error("Variant fetch failed");
-        return r.json();
-      })
-      .then((data) => {
-        if (!data || typeof data !== "object") return;
-        const v = {
-          variant: data.variant || "A",
-          hero_title: data.hero_title || "Hayalinizdeki Etkinliğe Bilet Bulun",
-          hero_subtitle: data.hero_subtitle || "Konser, tiyatro, stand-up ve daha fazlası.\nGüvenli ödeme ile kolayca bilet alın.",
-          cta_text: data.cta_text || "Ara",
-        };
-        setHeroVariant(v);
-        try {
-          sessionStorage.setItem(key, JSON.stringify(v));
-        } catch {
-          /* ignore */
+
+    const loadVariant = () => {
+      try {
+        const cached = sessionStorage.getItem(key);
+        if (cached) {
+          const parsed = JSON.parse(cached) as {
+            variant: string;
+            hero_title: string;
+            hero_subtitle: string;
+            cta_text: string;
+          };
+          setHeroVariant(parsed);
+          return;
         }
-      })
-      .catch(() => {
-        setHeroVariant({
-          variant: "A",
-          hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
-          hero_subtitle: "Konser, tiyatro, stand-up ve daha fazlası.\nGüvenli ödeme ile kolayca bilet alın.",
-          cta_text: "Ara",
+      } catch {
+        /* ignore */
+      }
+      fetch("/api/ab/variant")
+        .then(async (r) => {
+          if (!r.ok) throw new Error("Variant fetch failed");
+          return r.json();
+        })
+        .then((data) => {
+          if (!data || typeof data !== "object") return;
+          const v = {
+            variant: data.variant || "A",
+            hero_title: data.hero_title || "Hayalinizdeki Etkinliğe Bilet Bulun",
+            hero_subtitle:
+              data.hero_subtitle ||
+              "Konser, tiyatro, stand-up ve daha fazlası.\nGüvenli ödeme ile kolayca bilet alın.",
+            cta_text: data.cta_text || "Ara",
+          };
+          setHeroVariant(v);
+          try {
+            sessionStorage.setItem(key, JSON.stringify(v));
+          } catch {
+            /* ignore */
+          }
+        })
+        .catch(() => {
+          setHeroVariant({
+            variant: "A",
+            hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
+            hero_subtitle: "Konser, tiyatro, stand-up ve daha fazlası.\nGüvenli ödeme ile kolayca bilet alın.",
+            cta_text: "Ara",
+          });
         });
-      });
-  }, []);
+    };
+
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(loadVariant);
+      return () => cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(loadVariant, 200);
+    return () => clearTimeout(t);
+  }, [locale]);
 
   // Şehir bölümü: sayfa yüklendiğinde rastgele bir şehre scroll
   useEffect(() => {
@@ -270,33 +286,19 @@ export default function ClientHomePage({
     return () => clearTimeout(t);
   }, [cities]);
 
-  // Mount'ta bir kez veri yenile (Alışverişe devam et sonrası güncel liste görünsün); sayfa geri dönüşünde de yenile
+  // SSR verisi varken mount'ta tekrar Supabase çağırma; bfcache dönüşünde hafif yenile
   useEffect(() => {
     isMountedRef.current = true;
-    fetchData(); // İlk açılışta / sepet sonrası ana sayfada güncel etkinlik listesi
+    if (initialEvents.length === 0) fetchData();
     const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) fetchData(); // bfcache'den dönüş
+      if (e.persisted) fetchData();
     };
-    const handleFocus = () => {
-      fetchData();
-    };
-    const handleVisibility = () => {
-      if (document.visibilityState === "visible") {
-        fetchData();
-      }
-    };
-
     window.addEventListener("pageshow", handlePageShow);
-    window.addEventListener("focus", handleFocus);
-    document.addEventListener("visibilitychange", handleVisibility);
-
     return () => {
       isMountedRef.current = false;
       window.removeEventListener("pageshow", handlePageShow);
-      window.removeEventListener("focus", handleFocus);
-      document.removeEventListener("visibilitychange", handleVisibility);
     };
-  }, [fetchData]);
+  }, [fetchData, initialEvents.length]);
 
   const isEventPast = (event: Event) => isEventPastByLocalDateTime(event.date, event.time);
 
@@ -520,7 +522,7 @@ export default function ClientHomePage({
             <h2 className="text-xl font-bold text-slate-900">{t("upcomingEvents")}</h2>
           </div>
           <div className="border-t border-slate-200">
-            <AnaHeroSlider placement="main_slider" />
+            <AnaHeroSlider placement="main_slider" initialAds={initialSliderAds} />
           </div>
         </div>
 

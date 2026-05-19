@@ -3,11 +3,14 @@ import ClientHomePage from "./ClientHomePage";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { buildHomeMetadata } from "@/lib/seo/home-metadata";
 import { sortCitiesByUpcomingEventCount } from "@/lib/city-event-sort";
-import type { Event, News } from "@/types/database";
+import { getHomeSliderAds } from "@/lib/home-slider-ads";
+import type { Event } from "@/types/database";
 
 type HomePageProps = {
   params: Promise<{ locale: string }>;
 };
+
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: HomePageProps): Promise<Metadata> {
   const { locale } = await params;
@@ -25,9 +28,9 @@ type City = {
   sort_order?: number | null;
 };
 
-async function getHomeData() {
+async function getHomeData(locale: string) {
   const supabase = createServerSupabase();
-  const [eventsRes, newsRes, heroRes, citiesRes] = await Promise.all([
+  const [eventsRes, heroRes, citiesRes, sliderAds] = await Promise.all([
     supabase
       .from("events")
       .select("*, venues(city)")
@@ -35,13 +38,13 @@ async function getHomeData() {
       .eq("is_approved", true)
       .eq("is_draft", false)
       .order("created_at", { ascending: false }),
-    supabase.from("news").select("*").eq("is_published", true).order("published_at", { ascending: false }).limit(5),
     supabase.from("hero_backgrounds").select("*").eq("is_active", true).order("sort_order", { ascending: true }),
     supabase
       .from("cities")
       .select("id, slug, name_tr, name_de, name_en, image_url, sort_order")
       .eq("is_active", true)
       .order("sort_order", { ascending: true }),
+    getHomeSliderAds(locale, "main_slider"),
   ]);
   const rawEvents = (eventsRes.data || []) as Array<Record<string, unknown>>;
   const events = rawEvents.map(({ venues: _v, ...ev }) => ev) as unknown as Event[];
@@ -49,32 +52,39 @@ async function getHomeData() {
   const cities = sortCitiesByUpcomingEventCount(citiesUnsorted, rawEvents);
   return {
     events,
-    news: (newsRes.data || []) as News[],
     heroBackgrounds: (heroRes.data || []) as HeroBg[],
     cities,
+    sliderAds,
   };
 }
 
-export default async function HomePage() {
+export default async function HomePage({ params }: HomePageProps) {
+  const { locale } = await params;
   let events: Event[] = [];
-  let news: News[] = [];
   let heroBackgrounds: HeroBg[] = [];
   let cities: City[] = [];
+  let sliderAds: Awaited<ReturnType<typeof getHomeSliderAds>> = [];
   try {
-    const data = await getHomeData();
+    const data = await getHomeData(locale);
     events = data.events;
-    news = data.news;
     heroBackgrounds = data.heroBackgrounds;
     cities = data.cities;
+    sliderAds = data.sliderAds;
   } catch (e) {
     console.error("HomePage getHomeData error:", e);
   }
+
+  const lcpHero = heroBackgrounds[0]?.image_url;
+
   return (
-    <ClientHomePage
-      initialEvents={events}
-      initialNews={news}
-      initialHeroBackgrounds={heroBackgrounds}
-      initialCities={cities}
-    />
+    <>
+      {lcpHero ? <link rel="preload" as="image" href={lcpHero} fetchPriority="high" /> : null}
+      <ClientHomePage
+        initialEvents={events}
+        initialHeroBackgrounds={heroBackgrounds}
+        initialCities={cities}
+        initialSliderAds={sliderAds}
+      />
+    </>
   );
 }

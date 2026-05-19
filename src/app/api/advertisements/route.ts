@@ -48,7 +48,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Reklamlar yuklenemedi" }, { status: 500 });
     }
 
-    return NextResponse.json(data || []);
+    return NextResponse.json(data || [], {
+      headers: {
+        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
+      },
+    });
   } catch {
     return NextResponse.json({ error: "Sunucu hatasi" }, { status: 500 });
   }

@@ -74,10 +74,17 @@ function splitOverlayMonthYear(raw: string, locale: string): { month: string; ye
   return { month: localizeOverlayMonth(monthToken, locale), year: yearToken };
 }
 
-export default function AnaHeroSlider({ placement = "main_slider" }: { placement?: string }) {
+export default function AnaHeroSlider({
+  placement = "main_slider",
+  initialAds,
+}: {
+  placement?: string;
+  initialAds?: Advertisement[];
+}) {
   const locale = useLocale();
-  const [ads, setAds] = useState<Advertisement[]>([]);
-  const [loading, setLoading] = useState(true);
+  const hasInitialAds = initialAds !== undefined;
+  const [ads, setAds] = useState<Advertisement[]>(initialAds ?? []);
+  const [loading, setLoading] = useState(!hasInitialAds);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const shownAds = ads.slice(0, 10);
@@ -85,6 +92,7 @@ export default function AnaHeroSlider({ placement = "main_slider" }: { placement
   const [wrapWidth, setWrapWidth] = useState(0);
 
   useEffect(() => {
+    if (hasInitialAds) return;
     let cancelled = false;
 
     async function load() {
@@ -130,7 +138,7 @@ export default function AnaHeroSlider({ placement = "main_slider" }: { placement
     return () => {
       cancelled = true;
     };
-  }, [locale, placement]);
+  }, [locale, placement, hasInitialAds]);
 
   useEffect(() => {
     function update() {

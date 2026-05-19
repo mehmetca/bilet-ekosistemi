@@ -92,9 +92,9 @@ export default function HeroBackgroundSlider({ initialBackgrounds = [] }: HeroBa
             fill
             className="object-cover"
             sizes="100vw"
-            priority={backgrounds.length <= 1 ? true : index < 2}
-            fetchPriority={backgrounds.length <= 1 || index < 2 ? "high" : "low"}
-            loading={backgrounds.length <= 1 || index < 2 ? "eager" : "lazy"}
+            priority={index === 0}
+            fetchPriority={index === 0 ? "high" : "auto"}
+            loading={index === 0 ? "eager" : "lazy"}
           />
         </div>
       ))}

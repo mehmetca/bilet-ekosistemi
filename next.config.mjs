@@ -11,6 +11,9 @@ const nextConfig = {
   // next-intl / use-intl: RSC + client sınırında tek webpack grafiği; ayrıca Windows vendor-chunk hatalarını azaltır
   // konva: tarayıcı paketi; gerektiğinde transpile (canvas fallback webpack’te kapalı).
   transpilePackages: ["lucide-react", "next-intl", "use-intl", "konva"],
+  experimental: {
+    optimizePackageImports: ["lucide-react"],
+  },
   // Sentry / OpenTelemetry webpack vendor-chunks (örn. @opentelemetry.js) Windows dev'de
   // eksik dosya → MODULE_NOT_FOUND. Sunucuda paketleri bundle dışı bırakır.
   serverExternalPackages: [
