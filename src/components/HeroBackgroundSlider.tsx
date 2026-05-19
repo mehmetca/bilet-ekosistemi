@@ -14,9 +14,14 @@ interface HeroBackground {
 
 interface HeroBackgroundSliderProps {
   initialBackgrounds?: HeroBackground[];
+  /** Sunucuda LCP img zaten çizildiyse ilk slaytı tekrar yükleme */
+  lcpImageRendered?: boolean;
 }
 
-export default function HeroBackgroundSlider({ initialBackgrounds = [] }: HeroBackgroundSliderProps) {
+export default function HeroBackgroundSlider({
+  initialBackgrounds = [],
+  lcpImageRendered = false,
+}: HeroBackgroundSliderProps) {
   const [backgrounds, setBackgrounds] = useState<HeroBackground[]>(initialBackgrounds);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(initialBackgrounds.length === 0);
@@ -79,28 +84,44 @@ export default function HeroBackgroundSlider({ initialBackgrounds = [] }: HeroBa
   return (
     <div className="absolute inset-0 z-0">
       {/* Background Images */}
-      {backgrounds.map((bg, index) => (
-        <div
-          key={bg.id}
-          className={`absolute inset-0 transition-opacity duration-1000 ${
-            index === currentIndex ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <Image
-            src={bg.image_url}
-            alt={bg.title}
-            fill
-            className="object-cover"
-            sizes="100vw"
-            priority={index === 0}
-            fetchPriority={index === 0 ? "high" : "auto"}
-            loading={index === 0 ? "eager" : "lazy"}
-          />
-        </div>
-      ))}
+      {backgrounds.map((bg, index) => {
+        if (lcpImageRendered && index === 0) return null;
+        const isActive = index === currentIndex;
+        return (
+          <div
+            key={bg.id}
+            className={`absolute inset-0 transition-opacity duration-1000 ${
+              isActive ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {index === 0 && !lcpImageRendered ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={bg.image_url}
+                alt={bg.title}
+                fetchPriority="high"
+                loading="eager"
+                decoding="async"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+            ) : (
+              <Image
+                src={bg.image_url}
+                alt={bg.title}
+                fill
+                className="object-cover"
+                sizes="100vw"
+                loading="lazy"
+              />
+            )}
+          </div>
+        );
+      })}
       
       {/* Dark Overlay for text readability */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60"></div>
     </div>
   );
 }
+
+

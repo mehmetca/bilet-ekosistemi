@@ -82,7 +82,7 @@ export default function AnaHeroSlider({
   initialAds?: Advertisement[];
 }) {
   const locale = useLocale();
-  const hasInitialAds = initialAds !== undefined;
+  const hasInitialAds = Array.isArray(initialAds) && initialAds.length > 0;
   const [ads, setAds] = useState<Advertisement[]>(initialAds ?? []);
   const [loading, setLoading] = useState(!hasInitialAds);
   const [currentIndex, setCurrentIndex] = useState(0);

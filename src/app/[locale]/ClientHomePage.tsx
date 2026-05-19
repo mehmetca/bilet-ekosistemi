@@ -7,15 +7,13 @@ import {
   MapPin,
   Music2,
   Search as SearchIcon,
-  CheckCircle,
   Shield,
-  Clock,
-  Database,
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
+import HomeHeroControls from "@/components/home/HomeHeroControls";
 import HeroBackgroundSlider from "@/components/HeroBackgroundSlider";
 import type { Event } from "@/types/database";
 import type { HomeSliderAd } from "@/lib/home-slider-ads";
@@ -135,6 +133,7 @@ interface ClientHomePageProps {
   initialHeroBackgrounds?: HeroBg[];
   initialCities?: City[];
   initialSliderAds?: HomeSliderAd[];
+  heroBackground?: React.ReactNode;
 }
 
 export default function ClientHomePage({
@@ -142,6 +141,7 @@ export default function ClientHomePage({
   initialHeroBackgrounds = [],
   initialCities = [],
   initialSliderAds,
+  heroBackground,
 }: ClientHomePageProps) {
   const t = useTranslations("home");
   const tCalendar = useTranslations("calendar");
@@ -158,12 +158,6 @@ export default function ClientHomePage({
   const [events, setEvents] = useState<Event[]>(initialEvents);
   const [cities, setCities] = useState<City[]>(initialCities);
   const cityScrollRef = useRef<HTMLDivElement>(null);
-  const [heroVariant, setHeroVariant] = useState<{
-    variant: string;
-    hero_title: string;
-    hero_subtitle: string;
-    cta_text: string;
-  } | null>(null);
   const isMountedRef = useRef(true);
   const fallbackImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
@@ -204,67 +198,6 @@ export default function ClientHomePage({
       /* ignore */
     }
   }, []);
-
-  // A/B test: yalnızca TR; kritik yolu bloklamadan sonra yükle
-  useEffect(() => {
-    if (locale !== "tr") return;
-    const key = "hero_ab_variant";
-
-    const loadVariant = () => {
-      try {
-        const cached = sessionStorage.getItem(key);
-        if (cached) {
-          const parsed = JSON.parse(cached) as {
-            variant: string;
-            hero_title: string;
-            hero_subtitle: string;
-            cta_text: string;
-          };
-          setHeroVariant(parsed);
-          return;
-        }
-      } catch {
-        /* ignore */
-      }
-      fetch("/api/ab/variant")
-        .then(async (r) => {
-          if (!r.ok) throw new Error("Variant fetch failed");
-          return r.json();
-        })
-        .then((data) => {
-          if (!data || typeof data !== "object") return;
-          const v = {
-            variant: data.variant || "A",
-            hero_title: data.hero_title || "Hayalinizdeki Etkinliğe Bilet Bulun",
-            hero_subtitle:
-              data.hero_subtitle ||
-              "Konser, tiyatro, stand-up ve daha fazlası.\nGüvenli ödeme ile kolayca bilet alın.",
-            cta_text: data.cta_text || "Ara",
-          };
-          setHeroVariant(v);
-          try {
-            sessionStorage.setItem(key, JSON.stringify(v));
-          } catch {
-            /* ignore */
-          }
-        })
-        .catch(() => {
-          setHeroVariant({
-            variant: "A",
-            hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
-            hero_subtitle: "Konser, tiyatro, stand-up ve daha fazlası.\nGüvenli ödeme ile kolayca bilet alın.",
-            cta_text: "Ara",
-          });
-        });
-    };
-
-    if (typeof requestIdleCallback === "function") {
-      const id = requestIdleCallback(loadVariant);
-      return () => cancelIdleCallback(id);
-    }
-    const t = window.setTimeout(loadVariant, 200);
-    return () => clearTimeout(t);
-  }, [locale]);
 
   // Şehir bölümü: sayfa yüklendiğinde rastgele bir şehre scroll
   useEffect(() => {
@@ -429,88 +362,10 @@ export default function ClientHomePage({
 
       {/* Hero */}
       <section className="relative min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
-        {/* Dynamic Background Slider */}
-        <HeroBackgroundSlider initialBackgrounds={initialHeroBackgrounds} />
-        
-        {/* Content */}
-        <div className="relative z-10 site-container text-center">
-          <h1 className="mb-6 px-1 text-white break-words hyphens-auto">
-            <span className="block text-3xl font-bold sm:text-4xl md:text-6xl">
-              {locale === "tr" && heroVariant?.hero_title ? heroVariant.hero_title : t("heroTitle")}
-            </span>
-            <span className="mt-3 block text-lg font-semibold leading-snug text-white/95 sm:text-xl md:text-2xl">
-              {t("seoH1")}
-            </span>
-          </h1>
-          <p className="text-base sm:text-lg md:text-xl text-white mb-8 sm:mb-12 max-w-3xl mx-auto px-1">
-            {locale === "tr" && heroVariant?.hero_subtitle ? heroVariant.hero_subtitle : t("heroSubtitle")}
-          </p>
-          
-          {/* Orijinal Büyüklükte Arama Kutusu */}
-          <div className="max-w-2xl mx-auto mb-12 sm:mb-16 px-0">
-            <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 bg-white rounded-2xl p-2 shadow-2xl">
-              <div className="relative flex-1 min-w-0">
-                <SearchIcon className="absolute left-3 sm:left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                <input
-                  type="search"
-                  placeholder={t("searchPlaceholder")}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full rounded-xl border-0 py-3.5 sm:py-4 pl-11 sm:pl-12 pr-3 sm:pr-4 text-slate-900 text-base sm:text-lg focus:outline-none"
-                />
-              </div>
-              <Link 
-                href={searchTerm.trim() ? `/arama?q=${encodeURIComponent(searchTerm.trim())}` : "/arama"}
-                className="rounded-xl bg-primary-600 px-6 sm:px-8 py-3.5 sm:py-4 font-semibold text-white hover:bg-primary-700 transition-colors text-center shrink-0"
-              >
-                {locale === "tr" && heroVariant?.cta_text ? heroVariant.cta_text : t("search")}
-              </Link>
-            </div>
-          </div>
-
-          {/* Güven Özellikleri */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-            <div className="text-center">
-              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
-                <CheckCircle className="h-10 w-10 mx-auto mb-3 text-white" />
-              </div>
-              <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.verified")}</h3>
-              <p className="text-sm text-white/90">{t("trustBadges.verifiedDesc")}</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
-                <Clock className="h-10 w-10 mx-auto mb-3 text-white" />
-              </div>
-              <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.delivery")}</h3>
-              <p className="text-sm text-white/90">{t("trustBadges.deliveryDesc")}</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
-                <Shield className="h-10 w-10 mx-auto mb-3 text-white" />
-              </div>
-              <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.payment")}</h3>
-              <p className="text-sm text-white/90">{t("trustBadges.paymentDesc")}</p>
-            </div>
-            <div className="text-center">
-              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
-                <Database className="h-10 w-10 mx-auto mb-3 text-white" />
-              </div>
-              <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.inventory")}</h3>
-              <p className="text-sm text-white/90">{t("trustBadges.inventoryDesc")}</p>
-            </div>
-          </div>
-
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-2 text-xs">
-            {["VISA", "Mastercard", "AMEX", "Apple Pay", "Google Pay", "3D Secure"].map((badge) => (
-              <span
-                key={badge}
-                className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-white/95"
-              >
-                {badge}
-              </span>
-            ))}
-          </div>
-        </div>
+        {heroBackground ?? (
+          <HeroBackgroundSlider initialBackgrounds={initialHeroBackgrounds} />
+        )}
+        <HomeHeroControls searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
       </section>
 
       {/* Ana Slider: Slider'lar alanına taşındı */}
