@@ -1,9 +1,9 @@
 export default function LocaleLoading() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 text-white">
-      <div className="site-container flex min-h-screen flex-col items-center justify-center px-4 py-20 text-center">
-        <h1 className="text-3xl font-bold sm:text-4xl">KurdEvents</h1>
-        <p className="mt-3 text-lg text-white/90">Yükleniyor…</p>
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="animate-pulse flex flex-col items-center gap-4">
+        <div className="h-10 w-10 rounded-xl bg-primary-200" />
+        <div className="h-4 w-48 rounded bg-slate-200" />
       </div>
     </div>
   );
