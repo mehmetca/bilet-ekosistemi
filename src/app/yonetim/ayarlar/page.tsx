@@ -14,10 +14,28 @@ export default function AyarlarPage() {
   } | null>(null);
 
   useEffect(() => {
-    fetch("/api/email-status")
-      .then((r) => r.json())
-      .then(setEmailStatus)
-      .catch(() => setEmailStatus(null));
+    let cancelled = false;
+    (async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        if (!token) return;
+
+        const res = await fetch("/api/email-status", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        if (cancelled || !data?.checks) return;
+        setEmailStatus(data);
+      } catch {
+        if (!cancelled) setEmailStatus(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const [settings, setSettings] = useState({
@@ -109,7 +127,7 @@ export default function AyarlarPage() {
 
         <div className="space-y-6">
           {/* Bilet E-posta Yapılandırması */}
-          {emailStatus && (
+          {emailStatus?.checks && (
             <div
               className={`rounded-xl border p-6 ${
                 emailStatus.ready
@@ -130,8 +148,8 @@ export default function AyarlarPage() {
                 <div>
                   <p className="font-medium text-slate-900">{emailStatus.message}</p>
                   <div className="mt-2 flex flex-wrap gap-4 text-sm text-slate-600">
-                    <span>RESEND_API_KEY: {emailStatus.checks.RESEND_API_KEY}</span>
-                    <span>TICKET_EMAIL_FROM: {emailStatus.checks.TICKET_EMAIL_FROM}</span>
+                    <span>RESEND_API_KEY: {emailStatus.checks?.RESEND_API_KEY}</span>
+                    <span>TICKET_EMAIL_FROM: {emailStatus.checks?.TICKET_EMAIL_FROM}</span>
                   </div>
                   {!emailStatus.ready && (
                     <p className="mt-2 text-sm text-slate-600">
