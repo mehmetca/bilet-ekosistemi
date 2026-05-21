@@ -4,7 +4,6 @@ import { createServerSupabase } from "@/lib/supabase-server";
 import { buildHomeMetadata } from "@/lib/seo/home-metadata";
 import { sortCitiesByUpcomingEventCount } from "@/lib/city-event-sort";
 import { getHomeSliderAds } from "@/lib/home-slider-ads";
-import HomeHeroBackgrounds from "@/components/home/HomeHeroBackgrounds";
 import type { Event } from "@/types/database";
 
 type HomePageProps = {
@@ -85,9 +84,6 @@ export default async function HomePage({ params }: HomePageProps) {
         initialHeroBackgrounds={heroBackgrounds}
         initialCities={cities}
         initialSliderAds={sliderAds}
-        heroBackground={
-          <HomeHeroBackgrounds backgrounds={heroBackgrounds} />
-        }
       />
     </>
   );

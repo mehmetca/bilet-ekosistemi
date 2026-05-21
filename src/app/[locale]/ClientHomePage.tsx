@@ -133,7 +133,6 @@ interface ClientHomePageProps {
   initialHeroBackgrounds?: HeroBg[];
   initialCities?: City[];
   initialSliderAds?: HomeSliderAd[];
-  heroBackground?: React.ReactNode;
 }
 
 export default function ClientHomePage({
@@ -141,7 +140,6 @@ export default function ClientHomePage({
   initialHeroBackgrounds = [],
   initialCities = [],
   initialSliderAds,
-  heroBackground,
 }: ClientHomePageProps) {
   const t = useTranslations("home");
   const tCalendar = useTranslations("calendar");
@@ -356,15 +354,30 @@ export default function ClientHomePage({
     };
   };
 
+  const lcpHeroImage = initialHeroBackgrounds[0]?.image_url;
+  const lcpHeroAlt = initialHeroBackgrounds[0]?.title || "KurdEvents";
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
 
       {/* Hero */}
       <section className="relative min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
-        {heroBackground ?? (
-          <HeroBackgroundSlider initialBackgrounds={initialHeroBackgrounds} />
-        )}
+        {lcpHeroImage ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={lcpHeroImage}
+            alt={lcpHeroAlt}
+            fetchPriority="high"
+            loading="eager"
+            decoding="async"
+            className="absolute inset-0 z-0 h-full w-full object-cover"
+          />
+        ) : null}
+        <HeroBackgroundSlider
+          initialBackgrounds={initialHeroBackgrounds}
+          lcpImageRendered={!!lcpHeroImage}
+        />
         <HomeHeroControls searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
       </section>
 
