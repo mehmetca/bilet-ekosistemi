@@ -8,8 +8,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // next-intl / use-intl: RSC + client sınırında tek webpack grafiği; ayrıca Windows vendor-chunk hatalarını azaltır
-  // konva: tarayıcı paketi; gerektiğinde transpile (canvas fallback webpack’te kapalı).
+  // next-intl / use-intl: tek React grafiği (use-intl serverExternal yapılırsa SSR'de useMemo null hatası)
   transpilePackages: ["lucide-react", "next-intl", "use-intl", "konva"],
   experimental: {
     optimizePackageImports: ["lucide-react"],
@@ -25,7 +24,7 @@ const nextConfig = {
     // Windows dev: eksik ./vendor-chunks/@supabase.js hatasını önlemek için sunucu bundle'dan çıkar
     "@supabase/supabase-js",
     "@supabase/ssr",
-    // use-intl burada external yapma — __webpack_modules__[id] is not a function hatasına yol açar; transpilePackages kullan
+    // use-intl burada external yapma — IntlProvider SSR'de "useMemo of null" + vendor-chunk sorunları
     // Windows dev: eksik ./vendor-chunks/@formatjs.js — sadece formatjs ailesi (next-intl'i external yapma)
     "intl-messageformat",
     "@formatjs/ecma402-abstract",
@@ -77,7 +76,8 @@ const nextConfig = {
   eslint: { ignoreDuringBuilds: true },
   webpack: (config, { isServer }) => {
     config.resolve = config.resolve || {};
-    // Webpack dev cache stays on (avoids HMR ./9085.js missing on Windows). Use npm run dev:fresh if stuck.
+    // React alias kullanma: Next 15 client `react.use()` (React 19) ile React 18 çakışır → hydration kırılır.
+    // Webpack dev cache stays on (avoids HMR ./9085.js missing on Windows). npm run dev:fresh = clean + webpack.
     // react-konva / Konva: optional Node `canvas` modülü — Next derlemesinde yok say.
     config.resolve.fallback = {
       ...config.resolve.fallback,

@@ -7,6 +7,7 @@ import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import AdminImageUploadFixed from "@/components/AdminImageUploadFixed";
 import RichTextEditor from "@/components/RichTextEditor";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import { isLegacyWordPressImageUrl, resolvePublicImageUrl } from "@/lib/external-image";
 
 interface City {
   id: string;
@@ -130,7 +131,11 @@ function SehirlerContent() {
         description_en: form.description_en?.trim() || null,
         description_ku: form.description_ku?.trim() || null,
         description_ckb: form.description_ckb?.trim() || null,
-        image_url: form.image_url?.trim() || null,
+        image_url: (() => {
+          const raw = form.image_url?.trim() || "";
+          if (!raw || isLegacyWordPressImageUrl(raw)) return null;
+          return raw;
+        })(),
         sort_order: form.sort_order ?? 0,
         is_active: form.is_active ?? true,
       };
@@ -279,8 +284,16 @@ function SehirlerContent() {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Hero Görsel (URL)</label>
+                {form.image_url && isLegacyWordPressImageUrl(form.image_url) ? (
+                  <p className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                    Eski WordPress linki artık geçerli değil (kurdevents.org/wp-content/…). Lütfen görseli
+                    yeniden yükleyin; kayıtta Supabase URL’si kullanılacak.
+                  </p>
+                ) : null}
                 <AdminImageUploadFixed
-                  value={form.image_url || ""}
+                  value={
+                    form.image_url && isLegacyWordPressImageUrl(form.image_url) ? "" : form.image_url || ""
+                  }
                   onChange={(url) => setForm((p) => ({ ...p, image_url: url }))}
                   folder="hero-backgrounds"
                 />
@@ -393,9 +406,9 @@ function SehirlerContent() {
                 key={city.id}
                 className="flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4"
               >
-                {city.image_url ? (
+                {resolvePublicImageUrl(city.image_url) ? (
                   <img
-                    src={city.image_url}
+                    src={resolvePublicImageUrl(city.image_url)!}
                     alt={city.name_tr || city.slug}
                     className="h-16 w-24 rounded-lg object-cover"
                   />

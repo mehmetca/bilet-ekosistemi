@@ -11,6 +11,7 @@ import { parseEventDescription } from "@/lib/eventMeta";
 import type { Event } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
 import { formatEventDateDMY } from "@/lib/date-utils";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 
 interface CityPageClientProps {
   city: Record<string, unknown>;
@@ -26,7 +27,7 @@ export default function CityPageClient({ city, initialEvents }: CityPageClientPr
   const localized = getLocalizedCity(city, locale);
   const cityName = localized.name || (city.slug as string) || "";
   const cityDesc = localized.description || "";
-  const imageUrl = (city.image_url as string) || null;
+  const imageUrl = resolvePublicImageUrl((city.image_url as string) || null);
 
   const citySlug = (city.slug as string)?.toLowerCase() || "";
 

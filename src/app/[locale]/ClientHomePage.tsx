@@ -24,6 +24,7 @@ import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
 import { sortCitiesByUpcomingEventCount } from "@/lib/city-event-sort";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 
 function eventDateISO(event: Event): string {
   const d = String(event.date ?? "");
@@ -354,7 +355,7 @@ export default function ClientHomePage({
     };
   };
 
-  const lcpHeroImage = initialHeroBackgrounds[0]?.image_url;
+  const lcpHeroImage = resolvePublicImageUrl(initialHeroBackgrounds[0]?.image_url);
   const lcpHeroAlt = initialHeroBackgrounds[0]?.title || "KurdEvents";
 
   return (
@@ -441,6 +442,7 @@ export default function ClientHomePage({
               >
                 {cities.map((city) => {
                   const name = (locale === "de" ? city.name_de : locale === "en" ? city.name_en : city.name_tr) || city.name_tr || city.name_de || city.name_en || city.slug;
+                  const cityImageSrc = resolvePublicImageUrl(city.image_url);
                   return (
                     <Link
                       key={city.id}
@@ -448,9 +450,9 @@ export default function ClientHomePage({
                       className="group flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 snap-center w-[min(88vw,22rem)] max-w-[min(88vw,22rem)] sm:min-w-[230px] sm:max-w-[230px] sm:w-[230px] md:min-w-[250px] md:max-w-[250px] md:w-[250px] xl:min-w-[280px] xl:max-w-[280px] xl:w-[280px]"
                     >
                       <div className="aspect-[16/9] overflow-hidden bg-slate-100">
-                        {city.image_url ? (
+                        {cityImageSrc ? (
                           <img
-                            src={city.image_url}
+                            src={cityImageSrc}
                             alt={name}
                             className="h-full w-full object-cover transition-transform group-hover:scale-105"
                           />

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 import ClientHomePage from "./ClientHomePage";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { buildHomeMetadata } from "@/lib/seo/home-metadata";
@@ -74,7 +75,7 @@ export default async function HomePage({ params }: HomePageProps) {
     console.error("HomePage getHomeData error:", e);
   }
 
-  const lcpHero = heroBackgrounds[0]?.image_url;
+  const lcpHero = resolvePublicImageUrl(heroBackgrounds[0]?.image_url);
 
   return (
     <>

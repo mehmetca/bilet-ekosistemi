@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 
 interface HeroBackground {
   id: string;
@@ -97,7 +98,7 @@ export default function HeroBackgroundSlider({
             {index === 0 && !lcpImageRendered ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={bg.image_url}
+                src={resolvePublicImageUrl(bg.image_url) ?? bg.image_url}
                 alt={bg.title}
                 fetchPriority="high"
                 loading="eager"
@@ -106,7 +107,7 @@ export default function HeroBackgroundSlider({
               />
             ) : (
               <Image
-                src={bg.image_url}
+                src={resolvePublicImageUrl(bg.image_url) ?? bg.image_url}
                 alt={bg.title}
                 fill
                 className="object-cover"

@@ -3,6 +3,7 @@
 import { Link } from "@/i18n/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { MapPin } from "lucide-react";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 
 interface City {
   id: string;
@@ -30,6 +31,7 @@ export default function CitiesGrid({ cities }: { cities: City[] }) {
     <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
       {cities.map((city) => {
         const name = (locale === "de" ? city.name_de : locale === "en" ? city.name_en : city.name_tr) || city.name_tr || city.name_de || city.name_en || city.slug;
+        const imageSrc = resolvePublicImageUrl(city.image_url);
         return (
           <Link
             key={city.id}
@@ -37,9 +39,9 @@ export default function CitiesGrid({ cities }: { cities: City[] }) {
             className="group overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200"
           >
             <div className="aspect-[16/9] overflow-hidden bg-slate-100">
-              {city.image_url ? (
+              {imageSrc ? (
                 <img
-                  src={city.image_url}
+                  src={imageSrc}
                   alt={name}
                   className="h-full w-full object-cover transition-transform group-hover:scale-105"
                 />
