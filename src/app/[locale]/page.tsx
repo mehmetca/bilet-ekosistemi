@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import { resolvePublicImageUrl } from "@/lib/external-image";
 import { buildHomeMetadata } from "@/lib/seo/home-metadata";
-import { getHomeShellData } from "@/lib/home-page-data";
-import HomePageWithEvents, { HomePageShell } from "./HomePageWithEvents";
+import { getHomePageData } from "@/lib/home-page-data";
+import { CRITICAL_HOME_CSS } from "@/lib/critical-home-css";
+import ClientHomePage from "./ClientHomePage";
+import HomeHeroLcp from "@/components/home/HomeHeroLcp";
 
 type HomePageProps = {
   params: Promise<{ locale: string }>;
@@ -18,28 +19,36 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
 
 export default async function HomePage({ params }: HomePageProps) {
   const { locale } = await params;
-  let shell: Awaited<ReturnType<typeof getHomeShellData>> = {
+  let data: Awaited<ReturnType<typeof getHomePageData>> = {
     heroBackgrounds: [],
     cities: [],
     sliderAds: [],
+    events: [],
   };
 
   try {
-    shell = await getHomeShellData(locale);
+    data = await getHomePageData(locale);
   } catch (e) {
-    console.error("HomePage getHomeShellData error:", e);
+    console.error("HomePage getHomePageData error:", e);
   }
 
-  const lcpHero = resolvePublicImageUrl(shell.heroBackgrounds[0]?.image_url);
+  const lcpHero = resolvePublicImageUrl(data.heroBackgrounds[0]?.image_url);
+  const lcpAlt = data.heroBackgrounds[0]?.title || "KurdEvents";
 
   return (
     <>
+      <style id="critical-home" dangerouslySetInnerHTML={{ __html: CRITICAL_HOME_CSS }} />
       {lcpHero ? <link rel="preload" as="image" href={lcpHero} fetchPriority="high" /> : null}
-      <Suspense
-        fallback={<HomePageShell locale={locale} shell={shell} initialEvents={[]} />}
-      >
-        <HomePageWithEvents locale={locale} shell={shell} />
-      </Suspense>
+      <ClientHomePage
+        initialEvents={data.events}
+        initialHeroBackgrounds={data.heroBackgrounds}
+        initialCities={data.cities}
+        initialSliderAds={data.sliderAds}
+        heroLcpImage={
+          <HomeHeroLcp imageUrl={data.heroBackgrounds[0]?.image_url} alt={lcpAlt} />
+        }
+        hasHeroLcpImage={!!lcpHero}
+      />
     </>
   );
 }

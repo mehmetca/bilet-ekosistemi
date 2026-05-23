@@ -30,12 +30,8 @@ export default function HeroBackgroundSlider({
 
   useEffect(() => {
     if (!lcpImageRendered || initialBackgrounds.length <= 1) return;
-    if (typeof requestIdleCallback === "function") {
-      const id = requestIdleCallback(() => setShowExtraSlides(true), { timeout: 4000 });
-      return () => cancelIdleCallback(id);
-    }
-    const t = window.setTimeout(() => setShowExtraSlides(true), 2000);
-    return () => clearTimeout(t);
+    const id = requestAnimationFrame(() => setShowExtraSlides(true));
+    return () => cancelAnimationFrame(id);
   }, [lcpImageRendered, initialBackgrounds.length]);
 
   useEffect(() => {

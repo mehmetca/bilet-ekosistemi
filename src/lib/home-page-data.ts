@@ -82,3 +82,18 @@ export function sortHomeCities(
   const rawEvents = events as unknown as Array<Record<string, unknown>>;
   return sortCitiesByUpcomingEventCount(cities, rawEvents);
 }
+
+export type HomePageData = HomeShellData & {
+  events: Event[];
+  cities: HomeShellData["cities"];
+};
+
+/** Tek round-trip: shell + etkinlikler paralel (Suspense/streaming LCP’yi geciktirmesin). */
+export async function getHomePageData(locale: string): Promise<HomePageData> {
+  const [shell, events] = await Promise.all([getHomeShellData(locale), getHomeEvents(locale)]);
+  return {
+    ...shell,
+    events,
+    cities: sortHomeCities(shell.cities, events),
+  };
+}
