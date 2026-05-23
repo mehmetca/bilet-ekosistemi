@@ -8,6 +8,7 @@ import { headers } from "next/headers";
 import { routing } from "@/i18n/routing";
 import { loadMessagesWithEnFallback } from "@/i18n/load-messages";
 import { getSiteUrl } from "@/lib/site-url";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap" });
 const LOCALES = ["tr", "de", "en", "ku", "ckb"] as const;
@@ -96,6 +97,7 @@ export default async function RootLayout({
             </ClientIntlBridge>
           )}
         </SimpleAuthProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
