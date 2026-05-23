@@ -313,6 +313,7 @@
       "inventory": "ئینفۆنتۆری ڕاستەوخۆ",
       "inventoryDesc": "بەردەستبوونی کاتی ڕاستەقینە"
     },
+    "paymentMethodsLabel": "شێوازەکانی پارەدانی قبوڵکراو",
     "solutionSteps": "هەنگاوەکانی چارەسەر: ١.",
     "solution1": "داشبۆردەکەی سوپابەیس بکەرەوە",
     "solution2": "SQL Editor داخڵ بکە",

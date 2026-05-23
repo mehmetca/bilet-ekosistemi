@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
@@ -88,8 +88,6 @@ export default function AnaHeroSlider({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const shownAds = ads.slice(0, 10);
-  const wrapRef = useRef<HTMLDivElement>(null);
-  const [wrapWidth, setWrapWidth] = useState(0);
 
   useEffect(() => {
     if (hasInitialAds) return;
@@ -139,25 +137,6 @@ export default function AnaHeroSlider({
       cancelled = true;
     };
   }, [locale, placement, hasInitialAds]);
-
-  useEffect(() => {
-    function update() {
-      const w = wrapRef.current?.clientWidth ?? 0;
-      setWrapWidth(w);
-    }
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
-  useEffect(() => {
-    // ads geldikten sonra bir kez daha ölçelim (ilk render'da 0 gelmesin).
-    if (!wrapRef.current) return;
-    requestAnimationFrame(() => {
-      const w = wrapRef.current?.clientWidth ?? 0;
-      setWrapWidth(w);
-    });
-  }, [shownAds.length]);
 
   useEffect(() => {
     if (shownAds.length === 0) return;
@@ -210,19 +189,24 @@ export default function AnaHeroSlider({
                 type="button"
                 onClick={() => goToIndex(idx)}
                 aria-label={`Slide ${idx + 1}`}
-                className={`h-2.5 w-2.5 rounded-full shadow-md transition-all sm:h-3 sm:w-3 ${
-                  idx === currentIndex ? "bg-primary-600 scale-110" : "bg-white hover:opacity-90"
-                }`}
-              />
+                aria-current={idx === currentIndex ? "true" : undefined}
+                className="flex h-11 w-11 items-center justify-center rounded-full"
+              >
+                <span
+                  className={`block rounded-full shadow-md transition-all h-2.5 w-2.5 sm:h-3 sm:w-3 ${
+                    idx === currentIndex ? "bg-primary-600 scale-110" : "bg-white"
+                  }`}
+                />
+              </button>
             ))}
           </div>
         )}
 
-        <div className="w-full overflow-hidden" ref={wrapRef}>
+        <div className="w-full overflow-hidden">
           <div
             className="heroSlider owl-carousel owl-theme flex transition-transform duration-500 ease-in-out"
             id="slider"
-            style={{ transform: `translateX(-${currentIndex * (wrapWidth || 1)}px)` }}
+            style={{ transform: `translateX(-${currentIndex * 100}%)` }}
           >
             {shownAds.map((ad, idx) => {
               const href = ad.link_url || "#";
@@ -237,9 +221,8 @@ export default function AnaHeroSlider({
                 locale
               );
 
-              const inner = (
-                <div className="w-full flex-shrink-0">
-                  <div className="relative w-full h-[58vw] min-h-[220px] max-h-[360px] sm:h-[48vw] sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px] bg-black">
+              const slide = (
+                <div className="relative w-full h-[58vw] min-h-[220px] max-h-[360px] sm:h-[48vw] sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px] bg-black">
                     <picture>
                       <img
                         src={ad.image_url}
@@ -262,22 +245,23 @@ export default function AnaHeroSlider({
                       </div>
                     </div>
                   </div>
-                </div>
               );
+
+              const slideWrapClass =
+                "sliderItem block w-full shrink-0 grow-0 basis-full min-w-0";
 
               if (isInternalLink(href)) {
                 return (
                   <Link
                     key={ad.id || idx}
                     href={href}
-                    className="sliderItem block flex-shrink-0"
+                    className={slideWrapClass}
                     data-order={order}
                     data-slider-group={group}
                     data-slider-order={order}
                     data-slider-item={String(order)}
-                    style={wrapWidth ? { width: `${wrapWidth}px` } : { width: "100%" }}
                   >
-                    {inner}
+                    {slide}
                   </Link>
                 );
               }
@@ -288,14 +272,13 @@ export default function AnaHeroSlider({
                   href={href}
                   target="_blank"
                   rel="noreferrer"
-                  className="sliderItem block flex-shrink-0"
+                  className={slideWrapClass}
                   data-order={order}
                   data-slider-group={group}
                   data-slider-order={order}
                   data-slider-item={String(order)}
-                  style={wrapWidth ? { width: `${wrapWidth}px` } : { width: "100%" }}
                 >
-                  {inner}
+                  {slide}
                 </a>
               );
             })}

@@ -39,6 +39,15 @@ function eventDateISO(event: Event): string {
   return d.includes("T") ? d.split("T")[0]! : d.slice(0, 10);
 }
 
+/** Şehir carousel okları — kart genişlikleri CSS ile sabit; DOM ölçümü (forced reflow) gerekmez. */
+function getCityCardScrollStep(viewportWidth: number): number {
+  const gap = 12;
+  if (viewportWidth >= 1280) return 280 + gap;
+  if (viewportWidth >= 768) return 250 + gap;
+  if (viewportWidth >= 640) return 230 + gap;
+  return Math.min(viewportWidth * 0.88, 352) + gap;
+}
+
 function normalizeForSearch(value: string): string {
   const lower = (value || "").toLocaleLowerCase("tr");
   const mapped = lower
@@ -210,29 +219,6 @@ export default function ClientHomePage({
     }
   }, []);
 
-  // Şehir carousel: ana iş parçacığını meşgul etmemek için idle'da konumla
-  useEffect(() => {
-    if (cities.length <= 1 || !cityScrollRef.current) return;
-    const el = cityScrollRef.current;
-    const randomIndex = Math.floor(Math.random() * cities.length);
-    const scrollToRandom = () => {
-      const first = el.querySelector("a");
-      if (first) {
-        const card = first as HTMLElement;
-        const gap = 12;
-        const cardWidth = card.offsetWidth + gap;
-        const targetLeft = Math.min(randomIndex * cardWidth, el.scrollWidth - el.clientWidth);
-        el.scrollTo({ left: targetLeft, behavior: "auto" });
-      }
-    };
-    if (typeof requestIdleCallback === "function") {
-      const id = requestIdleCallback(scrollToRandom, { timeout: 2000 });
-      return () => cancelIdleCallback(id);
-    }
-    const t = window.setTimeout(scrollToRandom, 300);
-    return () => clearTimeout(t);
-  }, [cities]);
-
   // SSR verisi varken mount'ta tekrar Supabase çağırma; bfcache dönüşünde hafif yenile
   useEffect(() => {
     isMountedRef.current = true;
@@ -375,7 +361,7 @@ export default function ClientHomePage({
       <Header />
 
       {/* Hero */}
-      <section className="relative min-h-[min(100dvh,820px)] md:min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
+      <section className="hero-lcp-fold relative min-h-[min(100dvh,820px)] md:min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
         {heroLcpImage}
         <HeroBackgroundSlider
           initialBackgrounds={initialHeroBackgrounds}
@@ -415,11 +401,10 @@ export default function ClientHomePage({
                 onClick={() => {
                   const el = cityScrollRef.current;
                   if (!el) return;
-                  const first = el.querySelector("a") as HTMLElement | null;
-                  const step = first ? first.offsetWidth + 12 : 220;
+                  const step = getCityCardScrollStep(window.innerWidth);
                   el.scrollBy({ left: -step, behavior: "smooth" });
                 }}
-                className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/20 p-2.5 text-white backdrop-blur-sm transition-all hover:bg-black/35 md:left-4"
+                className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/20 text-white backdrop-blur-sm transition-all hover:bg-black/35 md:left-4"
                 aria-label="Önceki"
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -429,11 +414,10 @@ export default function ClientHomePage({
                 onClick={() => {
                   const el = cityScrollRef.current;
                   if (!el) return;
-                  const first = el.querySelector("a") as HTMLElement | null;
-                  const step = first ? first.offsetWidth + 12 : 220;
+                  const step = getCityCardScrollStep(window.innerWidth);
                   el.scrollBy({ left: step, behavior: "smooth" });
                 }}
-                className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full bg-black/20 p-2.5 text-white backdrop-blur-sm transition-all hover:bg-black/35 md:right-4"
+                className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/20 text-white backdrop-blur-sm transition-all hover:bg-black/35 md:right-4"
                 aria-label="Sonraki"
               >
                 <ChevronRight className="h-6 w-6" />

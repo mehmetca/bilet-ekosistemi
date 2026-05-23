@@ -118,7 +118,7 @@ export default function HomeHeroControls({
           </div>
           <Link
             href={searchTerm.trim() ? `/arama?q=${encodeURIComponent(searchTerm.trim())}` : "/arama"}
-            className="rounded-xl bg-primary-600 px-6 sm:px-8 py-3.5 sm:py-4 font-semibold text-white hover:bg-primary-700 transition-colors text-center shrink-0"
+            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-primary-600 px-6 sm:px-8 py-3.5 sm:py-4 font-semibold text-white hover:bg-primary-700 transition-colors text-center shrink-0"
           >
             {ctaText}
           </Link>
@@ -130,42 +130,45 @@ export default function HomeHeroControls({
           <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
             <CheckCircle className="h-10 w-10 mx-auto mb-3 text-white" />
           </div>
-          <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.verified")}</h3>
+          <h2 className="font-semibold text-base mb-2 text-white">{t("trustBadges.verified")}</h2>
           <p className="text-sm text-white/90">{t("trustBadges.verifiedDesc")}</p>
         </div>
         <div className="text-center">
           <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
             <Clock className="h-10 w-10 mx-auto mb-3 text-white" />
           </div>
-          <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.delivery")}</h3>
+          <h2 className="font-semibold text-base mb-2 text-white">{t("trustBadges.delivery")}</h2>
           <p className="text-sm text-white/90">{t("trustBadges.deliveryDesc")}</p>
         </div>
         <div className="text-center">
           <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
             <Shield className="h-10 w-10 mx-auto mb-3 text-white" />
           </div>
-          <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.payment")}</h3>
+          <h2 className="font-semibold text-base mb-2 text-white">{t("trustBadges.payment")}</h2>
           <p className="text-sm text-white/90">{t("trustBadges.paymentDesc")}</p>
         </div>
         <div className="text-center">
           <div className="bg-white/20 backdrop-blur-sm rounded-xl p-6 mb-4">
             <Database className="h-10 w-10 mx-auto mb-3 text-white" />
           </div>
-          <h3 className="font-semibold text-base mb-2 text-white">{t("trustBadges.inventory")}</h3>
+          <h2 className="font-semibold text-base mb-2 text-white">{t("trustBadges.inventory")}</h2>
           <p className="text-sm text-white/90">{t("trustBadges.inventoryDesc")}</p>
         </div>
       </div>
 
-      <div className="mt-10 flex flex-wrap items-center justify-center gap-2 text-xs">
+      <ul
+        className="mt-10 flex flex-wrap items-center justify-center gap-2 text-xs list-none p-0 m-0"
+        aria-label={t("paymentMethodsLabel")}
+      >
         {["VISA", "Mastercard", "AMEX", "Apple Pay", "Google Pay", "3D Secure"].map((badge) => (
-          <span
+          <li
             key={badge}
-            className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-white/95"
+            className="rounded-full border border-white/40 bg-white/10 px-3 py-2 text-white/95"
           >
             {badge}
-          </span>
+          </li>
         ))}
-      </div>
+      </ul>
     </div>
   );
 }

@@ -1,0 +1,6 @@
+/** İlk boyama (LCP hero) için — tam Tailwind yüklenmeden önce uygulanır. */
+export const CRITICAL_HOME_CSS = `
+body{margin:0;background-color:#fff;color:#0f172a}
+.hero-lcp-fold{position:relative;min-height:min(100dvh,820px);background:linear-gradient(to bottom right,#2563eb,#1e40af);color:#fff}
+.hero-lcp-img{position:absolute;inset:0;z-index:0;width:100%;height:100%;object-fit:cover}
+`.trim();

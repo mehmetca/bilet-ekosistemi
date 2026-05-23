@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { routing } from "@/i18n/routing";
 import { getSiteUrl } from "@/lib/site-url";
+import { buildCanonicalAlternates } from "@/lib/seo/locale-path-metadata";
 
 const LOCALES = routing.locales;
 type AppLocale = (typeof LOCALES)[number];
@@ -40,15 +41,6 @@ const HOME_SEO: Record<AppLocale, HomeSeo> = {
   },
 };
 
-function languageAlternates(base: string, pathSuffix: string) {
-  const languages: Record<string, string> = {};
-  for (const l of LOCALES) {
-    languages[l] = `${base}/${l}${pathSuffix}`;
-  }
-  languages["x-default"] = `${base}/${routing.defaultLocale}${pathSuffix}`;
-  return languages;
-}
-
 export function buildHomeMetadata(locale: string): Metadata {
   const base = getSiteUrl();
   const loc = (LOCALES.includes(locale as AppLocale) ? locale : routing.defaultLocale) as AppLocale;
@@ -59,10 +51,7 @@ export function buildHomeMetadata(locale: string): Metadata {
   return {
     title,
     description,
-    alternates: {
-      canonical,
-      languages: languageAlternates(base, pathSuffix),
-    },
+    alternates: buildCanonicalAlternates(loc, pathSuffix),
     openGraph: {
       title,
       description,

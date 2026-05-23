@@ -19,7 +19,7 @@ export default function HomeHeroLcp({ imageUrl, alt }: HomeHeroLcpProps) {
       loading="eager"
       decoding="async"
       sizes="100vw"
-      className="absolute inset-0 z-0 h-full w-full object-cover"
+      className="hero-lcp-img absolute inset-0 z-0 h-full w-full object-cover"
     />
   );
 }

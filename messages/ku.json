@@ -57,6 +57,7 @@
       "inventory": "Inventory Live",
       "inventoryDesc": "hebûna dema rast"
     },
+    "paymentMethodsLabel": "Rêbazên dravdanê yên qebûlkirî",
     "solutionSteps": "Gavên çareseriyê:",
     "solution1": "Dashboard Supabase vekin",
     "solution2": "Edîtorê SQL têkevin",
