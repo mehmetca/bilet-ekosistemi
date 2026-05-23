@@ -20,36 +20,34 @@ function filterSliderAds(rows: HomeSliderAd[], placement: string) {
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
 }
 
-async function fetchAdsForLocale(locale?: string) {
-  const supabase = createServerSupabase();
-  let query = supabase.from("advertisements").select("*").order("created_at", { ascending: false });
+const AD_COLUMNS =
+  "id,title,image_url,link_url,placement,is_active,sort_order,locale,overlay_title,overlay_day,overlay_month_year";
 
-  if (locale && ["tr", "de", "en"].includes(locale)) {
-    if (locale === "tr") {
-      query = query.or("locale.eq.tr,locale.is.null");
-    } else {
-      query = query.or(`locale.eq.${locale},locale.eq.tr,locale.is.null`);
-    }
-  }
-
-  const { data, error } = await query;
-  if (error) return [];
-  return (data || []) as HomeSliderAd[];
-}
-
-/** Ana sayfa slider reklamları — istemci /api/advertisements çağrısını önler. */
+/** Ana sayfa slider reklamları — tek sorgu (önceki 3× fetch kaldırıldı). */
 export async function getHomeSliderAds(
   locale: string,
   placement = "main_slider"
 ): Promise<HomeSliderAd[]> {
   try {
-    const localized = filterSliderAds(await fetchAdsForLocale(locale), placement);
-    if (localized.length > 0 || locale === "tr") return localized;
+    const supabase = createServerSupabase();
+    const { data, error } = await supabase
+      .from("advertisements")
+      .select(AD_COLUMNS)
+      .eq("is_active", true)
+      .eq("placement", placement)
+      .order("sort_order", { ascending: true })
+      .limit(20);
 
-    const fallback = filterSliderAds(await fetchAdsForLocale("tr"), placement);
-    if (fallback.length > 0) return fallback;
+    if (error || !data?.length) return [];
 
-    return filterSliderAds(await fetchAdsForLocale(), placement);
+    const rows = data as HomeSliderAd[];
+    const loc = ["tr", "de", "en"].includes(locale) ? locale : "tr";
+    const forLocale = rows.filter(
+      (a) => !a.locale || a.locale === loc || a.locale === "tr"
+    );
+    const localized = filterSliderAds(forLocale.length ? forLocale : rows, placement);
+    if (localized.length > 0) return localized;
+    return filterSliderAds(rows, placement);
   } catch {
     return [];
   }

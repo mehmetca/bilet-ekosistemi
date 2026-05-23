@@ -66,11 +66,25 @@ export default async function RootLayout({
 
   const inner = <Providers>{children}</Providers>;
 
+  let supabaseOrigin: string | null = null;
+  try {
+    const raw = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (raw) supabaseOrigin = new URL(raw).origin;
+  } catch {
+    /* ignore */
+  }
+
   return (
     <html lang={validLocale} suppressHydrationWarning translate="no">
       <head>
         {/* Tarayıcı / eklenti çevirisi DOM’u bozup React hidrasyonunu kırıyor; site kendi dil seçicisini kullanır. */}
         <meta name="google" content="notranslate" />
+        {supabaseOrigin ? (
+          <>
+            <link rel="preconnect" href={supabaseOrigin} />
+            <link rel="dns-prefetch" href={supabaseOrigin} />
+          </>
+        ) : null}
       </head>
       <body className={`${inter.className} notranslate`} translate="no">
         <SimpleAuthProvider>

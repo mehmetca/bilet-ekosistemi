@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
+import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { FlaskConical, BarChart3 } from "lucide-react";
 import Link from "next/link";
 
@@ -21,14 +22,20 @@ interface AbBreakdown {
 }
 
 export default function AbTestPage() {
+  const { accessToken } = useSimpleAuth();
   const [variants, setVariants] = useState<AbVariant[]>([]);
   const [breakdown, setBreakdown] = useState<AbBreakdown[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!accessToken) {
+      setLoading(false);
+      return;
+    }
+    const headers = { Authorization: `Bearer ${accessToken}` };
     Promise.all([
-      fetch("/api/ab/variants", { cache: "no-store" }).then((r) => r.json()),
-      fetch("/api/analytics/funnel-stats?period=30", { cache: "no-store" }).then((r) =>
+      fetch("/api/ab/variants", { cache: "no-store", headers }).then((r) => r.json()),
+      fetch("/api/analytics/funnel-stats?period=30", { cache: "no-store", headers }).then((r) =>
         r.json()
       ),
     ])
@@ -38,7 +45,7 @@ export default function AbTestPage() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [accessToken]);
 
   return (
     <AdminOnlyGuard>

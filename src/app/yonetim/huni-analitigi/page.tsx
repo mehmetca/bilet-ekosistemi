@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
+import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { BarChart3, Eye, ShoppingCart, CheckCircle } from "lucide-react";
 import Link from "next/link";
 
@@ -21,30 +22,48 @@ interface FunnelData {
 }
 
 export default function HuniAnalitigiPage() {
+  const { accessToken } = useSimpleAuth();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<FunnelData | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [period, setPeriod] = useState("7");
 
-  useEffect(() => {
-    fetchData();
-  }, [period]);
-
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
+    if (!accessToken) {
+      setData(null);
+      setError("Oturum bulunamadı. Sayfayı yenileyip tekrar giriş yapın.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
+    setError(null);
     try {
       const res = await fetch(`/api/analytics/funnel-stats?period=${period}`, {
         cache: "no-store",
+        headers: { Authorization: `Bearer ${accessToken}` },
       });
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
+      const json = (await res.json().catch(() => ({}))) as FunnelData & {
+        message?: string;
+        error?: string;
+      };
+      if (!res.ok) {
+        setData(null);
+        setError(json.message || json.error || "Huni verileri alınamadı.");
+        return;
       }
+      setData(json);
     } catch (err) {
       console.error("Funnel fetch error:", err);
+      setData(null);
+      setError("Bağlantı hatası. Tekrar deneyin.");
     } finally {
       setLoading(false);
     }
-  }
+  }, [accessToken, period]);
+
+  useEffect(() => {
+    void fetchData();
+  }, [fetchData]);
 
   return (
     <AdminOnlyGuard>
@@ -76,9 +95,18 @@ export default function HuniAnalitigiPage() {
             <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
               <div className="inline-block h-8 w-8 animate-spin rounded-full border-2 border-primary-600 border-t-transparent" />
             </div>
-          ) : !data ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-12 text-center text-slate-500">
-              Veri yüklenemedi.
+          ) : error || !data ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-8 text-center">
+              <p className="text-amber-950 font-medium">
+                {error || "Veri yüklenemedi."}
+              </p>
+              <button
+                type="button"
+                onClick={() => void fetchData()}
+                className="mt-4 rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-medium text-amber-950 hover:bg-amber-100"
+              >
+                Tekrar dene
+              </button>
             </div>
           ) : (
             <>

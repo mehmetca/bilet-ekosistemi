@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
 import { Link } from "@/i18n/navigation";
 import {
   Calendar,
@@ -18,8 +18,15 @@ import HeroBackgroundSlider from "@/components/HeroBackgroundSlider";
 import type { Event } from "@/types/database";
 import type { HomeSliderAd } from "@/lib/home-slider-ads";
 import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
+import dynamic from "next/dynamic";
 import FeaturedEvents from "@/components/FeaturedEvents";
-import AnaHeroSlider from "@/components/AnaHeroSlider";
+
+const AnaHeroSlider = dynamic(() => import("@/components/AnaHeroSlider"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[58vw] min-h-[220px] max-h-[360px] animate-pulse bg-slate-100 sm:max-h-[420px]" />
+  ),
+});
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
@@ -134,6 +141,9 @@ interface ClientHomePageProps {
   initialHeroBackgrounds?: HeroBg[];
   initialCities?: City[];
   initialSliderAds?: HomeSliderAd[];
+  /** Sunucuda boyanan LCP <img> (React node — Server Component). */
+  heroLcpImage?: ReactNode;
+  hasHeroLcpImage?: boolean;
 }
 
 export default function ClientHomePage({
@@ -141,6 +151,8 @@ export default function ClientHomePage({
   initialHeroBackgrounds = [],
   initialCities = [],
   initialSliderAds,
+  heroLcpImage = null,
+  hasHeroLcpImage = false,
 }: ClientHomePageProps) {
   const t = useTranslations("home");
   const tCalendar = useTranslations("calendar");
@@ -198,7 +210,7 @@ export default function ClientHomePage({
     }
   }, []);
 
-  // Şehir bölümü: sayfa yüklendiğinde rastgele bir şehre scroll
+  // Şehir carousel: ana iş parçacığını meşgul etmemek için idle'da konumla
   useEffect(() => {
     if (cities.length <= 1 || !cityScrollRef.current) return;
     const el = cityScrollRef.current;
@@ -213,8 +225,11 @@ export default function ClientHomePage({
         el.scrollTo({ left: targetLeft, behavior: "auto" });
       }
     };
-    scrollToRandom();
-    const t = window.setTimeout(scrollToRandom, 100);
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(scrollToRandom, { timeout: 2000 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(scrollToRandom, 300);
     return () => clearTimeout(t);
   }, [cities]);
 
@@ -355,29 +370,16 @@ export default function ClientHomePage({
     };
   };
 
-  const lcpHeroImage = resolvePublicImageUrl(initialHeroBackgrounds[0]?.image_url);
-  const lcpHeroAlt = initialHeroBackgrounds[0]?.title || "KurdEvents";
-
   return (
     <div className="min-h-screen bg-slate-50">
       <Header />
 
       {/* Hero */}
-      <section className="relative min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
-        {lcpHeroImage ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={lcpHeroImage}
-            alt={lcpHeroAlt}
-            fetchPriority="high"
-            loading="eager"
-            decoding="async"
-            className="absolute inset-0 z-0 h-full w-full object-cover"
-          />
-        ) : null}
+      <section className="relative min-h-[min(100dvh,820px)] md:min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
+        {heroLcpImage}
         <HeroBackgroundSlider
           initialBackgrounds={initialHeroBackgrounds}
-          lcpImageRendered={!!lcpHeroImage}
+          lcpImageRendered={hasHeroLcpImage}
         />
         <HomeHeroControls searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
       </section>

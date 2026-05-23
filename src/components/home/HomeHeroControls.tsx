@@ -51,27 +51,36 @@ export default function HomeHeroControls({
       /* ignore */
     }
 
-    fetch("/api/ab/variant")
-      .then(async (r) => {
-        if (!r.ok) throw new Error("Variant fetch failed");
-        return r.json();
-      })
-      .then((data) => {
-        if (!data || typeof data !== "object") return;
-        const v = {
-          variant: data.variant || "A",
-          hero_title: data.hero_title || DEFAULT_TR_VARIANT.hero_title,
-          hero_subtitle: data.hero_subtitle || DEFAULT_TR_VARIANT.hero_subtitle,
-          cta_text: data.cta_text || DEFAULT_TR_VARIANT.cta_text,
-        };
-        setHeroVariant(v);
-        try {
-          sessionStorage.setItem(key, JSON.stringify(v));
-        } catch {
-          /* ignore */
-        }
-      })
-      .catch(() => setHeroVariant(DEFAULT_TR_VARIANT));
+    const loadVariant = () => {
+      fetch("/api/ab/variant")
+        .then(async (r) => {
+          if (!r.ok) throw new Error("Variant fetch failed");
+          return r.json();
+        })
+        .then((data) => {
+          if (!data || typeof data !== "object") return;
+          const v = {
+            variant: data.variant || "A",
+            hero_title: data.hero_title || DEFAULT_TR_VARIANT.hero_title,
+            hero_subtitle: data.hero_subtitle || DEFAULT_TR_VARIANT.hero_subtitle,
+            cta_text: data.cta_text || DEFAULT_TR_VARIANT.cta_text,
+          };
+          setHeroVariant(v);
+          try {
+            sessionStorage.setItem(key, JSON.stringify(v));
+          } catch {
+            /* ignore */
+          }
+        })
+        .catch(() => setHeroVariant(DEFAULT_TR_VARIANT));
+    };
+
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(loadVariant, { timeout: 2500 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(loadVariant, 1);
+    return () => window.clearTimeout(t);
   }, [locale]);
 
   const heroTitle =

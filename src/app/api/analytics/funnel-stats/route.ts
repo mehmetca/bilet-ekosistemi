@@ -77,6 +77,31 @@ export async function GET(request: NextRequest) {
       eventsQuery,
     ]);
 
+    const queryError =
+      viewsRes.error?.message ||
+      intentsRes.error?.message ||
+      ordersRes.error?.message ||
+      eventsRes.error?.message;
+    if (queryError) {
+      console.error("Funnel stats query error:", {
+        views: viewsRes.error,
+        intents: intentsRes.error,
+        orders: ordersRes.error,
+        events: eventsRes.error,
+      });
+      const missingTable = /event_views|purchase_intents|does not exist|schema cache/i.test(
+        queryError
+      );
+      return NextResponse.json(
+        {
+          message: missingTable
+            ? "Huni tabloları eksik. Supabase’de 028_funnel_analytics migration’ını uygulayın."
+            : `Huni sorgusu başarısız: ${queryError}`,
+        },
+        { status: 500 }
+      );
+    }
+
     const views = viewsRes.data || [];
     const intents = intentsRes.data || [];
     const orders = ordersRes.data || [];

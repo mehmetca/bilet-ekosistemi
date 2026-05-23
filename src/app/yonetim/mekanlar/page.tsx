@@ -533,7 +533,7 @@ function MekanlarContent() {
 
   return (
     <div className="p-8">
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-6xl mx-auto w-full min-w-0">
         <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-bold text-slate-900">Mekan Yönetimi</h1>
@@ -558,30 +558,30 @@ function MekanlarContent() {
 
         <Link
           href="/yonetim/mekanlar/musensaal-onizleme"
-          className="flex items-center gap-4 rounded-xl border-2 border-primary-200 bg-primary-50/50 p-4 mb-6 hover:border-primary-300 hover:bg-primary-50 transition-colors"
+          className="flex items-center gap-4 rounded-xl border-2 border-primary-200 bg-primary-50/50 p-4 mb-6 hover:border-primary-300 hover:bg-primary-50 transition-colors min-w-0"
         >
           <div className="w-12 h-12 rounded-lg bg-primary-100 flex items-center justify-center flex-shrink-0">
             <LayoutGrid className="h-6 w-6 text-primary-600" />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-slate-900">Musensaal salon planı</h3>
             <p className="text-sm text-slate-600">Koltuk planı önizleme — Parkett, Empore, Seitensempore. Tıklanabilir koltuklar.</p>
           </div>
-          <span className="text-primary-600 font-medium text-sm">Planı görüntüle →</span>
+          <span className="text-primary-600 font-medium text-sm flex-shrink-0 hidden sm:inline">Planı görüntüle →</span>
         </Link>
 
         <Link
           href="/yonetim/salon-yapim-wizard"
-          className="flex items-center gap-4 rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-4 mb-6 hover:border-emerald-300 hover:bg-emerald-50 transition-colors"
+          className="flex items-center gap-4 rounded-xl border-2 border-emerald-200 bg-emerald-50/50 p-4 mb-6 hover:border-emerald-300 hover:bg-emerald-50 transition-colors min-w-0"
         >
           <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center flex-shrink-0">
             <LayoutGrid className="h-6 w-6 text-emerald-600" />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-slate-900">Yeni Salon Yapım Wizard</h3>
             <p className="text-sm text-slate-600">Mevcut araca dokunmadan adım adım salon planı oluşturun, uzakta şekli görün, yakınlaşınca koltuk seçin.</p>
           </div>
-          <span className="text-emerald-700 font-medium text-sm">Wizardı aç →</span>
+          <span className="text-emerald-700 font-medium text-sm flex-shrink-0 hidden sm:inline">Wizardı aç →</span>
         </Link>
 
         {showForm && (
@@ -1102,9 +1102,9 @@ function MekanlarContent() {
               return (
                 <div
                   key={venue.id}
-                  className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+                  className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm min-w-0 overflow-hidden"
                 >
-                  <div className="flex gap-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:gap-6 min-w-0">
                     <div className="w-24 h-24 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden">
                       {cover ? (
                         <img src={cover} alt={`${venue.name} kapak`} className="h-full w-full object-cover" />
@@ -1131,11 +1131,11 @@ function MekanlarContent() {
                         </div>
                       )}
                     </div>
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-slate-900">{venue.name}</h3>
-                        <p className="mt-1 text-sm text-slate-600">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg font-semibold text-slate-900 break-words">{venue.name}</h3>
+                        <p className="mt-1 text-sm text-slate-600 break-words">
                           {venue.city && `${venue.city}`}
                           {venue.address && ` • ${venue.address}`}
                         </p>
@@ -1183,10 +1183,10 @@ function MekanlarContent() {
                           </div>
                         )}
                       </div>
-                      <div className="flex gap-2 flex-wrap">
+                      <div className="flex flex-wrap gap-2 shrink-0">
                         <Link
                           href={`/yonetim/mekanlar/${venue.id}/oturum-plani`}
-                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-primary-200 bg-primary-50/50 text-primary-700 hover:bg-primary-100 text-sm font-medium"
+                          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-primary-200 bg-primary-50/50 text-primary-700 hover:bg-primary-100 text-sm font-medium whitespace-nowrap"
                           title="Salonları ve oturum planlarını yönetin (bir mekanda birden fazla salon tanımlanabilir)"
                         >
                           <LayoutGrid className="h-4 w-4" />

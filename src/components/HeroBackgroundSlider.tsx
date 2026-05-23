@@ -26,6 +26,17 @@ export default function HeroBackgroundSlider({
   const [backgrounds, setBackgrounds] = useState<HeroBackground[]>(initialBackgrounds);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(initialBackgrounds.length === 0);
+  const [showExtraSlides, setShowExtraSlides] = useState(!lcpImageRendered);
+
+  useEffect(() => {
+    if (!lcpImageRendered || initialBackgrounds.length <= 1) return;
+    if (typeof requestIdleCallback === "function") {
+      const id = requestIdleCallback(() => setShowExtraSlides(true), { timeout: 4000 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = window.setTimeout(() => setShowExtraSlides(true), 2000);
+    return () => clearTimeout(t);
+  }, [lcpImageRendered, initialBackgrounds.length]);
 
   useEffect(() => {
     if (initialBackgrounds.length > 0) {
@@ -75,9 +86,11 @@ export default function HeroBackgroundSlider({
   }, [backgrounds, currentIndex]);
 
   if (loading || backgrounds.length === 0) {
-    return (
+    return lcpImageRendered ? (
+      <div className="absolute inset-0 z-0 bg-black/20" aria-hidden />
+    ) : (
       <div className="absolute inset-0 z-0 bg-gradient-to-br from-primary-600 to-primary-800">
-        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="absolute inset-0 bg-black/20" aria-hidden />
       </div>
     );
   }
@@ -87,6 +100,7 @@ export default function HeroBackgroundSlider({
       {/* Background Images */}
       {backgrounds.map((bg, index) => {
         if (lcpImageRendered && index === 0) return null;
+        if (lcpImageRendered && !showExtraSlides && index > 0) return null;
         const isActive = index === currentIndex;
         return (
           <div
@@ -103,6 +117,7 @@ export default function HeroBackgroundSlider({
                 fetchPriority="high"
                 loading="eager"
                 decoding="async"
+                sizes="100vw"
                 className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
