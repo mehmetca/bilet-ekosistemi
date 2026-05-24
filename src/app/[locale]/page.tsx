@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { resolvePublicImageUrl } from "@/lib/external-image";
 import { buildHomeMetadata } from "@/lib/seo/home-metadata";
 import { getHomePageData } from "@/lib/home-page-data";
 import { CRITICAL_HOME_CSS } from "@/lib/critical-home-css";
@@ -32,13 +31,12 @@ export default async function HomePage({ params }: HomePageProps) {
     console.error("HomePage getHomePageData error:", e);
   }
 
-  const lcpHero = resolvePublicImageUrl(data.heroBackgrounds[0]?.image_url);
   const lcpAlt = data.heroBackgrounds[0]?.title || "KurdEvents";
+  const hasHeroLcpImage = Boolean(data.heroBackgrounds[0]?.image_url);
 
   return (
     <>
       <style id="critical-home" dangerouslySetInnerHTML={{ __html: CRITICAL_HOME_CSS }} />
-      {lcpHero ? <link rel="preload" as="image" href={lcpHero} fetchPriority="high" /> : null}
       <ClientHomePage
         initialEvents={data.events}
         initialHeroBackgrounds={data.heroBackgrounds}
@@ -47,7 +45,7 @@ export default async function HomePage({ params }: HomePageProps) {
         heroLcpImage={
           <HomeHeroLcp imageUrl={data.heroBackgrounds[0]?.image_url} alt={lcpAlt} />
         }
-        hasHeroLcpImage={!!lcpHero}
+        hasHeroLcpImage={hasHeroLcpImage}
       />
     </>
   );
