@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "@/i18n/navigation";
 import {
   Calendar,
@@ -13,8 +13,7 @@ import {
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
-import HomeHeroControls from "@/components/home/HomeHeroControls";
-import HeroBackgroundSlider from "@/components/HeroBackgroundSlider";
+import { useHomeSearch } from "@/contexts/HomeSearchContext";
 import type { Event } from "@/types/database";
 import type { HomeSliderAd } from "@/lib/home-slider-ads";
 import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
@@ -126,15 +125,6 @@ function parseDMYToISODateString(input: string): string | null {
   return getLocalISODateString(dt);
 }
 
-interface HeroBg {
-  id: string;
-  title: string;
-  image_url: string;
-  is_active: boolean;
-  sort_order: number;
-  transition_duration: number;
-}
-
 interface City {
   id: string;
   slug: string;
@@ -147,26 +137,22 @@ interface City {
 
 interface ClientHomePageProps {
   initialEvents?: Event[];
-  initialHeroBackgrounds?: HeroBg[];
   initialCities?: City[];
   initialSliderAds?: HomeSliderAd[];
-  /** Sunucuda boyanan LCP <img> (React node — Server Component). */
-  heroLcpImage?: ReactNode;
-  hasHeroLcpImage?: boolean;
+  /** Header page.tsx içinde */
+  hideHeader?: boolean;
 }
 
 export default function ClientHomePage({
   initialEvents = [],
-  initialHeroBackgrounds = [],
   initialCities = [],
   initialSliderAds,
-  heroLcpImage = null,
-  hasHeroLcpImage = false,
+  hideHeader = false,
 }: ClientHomePageProps) {
   const t = useTranslations("home");
   const tCalendar = useTranslations("calendar");
   const locale = useLocale();
-  const [searchTerm, setSearchTerm] = useState("");
+  const { searchTerm, setSearchTerm } = useHomeSearch();
   const [selectedCity, setSelectedCity] = useState("all");
   const [selectedCategory, setSelectedCategory] = useState("all");
   /** YYYY-MM-DD; boş = tarih filtresi yok (tarih bazlı daraltma kapalı) */
@@ -357,18 +343,12 @@ export default function ClientHomePage({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Header />
-
-      {/* Hero */}
-      <section className="hero-lcp-fold relative min-h-[min(100dvh,820px)] md:min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
-        {heroLcpImage}
-        <HeroBackgroundSlider
-          initialBackgrounds={initialHeroBackgrounds}
-          lcpImageRendered={hasHeroLcpImage}
-        />
-        <HomeHeroControls searchTerm={searchTerm} onSearchTermChange={setSearchTerm} />
-      </section>
+    <>
+      {!hideHeader ? (
+        <div className="min-h-screen bg-slate-50">
+          <Header />
+        </div>
+      ) : null}
 
       {/* Ana Slider: Slider'lar alanına taşındı */}
 
@@ -731,7 +711,6 @@ export default function ClientHomePage({
         )}
 
       </section>
-
-    </div>
+    </>
   );
 }

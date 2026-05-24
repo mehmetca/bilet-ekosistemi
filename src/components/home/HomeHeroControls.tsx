@@ -10,41 +10,33 @@ import {
   Database,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
+import { useHomeSearch } from "@/contexts/HomeSearchContext";
 
 const DEFAULT_TR_VARIANT = {
   variant: "A",
-  hero_title: "Hayalinizdeki Etkinliğe Bilet Bulun",
-  hero_subtitle:
-    "Konser, tiyatro, stand-up ve daha fazlası.\nGüvenli ödeme ile kolayca bilet alın.",
   cta_text: "Ara",
 };
 
-type HomeHeroControlsProps = {
-  searchTerm: string;
-  onSearchTermChange: (value: string) => void;
-};
-
-export default function HomeHeroControls({
-  searchTerm,
-  onSearchTermChange,
-}: HomeHeroControlsProps) {
+export default function HomeHeroControls() {
   const t = useTranslations("home");
   const locale = useLocale();
-  const [heroVariant, setHeroVariant] = useState<{
-    variant: string;
-    hero_title: string;
-    hero_subtitle: string;
-    cta_text: string;
-  } | null>(locale === "tr" ? DEFAULT_TR_VARIANT : null);
+  const { searchTerm, setSearchTerm } = useHomeSearch();
+  const [ctaText, setCtaText] = useState(
+    locale === "tr" ? DEFAULT_TR_VARIANT.cta_text : t("search")
+  );
 
   useEffect(() => {
-    if (locale !== "tr") return;
+    if (locale !== "tr") {
+      setCtaText(t("search"));
+      return;
+    }
     const key = "hero_ab_variant";
 
     try {
       const cached = sessionStorage.getItem(key);
       if (cached) {
-        setHeroVariant(JSON.parse(cached) as typeof DEFAULT_TR_VARIANT);
+        const parsed = JSON.parse(cached) as { cta_text?: string };
+        if (parsed.cta_text) setCtaText(parsed.cta_text);
         return;
       }
     } catch {
@@ -59,51 +51,26 @@ export default function HomeHeroControls({
         })
         .then((data) => {
           if (!data || typeof data !== "object") return;
-          const v = {
-            variant: data.variant || "A",
-            hero_title: data.hero_title || DEFAULT_TR_VARIANT.hero_title,
-            hero_subtitle: data.hero_subtitle || DEFAULT_TR_VARIANT.hero_subtitle,
-            cta_text: data.cta_text || DEFAULT_TR_VARIANT.cta_text,
-          };
-          setHeroVariant(v);
+          if (data.cta_text) setCtaText(data.cta_text);
           try {
-            sessionStorage.setItem(key, JSON.stringify(v));
+            sessionStorage.setItem(key, JSON.stringify(data));
           } catch {
             /* ignore */
           }
         })
-        .catch(() => setHeroVariant(DEFAULT_TR_VARIANT));
+        .catch(() => setCtaText(DEFAULT_TR_VARIANT.cta_text));
     };
 
     if (typeof requestIdleCallback === "function") {
       const id = requestIdleCallback(loadVariant, { timeout: 2500 });
       return () => cancelIdleCallback(id);
     }
-    const t = window.setTimeout(loadVariant, 1);
-    return () => window.clearTimeout(t);
-  }, [locale]);
-
-  const heroTitle =
-    locale === "tr" && heroVariant?.hero_title ? heroVariant.hero_title : t("heroTitle");
-  const heroSubtitle =
-    locale === "tr" && heroVariant?.hero_subtitle
-      ? heroVariant.hero_subtitle
-      : t("heroSubtitle");
-  const ctaText =
-    locale === "tr" && heroVariant?.cta_text ? heroVariant.cta_text : t("search");
+    const timer = window.setTimeout(loadVariant, 1);
+    return () => window.clearTimeout(timer);
+  }, [locale, t]);
 
   return (
-    <div className="relative z-10 site-container text-center">
-      <h1 className="mb-6 px-1 text-white break-words hyphens-auto">
-        <span className="block text-3xl font-bold sm:text-4xl md:text-6xl">{heroTitle}</span>
-        <span className="mt-3 block text-lg font-semibold leading-snug text-white/95 sm:text-xl md:text-2xl">
-          {t("seoH1")}
-        </span>
-      </h1>
-      <p className="text-base sm:text-lg md:text-xl text-white mb-8 sm:mb-12 max-w-3xl mx-auto px-1 whitespace-pre-line">
-        {heroSubtitle}
-      </p>
-
+    <>
       <div className="max-w-2xl mx-auto mb-12 sm:mb-16 px-0">
         <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 bg-white rounded-2xl p-2 shadow-2xl">
           <div className="relative flex-1 min-w-0">
@@ -112,7 +79,7 @@ export default function HomeHeroControls({
               type="search"
               placeholder={t("searchPlaceholder")}
               value={searchTerm}
-              onChange={(e) => onSearchTermChange(e.target.value)}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full rounded-xl border-0 py-3.5 sm:py-4 pl-11 sm:pl-12 pr-3 sm:pr-4 text-slate-900 text-base sm:text-lg focus:outline-none"
             />
           </div>
@@ -169,6 +136,6 @@ export default function HomeHeroControls({
           </li>
         ))}
       </ul>
-    </div>
+    </>
   );
 }

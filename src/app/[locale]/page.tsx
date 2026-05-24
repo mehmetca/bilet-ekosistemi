@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 import { buildHomeMetadata } from "@/lib/seo/home-metadata";
-import { getHomePageData } from "@/lib/home-page-data";
+import { getHomeShellData } from "@/lib/home-page-data";
 import { CRITICAL_HOME_CSS } from "@/lib/critical-home-css";
-import ClientHomePage from "./ClientHomePage";
-import HomeHeroLcp from "@/components/home/HomeHeroLcp";
+import { HomeSearchProvider } from "@/contexts/HomeSearchContext";
+import Header from "@/components/Header";
+import HomePageHero from "@/components/home/HomePageHero";
+import HomePageMainFallback from "@/components/home/HomePageMainFallback";
+import HomePageMain from "./HomePageMain";
 
 type HomePageProps = {
   params: Promise<{ locale: string }>;
@@ -18,35 +23,33 @@ export async function generateMetadata({ params }: HomePageProps): Promise<Metad
 
 export default async function HomePage({ params }: HomePageProps) {
   const { locale } = await params;
-  let data: Awaited<ReturnType<typeof getHomePageData>> = {
+  let shell: Awaited<ReturnType<typeof getHomeShellData>> = {
     heroBackgrounds: [],
     cities: [],
     sliderAds: [],
-    events: [],
   };
 
   try {
-    data = await getHomePageData(locale);
+    shell = await getHomeShellData(locale);
   } catch (e) {
-    console.error("HomePage getHomePageData error:", e);
+    console.error("HomePage getHomeShellData error:", e);
   }
 
-  const lcpAlt = data.heroBackgrounds[0]?.title || "KurdEvents";
-  const hasHeroLcpImage = Boolean(data.heroBackgrounds[0]?.image_url);
+  const lcpSrc = resolvePublicImageUrl(shell.heroBackgrounds[0]?.image_url);
 
   return (
-    <>
+    <HomeSearchProvider>
       <style id="critical-home" dangerouslySetInnerHTML={{ __html: CRITICAL_HOME_CSS }} />
-      <ClientHomePage
-        initialEvents={data.events}
-        initialHeroBackgrounds={data.heroBackgrounds}
-        initialCities={data.cities}
-        initialSliderAds={data.sliderAds}
-        heroLcpImage={
-          <HomeHeroLcp imageUrl={data.heroBackgrounds[0]?.image_url} alt={lcpAlt} />
-        }
-        hasHeroLcpImage={hasHeroLcpImage}
-      />
-    </>
+      {lcpSrc ? (
+        <link rel="preload" as="image" href={lcpSrc} fetchPriority="high" />
+      ) : null}
+      <div className="min-h-screen bg-slate-50">
+        <Header />
+        <HomePageHero locale={locale} shell={shell} />
+        <Suspense fallback={<HomePageMainFallback />}>
+          <HomePageMain locale={locale} shell={shell} />
+        </Suspense>
+      </div>
+    </HomeSearchProvider>
   );
 }

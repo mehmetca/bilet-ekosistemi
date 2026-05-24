@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { resolvePublicImageUrl } from "@/lib/external-image";
 
 type HomeHeroLcpProps = {
@@ -6,19 +5,24 @@ type HomeHeroLcpProps = {
   alt: string;
 };
 
-/** Ana sayfa LCP görseli — Server Component; priority ile preload + Vercel optimizasyonu. */
+/**
+ * LCP görseli — doğrudan <img> (mobilde _next/image ek gecikmesi yok).
+ * Masaüstünde de preload ile hızlı boyanır.
+ */
 export default function HomeHeroLcp({ imageUrl, alt }: HomeHeroLcpProps) {
   const src = resolvePublicImageUrl(imageUrl);
   if (!src) return null;
 
   return (
-    <Image
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
       src={src}
       alt={alt}
-      fill
-      priority
+      fetchPriority="high"
+      loading="eager"
+      decoding="async"
       sizes="100vw"
-      className="hero-lcp-img object-cover"
+      className="hero-lcp-img absolute inset-0 z-0 h-full w-full object-cover"
     />
   );
 }
