@@ -12,7 +12,7 @@ import {
 } from "@/lib/events-server";
 import { getSiteUrl } from "@/lib/site-url";
 import { routing } from "@/i18n/routing";
-import type { Locale } from "@/lib/i18n-content";
+import { getLocalizedEvent, type Locale } from "@/lib/i18n-content";
 import { buildEventJsonLd } from "@/lib/event-jsonld";
 import { DateTime } from "luxon";
 
@@ -22,12 +22,14 @@ interface PageProps {
   params: Promise<{ locale?: string; id: string }>;
 }
 
+const EVENT_UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function eventPathFromId(
   id: string,
   showEvents: { slug?: string | null; id?: string }[],
   singleEvent: Event | undefined
 ): string {
-  const tail = showEvents.length >= 2 ? id : (singleEvent?.slug || singleEvent?.id || id);
+  const tail = showEvents.length >= 2 || EVENT_UUID_REGEX.test(id) ? id : (singleEvent?.slug || singleEvent?.id || id);
   return `/etkinlik/${tail}`;
 }
 
@@ -44,10 +46,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
-  const title = `${event.title} | KurdEvents`;
+  const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as Locale);
+  const eventTitle = localized.title || event.title;
+  const eventDescription = localized.description || event.description;
+  const title = `${eventTitle} | KurdEvents`;
   const description =
-    event.description?.replace(/<[^>]*>/g, "").slice(0, 160) ||
-    `${event.title} - ${event.date} ${event.time || ""} ${event.venue || ""}. Bilet alın.`;
+    eventDescription?.replace(/<[^>]*>/g, "").slice(0, 160) ||
+    `${eventTitle} - ${event.date} ${event.time || ""} ${localized.venue || event.venue || ""}.`;
   const imageUrl = event.image_url || undefined;
   const base = getSiteUrl();
   const path = eventPathFromId(id, showEvents, event);
@@ -57,7 +62,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     languages[l] = `${base}/${l}${path}`;
   }
   languages["x-default"] = `${base}/${routing.defaultLocale}${path}`;
-  const ogLocale = locale === "de" ? "de_DE" : locale === "en" ? "en_US" : "tr_TR";
+  const ogLocale =
+    locale === "de" ? "de_DE" :
+    locale === "en" ? "en_US" :
+    locale === "ku" ? "ku_TR" :
+    locale === "ckb" ? "ckb_IQ" :
+    "tr_TR";
 
   return {
     title,
@@ -69,7 +79,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       siteName: "KurdEvents",
       locale: ogLocale,
       type: "website",
-      images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630, alt: event.title }] : undefined,
+      images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630, alt: eventTitle }] : undefined,
     },
     twitter: {
       card: "summary_large_image",

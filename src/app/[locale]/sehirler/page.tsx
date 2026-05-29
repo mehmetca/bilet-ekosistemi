@@ -4,6 +4,9 @@ import Header from "@/components/Header";
 import CitiesGrid from "./CitiesGrid";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
+import { routing } from "@/i18n/routing";
+import type { Locale } from "@/lib/i18n-content";
+import { buildLocalePathMetadata } from "@/lib/seo/locale-path-metadata";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -30,12 +33,20 @@ async function getCities() {
   return sortCitiesByUpcomingEventCount(cities, rawEvents);
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-  const t = await getTranslations("cities");
-  return {
-    title: `${t("title")} - ${t("metaTitleSuffix")}`,
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale?: string }>;
+}): Promise<Metadata> {
+  const { locale: locParam } = await params;
+  const locale = locParam && routing.locales.includes(locParam as Locale)
+    ? (locParam as Locale)
+    : routing.defaultLocale;
+  const t = await getTranslations({ locale, namespace: "cities" });
+  return buildLocalePathMetadata(locale, "/sehirler", {
+    title: `${t("title")} | KurdEvents`,
     description: t("subtitle"),
-  };
+  });
 }
 
 export default async function SehirlerPage() {

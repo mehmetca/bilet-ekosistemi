@@ -8,8 +8,8 @@
 /** Eski alan adları; env veya Vercel URL hâlâ burayı gösterse bile kanonik çıktı kurdevents.com olur. */
 const LEGACY_PUBLIC_HOSTS = new Set(["eventseat.de", "www.eventseat.de"]);
 
-/** Üretim SEO / GSC: canlı site www ile açılıyor; apex metadata canonical uyumsuzluğu üretmesin. */
-const CANONICAL_PUBLIC_ORIGIN = "https://www.kurdevents.com";
+/** Üretim SEO / GSC: kullanıcı ve Search Console URL’leri apex host üzerinde tutulur. */
+const CANONICAL_PUBLIC_ORIGIN = "https://kurdevents.com";
 
 const KURDEVENTS_APEX_HOST = "kurdevents.com";
 const KURDEVENTS_WWW_HOST = "www.kurdevents.com";
@@ -25,8 +25,7 @@ function normalizePublicOrigin(url: string): string {
     const u = new URL(/^https?:\/\//i.test(s) ? s : `https://${s}`);
     const host = u.hostname.toLowerCase();
     if (LEGACY_PUBLIC_HOSTS.has(host)) return CANONICAL_PUBLIC_ORIGIN;
-    if (host === KURDEVENTS_APEX_HOST) return CANONICAL_PUBLIC_ORIGIN;
-    if (host === KURDEVENTS_WWW_HOST) return `https://${KURDEVENTS_WWW_HOST}`;
+    if (host === KURDEVENTS_APEX_HOST || host === KURDEVENTS_WWW_HOST) return CANONICAL_PUBLIC_ORIGIN;
   } catch {
     /* ignore */
   }
