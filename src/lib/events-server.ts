@@ -2,12 +2,15 @@
  * Sunucu tarafı etkinlik veri katmanı.
  * Etkinlik detay, şehir, takvim ve show_slug sorguları tek yerden.
  */
+import { cache } from "react";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { eventMatchesCityRow } from "@/lib/city-event-sort";
 import type { Event, Ticket, Venue } from "@/types/database";
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SAFE_ROUTE_SLUG_REGEX = /^[a-zA-Z0-9.-]+$/;
+const CITY_EVENT_COLUMNS =
+  "id,title,slug,date,time,venue,location,image_url,category,price_from,currency,created_at,is_approved,description,title_tr,title_de,title_en,title_ku,title_ckb,description_tr,description_de,description_en,venue_tr,venue_de,venue_en,show_slug,city,venues(city)";
 
 function isSafeRouteSlug(value: string): boolean {
   return SAFE_ROUTE_SLUG_REGEX.test(value) && !value.includes("..");
@@ -44,11 +47,12 @@ export function getTicketSortRank(name?: string): number {
   return 999;
 }
 
-export async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {
+export const getEventsByShowSlug = cache(async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {
   try {
     const supabase = createServerSupabase();
     const showSlugTrimmed = (showSlug || "").trim();
     if (!showSlugTrimmed) return [];
+    if (UUID_REGEX.test(showSlugTrimmed)) return [];
     if (!isSafeRouteSlug(showSlugTrimmed)) return [];
     const { data, error } = await supabase
       .from("events")
@@ -64,15 +68,38 @@ export async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {
   } catch {
     return [];
   }
-}
+});
 
-export async function getEventBySlug(
+export const getEventBySlug = cache(async function getEventBySlug(
   slugOrId: string
 ): Promise<{ event: Event; isUnapproved?: boolean } | null> {
   try {
     const supabase = createServerSupabase();
     const slugOrIdTrimmed = (slugOrId || "").trim();
     if (!UUID_REGEX.test(slugOrIdTrimmed) && !isSafeRouteSlug(slugOrIdTrimmed)) {
+      return null;
+    }
+
+    if (UUID_REGEX.test(slugOrIdTrimmed)) {
+      const { data: idData, error: idError } = await supabase
+        .from("events")
+        .select("*")
+        .eq("id", slugOrIdTrimmed)
+        .eq("is_active", true)
+        .eq("is_approved", true)
+        .eq("is_draft", false)
+        .single();
+
+      if (!idError && idData) return { event: idData as Event };
+
+      const { data: unapproved } = await supabase
+        .from("events")
+        .select("*")
+        .eq("id", slugOrIdTrimmed)
+        .eq("is_active", true)
+        .single();
+      if (unapproved) return { event: unapproved as Event, isUnapproved: true };
+
       return null;
     }
 
@@ -110,24 +137,14 @@ export async function getEventBySlug(
 
     if (!idError && idData) return { event: idData as Event };
 
-    if (UUID_REGEX.test(slugOrId)) {
-      const { data: unapproved } = await supabase
-        .from("events")
-        .select("*")
-        .eq("id", slugOrId)
-        .eq("is_active", true)
-        .single();
-      if (unapproved) return { event: unapproved as Event, isUnapproved: true };
-    }
-
     return null;
   } catch (err) {
     console.error("Fetch event error:", err);
     return null;
   }
-}
+});
 
-export async function getVenue(venueId: string | null | undefined): Promise<Venue | null> {
+export const getVenue = cache(async function getVenue(venueId: string | null | undefined): Promise<Venue | null> {
   if (!venueId) return null;
   try {
     const supabase = createServerSupabase();
@@ -142,9 +159,9 @@ export async function getVenue(venueId: string | null | undefined): Promise<Venu
   } catch {
     return null;
   }
-}
+});
 
-export async function getEventTickets(eventId: string): Promise<Ticket[]> {
+export const getEventTickets = cache(async function getEventTickets(eventId: string): Promise<Ticket[]> {
   try {
     const supabase = createServerSupabase();
     const { data, error } = await supabase
@@ -165,9 +182,9 @@ export async function getEventTickets(eventId: string): Promise<Ticket[]> {
   } catch {
     return [];
   }
-}
+});
 
-export async function getOrganizerDisplayName(
+export const getOrganizerDisplayName = cache(async function getOrganizerDisplayName(
   userId: string | null | undefined
 ): Promise<string | null> {
   if (!userId) return null;
@@ -182,7 +199,7 @@ export async function getOrganizerDisplayName(
   } catch {
     return null;
   }
-}
+});
 
 /** Takvim sayfası: tüm aktif etkinlikler (tarih sıralı) */
 export async function getEventsForCalendar(): Promise<Event[]> {
@@ -216,7 +233,7 @@ export async function getEventsForCity(
 
     const { data: eventsData, error } = await supabase
       .from("events")
-      .select("*, venues(city)")
+      .select(CITY_EVENT_COLUMNS)
       .eq("is_active", true)
       .eq("is_approved", true)
       .eq("is_draft", false)

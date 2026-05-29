@@ -17,7 +17,7 @@ export default async function HomePageHero({ locale, shell }: HomePageHeroProps)
   const lcpAlt = first?.title || "KurdEvents";
 
   return (
-    <section className="hero-lcp-fold relative min-h-[min(100dvh,820px)] md:min-h-screen bg-gradient-to-br from-primary-600 to-primary-800 text-white py-20">
+    <section className="hero-lcp-fold relative min-h-[min(100dvh,820px)] bg-slate-950 text-white py-20 md:min-h-screen">
       <HomeHeroLcp imageUrl={first?.image_url} alt={lcpAlt} />
       <HeroBackgroundSlider
         initialBackgrounds={shell.heroBackgrounds}

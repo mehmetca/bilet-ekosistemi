@@ -2,11 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import {
-  getResponsivePublicImageSrcSet,
-  getResponsivePublicImageUrl,
-  resolvePublicImageUrl,
-} from "@/lib/external-image";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 
 interface HeroBackground {
   id: string;
@@ -89,7 +85,7 @@ export default function HeroBackgroundSlider({
     return lcpImageRendered ? (
       <div className="absolute inset-0 z-0 bg-black/20" aria-hidden />
     ) : (
-      <div className="absolute inset-0 z-0 bg-gradient-to-br from-primary-600 to-primary-800">
+      <div className="absolute inset-0 z-0 bg-slate-950">
         <div className="absolute inset-0 bg-black/20" aria-hidden />
       </div>
     );
@@ -102,8 +98,6 @@ export default function HeroBackgroundSlider({
         if (lcpImageRendered && index === 0) return null;
         if (lcpImageRendered && !showExtraSlides && index > 0) return null;
         const isActive = index === currentIndex;
-        const firstSlideSrc = getResponsivePublicImageUrl(bg.image_url, 1280, 75) ?? resolvePublicImageUrl(bg.image_url) ?? bg.image_url;
-        const firstSlideSrcSet = getResponsivePublicImageSrcSet(bg.image_url, [640, 960, 1280, 1920], 75);
         return (
           <div
             key={bg.id}
@@ -114,12 +108,11 @@ export default function HeroBackgroundSlider({
             {index === 0 && !lcpImageRendered ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={firstSlideSrc}
+                src={resolvePublicImageUrl(bg.image_url) ?? bg.image_url}
                 alt={bg.title}
                 fetchPriority="high"
                 loading="eager"
                 decoding="async"
-                srcSet={firstSlideSrcSet}
                 sizes="100vw"
                 className="absolute inset-0 h-full w-full object-cover"
               />
