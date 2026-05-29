@@ -68,6 +68,7 @@ export default async function CityPage({ params }: PageProps) {
     <CityPageClient
       city={city as Record<string, unknown>}
       initialEvents={events}
+      nowIso={new Date().toISOString()}
     />
   );
 }

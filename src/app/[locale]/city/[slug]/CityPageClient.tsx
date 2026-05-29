@@ -16,12 +16,14 @@ import { resolvePublicImageUrl } from "@/lib/external-image";
 interface CityPageClientProps {
   city: Record<string, unknown>;
   initialEvents: Event[];
+  nowIso: string;
 }
 
-export default function CityPageClient({ city, initialEvents }: CityPageClientProps) {
+export default function CityPageClient({ city, initialEvents, nowIso }: CityPageClientProps) {
   const t = useTranslations("city");
   const tHome = useTranslations("home");
   const locale = useLocale() as "tr" | "de" | "en";
+  const renderNow = useMemo(() => new Date(nowIso), [nowIso]);
 
   const [sortBy, setSortBy] = useState<"upcoming" | "popular">("upcoming");
   const localized = getLocalizedCity(city, locale);
@@ -33,7 +35,7 @@ export default function CityPageClient({ city, initialEvents }: CityPageClientPr
 
   const isEventPast = (event: Event) => {
     const eventDateTime = new Date(`${event.date} ${event.time || "00:00"}`);
-    return eventDateTime < new Date();
+    return eventDateTime < renderNow;
   };
 
   // Filtreleme: Sadece onaylı (is_approved === true), bu şehre ait olan ve geçmiş olmayan etkinlikler

@@ -83,6 +83,7 @@ interface EventDetailClientProps {
   locale?: Locale;
   /** Etkinlik henüz onaylanmadı (organizatör önizlemesi); bilet satışı kapalı */
   isUnapproved?: boolean;
+  nowIso: string;
 }
 
 /** Oturum planı: bölüm > sıra > koltuk (koltuk seçimi UI için); bölümde ticket_type_label etkinlikteki bilet adıyla eşlenir */
@@ -988,11 +989,12 @@ function sidebarTicketFallbackFromCart(
   };
 }
 
-export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr", isUnapproved = false }: EventDetailClientProps): React.ReactElement {
+export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr", isUnapproved = false, nowIso }: EventDetailClientProps): React.ReactElement {
   const t = useTranslations("eventDetail");
   const tCheckout = useTranslations("checkout");
   const tCat = useTranslations("categories");
   const locale = ((useLocale() as Locale) || localeProp) as Locale;
+  const renderNow = useMemo(() => new Date(nowIso), [nowIso]);
   const searchParams = useSearchParams();
   const showSeatGridDebug = searchParams.get("seatDebug") === "1";
   const { addItem, addItemsBatch, removeSeatItem, totalItems, items: cartItems } = useCart();
@@ -1853,7 +1855,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   );
 
   const eventDateTime = new Date(`${event.date} ${event.time || "23:59"}`);
-  const isPastEvent = eventDateTime < new Date();
+  const isPastEvent = eventDateTime < renderNow;
 
   async function handleReminderSubmit(e: React.FormEvent) {
     e.preventDefault();

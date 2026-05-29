@@ -93,6 +93,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function EventDetailPage({ params }: PageProps) {
   const { locale = "tr", id } = await params;
+  const nowIso = new Date().toISOString();
 
   // show_slug ile gruplanmış tur/gösteri sayfası (1+ etkinlik; tek etkinlikte de sayfa görünsün)
   const showEvents = await getEventsByShowSlug(id);
@@ -136,6 +137,7 @@ export default async function EventDetailPage({ params }: PageProps) {
           showSlug={id}
           organizerDisplayName={organizerDisplayName}
           locale={locale as Locale}
+          nowIso={nowIso}
         />
       </>
     );
@@ -171,6 +173,7 @@ export default async function EventDetailPage({ params }: PageProps) {
         organizerDisplayName={organizerDisplayName}
         locale={locale as Locale}
         isUnapproved={isUnapproved}
+        nowIso={nowIso}
       />
     </>
   );

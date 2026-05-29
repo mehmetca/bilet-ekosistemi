@@ -5,11 +5,11 @@
  * Apex ↔ www için middleware artık döngü yapmaz; yine de GSC mülkünüz hangi host ise env’i ona yazın.
  */
 
-/** Eski alan adları; env veya Vercel URL hâlâ burayı gösterse bile kanonik çıktı kurdevents.com olur. */
+/** Eski alan adları; env veya Vercel URL hâlâ burayı gösterse bile kanonik çıktı www.kurdevents.com olur. */
 const LEGACY_PUBLIC_HOSTS = new Set(["eventseat.de", "www.eventseat.de"]);
 
-/** Üretim SEO / GSC: kullanıcı ve Search Console URL’leri apex host üzerinde tutulur. */
-const CANONICAL_PUBLIC_ORIGIN = "https://kurdevents.com";
+/** Üretim SEO / Lighthouse: canlı ölçümler www host üzerinde; canonical/hreflang tek hostta kalmalı. */
+const CANONICAL_PUBLIC_ORIGIN = "https://www.kurdevents.com";
 
 const KURDEVENTS_APEX_HOST = "kurdevents.com";
 const KURDEVENTS_WWW_HOST = "www.kurdevents.com";

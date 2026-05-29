@@ -18,6 +18,7 @@ interface ShowDetailClientProps {
   showSlug: string;
   organizerDisplayName?: string | null;
   locale?: Locale;
+  nowIso: string;
 }
 
 function buildEventAddressLine(event: Event, venueDisplay: string): string {
@@ -47,9 +48,9 @@ function formatCityTicketsTitle(showTitle: string, city: string, locale: Locale)
   return `${cleanTitle} ${city}`.trim();
 }
 
-function isPastEventDate(event: Event): boolean {
+function isPastEventDate(event: Event, now: Date): boolean {
   const dt = new Date(`${event.date} ${event.time || "00:00"}`);
-  return dt < new Date();
+  return dt < now;
 }
 
 function pickBestLocalizedShowText(events: Event[], field: "title" | "description" | "venue", locale: Locale): string {
@@ -60,11 +61,12 @@ function pickBestLocalizedShowText(events: Event[], field: "title" | "descriptio
   return "";
 }
 
-export default function ShowDetailClient({ events, showSlug, organizerDisplayName = null, locale: localeProp = "tr" }: ShowDetailClientProps) {
+export default function ShowDetailClient({ events, showSlug, organizerDisplayName = null, locale: localeProp = "tr", nowIso }: ShowDetailClientProps) {
   const t = useTranslations("eventDetail");
   const tShow = useTranslations("showDetail");
   const tCat = useTranslations("categories");
   const locale = ((useLocale() as Locale) || localeProp) as Locale;
+  const renderNow = useMemo(() => new Date(nowIso), [nowIso]);
 
   const firstEvent = events[0];
   const localized = {
@@ -86,7 +88,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
   }, [events, locale]);
 
   const [selectedCity, setSelectedCity] = useState<string>("all");
-  const upcomingEvents = useMemo(() => events.filter((e) => !isPastEventDate(e)), [events]);
+  const upcomingEvents = useMemo(() => events.filter((e) => !isPastEventDate(e, renderNow)), [events, renderNow]);
 
   const cities = useMemo(() => {
     const citySet = new Set(upcomingEvents.map((e) => getEventCityLabel(e)).filter(Boolean));
@@ -229,6 +231,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                       locale={locale}
                       t={t}
                       tShow={tShow}
+                      renderNow={renderNow}
                     />
                   );
                 })
@@ -241,6 +244,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                   locale={locale}
                   t={t}
                   tShow={tShow}
+                  renderNow={renderNow}
                 />
               )}
           </div>
@@ -268,6 +272,7 @@ function CityEventsSection({
   locale,
   t,
   tShow,
+  renderNow,
 }: {
   city: string;
   showTitle: string;
@@ -276,6 +281,7 @@ function CityEventsSection({
   locale: Locale;
   t: (key: string, values?: Record<string, string | number>) => string;
   tShow: (key: string, values?: Record<string, string>) => string;
+  renderNow: Date;
 }) {
   const cityHeadlineTitle = formatCityTicketsTitle(showTitle, city, locale);
   return (
@@ -290,7 +296,7 @@ function CityEventsSection({
         {events.map((event) => {
           const eventLocalized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale);
           const eventDate = new Date(`${event.date} ${event.time || "00:00"}`);
-          const isPast = eventDate < new Date();
+          const isPast = eventDate < renderNow;
           const price = Number(event.price_from || 0);
           const dateParts = formatEventLongDateTime(event.date, event.time, locale);
           const venueName = (eventLocalized.venue || event.venue || "").trim();
