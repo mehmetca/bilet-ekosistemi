@@ -354,7 +354,7 @@ export default function ClientHomePage({
 
       {/* Slider'lar */}
       <section className="site-container py-12">
-        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+        <div className="min-h-[calc(min(58vw,360px)_+_4.75rem)] overflow-hidden rounded-xl border border-slate-200 bg-white sm:min-h-[calc(min(48vw,420px)_+_4.75rem)] lg:min-h-[calc(min(36vw,520px)_+_4.75rem)] xl:min-h-[calc(min(30vw,560px)_+_4.75rem)]">
           <div className="p-6 pb-4">
             <h2 className="text-xl font-bold text-slate-900">{t("upcomingEvents")}</h2>
           </div>

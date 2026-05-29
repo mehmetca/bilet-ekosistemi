@@ -172,7 +172,15 @@ export default function AnaHeroSlider({
     setCurrentIndex(index);
   }
 
-  if (loading || shownAds.length === 0) return null;
+  if (loading) {
+    return (
+      <div className="w-full">
+        <div className="h-[58vw] min-h-[220px] max-h-[360px] w-full animate-pulse bg-slate-100 sm:h-[48vw] sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px]" />
+      </div>
+    );
+  }
+
+  if (shownAds.length === 0) return null;
 
   return (
     <div className="w-full">

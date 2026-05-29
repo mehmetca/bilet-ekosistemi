@@ -1,4 +1,8 @@
-import { resolvePublicImageUrl } from "@/lib/external-image";
+import {
+  getResponsivePublicImageSrcSet,
+  getResponsivePublicImageUrl,
+  resolvePublicImageUrl,
+} from "@/lib/external-image";
 
 type HomeHeroLcpProps = {
   imageUrl: string | null | undefined;
@@ -10,7 +14,8 @@ type HomeHeroLcpProps = {
  * Masaüstünde de preload ile hızlı boyanır.
  */
 export default function HomeHeroLcp({ imageUrl, alt }: HomeHeroLcpProps) {
-  const src = resolvePublicImageUrl(imageUrl);
+  const src = getResponsivePublicImageUrl(imageUrl, 1280, 75) ?? resolvePublicImageUrl(imageUrl);
+  const srcSet = getResponsivePublicImageSrcSet(imageUrl, [640, 960, 1280, 1920], 75);
   if (!src) return null;
 
   return (
@@ -21,6 +26,7 @@ export default function HomeHeroLcp({ imageUrl, alt }: HomeHeroLcpProps) {
       fetchPriority="high"
       loading="eager"
       decoding="async"
+      srcSet={srcSet}
       sizes="100vw"
       className="hero-lcp-img absolute inset-0 z-0 h-full w-full object-cover"
     />

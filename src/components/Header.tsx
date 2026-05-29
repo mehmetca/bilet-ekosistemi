@@ -100,14 +100,14 @@ export default function Header() {
 
 <NextLink
   href={navHref(locale, "/")}
-  className="flex items-center gap-2 shrink-0"
+  className="flex h-10 w-[128px] shrink-0 items-center gap-2 sm:h-[50px] sm:w-[160px]"
 >
   <Image
     src="/images/kurdevent-logo.png"
     alt="Kurdevent Logo"
     width={160}
     height={50}
-    style={{ width: "auto", height: "auto" }}
+    className="h-auto w-full"
     priority
   />
 </NextLink>
