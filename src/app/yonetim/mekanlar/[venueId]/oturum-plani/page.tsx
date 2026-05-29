@@ -180,7 +180,6 @@ function OturumPlaniContent() {
   /** Bu plana bağlı etkinliklerde iptal dışı siparişe girmiş koltuklar (çift satış / yanlış silmeyi önler). */
   const [soldSeatIdsByPlan, setSoldSeatIdsByPlan] = useState<Record<string, string[]>>({});
   const [copyingTemplate, setCopyingTemplate] = useState(false);
-  const [creatingTheaterDuisburg, setCreatingTheaterDuisburg] = useState(false);
   const [addingMissingRows, setAddingMissingRows] = useState(false);
   const [addingMissingSeats, setAddingMissingSeats] = useState(false);
   const [salonPresetId, setSalonPresetId] = useState<SalonPresetId>("single_center");
@@ -683,35 +682,6 @@ function OturumPlaniContent() {
       setExpandedPlan(planData.id);
     } finally {
       setCopyingTemplate(false);
-    }
-  };
-
-  /** Theater Duisburg görsel planı için veritabanında bölüm/sıra/koltuk oluşturur (API ile). */
-  const handleCreateTheaterDuisburg = async () => {
-    if (!venueId) return;
-    if (!confirm('Bu mekan için "Theater Duisburg" oturum planı oluşturulacak (bölümler, sıralar, koltuklar). Etkinlikte bu planı seçip görsel plan ile koltuk seçimi yapabilirsiniz. Devam?')) return;
-    setCreatingTheaterDuisburg(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
-        alert('Oturum bulunamadı. Lütfen tekrar giriş yapın.');
-        return;
-      }
-      const res = await fetch('/api/yonetim/theater-duisburg-plan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ venueId }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        alert(data?.error || 'Plan oluşturulamadı.');
-        return;
-      }
-      await refreshPlans();
-      if (data.planId) setExpandedPlan(data.planId);
-    } finally {
-      setCreatingTheaterDuisburg(false);
     }
   };
 
@@ -1600,19 +1570,9 @@ function OturumPlaniContent() {
           <Copy className="h-4 w-4" />
           {copyingTemplate ? "Kopyalanıyor…" : "Şablondan kopyala: Musensaal"}
         </button>
-        <button
-          type="button"
-          onClick={handleCreateTheaterDuisburg}
-          disabled={creatingTheaterDuisburg}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          title="Theater Duisburg (görsel plan) bölüm/sıra/koltuk verilerini veritabanında oluşturur. Etkinlikte bu planı seçince salon görseli üzerinde tıklanabilir koltuklar gösterilir."
-        >
-          <Copy className="h-4 w-4" />
-          {creatingTheaterDuisburg ? "Oluşturuluyor…" : "Theater Duisburg planını oluştur"}
-        </button>
       </div>
       <p className="mt-1 text-xs text-slate-500">
-        <strong>Musensaal:</strong> &quot;Salon 1&quot; veya &quot;Musensaal&quot; yazıp &quot;Şablondan kopyala&quot; ile Rosengarten Mannheim koltuk planı bu mekana eklenir. <strong>Theater Duisburg:</strong> &quot;Theater Duisburg planını oluştur&quot; ile görsel plan (fotoğraf/PDF) ile eşleşen bölüm/sıra/koltuk veritabanına eklenir; <code>public/seatplans/theaterduisburg.svg</code> dosyası varken etkinlik sayfasında görsel plan gösterilir; koltuk id’leri için <code>npm run seatplan:tag-duisburg</code> ile <code>theaterduisburg.tagged.svg</code> üretilebilir.
+        <strong>Musensaal:</strong> &quot;Salon 1&quot; veya &quot;Musensaal&quot; yazıp &quot;Şablondan kopyala&quot; ile Rosengarten Mannheim koltuk planı bu mekana eklenir.
       </p>
       <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
         <strong>Bilet türleri ile eşleştirme:</strong> Her bölümde &quot;Bilet türü (etkinlikte eşlenecek)&quot; alanına yazdığınız isim, <em>etkinlik oluştururken</em> eklediğiniz bilet türü adıyla <strong>birebir aynı</strong> olmalı (örn. Kategori 1, Kategori 2). Musensaal şablonundan kopyaladıysanız bölümler zaten Kategori 1–4 ile işaretlidir; etkinlikte bu isimlerle bilet türü ekleyin.

@@ -74,17 +74,6 @@ export function getLocalizedArtist(
   };
 }
 
-export function getLocalizedNews(
-  news: Record<string, unknown>,
-  locale: Locale
-): { title: string; content: string; excerpt: string } {
-  return {
-    title: getLocalizedText(news, "title", locale),
-    content: getLocalizedText(news, "content", locale),
-    excerpt: getLocalizedText(news, "excerpt", locale),
-  };
-}
-
 export function getLocalizedCity(
   city: Record<string, unknown>,
   locale: Locale

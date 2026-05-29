@@ -1889,17 +1889,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   // Huni analitiği: etkinlik görüntüleme
   useEffect(() => {
     let sid = "";
-    let heroVariant: string | undefined;
     try {
       sid = sessionStorage.getItem("analytics_session") || "";
       if (!sid) {
         sid = `s_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
         sessionStorage.setItem("analytics_session", sid);
-      }
-      const hv = sessionStorage.getItem("hero_ab_variant");
-      if (hv) {
-        const parsed = JSON.parse(hv) as { variant?: string };
-        heroVariant = parsed?.variant;
       }
     } catch {
       /* ignore */
@@ -1911,7 +1905,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         type: "view",
         event_id: event.id,
         session_id: sid || undefined,
-        hero_variant: heroVariant,
       }),
     }).catch(() => {});
   }, [event.id]);

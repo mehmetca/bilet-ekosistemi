@@ -6,9 +6,25 @@ import { withSupabaseAuth } from "@/utils/supabase/middleware";
 const intlMiddleware = createMiddleware(routing);
 
 const APP_LOCALES = routing.locales as readonly string[];
+const AUTH_SESSION_PATH_RE =
+  /^\/(?:yonetim|auth|kontrol)(?:\/|$)|^\/(?:(?:tr|de|en|ku|ckb)\/)?(?:giris|sifre-yenile|sepet|bilgilerim|organizator-basvuru|panel)(?:\/|$)/;
+const SUPABASE_SESSION_COOKIE_RE = /^sb-.+-auth-token(?:\.\d+)?$/;
 
 function isAppLocale(v: string | undefined | null): v is (typeof routing.locales)[number] {
   return !!v && APP_LOCALES.includes(v);
+}
+
+function hasSupabaseAuthCookie(request: NextRequest): boolean {
+  return request.cookies.getAll().some(({ name }) => SUPABASE_SESSION_COOKIE_RE.test(name));
+}
+
+function shouldRefreshSupabaseAuth(request: NextRequest): boolean {
+  return hasSupabaseAuthCookie(request) && AUTH_SESSION_PATH_RE.test(request.nextUrl.pathname);
+}
+
+function withSupabaseAuthIfNeeded(request: NextRequest, response: NextResponse) {
+  if (!shouldRefreshSupabaseAuth(request)) return response;
+  return withSupabaseAuth(request, response);
 }
 
 /** Locale önekli olmayan /giris, /sepet vb. için hedef dil: ?redirect=/de/... → de; yoksa NEXT_LOCALE; yoksa Accept-Language; son çare defaultLocale. */
@@ -155,31 +171,31 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/sepet" || pathname === "/sepet/") {
     const url = request.nextUrl.clone();
     url.pathname = `/${resolveUnprefixedPathLocale(request)}/sepet`;
-    return withSupabaseAuth(request, NextResponse.redirect(url));
+    return withSupabaseAuthIfNeeded(request, NextResponse.redirect(url));
   }
 
   if (pathname === "/organizator-basvuru" || pathname === "/organizator-basvuru/") {
     const url = request.nextUrl.clone();
     url.pathname = `/${resolveUnprefixedPathLocale(request)}/organizator-basvuru`;
-    return withSupabaseAuth(request, NextResponse.redirect(url));
+    return withSupabaseAuthIfNeeded(request, NextResponse.redirect(url));
   }
 
   if (pathname === "/bilgilerim" || pathname === "/bilgilerim/") {
     const url = request.nextUrl.clone();
     url.pathname = `/${resolveUnprefixedPathLocale(request)}/bilgilerim`;
-    return withSupabaseAuth(request, NextResponse.redirect(url));
+    return withSupabaseAuthIfNeeded(request, NextResponse.redirect(url));
   }
 
   // Kök /giris ve /sifre-yenile [locale] ile aynı bileşeni kullanıyor; locale path tek kanonik olsun (intl + layout).
   if (pathname === "/giris" || pathname === "/giris/") {
     const url = request.nextUrl.clone();
     url.pathname = `/${resolveUnprefixedPathLocale(request)}/giris`;
-    return withSupabaseAuth(request, NextResponse.redirect(url, 308));
+    return withSupabaseAuthIfNeeded(request, NextResponse.redirect(url, 308));
   }
   if (pathname === "/sifre-yenile" || pathname === "/sifre-yenile/") {
     const url = request.nextUrl.clone();
     url.pathname = `/${resolveUnprefixedPathLocale(request)}/sifre-yenile`;
-    return withSupabaseAuth(request, NextResponse.redirect(url, 308));
+    return withSupabaseAuthIfNeeded(request, NextResponse.redirect(url, 308));
   }
 
   // OAuth PKCE: do not run getUser() here — it can refresh/clear storage before route.ts exchanges the code.
@@ -199,7 +215,7 @@ export async function middleware(request: NextRequest) {
     requestHeaders.set("X-NEXT-INTL-LOCALE", panelLocale);
     requestHeaders.set("x-pathname", pathname);
     const res = NextResponse.next({ request: { headers: requestHeaders } });
-    return withSupabaseAuth(request, res);
+    return withSupabaseAuthIfNeeded(request, res);
   }
 
   const match = pathname.match(/^\/(tr|de|en|ku|ckb)(?:\/|$)/);
@@ -210,7 +226,7 @@ export async function middleware(request: NextRequest) {
   requestHeaders.set("x-pathname", pathname);
   const modifiedRequest = new NextRequest(request.url, { method: request.method, headers: requestHeaders });
   const intlResponse = intlMiddleware(modifiedRequest);
-  return withSupabaseAuth(request, intlResponse);
+  return withSupabaseAuthIfNeeded(request, intlResponse);
 }
 
 export const config = {

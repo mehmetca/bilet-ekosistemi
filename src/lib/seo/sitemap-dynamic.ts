@@ -88,7 +88,7 @@ export async function fetchSitemapDynamicPaths(): Promise<SitemapPathEntry[]> {
 
   const entries: SitemapPathEntry[] = [];
 
-  const [eventsRes, citiesRes, newsRes, venuesRes, artistsRes] = await Promise.all([
+  const [eventsRes, citiesRes, venuesRes, artistsRes] = await Promise.all([
     supabase
       .from("events")
       .select("id, slug, show_slug, updated_at")
@@ -97,12 +97,6 @@ export async function fetchSitemapDynamicPaths(): Promise<SitemapPathEntry[]> {
       .eq("is_draft", false)
       .limit(5000),
     supabase.from("cities").select("slug, updated_at").eq("is_active", true).limit(500),
-    supabase
-      .from("news")
-      .select("id, updated_at, published_at")
-      .eq("is_published", true)
-      .order("published_at", { ascending: false })
-      .limit(500),
     supabase.from("venues").select("id, updated_at").limit(2000),
     supabase
       .from("artists")
@@ -121,15 +115,6 @@ export async function fetchSitemapDynamicPaths(): Promise<SitemapPathEntry[]> {
       const slug = c.slug?.trim();
       if (!slug || !isValidPathTailSegment(slug)) continue;
       entries.push({ path: `/city/${slug}`, lastModified: parseDate(c.updated_at ?? null) });
-    }
-  }
-
-  if (!newsRes.error && newsRes.data?.length) {
-    for (const n of newsRes.data as { id: string; updated_at?: string | null; published_at?: string | null }[]) {
-      entries.push({
-        path: `/haber/${n.id}`,
-        lastModified: parseDate(n.updated_at ?? n.published_at ?? null),
-      });
     }
   }
 

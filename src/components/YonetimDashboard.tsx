@@ -58,10 +58,6 @@ export default function YonetimDashboard() {
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Salon Yapım Wizard</h3>
           <p className="text-sm text-slate-500">Adım adım salon planı oluşturun</p>
         </Link>
-        <Link href="/yonetim/haberler" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Haberler</h3>
-          <p className="text-sm text-slate-500">Haberleri yönetin ve yayınlayın</p>
-        </Link>
         <Link href="/yonetim/bilet-kontrol" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Bilet Kontrol</h3>
           <p className="text-sm text-slate-500">Biletleri doğrulayın</p>
@@ -120,9 +116,6 @@ export default function YonetimDashboard() {
         <div className="flex flex-wrap gap-3 justify-center">
           <Link href="/yonetim/etkinlikler?yeni=true" className="inline-flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors">
             <span className="text-lg">+</span> Yeni Etkinlik
-          </Link>
-          <Link href="/yonetim/haberler?yeni=true" className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-            <span className="text-lg">+</span> Yeni Haber
           </Link>
           <Link href="/yonetim/sanatcilar" className="inline-flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors">
             <span className="text-lg">+</span> Yeni Sanatçı

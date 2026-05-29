@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { Link } from "@/i18n/navigation";
 import {
   Search as SearchIcon,
@@ -12,62 +11,11 @@ import {
 import { useTranslations, useLocale } from "next-intl";
 import { useHomeSearch } from "@/contexts/HomeSearchContext";
 
-const DEFAULT_TR_VARIANT = {
-  variant: "A",
-  cta_text: "Ara",
-};
-
 export default function HomeHeroControls() {
   const t = useTranslations("home");
   const locale = useLocale();
   const { searchTerm, setSearchTerm } = useHomeSearch();
-  const [ctaText, setCtaText] = useState(
-    locale === "tr" ? DEFAULT_TR_VARIANT.cta_text : t("search")
-  );
-
-  useEffect(() => {
-    if (locale !== "tr") {
-      setCtaText(t("search"));
-      return;
-    }
-    const key = "hero_ab_variant";
-
-    try {
-      const cached = sessionStorage.getItem(key);
-      if (cached) {
-        const parsed = JSON.parse(cached) as { cta_text?: string };
-        if (parsed.cta_text) setCtaText(parsed.cta_text);
-        return;
-      }
-    } catch {
-      /* ignore */
-    }
-
-    const loadVariant = () => {
-      fetch("/api/ab/variant")
-        .then(async (r) => {
-          if (!r.ok) throw new Error("Variant fetch failed");
-          return r.json();
-        })
-        .then((data) => {
-          if (!data || typeof data !== "object") return;
-          if (data.cta_text) setCtaText(data.cta_text);
-          try {
-            sessionStorage.setItem(key, JSON.stringify(data));
-          } catch {
-            /* ignore */
-          }
-        })
-        .catch(() => setCtaText(DEFAULT_TR_VARIANT.cta_text));
-    };
-
-    if (typeof requestIdleCallback === "function") {
-      const id = requestIdleCallback(loadVariant, { timeout: 2500 });
-      return () => cancelIdleCallback(id);
-    }
-    const timer = window.setTimeout(loadVariant, 1);
-    return () => window.clearTimeout(timer);
-  }, [locale, t]);
+  const ctaText = locale === "tr" ? "Ara" : t("search");
 
   return (
     <>
