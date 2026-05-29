@@ -1,12 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { headers } from "next/headers";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import DeferredSpeedInsights from "@/components/DeferredSpeedInsights";
 import Providers from "@/components/Providers";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import { getSiteUrl } from "@/lib/site-url";
-import { routing } from "@/i18n/routing";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap" });
 
@@ -22,20 +20,13 @@ export const metadata: Metadata = {
   description: "Theater- und Event-Ticketing",
 };
 
-function isSupportedLocale(value: string | null): value is (typeof routing.locales)[number] {
-  return !!value && routing.locales.includes(value as (typeof routing.locales)[number]);
-}
+const setLocaleDocumentLanguageScript = `!function(){try{var m=location.pathname.match(/^\\/(tr|de|en|ku|ckb)(?:\\/|$)/);var l=m&&m[1]?m[1]:"tr";document.documentElement.lang=l;var meta=document.querySelector('meta[http-equiv="content-language"]');if(meta)meta.setAttribute("content",l)}catch(e){}}();`;
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const headerStore = await headers();
-  const headerLocale =
-    headerStore.get("x-next-intl-locale") ||
-    headerStore.get("X-NEXT-INTL-LOCALE");
-  const htmlLang = isSupportedLocale(headerLocale) ? headerLocale : routing.defaultLocale;
   let supabaseOrigin: string | null = null;
   try {
     const raw = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -45,10 +36,11 @@ export default async function RootLayout({
   }
 
   return (
-    <html lang={htmlLang} suppressHydrationWarning translate="no">
+    <html lang="tr" suppressHydrationWarning translate="no">
       <head>
         <meta name="google" content="notranslate" />
-        <meta httpEquiv="content-language" content={htmlLang} />
+        <meta httpEquiv="content-language" content="tr" />
+        <script dangerouslySetInnerHTML={{ __html: setLocaleDocumentLanguageScript }} />
         {supabaseOrigin ? (
           <>
             <link rel="preconnect" href={supabaseOrigin} crossOrigin="anonymous" />
