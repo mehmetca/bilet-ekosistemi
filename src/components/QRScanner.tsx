@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Html5Qrcode } from "html5-qrcode";
+import type { Html5Qrcode as Html5QrcodeInstance } from "html5-qrcode";
 import { Camera, X, AlertCircle } from "lucide-react";
 import { feedbackService } from "@/lib/feedbackService";
 import { extractTicketCode } from "@/lib/ticket-code";
@@ -27,7 +27,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
   const [isStarting, setIsStarting] = useState(true);
   const [isArmed, setIsArmed] = useState(false);
   const isArmedRef = useRef(false);
-  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerRef = useRef<Html5QrcodeInstance | null>(null);
   const onScanRef = useRef(onScan);
   onScanRef.current = onScan;
   const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([]);
@@ -66,6 +66,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
 
     async function startCamera() {
       try {
+        const { Html5Qrcode } = await import("html5-qrcode");
         const cameras = await Html5Qrcode.getCameras();
         if (!cameras || cameras.length === 0) {
           setError("Kamera bulunamadı. Cihazınızda kamera olduğundan emin olun.");
