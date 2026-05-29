@@ -20,8 +20,6 @@ export const metadata: Metadata = {
   description: "Theater- und Event-Ticketing",
 };
 
-const setLocaleDocumentLanguageScript = `!function(){try{var m=location.pathname.match(/^\\/(tr|de|en|ku|ckb)(?:\\/|$)/);var l=m&&m[1]?m[1]:"tr";document.documentElement.lang=l;var meta=document.querySelector('meta[http-equiv="content-language"]');if(meta)meta.setAttribute("content",l)}catch(e){}}();`;
-
 export default function RootLayout({
   children,
 }: {
@@ -39,8 +37,6 @@ export default function RootLayout({
     <html lang="tr" suppressHydrationWarning translate="no">
       <head>
         <meta name="google" content="notranslate" />
-        <meta httpEquiv="content-language" content="tr" />
-        <script dangerouslySetInnerHTML={{ __html: setLocaleDocumentLanguageScript }} />
         {supabaseOrigin ? (
           <>
             <link rel="preconnect" href={supabaseOrigin} crossOrigin="anonymous" />
