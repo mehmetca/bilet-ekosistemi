@@ -9,7 +9,6 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { stripLocalePrefixes } from "@/lib/i18n-pathname";
-import Image from "next/image";
 
 const navLinks = [
   { href: "/", labelKey: "nav.events" },
@@ -102,14 +101,15 @@ export default function Header() {
   href={navHref(locale, "/")}
   className="flex h-10 w-[128px] shrink-0 items-center gap-2 sm:h-[50px] sm:w-[160px]"
 >
-  <Image
+  <img
     src="/images/kurdevent-logo.png"
     alt="Kurdevent Logo"
     width={160}
     height={50}
     className="h-auto w-full"
-    style={{ height: "auto" }}
-    priority
+    style={{ width: "100%", height: "auto" }}
+    fetchPriority="high"
+    decoding="async"
   />
 </NextLink>
 

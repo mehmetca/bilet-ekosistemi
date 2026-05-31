@@ -851,6 +851,7 @@ export default function LoginPage() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">Şifre *</label>
                   <input
                     type="password"
+                    autoComplete="new-password"
                     value={ctrlPassword}
                     onChange={(e) => setCtrlPassword(e.target.value)}
                     required
