@@ -28,6 +28,7 @@ import {
 import { buildEventDescription, parseEventDescription } from "@/lib/eventMeta";
 import AdminImageUpload from "@/components/AdminImageUpload";
 import { formatPrice } from "@/lib/formatPrice";
+import { shortenTicketDisplayName } from "@/lib/ticket-seating-match";
 
 const STEPS = [
   { id: 1, label: "Temel bilgiler" },
@@ -156,6 +157,32 @@ type WizardTicket = {
   groupMinQuantity?: number;
 };
 
+function getWizardTicketDisplayName(t: WizardTicket): string {
+  if (t.presetKey === "salon_plan") return (t.name || "").trim() || "Bilet";
+  if (t.presetKey === "custom") return (t.name || "").trim() || "Bilet";
+  const p = BILET_TURU_SECENEKLERI.find((x) => x.value === t.presetKey);
+  return p ? p.label : (t.name || "").trim() || "Bilet";
+}
+
+function ticketCategoryRank(label: string): number {
+  const full = (label || "").trim().toLowerCase();
+  const short = shortenTicketDisplayName(label || "").trim().toLowerCase();
+  if (!full && !short) return 1000;
+  if (/\bvip\b/.test(full) || /\bvip\b/.test(short)) return 0;
+  const categoryMatch = full.match(/\bkategori\s*(\d{1,2})\b/) || short.match(/\bkategori\s*(\d{1,2})\b/);
+  if (categoryMatch) return 100 + Number(categoryMatch[1]);
+  return 1000;
+}
+
+function compareWizardTicketsByCategory(a: WizardTicket, b: WizardTicket): number {
+  const an = getWizardTicketDisplayName(a);
+  const bn = getWizardTicketDisplayName(b);
+  const ar = ticketCategoryRank(an);
+  const br = ticketCategoryRank(bn);
+  if (ar !== br) return ar - br;
+  return an.localeCompare(bn, undefined, { numeric: true, sensitivity: "base" });
+}
+
 type VenueOption = { id: string; name: string; address: string | null; city: string | null };
 type SeatingPlanOption = { id: string; name: string; is_default: boolean };
 
@@ -239,22 +266,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const [dragTicketId, setDragTicketId] = useState<string | null>(null);
 
   const autoSortTickets = () => {
-    const rank = (nameRaw: string) => {
-      const name = nameRaw.trim().toLowerCase();
-      if (name === "vip" || name === "vip bilet") return 0;
-      const m = name.match(/^kategori\s*(\d+)$/i);
-      if (m) return 100 + Number(m[1]);
-      return 1000;
-    };
-
-    setTickets((prev) =>
-      [...prev].sort((a, b) => {
-        const ra = rank(a.name || "");
-        const rb = rank(b.name || "");
-        if (ra !== rb) return ra - rb;
-        return (a.name || "").localeCompare(b.name || "", undefined, { numeric: true, sensitivity: "base" });
-      })
-    );
+    setTickets((prev) => [...prev].sort(compareWizardTicketsByCategory));
   };
 
   useEffect(() => {
@@ -592,7 +604,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
           created.push(mkPlanRowTicket({ ...row, seatCount: full }));
         }
         planSeatLastAppliedSnapshotRef.current = new Map(aggregatedPlanSeat);
-        return created;
+        return created.sort(compareWizardTicketsByCategory);
       }
 
       const planLabelConsumedPrimary = new Set<string>();
@@ -669,7 +681,8 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
           );
         });
       }
-      return appended.length === 0 ? next : [...next, ...appended];
+      const combined = appended.length === 0 ? next : [...next, ...appended];
+      return [...combined].sort(compareWizardTicketsByCategory);
     });
   }, [planTicketBreakdown, previousPlanTicketBreakdownForDelta]);
 
@@ -784,10 +797,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   }
 
   function getTicketDisplayName(t: WizardTicket): string {
-    if (t.presetKey === "salon_plan") return (t.name || "").trim() || "Bilet";
-    if (t.presetKey === "custom") return (t.name || "").trim() || "Bilet";
-    const p = BILET_TURU_SECENEKLERI.find((x) => x.value === t.presetKey);
-    return p ? p.label : (t.name || "").trim() || "Bilet";
+    return getWizardTicketDisplayName(t);
   }
 
   /** Select value: şablon key, salon_plan|encode(label), veya custom */

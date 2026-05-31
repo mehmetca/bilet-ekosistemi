@@ -1516,7 +1516,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       const catalogAvail = Number(tk.available || 0);
       if (!hasSeatingPlan || !seatingPlanData?.length) return catalogAvail;
       const seatBacked = remainingSeatSlotsByTicketId.get(tk.id) ?? 0;
-      return Math.min(catalogAvail, seatBacked);
+      return seatBacked;
     },
     [hasSeatingPlan, seatingPlanData, remainingSeatSlotsByTicketId]
   );
@@ -1602,13 +1602,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     seatMetaById.forEach((meta, seatId) => {
       const tid = meta.ticket?.id;
       const catalogAvail = Number(meta.ticket?.available ?? 0);
-      if (catalogAvail <= 0) {
+      if (!hasSeatingPlan && catalogAvail <= 0) {
         s.add(seatId);
         return;
       }
       if (hasSeatingPlan && seatingPlanData?.length && tid) {
         const seatBacked = remainingSeatSlotsByTicketId.get(tid) ?? 0;
-        if (Math.min(catalogAvail, seatBacked) <= 0) s.add(seatId);
+        if (seatBacked <= 0) s.add(seatId);
       }
     });
     return s;
@@ -2840,7 +2840,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   ? event.checkout_processing_fee
                                   : undefined,
                               quantity: count,
-                              available: Number(ticket.available || 0),
+                              available: effectiveAvailabilityForTicket(ticket),
                             }))
                           );
                           setTicketCountsByType({});
