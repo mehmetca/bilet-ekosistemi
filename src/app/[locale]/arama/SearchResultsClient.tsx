@@ -101,8 +101,20 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
       const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
       const parts = [
         localized.title || event.title,
+        event.title,
+        event.slug,
+        (event as Event & { show_slug?: string | null }).show_slug,
+        (event as Event & { title_tr?: string | null }).title_tr,
+        (event as Event & { title_de?: string | null }).title_de,
+        (event as Event & { title_en?: string | null }).title_en,
+        (event as Event & { title_ku?: string | null }).title_ku,
+        (event as Event & { title_ckb?: string | null }).title_ckb,
         localized.description || event.description,
         localized.venue || event.venue,
+        event.venue,
+        (event as Event & { venue_tr?: string | null }).venue_tr,
+        (event as Event & { venue_de?: string | null }).venue_de,
+        (event as Event & { venue_en?: string | null }).venue_en,
         event.location,
         (event as Event & { city?: string | null }).city,
       ].filter(Boolean) as string[];

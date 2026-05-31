@@ -179,7 +179,9 @@ export default function ClientHomePage({
           .eq("is_active", true)
           .eq("is_approved", true)
           .eq("is_draft", false)
-          .order("created_at", { ascending: false }),
+          .gte("date", getLocalISODateString(new Date()))
+          .order("date", { ascending: true })
+          .order("time", { ascending: true }),
         supabase
           .from("cities")
           .select("id, slug, name_tr, name_de, name_en, image_url, sort_order")
@@ -254,12 +256,17 @@ export default function ClientHomePage({
     const e = event as Event & { city?: string | null; address?: string | null };
     const parts = [
       event.title,
+      event.slug,
+      (event as Event & { show_slug?: string | null }).show_slug,
       (event as Event & { title_tr?: string }).title_tr,
       (event as Event & { title_de?: string }).title_de,
       (event as Event & { title_en?: string }).title_en,
+      (event as Event & { title_ku?: string }).title_ku,
+      (event as Event & { title_ckb?: string }).title_ckb,
       event.venue,
       (event as Event & { venue_tr?: string }).venue_tr,
       (event as Event & { venue_de?: string }).venue_de,
+      (event as Event & { venue_en?: string }).venue_en,
       event.location,
       e.city,
       e.address,

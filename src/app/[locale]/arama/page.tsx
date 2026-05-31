@@ -3,9 +3,9 @@ import SearchResultsClient from "./SearchResultsClient";
 import { getEventsForCalendar } from "@/lib/events-server";
 
 type PageProps = {
-  searchParams?: {
+  searchParams?: Promise<{
     q?: string;
-  };
+  }>;
 };
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,8 @@ export const revalidate = 0;
 
 export default async function SearchPage({ searchParams }: PageProps) {
   const events = await getEventsForCalendar();
-  const initialQuery = (searchParams?.q || "").trim();
+  const resolvedSearchParams = await searchParams;
+  const initialQuery = (resolvedSearchParams?.q || "").trim();
 
   return (
     <>

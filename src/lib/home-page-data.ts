@@ -6,10 +6,18 @@ import type { Event } from "@/types/database";
 const HOME_EVENTS_COLUMNS =
   "id,title,slug,date,time,venue,location,image_url,category,price_from,currency,created_at,is_active,is_approved,is_draft,title_tr,title_de,title_en,title_ku,title_ckb,venue_tr,venue_de,venue_en,show_slug,venues(city)";
 
-const HOME_EVENTS_LIMIT = 48;
+const HOME_EVENTS_LIMIT = 72;
 
 const HERO_COLUMNS =
   "id,title,image_url,is_active,sort_order,transition_duration";
+
+function todayIsoDate(): string {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 export type HomeShellData = {
   heroBackgrounds: Array<{
@@ -66,7 +74,9 @@ export async function getHomeEvents(locale: string): Promise<Event[]> {
     .eq("is_active", true)
     .eq("is_approved", true)
     .eq("is_draft", false)
-    .order("created_at", { ascending: false })
+    .gte("date", todayIsoDate())
+    .order("date", { ascending: true })
+    .order("time", { ascending: true })
     .limit(HOME_EVENTS_LIMIT);
 
   if (error || !data) return [];
