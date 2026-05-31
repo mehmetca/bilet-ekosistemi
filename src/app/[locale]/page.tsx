@@ -47,9 +47,6 @@ export default async function HomePage({ params }: HomePageProps) {
     <HomeSearchProvider>
       <style id="critical-home" dangerouslySetInnerHTML={{ __html: CRITICAL_HOME_CSS }} />
       {lcpOrigin ? <link rel="preconnect" href={lcpOrigin} crossOrigin="anonymous" /> : null}
-      {lcpSrc ? (
-        <link rel="preload" as="image" href={lcpSrc} fetchPriority="high" />
-      ) : null}
       <div className="min-h-screen bg-slate-50">
         <Header />
         <HomePageHero locale={locale} shell={shell} />
