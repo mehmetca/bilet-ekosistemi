@@ -1384,33 +1384,36 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   }, [event?.id, hasSeatingPlan, seatHoldSessionId]);
 
   useEffect(() => {
+    if (bookingMode !== "seat") return;
     fetchSoldSeats();
     void fetchHeldByOthersSeats();
-  }, [fetchSoldSeats, fetchHeldByOthersSeats]);
+  }, [bookingMode, fetchSoldSeats, fetchHeldByOthersSeats]);
 
   useEffect(() => {
-    if (!event?.id || !hasSeatingPlan) return;
+    if (!event?.id || !hasSeatingPlan || bookingMode !== "seat") return;
     const onFocus = () => {
       fetchSoldSeats();
       void fetchHeldByOthersSeats();
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [event?.id, hasSeatingPlan, fetchSoldSeats, fetchHeldByOthersSeats]);
+  }, [event?.id, hasSeatingPlan, bookingMode, fetchSoldSeats, fetchHeldByOthersSeats]);
 
   useEffect(() => {
-    if (!event?.id || !hasSeatingPlan) return;
+    if (!event?.id || !hasSeatingPlan || bookingMode !== "seat") return;
     const id = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
       void fetchHeldByOthersSeats();
       fetchSoldSeats();
-    }, 7000);
+    }, 15000);
     return () => window.clearInterval(id);
-  }, [event?.id, hasSeatingPlan, fetchHeldByOthersSeats, fetchSoldSeats]);
+  }, [event?.id, hasSeatingPlan, bookingMode, fetchHeldByOthersSeats, fetchSoldSeats]);
 
   /** Canlı bilet stoku (satış devam ederken sayfa yenilenmeden güncellenir). */
   useEffect(() => {
-    if (!event?.id || isExternalOnlyEvent) return;
+    if (!event?.id || isExternalOnlyEvent || bookingMode === null) return;
     const refreshTickets = () => {
+      if (document.visibilityState !== "visible") return;
       const end = new Date(`${event.date} ${event.time || "23:59"}`);
       if (end < new Date()) return;
       void fetch(`/api/event-tickets?event_id=${encodeURIComponent(event.id)}`)
@@ -1421,10 +1424,10 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         .catch(() => {});
     };
     refreshTickets();
-    const ms = hasSeatingPlan ? 12000 : 20000;
+    const ms = hasSeatingPlan ? 30000 : 45000;
     const id = window.setInterval(refreshTickets, ms);
     return () => window.clearInterval(id);
-  }, [event?.id, event.date, event.time, hasSeatingPlan, isExternalOnlyEvent]);
+  }, [event?.id, event.date, event.time, hasSeatingPlan, isExternalOnlyEvent, bookingMode]);
 
   const musensaalIdMaps = useMemo(() => {
     if (!isMusensaalPlan || !seatingPlanData?.length) return null;
