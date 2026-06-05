@@ -363,14 +363,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!hydrated || items.length === 0 || reservationExpiresAt == null) return;
-    const tick = () => {
-      if (Date.now() >= reservationExpiresAt) {
-        clearCart({ reason: "reservation_expired" });
-      }
-    };
-    const id = window.setInterval(tick, 1000);
-    tick();
-    return () => window.clearInterval(id);
+    const remainingMs = Math.max(0, reservationExpiresAt - Date.now());
+    const id = window.setTimeout(() => {
+      clearCart({ reason: "reservation_expired" });
+    }, remainingMs);
+    return () => window.clearTimeout(id);
   }, [hydrated, items.length, reservationExpiresAt, clearCart]);
 
   const bumpReservation = useCallback(() => {

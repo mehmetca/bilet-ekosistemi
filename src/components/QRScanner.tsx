@@ -6,6 +6,8 @@ import { Camera, X, AlertCircle } from "lucide-react";
 import { feedbackService } from "@/lib/feedbackService";
 import { extractTicketCode } from "@/lib/ticket-code";
 
+const QR_SCAN_FPS = 6;
+
 interface QRScannerProps {
   onScan: (code: string) => void;
   onClose: () => void;
@@ -57,7 +59,7 @@ export default function QRScanner({ onScan, onClose, continuous = false }: QRSca
     // Mobilde okuma kutusunu büyüt (uzaktan/rahat hizalama için).
     const isNarrow = typeof window !== "undefined" && window.innerWidth < 500;
     const config = {
-      fps: 10,
+      fps: QR_SCAN_FPS,
       qrbox: isNarrow
         ? { width: 320, height: 180 }
         : { width: 340, height: 240 },

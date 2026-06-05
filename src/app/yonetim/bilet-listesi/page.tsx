@@ -10,6 +10,8 @@ import type { Order } from "@/types/database";
 import QRScanner from "@/components/QRScanner";
 import { supabase } from "@/lib/supabase-client";
 
+const TICKET_LIST_REFRESH_MS = 60_000;
+
 export default function BiletListesiPage() {
   // Auth kontrolünü basitleştir - sadece admin mi diye kontrol et
   type AdminOrder = Order & {
@@ -145,18 +147,21 @@ export default function BiletListesiPage() {
   }, [expandedOrder, tickets, closeOrderMenu]);
 
   useEffect(() => {
-    fetchTickets();
+    void fetchTickets({ showLoading: true });
 
-    const interval = setInterval(fetchTickets, 15000);
+    const interval = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      void fetchTickets({ showLoading: false });
+    }, TICKET_LIST_REFRESH_MS);
 
     return () => {
-      clearInterval(interval);
+      window.clearInterval(interval);
     };
   }, []);
 
-  async function fetchTickets() {
+  async function fetchTickets(opts: { showLoading?: boolean } = {}) {
     try {
-      setLoading(true);
+      if (opts.showLoading) setLoading(true);
 
       // Supabase oturumundan access token al ve admin API'ye Bearer olarak ilet.
       const {

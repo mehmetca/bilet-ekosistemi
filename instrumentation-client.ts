@@ -1,5 +1,10 @@
 import * as Sentry from "@sentry/nextjs";
 
+function numberFromEnv(value: string | undefined, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function isBenignDomDetachErrorText(value: unknown): boolean {
   const message = String(value || "").toLowerCase();
   return (
@@ -39,8 +44,8 @@ Sentry.init({
       maskAllInputs: true,
     }),
   ],
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1.0,
+  replaysSessionSampleRate: numberFromEnv(process.env.NEXT_PUBLIC_SENTRY_REPLAY_SAMPLE_RATE, 0.02),
+  replaysOnErrorSampleRate: numberFromEnv(process.env.NEXT_PUBLIC_SENTRY_REPLAY_ON_ERROR_SAMPLE_RATE, 0.5),
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
