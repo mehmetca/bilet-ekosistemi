@@ -4,8 +4,8 @@ import { getSiteUrl } from "@/lib/site-url";
 import { SEO_SITEMAP_PATHS } from "@/lib/seo/sitemap-paths";
 import { fetchSitemapDynamicPaths } from "@/lib/seo/sitemap-dynamic";
 
-/** Site haritası veritabanından yenilensin (dakika). */
-export const revalidate = 3600;
+/** Site haritası botlar tarafından sık istenir; public URL seti saatlik değişmediği için 6 saat cache yeterli. */
+export const revalidate = 21600;
 
 function pushLocalizedEntries(
   entries: MetadataRoute.Sitemap,

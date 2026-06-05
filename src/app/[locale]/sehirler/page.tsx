@@ -8,8 +8,15 @@ import { routing } from "@/i18n/routing";
 import type { Locale } from "@/lib/i18n-content";
 import { buildLocalePathMetadata } from "@/lib/seo/locale-path-metadata";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 1800;
+
+function todayIsoDate(): string {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, "0");
+  const dd = String(now.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 async function getCities() {
   const supabase = createServerSupabase();
@@ -22,10 +29,13 @@ async function getCities() {
       .order("slug", { ascending: true }),
     supabase
       .from("events")
-      .select("*, venues(city)")
+      .select("id,date,time,location,city,venues(city)")
       .eq("is_active", true)
       .eq("is_approved", true)
-      .eq("is_draft", false),
+      .eq("is_draft", false)
+      .gte("date", todayIsoDate())
+      .order("date", { ascending: true })
+      .limit(500),
   ]);
   if (citiesRes.error) return [];
   const rawEvents = (eventsRes.data || []) as Record<string, unknown>[];
