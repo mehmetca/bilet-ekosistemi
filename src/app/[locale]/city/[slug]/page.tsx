@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
-import { cache } from "react";
-import { createServerSupabase } from "@/lib/supabase-server";
 import CityPageClient from "./CityPageClient";
+import { getCity } from "@/lib/cities-server";
 import { getLocalizedCity } from "@/lib/i18n-content";
 import { getEventsForCity } from "@/lib/events-server";
 import type { Metadata } from "next";
@@ -14,18 +13,6 @@ export const revalidate = 300;
 interface PageProps {
   params: Promise<{ locale?: string; slug: string }>;
 }
-
-const getCity = cache(async function getCity(slug: string) {
-  const supabase = createServerSupabase();
-  const { data, error } = await supabase
-    .from("cities")
-    .select("*")
-    .eq("slug", slug)
-    .eq("is_active", true)
-    .single();
-  if (error || !data) return null;
-  return data;
-});
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const resolved = await params;

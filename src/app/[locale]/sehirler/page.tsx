@@ -1,5 +1,4 @@
-import { createServerSupabase } from "@/lib/supabase-server";
-import { sortCitiesByUpcomingEventCount } from "@/lib/city-event-sort";
+import { getCitiesWithEventCounts } from "@/lib/cities-server";
 import Header from "@/components/Header";
 import CitiesGrid from "./CitiesGrid";
 import type { Metadata } from "next";
@@ -9,39 +8,6 @@ import type { Locale } from "@/lib/i18n-content";
 import { buildLocalePathMetadata } from "@/lib/seo/locale-path-metadata";
 
 export const revalidate = 1800;
-
-function todayIsoDate(): string {
-  const now = new Date();
-  const yyyy = now.getFullYear();
-  const mm = String(now.getMonth() + 1).padStart(2, "0");
-  const dd = String(now.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
-}
-
-async function getCities() {
-  const supabase = createServerSupabase();
-  const [citiesRes, eventsRes] = await Promise.all([
-    supabase
-      .from("cities")
-      .select("id, slug, name_tr, name_de, name_en, image_url, sort_order")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .order("slug", { ascending: true }),
-    supabase
-      .from("events")
-      .select("id,date,time,location,city,venues(city)")
-      .eq("is_active", true)
-      .eq("is_approved", true)
-      .eq("is_draft", false)
-      .gte("date", todayIsoDate())
-      .order("date", { ascending: true })
-      .limit(500),
-  ]);
-  if (citiesRes.error) return [];
-  const rawEvents = (eventsRes.data || []) as Record<string, unknown>[];
-  const cities = citiesRes.data || [];
-  return sortCitiesByUpcomingEventCount(cities, rawEvents);
-}
 
 export async function generateMetadata({
   params,
@@ -60,7 +26,7 @@ export async function generateMetadata({
 }
 
 export default async function SehirlerPage() {
-  const cities = await getCities();
+  const cities = await getCitiesWithEventCounts();
   const t = await getTranslations("cities");
 
   return (

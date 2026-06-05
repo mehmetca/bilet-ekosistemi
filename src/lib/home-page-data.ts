@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
 import { sortCitiesByUpcomingEventCount } from "@/lib/city-event-sort";
 import { getHomeSliderAds } from "@/lib/home-slider-ads";
 import type { Event } from "@/types/database";
@@ -41,7 +43,7 @@ export type HomeShellData = {
 };
 
 /** Hero + şehir + slider — ana sayfa LCP için hafif; etkinlik listesi dahil değil. */
-export async function getHomeShellData(locale: string): Promise<HomeShellData> {
+async function fetchHomeShellData(locale: string): Promise<HomeShellData> {
   const supabase = createServerSupabase();
   const [heroRes, citiesRes, sliderAds] = await Promise.all([
     supabase
@@ -66,7 +68,14 @@ export async function getHomeShellData(locale: string): Promise<HomeShellData> {
   };
 }
 
-export async function getHomeEvents(locale: string): Promise<Event[]> {
+export async function getHomeShellData(locale: string): Promise<HomeShellData> {
+  return unstable_cache(() => fetchHomeShellData(locale), ["home-shell", locale], {
+    revalidate: DATA_CACHE_REVALIDATE.home,
+    tags: ["home"],
+  })();
+}
+
+async function fetchHomeEvents(_locale: string): Promise<Event[]> {
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("events")
@@ -83,6 +92,13 @@ export async function getHomeEvents(locale: string): Promise<Event[]> {
 
   const raw = data as Array<Record<string, unknown>>;
   return raw.map(({ venues: _v, ...ev }) => ev) as unknown as Event[];
+}
+
+export async function getHomeEvents(locale: string): Promise<Event[]> {
+  return unstable_cache(() => fetchHomeEvents(locale), ["home-events", locale], {
+    revalidate: DATA_CACHE_REVALIDATE.home,
+    tags: ["home", "events"],
+  })();
 }
 
 export function sortHomeCities(

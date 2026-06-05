@@ -3,7 +3,9 @@
  * Etkinlik detay, şehir, takvim ve show_slug sorguları tek yerden.
  */
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
 import { eventMatchesCityRow, getMatchTerms } from "@/lib/city-event-sort";
 import type { Event, Ticket, Venue } from "@/types/database";
 
@@ -63,7 +65,7 @@ export function getTicketSortRank(name?: string): number {
   return 999;
 }
 
-export const getEventsByShowSlug = cache(async function getEventsByShowSlug(showSlug: string): Promise<Event[]> {
+async function fetchEventsByShowSlug(showSlug: string): Promise<Event[]> {
   try {
     const supabase = createServerSupabase();
     const showSlugTrimmed = (showSlug || "").trim();
@@ -84,9 +86,16 @@ export const getEventsByShowSlug = cache(async function getEventsByShowSlug(show
   } catch {
     return [];
   }
+}
+
+const getEventsByShowSlugCrossRequest = unstable_cache(fetchEventsByShowSlug, ["events-by-show-slug"], {
+  revalidate: DATA_CACHE_REVALIDATE.event,
+  tags: ["events"],
 });
 
-export const getEventBySlug = cache(async function getEventBySlug(
+export const getEventsByShowSlug = cache((showSlug: string) => getEventsByShowSlugCrossRequest(showSlug));
+
+async function fetchEventBySlug(
   slugOrId: string
 ): Promise<{ event: Event; isUnapproved?: boolean } | null> {
   try {
@@ -158,9 +167,16 @@ export const getEventBySlug = cache(async function getEventBySlug(
     console.error("Fetch event error:", err);
     return null;
   }
+}
+
+const getEventBySlugCrossRequest = unstable_cache(fetchEventBySlug, ["event-by-slug"], {
+  revalidate: DATA_CACHE_REVALIDATE.event,
+  tags: ["events"],
 });
 
-export const getVenue = cache(async function getVenue(venueId: string | null | undefined): Promise<Venue | null> {
+export const getEventBySlug = cache((slugOrId: string) => getEventBySlugCrossRequest(slugOrId));
+
+async function fetchVenue(venueId: string | null | undefined): Promise<Venue | null> {
   if (!venueId) return null;
   try {
     const supabase = createServerSupabase();
@@ -175,9 +191,16 @@ export const getVenue = cache(async function getVenue(venueId: string | null | u
   } catch {
     return null;
   }
+}
+
+const getVenueCrossRequest = unstable_cache(fetchVenue, ["venue-by-id"], {
+  revalidate: DATA_CACHE_REVALIDATE.event,
+  tags: ["venues"],
 });
 
-export const getEventTickets = cache(async function getEventTickets(eventId: string): Promise<Ticket[]> {
+export const getVenue = cache((venueId: string | null | undefined) => getVenueCrossRequest(venueId));
+
+async function fetchEventTickets(eventId: string): Promise<Ticket[]> {
   try {
     const supabase = createServerSupabase();
     const { data, error } = await supabase
@@ -198,11 +221,16 @@ export const getEventTickets = cache(async function getEventTickets(eventId: str
   } catch {
     return [];
   }
+}
+
+const getEventTicketsCrossRequest = unstable_cache(fetchEventTickets, ["event-tickets"], {
+  revalidate: DATA_CACHE_REVALIDATE.event,
+  tags: ["tickets"],
 });
 
-export const getOrganizerDisplayName = cache(async function getOrganizerDisplayName(
-  userId: string | null | undefined
-): Promise<string | null> {
+export const getEventTickets = cache((eventId: string) => getEventTicketsCrossRequest(eventId));
+
+async function fetchOrganizerDisplayName(userId: string | null | undefined): Promise<string | null> {
   if (!userId) return null;
   try {
     const supabase = createServerSupabase();
@@ -215,10 +243,19 @@ export const getOrganizerDisplayName = cache(async function getOrganizerDisplayN
   } catch {
     return null;
   }
+}
+
+const getOrganizerDisplayNameCrossRequest = unstable_cache(fetchOrganizerDisplayName, ["organizer-display-name"], {
+  revalidate: DATA_CACHE_REVALIDATE.event,
+  tags: ["organizers"],
 });
 
+export const getOrganizerDisplayName = cache((userId: string | null | undefined) =>
+  getOrganizerDisplayNameCrossRequest(userId)
+);
+
 /** Takvim sayfası: tüm aktif etkinlikler (tarih sıralı) */
-export async function getEventsForCalendar(): Promise<Event[]> {
+async function fetchEventsForCalendar(): Promise<Event[]> {
   try {
     const supabase = createServerSupabase();
     const { data, error } = await supabase
@@ -239,8 +276,15 @@ export async function getEventsForCalendar(): Promise<Event[]> {
   }
 }
 
+export async function getEventsForCalendar(): Promise<Event[]> {
+  return unstable_cache(fetchEventsForCalendar, ["events-calendar"], {
+    revalidate: DATA_CACHE_REVALIDATE.calendar,
+    tags: ["events-calendar"],
+  })();
+}
+
 /** Şehir slug ve opsiyonel şehir bilgisiyle eşleşen etkinlikler */
-export async function getEventsForCity(
+async function fetchEventsForCity(
   citySlug: string,
   city?: { name_tr?: string | null; name_de?: string | null; name_en?: string | null } | null
 ): Promise<Event[]> {
@@ -305,4 +349,18 @@ export async function getEventsForCity(
     console.error("getEventsForCity error:", err);
     return [];
   }
+}
+
+export async function getEventsForCity(
+  citySlug: string,
+  city?: { name_tr?: string | null; name_de?: string | null; name_en?: string | null } | null
+): Promise<Event[]> {
+  return unstable_cache(
+    async () => fetchEventsForCity(citySlug, city ?? null),
+    ["events-city", citySlug],
+    {
+      revalidate: DATA_CACHE_REVALIDATE.city,
+      tags: ["events-city", `city-${citySlug}`],
+    }
+  )();
 }

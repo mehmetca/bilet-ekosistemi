@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
 
 export type SitemapPathEntry = { path: string; lastModified: Date };
 
@@ -78,7 +80,7 @@ function eventPathEntries(rows: EventRow[]): SitemapPathEntry[] {
 }
 
 /** Supabase’ten herkese açık sayfa yolları (env yoksa veya tablo hatasında kısmi/boş döner). */
-export async function fetchSitemapDynamicPaths(): Promise<SitemapPathEntry[]> {
+async function fetchSitemapDynamicPathsUncached(): Promise<SitemapPathEntry[]> {
   let supabase: ReturnType<typeof createServerSupabase>;
   try {
     supabase = createServerSupabase();
@@ -133,4 +135,11 @@ export async function fetchSitemapDynamicPaths(): Promise<SitemapPathEntry[]> {
   }
 
   return entries;
+}
+
+export async function fetchSitemapDynamicPaths(): Promise<SitemapPathEntry[]> {
+  return unstable_cache(fetchSitemapDynamicPathsUncached, ["sitemap-dynamic-paths"], {
+    revalidate: DATA_CACHE_REVALIDATE.sitemap,
+    tags: ["sitemap"],
+  })();
 }
