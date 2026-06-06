@@ -11,7 +11,7 @@ Her endpoint için kontrol: **Rol** | **RLS uyumu** | **Tablo** | **Hata mesajla
 | Organizer – Etkinlik listesi | Client-side Supabase (`events`, `created_by_user_id` filtreli) | API yok; RLS: "Organizer can view own events" |
 | Admin – Bekleyen etkinlikler | Client-side Supabase (`events`, `is_approved = false`) | API yok; RLS: "Admin can view all events" |
 | Admin – Etkinlik onaylama/red | Client-side Supabase `events.update()` | API yok; RLS: "Admins can update events" (043) |
-| Bilet satın alma | `POST /api/purchase` | RPC `reserve_tickets_and_create_order` |
+| Bilet satın alma | `POST /api/purchase` | RPC `reserve_ticket_stock` + service role `orders.insert` |
 | Bilet doğrulama (kapıda) | `POST /api/check-ticket` | Sadece okuma; rol kontrolü eklendi |
 | Check-in (giriş işaretleme) | `POST /api/checkin-ticket` | `orders.checked_at` güncelleme; rol: admin/controller/organizer |
 
@@ -21,8 +21,8 @@ Her endpoint için kontrol: **Rol** | **RLS uyumu** | **Tablo** | **Hata mesajla
 
 ### 1. `POST /api/purchase` (Bilet satın alma)
 - **Rol:** Yok (misafir alışveriş; isteğe bağlı `Authorization` ile `user_id` bağlanır).
-- **RLS:** Service role ile RPC çağrılıyor; RPC tarafında stok/order yazımı yapılıyor. RLS bypass.
-- **Tablolar:** `tickets` (okuma), `orders` (RPC ile insert), `events` (okuma – e-posta için).
+- **RLS:** Service role; `reserve_ticket_stock` ile stok, ardından `orders` insert. RLS bypass.
+- **Tablolar:** `tickets` (okuma), `orders` (insert), `events` (okuma – e-posta için).
 - **Hatalar:** 400 (eksik alan, stok yok), 404 (bilet yok), 500 (sunucu/RPC). Mesajlar Türkçe.
 - **Durum:** Uyumlu.
 
@@ -100,16 +100,7 @@ Her endpoint için kontrol: **Rol** | **RLS uyumu** | **Tablo** | **Hata mesajla
 
 ---
 
-### 10. `GET/POST /api/news`, `PUT/DELETE /api/news/[id]`
-- **Rol:** GET herkese; POST/PUT/DELETE admin.
-- **RLS:** Service role.
-- **Tablolar:** `news`.
-- **Hatalar:** 403, 500.
-- **Durum:** Uyumlu.
-
----
-
-### 11. `POST /api/upload`
+### 10. `POST /api/upload`
 - **Rol:** Admin veya organizer.
 - **RLS:** Service role; Storage.
 - **Tablolar:** Yok (Storage bucket).
@@ -118,7 +109,7 @@ Her endpoint için kontrol: **Rol** | **RLS uyumu** | **Tablo** | **Hata mesajla
 
 ---
 
-### 12. `GET /api/user/orders`, `GET/DELETE /api/user/orders/[id]`
+### 11. `GET /api/user/orders`, `GET/DELETE /api/user/orders/[id]`
 - **Rol:** Giriş yapmış kullanıcı; sipariş sadece kendi kaydı.
 - **RLS:** Client veya anon key ile çağrılıyorsa RLS "Users see only their orders" ile uyumlu. API tarafında `user_id` / `buyer_email` eşlemesi yapılıyor.
 - **Tablolar:** `orders`, `tickets`.
@@ -127,7 +118,7 @@ Her endpoint için kontrol: **Rol** | **RLS uyumu** | **Tablo** | **Hata mesajla
 
 ---
 
-### 13. Etkinlik listesi / Bekleyen etkinlikler / Onaylama
+### 12. Etkinlik listesi / Bekleyen etkinlikler / Onaylama
 - **API yok.** İstemci doğrudan Supabase kullanıyor.
 - **RLS:**  
   - Public: `is_approved = true`.  

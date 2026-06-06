@@ -165,29 +165,6 @@ export interface Artist {
   bio_ckb?: string | null;
 }
 
-export interface News {
-  id: string;
-  title: string;
-  content: string;
-  excerpt: string;
-  summary?: string;
-  image_url?: string;
-  is_published?: boolean;
-  published_at: string;
-  created_at: string;
-  updated_at: string;
-  /** Çok dilli alanlar */
-  title_tr?: string | null;
-  title_de?: string | null;
-  title_en?: string | null;
-  content_tr?: string | null;
-  content_de?: string | null;
-  content_en?: string | null;
-  excerpt_tr?: string | null;
-  excerpt_de?: string | null;
-  excerpt_en?: string | null;
-}
-
 export interface Advertisement {
   id: string;
   title: string;

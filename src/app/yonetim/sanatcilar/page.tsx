@@ -232,7 +232,7 @@ export default function SanatcilarPage() {
         (signal) =>
           supabase
             .from("artists")
-            .select("id,name,slug,bio,image_url,show_on_artist_page,show_on_tour_page,name_tr,name_de,name_en,name_ku,name_ckb,bio_tr,bio_de,bio_en,bio_ku,bio_ckb")
+            .select("id,name,slug,bio,image_url,show_on_artist_page,name_tr,name_de,name_en,name_ku,name_ckb,bio_tr,bio_de,bio_en,bio_ku,bio_ckb")
             .eq("id", artistId)
             .abortSignal(signal)
             .single(),
