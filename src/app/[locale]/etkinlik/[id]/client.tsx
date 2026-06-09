@@ -83,6 +83,8 @@ interface EventDetailClientProps {
   locale?: Locale;
   /** Etkinlik henüz onaylanmadı (organizatör önizlemesi); bilet satışı kapalı */
   isUnapproved?: boolean;
+  /** Taslak etkinlik (yönetici önizlemesi); bilet satışı kapalı */
+  isDraft?: boolean;
   nowIso: string;
 }
 
@@ -989,8 +991,9 @@ function sidebarTicketFallbackFromCart(
   };
 }
 
-export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr", isUnapproved = false, nowIso }: EventDetailClientProps): React.ReactElement {
+export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr", isUnapproved = false, isDraft = false, nowIso }: EventDetailClientProps): React.ReactElement {
   const t = useTranslations("eventDetail");
+  const salesBlocked = isUnapproved || isDraft;
   const tCheckout = useTranslations("checkout");
   const tCat = useTranslations("categories");
   const locale = ((useLocale() as Locale) || localeProp) as Locale;
@@ -2088,7 +2091,14 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 {isExternalOnlyEvent ? t("ticketInfo") : t("ticketSelection")}
               </h2>
 
-              {isUnapproved && (
+              {isDraft && (
+                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                  <p className="font-medium">Bu etkinlik taslak olarak işaretlendi</p>
+                  <p className="mt-1 text-sm">Taslak etkinlikler ana sayfada görünmez ve bilet satışı kapalıdır. Bu sayfa yalnızca önizleme içindir.</p>
+                </div>
+              )}
+
+              {isUnapproved && !isDraft && (
                 <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
                   <p className="font-medium">Bu etkinlik onay bekliyor</p>
                   <p className="mt-1 text-sm">Yönetici onayından sonra sitede yayına alınacak ve bilet satışı açılacaktır. Bu sayfa sadece önizleme içindir.</p>
@@ -2504,7 +2514,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               </div>
                               {(() => {
                                 const seatSidebarHasCartForEvent = cartItems.some((it) => it.eventId === event.id);
-                                const blockSeatSale = isPastEvent || isUnapproved;
+                                const blockSeatSale = isPastEvent || salesBlocked;
                                 const atCartTicketCap = cartTotalTicketsCount >= maxTicketsPerOrder;
                                 /** Kotayı dolduysanız Sepete Ekle zaten anlamsız; tek CTA olarak Ödemeye Geç (çift buton gösterme). */
                                 const checkoutOnlyDueToCap =
@@ -2521,7 +2531,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (isPastEvent || isUnapproved) return;
+                                      if (isPastEvent || salesBlocked) return;
                                       const eventPayload = {
                                         eventId: event.id,
                                         eventTitle: localized.title || event.title,
@@ -2823,7 +2833,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <button
                         type="button"
                         onClick={() => {
-                          if (isPastEvent || isUnapproved || selectedPriceTicketEntries.length === 0) return;
+                          if (isPastEvent || salesBlocked || selectedPriceTicketEntries.length === 0) return;
                           addItemsBatch(
                             selectedPriceTicketEntries.map(({ ticket, count }) => ({
                               ticketId: ticket.id,
@@ -2850,7 +2860,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           setActionMessage(tCheckout("addedToCart"));
                         }}
                         disabled={
-                          isUnapproved ||
+                          salesBlocked ||
                           isPastEvent ||
                           selectedPriceTicketEntries.length === 0
                         }

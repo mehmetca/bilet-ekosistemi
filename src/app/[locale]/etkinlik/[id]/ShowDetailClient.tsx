@@ -19,6 +19,8 @@ interface ShowDetailClientProps {
   organizerDisplayName?: string | null;
   locale?: Locale;
   nowIso: string;
+  isDraft?: boolean;
+  isUnapproved?: boolean;
 }
 
 function buildEventAddressLine(event: Event, venueDisplay: string): string {
@@ -61,7 +63,7 @@ function pickBestLocalizedShowText(events: Event[], field: "title" | "descriptio
   return "";
 }
 
-export default function ShowDetailClient({ events, showSlug, organizerDisplayName = null, locale: localeProp = "tr", nowIso }: ShowDetailClientProps) {
+export default function ShowDetailClient({ events, showSlug, organizerDisplayName = null, locale: localeProp = "tr", nowIso, isDraft = false, isUnapproved = false }: ShowDetailClientProps) {
   const t = useTranslations("eventDetail");
   const tShow = useTranslations("showDetail");
   const tCat = useTranslations("categories");
@@ -177,6 +179,18 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
 
       {/* Şehir seçimi ve seanslar */}
       <div className="site-container py-10">
+        {isDraft && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+            <p className="font-medium">Bu etkinlik taslak olarak işaretlendi</p>
+            <p className="mt-1 text-sm">Taslak etkinlikler ana sayfada görünmez ve bilet satışı kapalıdır. Bu sayfa yalnızca önizleme içindir.</p>
+          </div>
+        )}
+        {isUnapproved && !isDraft && (
+          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+            <p className="font-medium">Bu etkinlik onay bekliyor</p>
+            <p className="mt-1 text-sm">Yönetici onayından sonra sitede yayına alınacak ve bilet satışı açılacaktır. Bu sayfa sadece önizleme içindir.</p>
+          </div>
+        )}
         {hasExternalTickets && (
           <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
             <h2 className="text-lg font-semibold text-blue-900 mb-2">{t("ticketInfo")}</h2>

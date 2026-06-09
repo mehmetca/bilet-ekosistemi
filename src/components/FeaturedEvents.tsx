@@ -32,8 +32,8 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
 
   const featured = [...events]
     .filter((e) => {
-      // Sadece onaylıları filtrele
-      if (String((e as any).is_approved) !== 'true') return false;
+      if (String((e as any).is_approved) !== "true") return false;
+      if ((e as Event & { is_draft?: boolean }).is_draft) return false;
       const ord = (e as Event & { homepage_featured_order?: number | null }).homepage_featured_order;
       return ord === 1 || ord === 2;
     })

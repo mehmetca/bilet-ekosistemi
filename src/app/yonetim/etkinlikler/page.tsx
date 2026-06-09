@@ -12,6 +12,21 @@ import { parseEventDescription } from "@/lib/eventMeta";
 import { formatPrice } from "@/lib/formatPrice";
 import { logAudit } from "@/lib/audit";
 
+async function revalidatePublicSiteCache() {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    await fetch("/api/admin/revalidate-public", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+  } catch {
+    /* önbellek temizliği başarısız olsa da panel işlemi tamamlansın */
+  }
+}
+
 async function withTimeout(
   requestFactory: (signal: AbortSignal) => any,
   timeoutMs = 30000,
@@ -168,6 +183,7 @@ function EtkinliklerContent() {
         .eq("id", eventId);
       if (error) throw error;
       await fetchEvents();
+      await revalidatePublicSiteCache();
     } catch (err) {
       console.error("Taslak ayarı güncellenemedi:", err);
       alert("Taslak ayarı güncellenemedi. " + (err instanceof Error ? err.message : ""));
@@ -182,6 +198,7 @@ function EtkinliklerContent() {
         .eq("id", eventId);
       if (error) throw error;
       await fetchEvents();
+      await revalidatePublicSiteCache();
       alert("Etkinlik onaylandı!");
     } catch (error) {
       console.error("Onay hatası:", error);

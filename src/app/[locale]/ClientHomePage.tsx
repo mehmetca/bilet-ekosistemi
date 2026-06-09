@@ -235,7 +235,9 @@ export default function ClientHomePage({
 
   // "Yaklaşan" listede gerçekten bitmemiş etkinlikleri göster.
   // Böylece etkinlik biter bitmez ana sayfada "biten" tarafına düşer.
-  const upcomingEvents = sortedEvents.filter((event) => !isEventPast(event));
+  const upcomingEvents = sortedEvents.filter(
+    (event) => !isEventPast(event) && !(event as Event & { is_draft?: boolean }).is_draft
+  );
   // Şehir listesi: tekrarsız, virgülden önceki kısım + büyük/küçük harf farkı birleştirilir (örn. 3x Berlin → 1)
   const cityOptions = (() => {
     const byKey = new Map<string, string>();

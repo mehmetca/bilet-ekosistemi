@@ -5,6 +5,7 @@
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
 import { eventMatchesCityRow, getMatchTerms } from "@/lib/city-event-sort";
 import type { Event, Ticket, Venue } from "@/types/database";
@@ -65,39 +66,126 @@ export function getTicketSortRank(name?: string): number {
   return 999;
 }
 
-async function fetchEventsByShowSlug(showSlug: string): Promise<Event[]> {
+function cacheKeyPart(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+export type EventLookupResult = {
+  event: Event;
+  isDraft?: boolean;
+  isUnapproved?: boolean;
+};
+
+function classifyPreviewEvent(event: Event | null | undefined): EventLookupResult | null {
+  if (!event || event.is_active === false) return null;
+  if (event.is_draft) return { event, isDraft: true };
+  if (!event.is_approved) return { event, isUnapproved: true };
+  return null;
+}
+
+async function fetchPreviewEventsByShowSlug(showSlugTrimmed: string): Promise<Event[]> {
+  try {
+    const admin = getSupabaseAdmin();
+    const previewShow = () =>
+      admin
+        .from("events")
+        .select("*")
+        .eq("is_active", true)
+        .or("is_draft.eq.true,is_approved.eq.false")
+        .order("date", { ascending: true })
+        .order("time", { ascending: true });
+
+    const { data, error } = await previewShow().eq("show_slug", showSlugTrimmed);
+    if (!error && data && data.length > 0) return data as Event[];
+
+    const { data: ciData, error: ciError } = await previewShow().ilike("show_slug", showSlugTrimmed);
+    if (!ciError && ciData && ciData.length > 0) return ciData as Event[];
+
+    return [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchEventsByShowSlug(showSlug: string, allowPreview = false): Promise<Event[]> {
   try {
     const supabase = createServerSupabase();
     const showSlugTrimmed = (showSlug || "").trim();
     if (!showSlugTrimmed) return [];
     if (UUID_REGEX.test(showSlugTrimmed)) return [];
     if (!isSafeRouteSlug(showSlugTrimmed)) return [];
-    const { data, error } = await supabase
-      .from("events")
-      .select("*")
-      .eq("show_slug", showSlugTrimmed)
-      .eq("is_active", true)
-      .eq("is_approved", true)
-      .eq("is_draft", false)
-      .order("date", { ascending: true })
-      .order("time", { ascending: true });
-    if (error || !data || data.length < 1) return [];
-    return data as Event[];
+
+    const publishedShow = () =>
+      supabase
+        .from("events")
+        .select("*")
+        .eq("is_active", true)
+        .eq("is_approved", true)
+        .eq("is_draft", false)
+        .order("date", { ascending: true })
+        .order("time", { ascending: true });
+
+    const { data, error } = await publishedShow().eq("show_slug", showSlugTrimmed);
+    if (!error && data && data.length > 0) return data as Event[];
+
+    const { data: ciData, error: ciError } = await publishedShow().ilike("show_slug", showSlugTrimmed);
+    if (!ciError && ciData && ciData.length > 0) return ciData as Event[];
+
+    if (allowPreview) return fetchPreviewEventsByShowSlug(showSlugTrimmed);
+
+    return [];
   } catch {
     return [];
   }
 }
 
-const getEventsByShowSlugCrossRequest = unstable_cache(fetchEventsByShowSlug, ["events-by-show-slug"], {
-  revalidate: DATA_CACHE_REVALIDATE.event,
-  tags: ["events"],
+export const getEventsByShowSlug = cache((showSlug: string, allowPreview = false) => {
+  if (allowPreview) return fetchEventsByShowSlug(showSlug, true);
+  return unstable_cache(
+    () => fetchEventsByShowSlug(showSlug, false),
+    ["events-by-show-slug", cacheKeyPart(showSlug)],
+    { revalidate: DATA_CACHE_REVALIDATE.event, tags: ["events"] }
+  )();
 });
 
-export const getEventsByShowSlug = cache((showSlug: string) => getEventsByShowSlugCrossRequest(showSlug));
+async function fetchPreviewEventBySlug(slugOrIdTrimmed: string): Promise<EventLookupResult | null> {
+  try {
+    const admin = getSupabaseAdmin();
 
-async function fetchEventBySlug(
-  slugOrId: string
-): Promise<{ event: Event; isUnapproved?: boolean } | null> {
+    if (UUID_REGEX.test(slugOrIdTrimmed)) {
+      const { data } = await admin
+        .from("events")
+        .select("*")
+        .eq("id", slugOrIdTrimmed)
+        .eq("is_active", true)
+        .maybeSingle();
+      return classifyPreviewEvent(data as Event | null);
+    }
+
+    const previewQuery = () =>
+      admin.from("events").select("*").eq("is_active", true).or("is_draft.eq.true,is_approved.eq.false");
+
+    const attempts = [
+      () => previewQuery().eq("slug", slugOrIdTrimmed).maybeSingle(),
+      () => previewQuery().ilike("slug", slugOrIdTrimmed).maybeSingle(),
+      () => previewQuery().eq("show_slug", slugOrIdTrimmed).maybeSingle(),
+      () => previewQuery().ilike("show_slug", slugOrIdTrimmed).maybeSingle(),
+      () => previewQuery().eq("id", slugOrIdTrimmed).maybeSingle(),
+    ];
+
+    for (const run of attempts) {
+      const { data } = await run();
+      const hit = classifyPreviewEvent(data as Event | null);
+      if (hit) return hit;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchEventBySlug(slugOrId: string, allowPreview = false): Promise<EventLookupResult | null> {
   try {
     const supabase = createServerSupabase();
     const slugOrIdTrimmed = (slugOrId || "").trim();
@@ -116,15 +204,7 @@ async function fetchEventBySlug(
         .single();
 
       if (!idError && idData) return { event: idData as Event };
-
-      const { data: unapproved } = await supabase
-        .from("events")
-        .select("*")
-        .eq("id", slugOrIdTrimmed)
-        .eq("is_active", true)
-        .single();
-      if (unapproved) return { event: unapproved as Event, isUnapproved: true };
-
+      if (allowPreview) return fetchPreviewEventBySlug(slugOrIdTrimmed);
       return null;
     }
 
@@ -139,7 +219,6 @@ async function fetchEventBySlug(
 
     if (!error && data) return { event: data as Event };
 
-    // case-insensitive fallback (URL slug formatı tutmazsa)
     const { data: ciData, error: ciError } = await supabase
       .from("events")
       .select("*")
@@ -150,6 +229,28 @@ async function fetchEventBySlug(
       .maybeSingle();
 
     if (!ciError && ciData) return { event: ciData as Event };
+
+    const { data: showData, error: showError } = await supabase
+      .from("events")
+      .select("*")
+      .eq("show_slug", slugOrIdTrimmed)
+      .eq("is_active", true)
+      .eq("is_approved", true)
+      .eq("is_draft", false)
+      .maybeSingle();
+
+    if (!showError && showData) return { event: showData as Event };
+
+    const { data: showCiData, error: showCiError } = await supabase
+      .from("events")
+      .select("*")
+      .ilike("show_slug", slugOrIdTrimmed)
+      .eq("is_active", true)
+      .eq("is_approved", true)
+      .eq("is_draft", false)
+      .maybeSingle();
+
+    if (!showCiError && showCiData) return { event: showCiData as Event };
 
     const { data: idData, error: idError } = await supabase
       .from("events")
@@ -162,6 +263,8 @@ async function fetchEventBySlug(
 
     if (!idError && idData) return { event: idData as Event };
 
+    if (allowPreview) return fetchPreviewEventBySlug(slugOrIdTrimmed);
+
     return null;
   } catch (err) {
     console.error("Fetch event error:", err);
@@ -169,12 +272,14 @@ async function fetchEventBySlug(
   }
 }
 
-const getEventBySlugCrossRequest = unstable_cache(fetchEventBySlug, ["event-by-slug"], {
-  revalidate: DATA_CACHE_REVALIDATE.event,
-  tags: ["events"],
+export const getEventBySlug = cache((slugOrId: string, allowPreview = false) => {
+  if (allowPreview) return fetchEventBySlug(slugOrId, true);
+  return unstable_cache(
+    () => fetchEventBySlug(slugOrId, false),
+    ["event-by-slug", cacheKeyPart(slugOrId)],
+    { revalidate: DATA_CACHE_REVALIDATE.event, tags: ["events"] }
+  )();
 });
-
-export const getEventBySlug = cache((slugOrId: string) => getEventBySlugCrossRequest(slugOrId));
 
 async function fetchVenue(venueId: string | null | undefined): Promise<Venue | null> {
   if (!venueId) return null;

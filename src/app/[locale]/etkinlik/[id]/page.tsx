@@ -10,6 +10,7 @@ import {
   getEventTickets,
   getOrganizerDisplayName,
 } from "@/lib/events-server";
+import { isServerAdmin } from "@/lib/server-admin";
 import { getSiteUrl } from "@/lib/site-url";
 import { routing } from "@/i18n/routing";
 import { getLocalizedEvent, type Locale } from "@/lib/i18n-content";
@@ -94,9 +95,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function EventDetailPage({ params }: PageProps) {
   const { locale = "tr", id } = await params;
   const nowIso = new Date().toISOString();
+  const allowPreview = await isServerAdmin();
 
   // show_slug ile gruplanmış tur/gösteri sayfası (1+ etkinlik; tek etkinlikte de sayfa görünsün)
-  const showEvents = await getEventsByShowSlug(id);
+  const showEvents = await getEventsByShowSlug(id, allowPreview);
   if (showEvents.length >= 1) {
     const firstEvent = showEvents[0] as { created_by_user_id?: string; organizer_display_name?: string | null };
     const lookedUp = await getOrganizerDisplayName(firstEvent.created_by_user_id);
@@ -125,6 +127,8 @@ export default async function EventDetailPage({ params }: PageProps) {
       primaryEvent.venue_id != null ? await getVenue(primaryEvent.venue_id) : null;
     const eventPath = eventPathFromId(id, showEvents, primaryEvent);
     const structuredData = buildEventJsonLd(primaryEvent, venue, locale, eventPath, organizerDisplayName);
+    const isDraft = !!primaryEvent.is_draft;
+    const isUnapproved = !primaryEvent.is_approved && !isDraft;
 
     return (
       <>
@@ -138,14 +142,16 @@ export default async function EventDetailPage({ params }: PageProps) {
           organizerDisplayName={organizerDisplayName}
           locale={locale as Locale}
           nowIso={nowIso}
+          isDraft={isDraft}
+          isUnapproved={isUnapproved}
         />
       </>
     );
   }
 
-  const slugResult = await getEventBySlug(id);
+  const slugResult = await getEventBySlug(id, allowPreview);
   if (!slugResult) notFound();
-  const { event, isUnapproved } = slugResult;
+  const { event, isUnapproved, isDraft } = slugResult;
 
   const [tickets, venue, lookedUpOrganizer] = await Promise.all([
     getEventTickets(event.id),
@@ -173,6 +179,7 @@ export default async function EventDetailPage({ params }: PageProps) {
         organizerDisplayName={organizerDisplayName}
         locale={locale as Locale}
         isUnapproved={isUnapproved}
+        isDraft={isDraft}
         nowIso={nowIso}
       />
     </>
