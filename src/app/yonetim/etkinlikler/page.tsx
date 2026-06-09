@@ -171,6 +171,7 @@ function EtkinliklerContent() {
         .eq("id", eventId);
       if (error) throw error;
       await fetchEvents();
+      await revalidatePublicSiteCache();
     } catch (err) {
       console.error("Öne çıkan ayarı güncellenemedi:", err);
       alert("Öne çıkan ayarı güncellenemedi. " + (err instanceof Error ? err.message : ""));

@@ -6,7 +6,7 @@ import { getHomeSliderAds } from "@/lib/home-slider-ads";
 import type { Event } from "@/types/database";
 
 const HOME_EVENTS_COLUMNS =
-  "id,title,slug,date,time,venue,location,image_url,category,price_from,currency,created_at,is_active,is_approved,is_draft,title_tr,title_de,title_en,title_ku,title_ckb,venue_tr,venue_de,venue_en,show_slug,venues(city)";
+  "id,title,slug,date,time,venue,location,image_url,category,price_from,currency,created_at,is_active,is_approved,is_draft,homepage_featured_order,title_tr,title_de,title_en,title_ku,title_ckb,venue_tr,venue_de,venue_en,show_slug,venues(city)";
 
 const HOME_EVENTS_LIMIT = 72;
 
