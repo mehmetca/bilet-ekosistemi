@@ -208,10 +208,10 @@ export default function ClientHomePage({
     }
   }, []);
 
-  // SSR verisi varken mount'ta tekrar Supabase çağırma; bfcache dönüşünde hafif yenile
+  // SSR önbelleği taslak değişiminden hemen sonra güncel olmayabilir; mount'ta canlı veri çek.
   useEffect(() => {
     isMountedRef.current = true;
-    if (initialEvents.length === 0) fetchData();
+    fetchData();
     const handlePageShow = (e: PageTransitionEvent) => {
       if (e.persisted) fetchData();
     };
@@ -220,7 +220,7 @@ export default function ClientHomePage({
       isMountedRef.current = false;
       window.removeEventListener("pageshow", handlePageShow);
     };
-  }, [fetchData, initialEvents.length]);
+  }, [fetchData]);
 
   const isEventPast = (event: Event) => isEventPastByLocalDateTime(event.date, event.time);
 

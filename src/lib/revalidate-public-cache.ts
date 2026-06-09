@@ -9,6 +9,7 @@ export function revalidatePublicEventCaches(): void {
   revalidateTag("sitemap");
 
   for (const locale of routing.locales) {
+    revalidatePath(`/${locale}`, "layout");
     revalidatePath(`/${locale}`, "page");
     revalidatePath(`/${locale}/arama`, "page");
     revalidatePath(`/${locale}/takvim`, "page");

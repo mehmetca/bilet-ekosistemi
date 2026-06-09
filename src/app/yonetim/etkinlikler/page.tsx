@@ -18,12 +18,15 @@ async function revalidatePublicSiteCache() {
       data: { session },
     } = await supabase.auth.getSession();
     if (!session?.access_token) return;
-    await fetch("/api/admin/revalidate-public", {
+    const res = await fetch("/api/admin/revalidate-public", {
       method: "POST",
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
-  } catch {
-    /* önbellek temizliği başarısız olsa da panel işlemi tamamlansın */
+    if (!res.ok) {
+      console.warn("Ana sayfa önbelleği temizlenemedi:", res.status);
+    }
+  } catch (err) {
+    console.warn("Ana sayfa önbelleği temizlenemedi:", err);
   }
 }
 

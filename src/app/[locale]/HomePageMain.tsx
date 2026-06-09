@@ -6,6 +6,9 @@ type HomePageMainProps = {
   shell: HomeShellData;
 };
 
+/** Taslak/yayın değişimleri önbelleğe takılmasın; liste her istekte taze çekilsin. */
+export const dynamic = "force-dynamic";
+
 /** Etkinlik listesi — hero sonrası stream; mobil TTFB/LCP için shell ayrı beklenir. */
 export default async function HomePageMain({ locale, shell }: HomePageMainProps) {
   let events: Awaited<ReturnType<typeof getHomeEvents>> = [];
