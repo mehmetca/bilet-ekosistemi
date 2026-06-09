@@ -43,8 +43,8 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
     const result: Event[] = [];
 
     for (const event of events) {
-      // Sadece onaylanmış (true) etkinlikleri slider'da göster, admin ise tümünü göster
-      if (!isAdmin && String((event as any).is_approved) !== 'true') continue;
+      if ((event as Event & { is_draft?: boolean }).is_draft) continue;
+      if (!isAdmin && String((event as any).is_approved) !== "true") continue;
 
       const key = getShowKey(event);
       const count = countByKey.get(key) || 0;

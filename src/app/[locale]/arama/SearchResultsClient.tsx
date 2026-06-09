@@ -8,6 +8,7 @@ import { formatEventDateWithMonth, isEventPastByLocalDateTime } from "@/lib/date
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import type { Event } from "@/types/database";
+import { isEventPubliclyVisible } from "@/lib/event-visibility";
 
 type Props = {
   initialQuery: string;
@@ -93,7 +94,9 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
   })();
 
   const upcomingEvents = useMemo(() => {
-    return (events || []).filter((event) => eventDateISO(event) >= todayIso);
+    return (events || []).filter(
+      (event) => eventDateISO(event) >= todayIso && isEventPubliclyVisible(event as Event & { is_active?: boolean })
+    );
   }, [events, todayIso]);
 
   const searchable = useMemo(() => {

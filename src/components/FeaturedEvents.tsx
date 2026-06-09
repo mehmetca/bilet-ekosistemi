@@ -2,6 +2,7 @@
 
 import { Link } from "@/i18n/navigation";
 import type { Event } from "@/types/database";
+import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import type { Locale } from "@/lib/i18n-content";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
@@ -32,8 +33,7 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
 
   const featured = [...events]
     .filter((e) => {
-      if (String((e as any).is_approved) !== "true") return false;
-      if ((e as Event & { is_draft?: boolean }).is_draft) return false;
+      if (!isEventPubliclyVisible(e as Event & { is_active?: boolean })) return false;
       const ord = (e as Event & { homepage_featured_order?: number | null }).homepage_featured_order;
       return ord === 1 || ord === 2;
     })

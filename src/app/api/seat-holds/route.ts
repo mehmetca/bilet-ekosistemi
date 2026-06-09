@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { CART_RESERVATION_SECONDS } from "@/lib/cart-reservation";
+import { isEventPubliclyVisible } from "@/lib/event-visibility";
 
 export const dynamic = "force-dynamic";
 
@@ -82,6 +83,15 @@ export async function POST(req: NextRequest) {
     }
 
     const userId = await getUserIdFromRequest(req, supabase);
+    const { data: eventRow } = await supabase
+      .from("events")
+      .select("is_active, is_approved, is_draft")
+      .eq("id", eventId)
+      .maybeSingle();
+    if (!eventRow || !isEventPubliclyVisible(eventRow)) {
+      return NextResponse.json({ ok: false, error: "Bu etkinlik satışa açık değil." }, { status: 403 });
+    }
+
     // Login kullanicilarinda hold sahipligi hesap bazli olsun; tarayici session id'si ile devredilmesin.
     const effectiveSessionId = userId ? null : (sessionId ?? null);
 

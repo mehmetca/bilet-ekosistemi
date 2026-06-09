@@ -31,6 +31,7 @@ import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
 import { sortCitiesByUpcomingEventCount } from "@/lib/city-event-sort";
 import { resolvePublicImageUrl } from "@/lib/external-image";
+import { isEventPubliclyVisible } from "@/lib/event-visibility";
 
 function eventDateISO(event: Event): string {
   const d = String(event.date ?? "");
@@ -236,7 +237,7 @@ export default function ClientHomePage({
   // "Yaklaşan" listede gerçekten bitmemiş etkinlikleri göster.
   // Böylece etkinlik biter bitmez ana sayfada "biten" tarafına düşer.
   const upcomingEvents = sortedEvents.filter(
-    (event) => !isEventPast(event) && !(event as Event & { is_draft?: boolean }).is_draft
+    (event) => !isEventPast(event) && isEventPubliclyVisible(event as Event & { is_active?: boolean })
   );
   // Şehir listesi: tekrarsız, virgülden önceki kısım + büyük/küçük harf farkı birleştirilir (örn. 3x Berlin → 1)
   const cityOptions = (() => {

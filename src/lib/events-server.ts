@@ -384,7 +384,7 @@ async function fetchEventsForCalendar(): Promise<Event[]> {
 export async function getEventsForCalendar(): Promise<Event[]> {
   return unstable_cache(fetchEventsForCalendar, ["events-calendar"], {
     revalidate: DATA_CACHE_REVALIDATE.calendar,
-    tags: ["events-calendar"],
+    tags: ["events", "events-calendar"],
   })();
 }
 
@@ -465,7 +465,7 @@ export async function getEventsForCity(
     ["events-city", citySlug],
     {
       revalidate: DATA_CACHE_REVALIDATE.city,
-      tags: ["events-city", `city-${citySlug}`],
+      tags: ["events", "events-city", `city-${citySlug}`],
     }
   )();
 }

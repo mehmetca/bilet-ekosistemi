@@ -236,17 +236,18 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                   const cityEvents = displayEvents.filter((e) => getEventCityLabel(e) === city);
                   if (cityEvents.length === 0) return null;
                   return (
-                    <CityEventsSection
-                      key={city}
-                      city={city}
-                      showTitle={localized.title || firstEvent.title}
-                      events={cityEvents}
-                      organizerDisplayName={organizerDisplayName}
-                      locale={locale}
-                      t={t}
-                      tShow={tShow}
-                      renderNow={renderNow}
-                    />
+                  <CityEventsSection
+                    key={city}
+                    city={city}
+                    showTitle={localized.title || firstEvent.title}
+                    events={cityEvents}
+                    organizerDisplayName={organizerDisplayName}
+                    locale={locale}
+                    t={t}
+                    tShow={tShow}
+                    renderNow={renderNow}
+                    salesBlocked={isDraft || isUnapproved}
+                  />
                   );
                 })
               : (
@@ -259,6 +260,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                   t={t}
                   tShow={tShow}
                   renderNow={renderNow}
+                  salesBlocked={isDraft || isUnapproved}
                 />
               )}
           </div>
@@ -287,6 +289,7 @@ function CityEventsSection({
   t,
   tShow,
   renderNow,
+  salesBlocked = false,
 }: {
   city: string;
   showTitle: string;
@@ -296,6 +299,7 @@ function CityEventsSection({
   t: (key: string, values?: Record<string, string | number>) => string;
   tShow: (key: string, values?: Record<string, string>) => string;
   renderNow: Date;
+  salesBlocked?: boolean;
 }) {
   const cityHeadlineTitle = formatCityTicketsTitle(showTitle, city, locale);
   return (
@@ -356,9 +360,9 @@ function CityEventsSection({
                     {price > 0 ? `${t("from")} ${formatPrice(price, event.currency)}` : t("comingSoon")}
                   </p>
                 </div>
-                {isPast ? (
+                {isPast || salesBlocked ? (
                   <span className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-200 px-6 py-3 font-semibold text-slate-500 cursor-not-allowed sm:ml-auto">
-                    {t("eventEnded")}
+                    {isPast ? t("eventEnded") : t("comingSoon")}
                   </span>
                 ) : (
                   <NextLink

@@ -12,6 +12,7 @@ import { getSiteUrl } from "@/lib/site-url";
 import { getStripe } from "@/lib/stripe-server";
 import type { TicketType } from "@/types/database";
 import { planLabelsMatchTicketCatalogName, shortenTicketDisplayName } from "@/lib/ticket-seating-match";
+import { isEventPubliclyVisible } from "@/lib/event-visibility";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -1063,12 +1064,12 @@ export async function POST(request: NextRequest) {
     // Sadece onaylanmış etkinliklerde bilet satışı; otomatik koltuk ataması için seating_plan_id gerekir
     const { data: eventRow } = await supabase
       .from("events")
-      .select("id, is_approved, seating_plan_id, checkout_processing_fee, currency")
+      .select("id, is_active, is_approved, is_draft, seating_plan_id, checkout_processing_fee, currency")
       .eq("id", ticket.event_id)
       .single();
-    if (!eventRow || eventRow.is_approved !== true) {
+    if (!eventRow || !isEventPubliclyVisible(eventRow)) {
       return NextResponse.json(
-        { success: false, message: "Bu etkinlik henüz onaylanmadığı için bilet satın alınamaz." },
+        { success: false, message: "Bu etkinlik satışa açık değil." },
         { status: 403 }
       );
     }

@@ -31,7 +31,10 @@ export default function EventCalendar({ events }: EventCalendarProps) {
   // Tarihe göre filtrele
   useEffect(() => {
     // Sadece onaylı (is_approved: true) olanları göster, admin ise tümünü göster
-    let filtered = events.filter(event => isAdmin || String((event as any).is_approved) === 'true');
+    let filtered = events.filter((event) => {
+      if ((event as Event & { is_draft?: boolean }).is_draft) return false;
+      return isAdmin || String((event as any).is_approved) === "true";
+    });
 
     // Kategori filtresi
     if (selectedCategory !== "all") {
