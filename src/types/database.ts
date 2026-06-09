@@ -18,6 +18,8 @@ export interface Event {
   image_url?: string;
   category: EventCategory;
   is_active: boolean;
+  is_approved?: boolean;
+  is_draft?: boolean;
   slug?: string;
   /** Tur/gösteri gruplaması - aynı show_slug'a sahip etkinlikler tek sayfada */
   show_slug?: string | null;
