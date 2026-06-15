@@ -1,18 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { sendControllerGuideEmail } from "@/lib/send-controller-guide-email";
-
-function serviceSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase env missing");
-  return createClient(url, key);
-}
 
 async function getAuthedUser(request: NextRequest) {
   const token = request.headers.get("authorization")?.replace("Bearer ", "").trim();
   if (!token) return null;
-  const supabase = serviceSupabase();
+  const supabase = getSupabaseAdmin();
   const {
     data: { user },
   } = await supabase.auth.getUser(token);
@@ -23,7 +16,7 @@ export async function GET(request: NextRequest) {
   try {
     const user = await getAuthedUser(request);
     if (!user) return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
-    const supabase = serviceSupabase();
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("controller_requests")
       .select("*")
@@ -48,7 +41,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Ad Soyad ve telefon zorunludur" }, { status: 400 });
     }
 
-    const supabase = serviceSupabase();
+    const supabase = getSupabaseAdmin();
     const { error } = await supabase.from("controller_requests").upsert(
       {
         user_id: user.id,

@@ -2,7 +2,10 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 import { authCookieDomainFromHost } from "@/lib/auth-cookie-domain";
 
-// Server-side client (Server Components, Server Actions, Route Handlers)
+/**
+ * Çerez tabanlı oturum için Supabase istemcisi — istek başına yeni örnek gerekir
+ * (kullanıcı çerezleri isteğe özeldir; singleton yapılamaz).
+ */
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
   const headerStore = await headers();

@@ -7,6 +7,9 @@ export function revalidatePublicEventCaches(): void {
   revalidateTag("events");
   revalidateTag("events-calendar");
   revalidateTag("sitemap");
+  revalidateTag("artists");
+  revalidateTag("venues");
+  revalidateTag("advertisements");
 
   for (const locale of routing.locales) {
     revalidatePath(`/${locale}`, "layout");
@@ -14,4 +17,13 @@ export function revalidatePublicEventCaches(): void {
     revalidatePath(`/${locale}/arama`, "page");
     revalidatePath(`/${locale}/takvim`, "page");
   }
+}
+
+export function revalidateAdvertisementCaches(): void {
+  revalidateTag("advertisements");
+  revalidateTag("home");
+}
+
+export function revalidateSiteSettingsCache(): void {
+  revalidateTag("site-settings");
 }

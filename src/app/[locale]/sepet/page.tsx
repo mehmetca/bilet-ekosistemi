@@ -7,6 +7,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
 import { useCart } from "@/context/CartContext";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import { fetchUserProfile } from "@/lib/user-profile-client";
 import { supabase } from "@/lib/supabase-client";
 import Header from "@/components/Header";
 import { collapseDuplicateAdjacentTicketLabel } from "@/lib/collapse-duplicate-ticket-label";
@@ -113,28 +114,15 @@ export default function CheckoutPage() {
     if (user.email) setBuyerEmail((prev) => (prev === "" ? user.email : prev));
     async function loadProfile() {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token) return;
-        const res = await fetch("/api/profile", {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (res.ok) {
-          const profile = (await res.json()) as {
-            first_name?: string | null;
-            last_name?: string | null;
-            email?: string | null;
-            address?: string | null;
-            plz?: string | null;
-            city?: string | null;
-          };
-          if (profile) {
-            const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
-            if (fullName) setBuyerName((prev) => (prev === "" ? fullName : prev));
-            if (profile.email) setBuyerEmail((prev) => (prev === "" ? profile.email! : prev));
-            if (profile.address) setBuyerAddress((prev) => (prev === "" ? profile.address! : prev));
-            if (profile.plz) setBuyerPlz((prev) => (prev === "" ? profile.plz! : prev));
-            if (profile.city) setBuyerCity((prev) => (prev === "" ? profile.city! : prev));
-          }
+        if (!user?.id) return;
+        const profile = await fetchUserProfile(user.id);
+        if (profile) {
+          const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
+          if (fullName) setBuyerName((prev) => (prev === "" ? fullName : prev));
+          if (profile.email) setBuyerEmail((prev) => (prev === "" ? profile.email! : prev));
+          if (profile.address) setBuyerAddress((prev) => (prev === "" ? profile.address! : prev));
+          if (profile.plz) setBuyerPlz((prev) => (prev === "" ? profile.plz! : prev));
+          if (profile.city) setBuyerCity((prev) => (prev === "" ? profile.city! : prev));
         }
       } catch {
         /* ignore */

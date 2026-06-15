@@ -95,9 +95,8 @@ async function fetchHomeEvents(_locale: string): Promise<Event[]> {
 }
 
 export async function getHomeEvents(locale: string): Promise<Event[]> {
-  // Ana sayfa listesi taslak değişimlerine duyarlı; kısa TTL + tag ile anında yenilenebilir.
   return unstable_cache(() => fetchHomeEvents(locale), ["home-events", locale], {
-    revalidate: 60,
+    revalidate: DATA_CACHE_REVALIDATE.home,
     tags: ["home", "events"],
   })();
 }

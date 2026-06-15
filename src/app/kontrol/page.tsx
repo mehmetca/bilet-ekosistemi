@@ -7,6 +7,11 @@ import { CheckCircle, XCircle, Calendar, MapPin, User, LogOut, ShieldCheck, Lock
 import { checkTicket, type CheckResult } from "@/app/kontrol/actions";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
+import {
+  fetchUserProfile,
+  updateUserPassword,
+  upsertUserProfile,
+} from "@/lib/user-profile-client";
 
 type ProfileForm = {
   first_name: string;
@@ -21,7 +26,6 @@ export default function KontrolPage() {
   const codeParam = searchParams.get("code");
   const { user, loading: authLoading, isController, isAdmin, userRole, signOut } = useSimpleAuth();
   const isStaff = isController || isAdmin;
-  const [resolvedRole, setResolvedRole] = useState<"admin" | "controller" | "organizer" | null>(null);
 
   const [activeTab, setActiveTab] = useState<"scan" | "profile" | "password">("scan");
   const [manualCode, setManualCode] = useState(codeParam || "");
@@ -44,9 +48,7 @@ export default function KontrolPage() {
   });
 
   const canShowDashboard =
-    !codeParam &&
-    !!user &&
-    (isStaff || userRole === "controller" || userRole === "admin" || resolvedRole === "controller" || resolvedRole === "admin");
+    !codeParam && !!user && !authLoading && (isStaff || userRole === "controller" || userRole === "admin");
 
   useEffect(() => {
     if (!codeParam || !codeParam.trim()) {
@@ -72,20 +74,8 @@ export default function KontrolPage() {
     (async () => {
       setProfileLoading(true);
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) return;
-        const res = await fetch("/api/profile", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const profile = (await res.json()) as {
-          first_name?: string | null;
-          last_name?: string | null;
-          email?: string | null;
-          telefon?: string | null;
-          handynummer?: string | null;
-        } | null;
+        if (!user?.id) return;
+        const profile = await fetchUserProfile(user.id);
         if (cancelled) return;
         setProfileForm({
           first_name: profile?.first_name || "",
@@ -101,30 +91,7 @@ export default function KontrolPage() {
     return () => {
       cancelled = true;
     };
-  }, [canShowDashboard, user?.email]);
-
-  useEffect(() => {
-    if (codeParam || !user || isStaff || userRole) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) return;
-        const res = await fetch("/api/auth/role", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) return;
-        const data = (await res.json()) as { role?: "admin" | "controller" | "organizer" | null };
-        if (!cancelled) setResolvedRole(data.role ?? null);
-      } catch {
-        /* ignore */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [codeParam, user, isStaff, userRole]);
+  }, [canShowDashboard, user?.id, user?.email]);
 
   const resultPanel = useMemo(() => {
     if (!result) return null;
@@ -196,25 +163,11 @@ export default function KontrolPage() {
     setProfileErr(null);
     setProfileMsg(null);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
+      if (!user) {
         setProfileErr("Oturum doğrulanamadı.");
         return;
       }
-      const res = await fetch("/api/profile", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(profileForm),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setProfileErr(data.error || "Bilgiler kaydedilemedi.");
-        return;
-      }
+      await upsertUserProfile(user, profileForm);
       setProfileMsg("Bilgiler güncellendi.");
     } finally {
       setProfileSaving(false);
@@ -236,24 +189,11 @@ export default function KontrolPage() {
         return;
       }
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) {
+      if (!session) {
         setPwdErr("Oturum doğrulanamadı.");
         return;
       }
-      const res = await fetch("/api/profile/password", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ password: password.newPassword, passwordConfirm: password.confirm }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setPwdErr(data.error || "Şifre güncellenemedi.");
-        return;
-      }
+      await updateUserPassword(password.newPassword);
       setPassword({ newPassword: "", confirm: "" });
       setPwdMsg("Şifre güncellendi.");
     } finally {

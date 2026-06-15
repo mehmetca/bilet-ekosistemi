@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "@/i18n/navigation";
 import {
   Calendar,
@@ -29,7 +29,6 @@ const AnaHeroSlider = dynamic(() => import("@/components/AnaHeroSlider"), {
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
-import { sortCitiesByUpcomingEventCount } from "@/lib/city-event-sort";
 import { resolvePublicImageUrl } from "@/lib/external-image";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 
@@ -165,62 +164,13 @@ export default function ClientHomePage({
   const [events, setEvents] = useState<Event[]>(initialEvents);
   const [cities, setCities] = useState<City[]>(initialCities);
   const cityScrollRef = useRef<HTMLDivElement>(null);
-  const isMountedRef = useRef(true);
   const fallbackImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
 
-  // Sayfa geri dönüşünde (pageshow) hafif yenileme - ilk yükleme server'dan gelir
-  const fetchData = useCallback(async () => {
-    const { supabase } = await import("@/lib/supabase-client");
-    try {
-      const [eventsRes, citiesRes] = await Promise.all([
-        supabase
-          .from("events")
-          .select("*, venues(city)")
-          .eq("is_active", true)
-          .eq("is_approved", true)
-          .eq("is_draft", false)
-          .gte("date", getLocalISODateString(new Date()))
-          .order("date", { ascending: true })
-          .order("time", { ascending: true }),
-        supabase
-          .from("cities")
-          .select("id, slug, name_tr, name_de, name_en, image_url, sort_order")
-          .eq("is_active", true)
-          .order("sort_order", { ascending: true }),
-      ]);
-      if (isMountedRef.current) {
-        if (!eventsRes.error && Array.isArray(eventsRes.data)) {
-          const raw = eventsRes.data as Array<Record<string, unknown>>;
-          setEvents(
-            raw.map(({ venues: _v, ...rest }) => rest) as unknown as Event[]
-          );
-        }
-        if (!citiesRes.error && Array.isArray(citiesRes.data)) {
-          const rawEv = (!eventsRes.error && Array.isArray(eventsRes.data)
-            ? (eventsRes.data as Record<string, unknown>[])
-            : []) as Record<string, unknown>[];
-          setCities(sortCitiesByUpcomingEventCount(citiesRes.data, rawEv));
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
-  // SSR önbelleği taslak değişiminden hemen sonra güncel olmayabilir; mount'ta canlı veri çek.
   useEffect(() => {
-    isMountedRef.current = true;
-    fetchData();
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted) fetchData();
-    };
-    window.addEventListener("pageshow", handlePageShow);
-    return () => {
-      isMountedRef.current = false;
-      window.removeEventListener("pageshow", handlePageShow);
-    };
-  }, [fetchData]);
+    setEvents(initialEvents);
+    setCities(initialCities);
+  }, [initialEvents, initialCities]);
 
   const isEventPast = (event: Event) => isEventPastByLocalDateTime(event.date, event.time);
 

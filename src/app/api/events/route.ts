@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 
+export const revalidate = 1800;
+
 const COLUMNS =
   "id,title,slug,date,time,venue,location,image_url,category,price_from,currency,created_at,is_active,is_approved,is_draft,homepage_featured_order,title_tr,title_de,title_en,title_ku,title_ckb,venue_tr,venue_de,venue_en,show_slug";
 
@@ -32,7 +34,11 @@ export async function GET() {
         { status: 500 }
       );
     }
-    return NextResponse.json(data ?? []);
+    return NextResponse.json(data ?? [], {
+      headers: {
+        "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
+      },
+    });
   } catch (e) {
     console.error("Events API exception:", e);
     return NextResponse.json(

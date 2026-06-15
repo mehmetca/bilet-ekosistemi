@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import PanelLayout from "@/components/PanelLayout";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { useTranslations } from "next-intl";
-import { supabase } from "@/lib/supabase-client";
+import { ensureUserProfile } from "@/lib/user-profile-client";
 import BiletlerimSection from "@/components/BiletlerimSection";
 import { LogOut } from "lucide-react";
 
@@ -34,20 +34,7 @@ export default function PanelPage() {
   async function ensureProfile() {
     if (!user) return;
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const headers: Record<string, string> = {
-        Authorization: `Bearer ${session?.access_token || ""}`,
-      };
-      const getRes = await fetch("/api/profile", { headers });
-      if (!getRes.ok) return;
-      const existing = (await getRes.json()) as { kundennummer?: string } | null;
-      if (existing?.kundennummer) return;
-      headers["Content-Type"] = "application/json";
-      await fetch("/api/profile", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({ email: user.email }),
-      });
+      await ensureUserProfile(user, { email: user.email || undefined });
     } catch (e) {
       console.error("ensureProfile:", e);
     }

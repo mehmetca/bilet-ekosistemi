@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { revalidateAdvertisementCaches } from "@/lib/revalidate-public-cache";
 import { requireAdmin } from "@/lib/api-auth";
 
 const ADVERTISEMENT_FIELDS = [
@@ -60,6 +61,7 @@ export async function PUT(
           .maybeSingle();
 
         if (!retry.error && retry.data) {
+          revalidateAdvertisementCaches();
           return NextResponse.json(retry.data);
         }
       }
@@ -77,6 +79,7 @@ export async function PUT(
       );
     }
 
+    revalidateAdvertisementCaches();
     return NextResponse.json(data);
   } catch {
     return NextResponse.json({ error: "Sunucu hatasi" }, { status: 500 });
@@ -102,6 +105,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Reklam silinemedi" }, { status: 500 });
     }
 
+    revalidateAdvertisementCaches();
     return NextResponse.json({ success: true });
   } catch {
     return NextResponse.json({ error: "Sunucu hatasi" }, { status: 500 });

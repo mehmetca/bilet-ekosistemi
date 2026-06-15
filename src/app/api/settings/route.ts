@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { unstable_cache } from "next/cache";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
+import { revalidateSiteSettingsCache } from "@/lib/revalidate-public-cache";
+
+export const revalidate = 3600;
 
 const DEFAULT_MAX_TICKET_QUANTITY = 10;
 const DEFAULT_SETTINGS = {
@@ -50,28 +55,44 @@ function normalizeSettings(rows: SiteSettingRow[] | null | undefined): SettingsR
 }
 
 /** Herkese açık: maksimum bilet adedi vb. ayarları döner */
+async function fetchPublicSettings(): Promise<SettingsResponse> {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("key, value")
+    .in("key", [
+      "site_name",
+      "site_description",
+      "contact_email",
+      "max_ticket_quantity",
+      "enable_notifications",
+      "maintenance_mode",
+    ]);
+
+  if (error) return DEFAULT_SETTINGS;
+  return normalizeSettings(data as SiteSettingRow[]);
+}
+
+const getPublicSettingsCached = unstable_cache(fetchPublicSettings, ["public-site-settings"], {
+  revalidate: DATA_CACHE_REVALIDATE.settings,
+  tags: ["site-settings"],
+});
+
 export async function GET() {
   try {
-    const supabase = createServerSupabase();
-    const { data, error } = await supabase
-      .from("site_settings")
-      .select("key, value")
-      .in("key", [
-        "site_name",
-        "site_description",
-        "contact_email",
-        "max_ticket_quantity",
-        "enable_notifications",
-        "maintenance_mode",
-      ]);
-
-    if (error) {
-      return NextResponse.json(DEFAULT_SETTINGS, { status: 200 });
-    }
-
-    return NextResponse.json(normalizeSettings(data as SiteSettingRow[]));
+    const settings = await getPublicSettingsCached();
+    return NextResponse.json(settings, {
+      headers: {
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200",
+      },
+    });
   } catch {
-    return NextResponse.json(DEFAULT_SETTINGS, { status: 200 });
+    return NextResponse.json(DEFAULT_SETTINGS, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=7200",
+      },
+    });
   }
 }
 
@@ -84,15 +105,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Yetkisiz" }, { status: 401 });
     }
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !serviceKey) {
-      return NextResponse.json({ error: "Sunucu yapılandırması eksik" }, { status: 500 });
-    }
-
-    const supabase = createClient(url, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const supabase = getSupabaseAdmin();
 
     const {
       data: { user },
@@ -163,6 +176,8 @@ export async function POST(request: NextRequest) {
     if (upsertError) {
       return NextResponse.json({ error: upsertError.message }, { status: 500 });
     }
+
+    revalidateSiteSettingsCache();
 
     return NextResponse.json({
       success: true,

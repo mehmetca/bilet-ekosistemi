@@ -1,40 +1,20 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createSupabaseBrowserClient } from "./supabase-browser-client";
+import { createServerSupabase } from "./supabase-server";
 
 /**
- * Tarayıcıda: `createSupabaseBrowserClient()` (PKCE + çerez, @supabase/ssr).
- * `giris/page.tsx` doğrudan aynı modülü import eder; davranış aynı singleton’dır, localStorage kullanılmaz.
- * Eski localStorage tabanlı ikinci createClient kaldırıldı — aksi halde
- * "Multiple GoTrueClient instances" ve çıkış/yönlendirme sorunları oluşuyordu.
+ * Tarayıcıda: `createSupabaseBrowserClient()` (PKCE + çerez, @supabase/ssr) — singleton.
+ * Sunucuda (SSR import): `createServerSupabase()` — singleton.
+ * İstek başına çerezli oturum için `createSupabaseServerClient()` kullanın.
  */
-let _serverAnon: SupabaseClient | null = null;
-
 function getSupabaseClient(): SupabaseClient {
   if (typeof window !== "undefined") {
     return createSupabaseBrowserClient() as unknown as SupabaseClient;
   }
-
-  if (_serverAnon) return _serverAnon;
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) {
-    throw new Error(
-      "supabaseUrl is required. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel Environment Variables."
-    );
-  }
-  _serverAnon = createClient(url, key, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-    db: { schema: "public" },
-    global: { headers: { "X-Client-Info": "bilet-ekosistemi/ssr-anon" } },
-  });
-  return _serverAnon;
+  return createServerSupabase();
 }
 
-/** Lazy proxy: ilk erişimde istemci oluşturulur (build sırasında env yoksa gecikmeli hata). */
+/** Lazy proxy: ilk erişimde singleton istemci döner (build sırasında env yoksa gecikmeli hata). */
 export const supabase = new Proxy({} as SupabaseClient, {
   get(_, prop: string) {
     const target = getSupabaseClient() as unknown as Record<string, unknown>;

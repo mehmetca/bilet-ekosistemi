@@ -7,8 +7,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { Eye, EyeOff, LogIn, ArrowLeft, UserPlus } from "lucide-react";
 import { Link } from "@/i18n/navigation";
 import Header from "@/components/Header";
-/** PKCE + çerez: @supabase/ssr createBrowserClient (SimpleAuth’taki `supabase` ile aynı singleton). */
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
+import { upsertUserProfile } from "@/lib/user-profile-client";
 
 function GoogleIcon({ className }: { className?: string }) {
   return (
@@ -169,25 +169,15 @@ export default function LoginPage() {
 
       if (signUpData?.session && signUpData.user) {
         try {
-          const { data: { session } } = await sb.auth.getSession();
-          if (session?.access_token) {
-            await fetch("/api/profile", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${session.access_token}`,
-              },
-              body: JSON.stringify({
-                email: regEmail.trim(),
-                first_name: firstName,
-                last_name: lastName,
-                country: regCountry.trim() || undefined,
-                city: regCity.trim() || undefined,
-                telefon: regPhone.trim() || undefined,
-                anrede: regAnrede.trim() || undefined,
-              }),
-            });
-          }
+          await upsertUserProfile(signUpData.user, {
+            email: regEmail.trim(),
+            first_name: firstName,
+            last_name: lastName,
+            country: regCountry.trim() || undefined,
+            city: regCity.trim() || undefined,
+            telefon: regPhone.trim() || undefined,
+            anrede: regAnrede.trim() || undefined,
+          });
         } catch (_) {
           // Profil kaydı başarısız olsa da üyelik tamamlandı
         }

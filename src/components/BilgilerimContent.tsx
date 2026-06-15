@@ -7,41 +7,17 @@ import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { useTranslations } from "next-intl";
 import { Save, Lock, Building2 } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
-
-type OrganizerRequest = {
-  id?: string;
-  email?: string;
-  status?: string;
-  company_name?: string | null;
-  legal_form?: string | null;
-  address?: string | null;
-  phone?: string | null;
-  trade_register?: string | null;
-  trade_register_number?: string | null;
-  vat_id?: string | null;
-  representative_name?: string | null;
-  organization_display_name?: string | null;
-  created_at?: string;
-};
-
-type Profile = {
-  id?: string;
-  user_id?: string;
-  kundennummer?: string;
-  anrede?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  firma?: string | null;
-  address?: string | null;
-  plz?: string | null;
-  city?: string | null;
-  ort?: string | null;
-  country?: string | null;
-  email?: string | null;
-  telefon?: string | null;
-  handynummer?: string | null;
-  geburtsdatum?: string | null;
-};
+import {
+  ensureUserProfile,
+  fetchUserProfile,
+  updateUserPassword,
+  upsertUserProfile,
+  type UserProfile,
+} from "@/lib/user-profile-client";
+import {
+  fetchOrganizerRequest,
+  type OrganizerRequest,
+} from "@/lib/organizer-request-client";
 
 interface BilgilerimContentProps {
   /** Yönetim paneli içinde mi (organizatör) - true ise /giris'e yönlendirme yapılmaz */
@@ -53,7 +29,7 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
   const tApp = useTranslations("organizerApplication");
   const { user, loading: authLoading, isOrganizer } = useSimpleAuth();
   const router = useRouter();
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [organizerRequest, setOrganizerRequest] = useState<OrganizerRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [saveLoading, setSaveLoading] = useState(false);
@@ -114,86 +90,63 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
     }
   }, [organizerRequest, profile]);
 
-  async function getAuthHeaders() {
-    const { data: { session } } = await supabase.auth.getSession();
-    return {
-      Authorization: `Bearer ${session?.access_token || ""}`,
-      "Content-Type": "application/json",
-    };
-  }
-
   async function fetchProfile() {
     if (!user) return;
     try {
-      const headers = await getAuthHeaders();
-      const [profileRes, orgRes] = await Promise.all([
-        fetch("/api/profile", { headers }),
-        fetch("/api/organizer-request", { headers }),
+      const [profileData, orgData] = await Promise.all([
+        fetchUserProfile(user.id),
+        fetchOrganizerRequest(user),
       ]);
-      let profileData: Profile | null = null;
-      let orgData: OrganizerRequest | null = null;
-      if (profileRes.ok) {
-        const data = (await profileRes.json()) as Profile | null;
-        profileData = data;
-        if (!data?.kundennummer) {
-          const postRes = await fetch("/api/profile", {
-            method: "POST",
-            headers: { ...headers, "Content-Type": "application/json" },
-            body: JSON.stringify({ email: user.email }),
-          });
-          if (postRes.ok) {
-            const created = (await postRes.json()) as Profile;
-            setProfile(created);
-            profileData = created;
-            setForm((f) => ({ ...f, email: user.email || "" }));
-          }
-        } else {
-          setProfile(data || null);
-          if (data) {
-            setForm({
-              anrede: data.anrede || "",
-              first_name: data.first_name || "",
-              last_name: data.last_name || "",
-              firma: data.firma || "",
-              address: data.address || "",
-              plz: data.plz || "",
-              city: data.city || "",
-              ort: data.ort || "",
-              country: data.country || "",
-              email: data.email || user.email || "",
-              telefon: data.telefon || "",
-              handynummer: data.handynummer || "",
-              geburtsdatum: data.geburtsdatum || "",
-            });
-          } else {
-            setForm((f) => ({ ...f, email: user.email || "" }));
-          }
+
+      if (!profileData?.kundennummer) {
+        const created = await ensureUserProfile(user, { email: user.email || undefined });
+        if (created) {
+          setProfile(created);
+          setForm((f) => ({ ...f, email: user.email || "" }));
         }
+      } else {
+        setProfile(profileData);
+        setForm({
+          anrede: profileData.anrede || "",
+          first_name: profileData.first_name || "",
+          last_name: profileData.last_name || "",
+          firma: profileData.firma || "",
+          address: profileData.address || "",
+          plz: profileData.plz || "",
+          city: profileData.city || "",
+          ort: profileData.ort || "",
+          country: profileData.country || "",
+          email: profileData.email || user.email || "",
+          telefon: profileData.telefon || "",
+          handynummer: profileData.handynummer || "",
+          geburtsdatum: profileData.geburtsdatum || "",
+        });
       }
-      if (orgRes.ok) {
-        orgData = (await orgRes.json()) as OrganizerRequest | null;
-        setOrganizerRequest(orgData || null);
-        if (orgData) {
-          const repName = orgData.representative_name?.trim() ||
-            (profileData ? [profileData.first_name, profileData.last_name].filter(Boolean).join(" ").trim() : "") ||
-            "";
-          setOrgForm({
-            company_name: orgData.company_name || "",
-            legal_form: orgData.legal_form || "",
-            address: orgData.address || "",
-            phone: orgData.phone || "",
-            trade_register: orgData.trade_register || "",
-            trade_register_number: orgData.trade_register_number || "",
-            vat_id: orgData.vat_id || "",
-            representative_name: repName,
-            organization_display_name: orgData.organization_display_name || "",
-          });
-        } else if (isOrganizerInYonetim && profileData) {
-          setOrgForm((o) => ({
-            ...o,
-            representative_name: [profileData!.first_name, profileData!.last_name].filter(Boolean).join(" ").trim(),
-          }));
-        }
+
+      setOrganizerRequest(orgData || null);
+      if (orgData) {
+        const repName =
+          orgData.representative_name?.trim() ||
+          (profileData
+            ? [profileData.first_name, profileData.last_name].filter(Boolean).join(" ").trim()
+            : "") ||
+          "";
+        setOrgForm({
+          company_name: orgData.company_name || "",
+          legal_form: orgData.legal_form || "",
+          address: orgData.address || "",
+          phone: orgData.phone || "",
+          trade_register: orgData.trade_register || "",
+          trade_register_number: orgData.trade_register_number || "",
+          vat_id: orgData.vat_id || "",
+          representative_name: repName,
+          organization_display_name: orgData.organization_display_name || "",
+        });
+      } else if (isOrganizerInYonetim && profileData) {
+        setOrgForm((o) => ({
+          ...o,
+          representative_name: [profileData.first_name, profileData.last_name].filter(Boolean).join(" ").trim(),
+        }));
       }
     } catch (e) {
       console.error(e);
@@ -209,18 +162,8 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
     setError("");
     setSuccess("");
     try {
-      const headers = await getAuthHeaders();
-      const res = await fetch("/api/profile", {
-        method: "POST",
-        headers,
-        body: JSON.stringify(form),
-      });
-      const data = (await res.json().catch(() => ({}))) as Profile | { error?: string };
-      if (!res.ok) {
-        setError("errorSaveFailed");
-        return;
-      }
-      setProfile(data as Profile);
+      const updated = await upsertUserProfile(user!, form);
+      setProfile(updated);
       setSuccess("successSaved");
     } catch (e) {
       setError("errorGeneric");
@@ -236,7 +179,13 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
     setOrgError("");
     setOrgSuccess("");
     try {
-      const headers = await getAuthHeaders();
+      const headers = await (async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        return {
+          Authorization: `Bearer ${session?.access_token || ""}`,
+          "Content-Type": "application/json",
+        };
+      })();
       const res = await fetch("/api/organizer-request", {
         method: "PATCH",
         headers,
@@ -272,31 +221,16 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
       return;
     }
     try {
-      const headers = await getAuthHeaders();
-      const res = await fetch("/api/profile/password", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          password: password.newPassword,
-          passwordConfirm: password.confirm,
-        }),
-      });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        const backendError = String(data.error || "").toLowerCase();
-        if (backendError.includes("eşleş")) {
-          setPwdError("errorPasswordsDontMatch");
-        } else if (backendError.includes("en az 6")) {
-          setPwdError("errorPasswordMinLength");
-        } else {
-          setPwdError("errorPasswordUpdateFailed");
-        }
-        return;
-      }
+      await updateUserPassword(password.newPassword);
       setPwdSuccess("successPasswordUpdated");
       setPassword({ newPassword: "", confirm: "" });
     } catch (e) {
-      setPwdError("errorGeneric");
+      const msg = e instanceof Error ? e.message.toLowerCase() : "";
+      if (msg.includes("en az") || msg.includes("6")) {
+        setPwdError("errorPasswordMinLength");
+      } else {
+        setPwdError("errorPasswordUpdateFailed");
+      }
     } finally {
       setPwdLoading(false);
     }

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getActiveAdvertisements } from "@/lib/advertisements-server";
+import { revalidateAdvertisementCaches } from "@/lib/revalidate-public-cache";
 import { requireAdmin } from "@/lib/api-auth";
+
+export const revalidate = 1800;
 
 const ADVERTISEMENT_FIELDS = [
   "title",
@@ -24,33 +28,13 @@ function pickAdvertisementPayload(body: Record<string, unknown>) {
 
 export async function GET(request: NextRequest) {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
     const { searchParams } = new URL(request.url);
-    const locale = searchParams.get("locale");
+    const locale = searchParams.get("locale") || undefined;
+    const data = await getActiveAdvertisements(locale || undefined);
 
-    let query = supabaseAdmin
-      .from("advertisements")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (locale && ["tr", "de", "en"].includes(locale)) {
-      // tr disindaki dillerde TR kayitlari da fallback olarak gosterilsin.
-      if (locale === "tr") {
-        query = query.or("locale.eq.tr,locale.is.null");
-      } else {
-        query = query.or(`locale.eq.${locale},locale.eq.tr,locale.is.null`);
-      }
-    }
-
-    const { data, error } = await query;
-
-    if (error) {
-      return NextResponse.json({ error: "Reklamlar yuklenemedi" }, { status: 500 });
-    }
-
-    return NextResponse.json(data || [], {
+    return NextResponse.json(data, {
       headers: {
-        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=300",
+        "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600",
       },
     });
   } catch {
@@ -90,12 +74,14 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
 
         if (!retry.error) {
+          revalidateAdvertisementCaches();
           return NextResponse.json(retry.data, { status: 201 });
         }
       }
       return NextResponse.json({ error: "Reklam eklenemedi" }, { status: 500 });
     }
 
+    revalidateAdvertisementCaches();
     return NextResponse.json(data, { status: 201 });
   } catch {
     return NextResponse.json({ error: "Sunucu hatasi" }, { status: 500 });

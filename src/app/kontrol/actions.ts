@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { extractTicketCode } from "@/lib/ticket-code";
 
 export type CheckResult =
@@ -27,24 +27,11 @@ export type CheckResult =
       quantity?: number;
     };
 
-function createAdminSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }
-  );
-}
-
 export async function checkTicket(input: string | FormData): Promise<CheckResult> {
   const rawCode =
     typeof input === "string" ? input : String(input.get("ticket_code") || "");
   const ticketCode = extractTicketCode(rawCode);
-  const supabase = createAdminSupabase();
+  const supabase = getSupabaseAdmin();
   
   try {
     if (!ticketCode) {

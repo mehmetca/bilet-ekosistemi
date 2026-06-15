@@ -26,7 +26,7 @@ async function fetchProfileDisplayName(userId: string, email: string | undefined
   const { data: profile } = await supabase
     .from("user_profiles")
     .select("first_name, last_name")
-    .eq("id", userId)
+    .eq("user_id", userId)
     .maybeSingle();
   const name = profile
     ? [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim()

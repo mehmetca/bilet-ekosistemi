@@ -6,4 +6,8 @@ export const DATA_CACHE_REVALIDATE = {
   event: 1800,
   sitemap: 21600,
   cities: 1800,
+  artists: 1800,
+  venues: 1800,
+  advertisements: 1800,
+  settings: 3600,
 } as const;

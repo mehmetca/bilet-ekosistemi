@@ -272,6 +272,8 @@ function saveCart(items: CartItem[]) {
 }
 
 const DEFAULT_MAX_TICKET_QUANTITY = 10;
+const SETTINGS_CACHE_KEY = "site_settings_cache_v1";
+const SETTINGS_CACHE_TTL_MS = 3_600_000;
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
@@ -289,11 +291,37 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(SETTINGS_CACHE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { at?: number; maxTicketQuantity?: number };
+        if (
+          typeof parsed.at === "number" &&
+          Date.now() - parsed.at < SETTINGS_CACHE_TTL_MS &&
+          typeof parsed.maxTicketQuantity === "number"
+        ) {
+          setMaxTicketQuantity(Math.max(1, Math.min(100, parsed.maxTicketQuantity)));
+          return;
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+
     fetch("/api/settings")
       .then((r) => r.json())
       .then((data) => {
         if (typeof data?.maxTicketQuantity === "number") {
-          setMaxTicketQuantity(Math.max(1, Math.min(100, data.maxTicketQuantity)));
+          const qty = Math.max(1, Math.min(100, data.maxTicketQuantity));
+          setMaxTicketQuantity(qty);
+          try {
+            sessionStorage.setItem(
+              SETTINGS_CACHE_KEY,
+              JSON.stringify({ at: Date.now(), maxTicketQuantity: qty })
+            );
+          } catch {
+            /* ignore */
+          }
         }
       })
       .catch(() => {});

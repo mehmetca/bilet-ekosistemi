@@ -1,4 +1,6 @@
+import { unstable_cache } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
 
 export type HomeSliderAd = {
   id: string;
@@ -23,8 +25,19 @@ function filterSliderAds(rows: HomeSliderAd[], placement: string) {
 const AD_COLUMNS =
   "id,title,image_url,link_url,placement,is_active,sort_order,locale,overlay_title,overlay_day,overlay_month_year";
 
-/** Ana sayfa slider reklamları — tek sorgu (önceki 3× fetch kaldırıldı). */
+/** Ana sayfa slider reklamları — ISR önbellekli tek sorgu. */
 export async function getHomeSliderAds(
+  locale: string,
+  placement = "main_slider"
+): Promise<HomeSliderAd[]> {
+  return unstable_cache(
+    () => fetchHomeSliderAds(locale, placement),
+    ["home-slider-ads", locale, placement],
+    { revalidate: DATA_CACHE_REVALIDATE.advertisements, tags: ["advertisements", "home"] }
+  )();
+}
+
+async function fetchHomeSliderAds(
   locale: string,
   placement = "main_slider"
 ): Promise<HomeSliderAd[]> {

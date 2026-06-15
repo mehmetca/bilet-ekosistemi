@@ -4,23 +4,26 @@ import useSWR from "swr";
 import type { Event } from "@/types/database";
 
 async function fetcher(): Promise<Event[]> {
-  const res = await fetch("/api/events", { cache: "no-store" });
+  const res = await fetch("/api/events");
   if (!res.ok) return [];
   const data = await res.json();
   return Array.isArray(data) ? (data as Event[]) : [];
 }
 
 /**
- * Etkinlik listesi (ana sayfa) – SWR cache.
- * Sunucu boş gelse bile client tarafında tekrar çekilir.
+ * Etkinlik listesi – SWR. initialData verilmişse ek istek atılmaz.
  */
 export function useEvents(initialData?: Event[]) {
-  const { data, error, isLoading, mutate } = useSWR<Event[]>("events-list", fetcher, {
-    fallbackData: initialData,
-    revalidateOnMount: true,
-    revalidateOnFocus: true,
-    dedupingInterval: 15_000,
-  });
+  const { data, error, isLoading, mutate } = useSWR<Event[]>(
+    initialData ? null : "events-list",
+    fetcher,
+    {
+      fallbackData: initialData,
+      revalidateOnMount: !initialData,
+      revalidateOnFocus: false,
+      dedupingInterval: 60_000,
+    }
+  );
   return {
     events: data ?? [],
     isLoading,

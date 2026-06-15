@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createServerSupabase } from "@/lib/supabase-server";
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,16 +15,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    if (!supabaseUrl || !supabaseAnonKey) {
-      return NextResponse.json(
-        { success: false, message: "Veritabanı yapılandırması eksik." },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const supabase = createServerSupabase();
     let userId: string | null = null;
     const authHeader = request.headers.get("authorization");
     const token = authHeader?.replace("Bearer ", "");

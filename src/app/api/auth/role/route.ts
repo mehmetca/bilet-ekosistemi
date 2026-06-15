@@ -1,15 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export async function GET(request: NextRequest) {
   try {
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) {
-      return NextResponse.json({ error: "Sunucu yapılandırma hatası" }, { status: 500 });
-    }
-
-    const supabase = createClient(url, key);
+    const supabase = getSupabaseAdmin();
     const authHeader = request.headers.get("authorization");
     const token = authHeader?.replace("Bearer ", "");
     if (!token) {

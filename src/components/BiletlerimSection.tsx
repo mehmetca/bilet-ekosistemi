@@ -5,12 +5,13 @@ import NextLink from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { Ticket as TicketIcon, ArrowRight, Calendar } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
-import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import type { User } from "@supabase/supabase-js";
+import { fetchUserOrders } from "@/lib/user-orders-client";
+import type { UserOrderRow } from "@/lib/user-orders-client";
 import BiletlerimOrderList from "@/components/BiletlerimOrderList";
 import type { BiletlerimOrderRow } from "@/components/BiletlerimOrderList";
 
-type OrderRow = BiletlerimOrderRow;
+type OrderRow = BiletlerimOrderRow & UserOrderRow;
 
 interface BiletlerimSectionProps {
   user: User | null;
@@ -23,7 +24,6 @@ function normalizeRelation<T>(value: T | T[] | null | undefined): T | null {
 }
 
 export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
-  const { accessToken: authAccessToken } = useSimpleAuth();
   const locale = useLocale();
   const t = useTranslations("panel");
   const [orders, setOrders] = useState<OrderRow[]>([]);
@@ -37,46 +37,18 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
     setLoading(true);
     setError(null);
     try {
-      let token = authAccessToken;
-      if (!token) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        token = session?.access_token ?? null;
-      }
-      if (!token) {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (!session) {
         setError(t("sessionNotFound"));
-        setLoading(false);
         return;
       }
-      const res = await fetch("/api/user/orders", {
-        headers: { Authorization: `Bearer ${token}` },
-        cache: "no-store",
-      });
-      if (res.status === 401) {
-        setError(t("sessionExpired"));
-        setLoading(false);
-        return;
-      }
-      if (!res.ok) {
-        setError(t("ordersLoadFailed"));
-        setLoading(false);
-        return;
-      }
-      const raw = (await res.json()) as unknown;
-      if (!Array.isArray(raw)) {
-        setError(t("ordersLoadFailed"));
-        setLoading(false);
-        return;
-      }
-      const data: OrderRow[] = raw.map((row) => {
-        const o = row as OrderRow;
-        return {
-          ...o,
-          events: normalizeRelation(o.events),
-          tickets: normalizeRelation(o.tickets),
-        };
-      });
+      const data: OrderRow[] = (await fetchUserOrders()).map((row) => ({
+        ...row,
+        events: normalizeRelation(row.events),
+        tickets: normalizeRelation(row.tickets),
+      }));
       setOrders(data);
     } catch (e) {
       console.error("Biletlerim fetch error:", e);
@@ -84,7 +56,7 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
     } finally {
       setLoading(false);
     }
-  }, [user, authAccessToken, t]);
+  }, [user, t]);
 
   useEffect(() => {
     if (user) fetchOrders();
@@ -95,13 +67,10 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
     if (!window.confirm(t("deleteTicketConfirm"))) return;
     setDeletingId(orderId);
     try {
-      let token = authAccessToken;
-      if (!token) {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        token = session?.access_token ?? null;
-      }
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
       if (!token) return;
       const res = await fetch(`/api/user/orders/${String(orderId)}`, {
         method: "DELETE",

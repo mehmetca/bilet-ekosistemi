@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { sendReminderEmail } from "@/lib/send-reminder-email";
 
 function getSiteUrl(): string {
@@ -19,13 +19,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !serviceKey) {
-    return NextResponse.json({ error: "Supabase config missing" }, { status: 500 });
-  }
-
-  const supabase = createClient(supabaseUrl, serviceKey);
+  const supabase = getSupabaseAdmin();
 
   // 24 saat sonra başlayacak etkinlikler (20–28 saat aralığında)
   const now = new Date();

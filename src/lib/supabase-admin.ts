@@ -1,10 +1,10 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 let supabaseAdmin: SupabaseClient | null = null;
 
 /**
- * Sunucu tarafında service role key ile Supabase client.
- * Sadece API route'larında ve güvenli sunucu işlemlerinde kullanın.
+ * Sunucu tarafı service role istemcisi — process başına tek örnek (singleton).
+ * Yalnızca API route'ları ve güvenli sunucu işlemlerinde kullanın.
  */
 export function getSupabaseAdmin(): SupabaseClient {
   if (supabaseAdmin) return supabaseAdmin;
@@ -15,6 +15,8 @@ export function getSupabaseAdmin(): SupabaseClient {
   }
   supabaseAdmin = createClient(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
+    db: { schema: "public" },
+    global: { headers: { "X-Client-Info": "bilet-ekosistemi/server-admin" } },
   });
   return supabaseAdmin;
 }

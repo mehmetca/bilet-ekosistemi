@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 /**
  * GET ?event_id=xxx → { seatIds: string[] }
@@ -17,9 +17,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ seatIds: [] });
   }
 
-  const supabase = createClient(supabaseUrl, key, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const supabase = getSupabaseAdmin();
 
   const { data: orders } = await supabase
     .from("orders")

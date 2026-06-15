@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import type { Artist } from "@/types/database";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { getArtistBySlug } from "@/lib/artists-server";
 import { parseArtistBio } from "@/lib/artistProfile";
 import { getLocalizedArtist, type Locale } from "@/lib/i18n-content";
 import { getSiteUrl } from "@/lib/site-url";
@@ -10,6 +9,8 @@ import ArtistPageClient from "./ArtistPageClient";
 interface PageProps {
   params: Promise<{ locale?: string; slug: string }>;
 }
+
+export const revalidate = 1800;
 
 function getYouTubeEmbedUrl(url?: string): string | null {
   if (!url) return null;
@@ -41,13 +42,6 @@ function getYouTubeVideoId(url?: string): string | null {
   const embed = getYouTubeEmbedUrl(url);
   if (!embed) return null;
   return embed.split("/embed/")[1] || null;
-}
-
-async function getArtistBySlug(slug: string): Promise<Artist | null> {
-  const supabase = createServerSupabase();
-  const { data, error } = await supabase.from("artists").select("*").eq("slug", slug).maybeSingle();
-  if (error || !data) return null;
-  return data as Artist;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {

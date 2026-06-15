@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { SupabaseClient, User } from "@supabase/supabase-js";
 import { requireRole } from "@/lib/api-auth";
 import { extractTicketCode } from "@/lib/ticket-code";
 
@@ -106,18 +107,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!url || !key) {
-      return NextResponse.json(
-        { success: false, message: "Sunucu yapılandırması eksik." },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(url, key, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const supabase = getSupabaseAdmin();
 
     // Önce adet-bazlı bilet birimi (koltuksuz çoklu alım) kontrolü
     const { data: ticketUnit, error: unitFetchError } = await supabase

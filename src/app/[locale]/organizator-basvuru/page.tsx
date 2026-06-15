@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import Header from "@/components/Header";
 import { supabase } from "@/lib/supabase-client";
+import { submitOrganizerApplication } from "@/lib/organizer-request-client";
 
 const PASSWORD_EXISTS_PATTERN = /already registered|already exists/i;
 const PASSWORD_VALIDATION_PATTERN = /password|weak|at least \d+ characters/i;
@@ -67,37 +68,18 @@ export default function OrganizerApplicationPage() {
         return;
       }
 
-      const accessToken = signUpData.session?.access_token;
-      if (!accessToken) {
-        setError("Başvuru kaydı için e-posta doğrulamasından sonra tekrar giriş yapmanız gerekiyor.");
-        return;
-      }
-
-      const res = await fetch("/api/organizer-request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          company_name: companyName.trim() || undefined,
-          legal_form: legalForm.trim() || undefined,
-          address: address.trim() || undefined,
-          phone: phone.trim() || undefined,
-          trade_register: tradeRegister.trim() || undefined,
-          trade_register_number: tradeRegisterNumber.trim() || undefined,
-          vat_id: vatId.trim() || undefined,
-          representative_name: representativeName.trim() || undefined,
-          organization_display_name: organizationDisplayName.trim() || undefined,
-          terms_accepted: true,
-        }),
+      await submitOrganizerApplication(signUpData.user, {
+        company_name: companyName.trim() || undefined,
+        legal_form: legalForm.trim() || undefined,
+        address: address.trim() || undefined,
+        phone: phone.trim() || undefined,
+        trade_register: tradeRegister.trim() || undefined,
+        trade_register_number: tradeRegisterNumber.trim() || undefined,
+        vat_id: vatId.trim() || undefined,
+        representative_name: representativeName.trim() || undefined,
+        organization_display_name: organizationDisplayName.trim() || undefined,
+        terms_accepted: true,
       });
-
-      const resData = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setError(resData.error || t("errorOrganizerApplyFailedShort"));
-        return;
-      }
 
       setSuccess(t("successOrganizerApplied"));
       setEmail("");

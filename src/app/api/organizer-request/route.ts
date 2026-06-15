@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 async function getSupabaseWithUser(request: NextRequest) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error("Supabase env missing");
-  const supabase = createClient(url, key);
+  const supabase = getSupabaseAdmin();
   const authHeader = request.headers.get("authorization");
   const token = authHeader?.replace("Bearer ", "");
   if (!token) return { supabase, user: null };
@@ -187,13 +184,7 @@ export async function PATCH(request: NextRequest) {
       organization_display_name,
     } = body;
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json({ error: "Sunucu yapılandırma hatası" }, { status: 500 });
-    }
-
-    const adminSupabase = createClient(supabaseUrl, serviceKey);
+    const adminSupabase = getSupabaseAdmin();
 
     const { data: roleRow } = await adminSupabase
       .from("user_roles")
