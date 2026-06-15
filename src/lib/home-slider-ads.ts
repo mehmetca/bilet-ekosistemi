@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
 
 export type HomeSliderAd = {
@@ -23,7 +23,7 @@ function filterSliderAds(rows: HomeSliderAd[], placement: string) {
 }
 
 const AD_COLUMNS =
-  "id,title,image_url,link_url,placement,is_active,sort_order,locale,overlay_title,overlay_day,overlay_month_year";
+  "id,title,image_url,link_url,placement,is_active,locale,overlay_title,overlay_day,overlay_month_year,created_at";
 
 /** Ana sayfa slider reklamları — ISR önbellekli tek sorgu. */
 export async function getHomeSliderAds(
@@ -32,7 +32,7 @@ export async function getHomeSliderAds(
 ): Promise<HomeSliderAd[]> {
   return unstable_cache(
     () => fetchHomeSliderAds(locale, placement),
-    ["home-slider-ads", locale, placement],
+    ["home-slider-ads-v3", locale, placement],
     { revalidate: DATA_CACHE_REVALIDATE.advertisements, tags: ["advertisements", "home"] }
   )();
 }
@@ -42,13 +42,13 @@ async function fetchHomeSliderAds(
   placement = "main_slider"
 ): Promise<HomeSliderAd[]> {
   try {
-    const supabase = createServerSupabase();
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from("advertisements")
       .select(AD_COLUMNS)
       .eq("is_active", true)
       .eq("placement", placement)
-      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(20);
 
     if (error || !data?.length) return [];

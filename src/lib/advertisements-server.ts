@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
 
 export type PublicAdvertisement = {
@@ -18,10 +18,11 @@ export type PublicAdvertisement = {
 };
 
 const AD_COLUMNS =
-  "id,title,image_url,link_url,placement,is_active,sort_order,locale,overlay_title,overlay_day,overlay_month_year,created_at";
+  "id,title,image_url,link_url,placement,is_active,locale,overlay_title,overlay_day,overlay_month_year,created_at";
 
 async function fetchActiveAdvertisements(locale?: string): Promise<PublicAdvertisement[]> {
-  const supabase = createServerSupabase();
+  // RLS yalnızca authenticated okumaya izin veriyor; public slider/API için service role.
+  const supabase = getSupabaseAdmin();
   let query = supabase
     .from("advertisements")
     .select(AD_COLUMNS)
@@ -42,7 +43,7 @@ async function fetchActiveAdvertisements(locale?: string): Promise<PublicAdverti
 
 export async function getActiveAdvertisements(locale?: string): Promise<PublicAdvertisement[]> {
   const key = locale && ["tr", "de", "en"].includes(locale) ? locale : "all";
-  return unstable_cache(() => fetchActiveAdvertisements(locale), ["advertisements-active", key], {
+  return unstable_cache(() => fetchActiveAdvertisements(locale), ["advertisements-active-v3", key], {
     revalidate: DATA_CACHE_REVALIDATE.advertisements,
     tags: ["advertisements"],
   })();
