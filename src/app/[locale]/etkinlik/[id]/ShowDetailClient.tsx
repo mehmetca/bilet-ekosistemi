@@ -151,7 +151,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                   {minPrice > 0 ? `${t("from")} ${formatPrice(minPrice, firstEvent.currency)}` : t("comingSoon")}
                 </p>
                 <span className="text-sm text-slate-500">
-                  {events.length} {tShow("performances")}
+                  {upcomingEvents.length} {tShow("performances")}
                 </span>
               </div>
             </div>

@@ -20,6 +20,7 @@ import {
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import Footer from "@/components/Footer";
 import { useLocale, useTranslations } from "next-intl";
+import { usePublicSiteLocale } from "@/hooks/usePublicSiteLocale";
 
 async function fetchProfileDisplayName(userId: string, email: string | undefined) {
   const { supabase } = await import("@/lib/supabase-client");
@@ -37,6 +38,7 @@ async function fetchProfileDisplayName(userId: string, email: string | undefined
 export default function OrganizerLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const locale = useLocale();
+  const publicSiteLocale = usePublicSiteLocale();
   const t = useTranslations("adminPanel");
   const tCommon = useTranslations("common");
   const { user, signOut } = useSimpleAuth();
@@ -136,7 +138,7 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
           })}
           <div className="pt-3 mt-3 border-t border-slate-200 space-y-1">
             <Link
-              href={`/${locale}`}
+              href={`/${publicSiteLocale}`}
               onClick={() => setSidebarOpen(false)}
               className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-colors"
             >
@@ -177,7 +179,7 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
             <p className="text-sm text-slate-500 truncate">{todayStr}</p>
           </div>
           <Link
-            href={`/${locale}`}
+            href={`/${publicSiteLocale}`}
             className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors flex-shrink-0"
           >
             <Home className="h-4 w-4" />

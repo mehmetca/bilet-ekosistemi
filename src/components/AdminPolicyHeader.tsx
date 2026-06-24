@@ -1,17 +1,17 @@
 "use client";
 
 import NextLink from "next/link";
-import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Menu } from "lucide-react";
+import { useAdminShellLabels } from "@/hooks/useAdminShellLabels";
 
 export default function AdminPolicyHeader({ onMenuClick }: { onMenuClick?: () => void }) {
-  const t = useTranslations("adminPanel.shell");
+  const shell = useAdminShellLabels();
   const siteLinks = [
-    { href: "/", label: t("events"), useLocale: true },
-    { href: "/takvim", label: t("calendar"), useLocale: true },
-    { href: "/sanatci", label: t("artists"), useLocale: true },
-    { href: "/yonetim", label: t("panel"), useLocale: false },
+    { href: "/", label: shell.events, useLocale: true },
+    { href: "/takvim", label: shell.calendar, useLocale: true },
+    { href: "/sanatci", label: shell.artists, useLocale: true },
+    { href: "/yonetim", label: shell.panel, useLocale: false },
   ] as const;
 
   return (
@@ -21,7 +21,7 @@ export default function AdminPolicyHeader({ onMenuClick }: { onMenuClick?: () =>
           type="button"
           onClick={onMenuClick}
           className="md:hidden p-2 -ml-1 shrink-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg"
-          aria-label={t("openMenu")}
+          aria-label={shell.openMenu}
         >
           <Menu className="h-5 w-5" />
         </button>

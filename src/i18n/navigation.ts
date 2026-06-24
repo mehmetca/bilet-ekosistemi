@@ -3,13 +3,15 @@
 import { createElement, type ComponentProps } from "react";
 import NextLink from "next/link";
 import { usePathname as useNextPathname, useRouter as useNextRouter } from "next/navigation";
+import { readPublicSiteLocaleFromCookie } from "@/lib/public-site-locale";
 import { routing } from "./routing";
 
 type LinkProps = ComponentProps<typeof NextLink>;
 
 function detectLocaleFromPathname(pathname: string | null): string {
   const match = pathname?.match(/^\/(tr|de|en|ku|ckb)(?:\/|$)/);
-  return match?.[1] || routing.defaultLocale;
+  if (match?.[1]) return match[1];
+  return readPublicSiteLocaleFromCookie();
 }
 
 function isExcludedFromLocalePrefix(href: string): boolean {
