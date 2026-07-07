@@ -525,14 +525,41 @@ export default function CheckoutPage() {
         /* ignore */
       }
 
+      const checkoutItems = items.map((item) => {
+        const seatIdsAligned =
+          item.seatIds && item.seatIds.length > 0
+            ? item.seatIds.slice(0, Math.min(item.seatIds.length, item.quantity))
+            : [];
+        const fee = item.eventCheckoutFee;
+        return {
+          ticketId: item.ticketId,
+          quantity: seatIdsAligned.length > 0 ? seatIdsAligned.length : item.quantity,
+          seatIds: seatIdsAligned.length > 0 ? seatIdsAligned : undefined,
+          includeProcessingFee: fee != null && fee > 0,
+        };
+      });
+
+      let token = authAccessToken;
+      if (!token) {
+        const { data: { session } } = await supabase.auth.getSession();
+        token = session?.access_token ?? null;
+      }
+      const checkoutHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) checkoutHeaders.Authorization = `Bearer ${token}`;
+
       const response = await fetch("/api/stripe/create-checkout-session", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: checkoutHeaders,
         body: JSON.stringify({
-          amount: grandTotal,
-          currency: (checkoutCurrency || "EUR").toLowerCase(),
           buyerEmail: finalEmail,
+          buyerName: buyerName.trim(),
+          buyerAddress: buyerAddress.trim(),
+          buyerPlz: buyerPlz.trim(),
+          buyerCity: buyerCity.trim(),
+          deliveryChoice,
+          seatHoldSessionId,
           locale,
+          items: checkoutItems,
         }),
       });
       const data = (await response.json()) as {

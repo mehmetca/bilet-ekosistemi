@@ -2,6 +2,7 @@
 
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { extractTicketCode } from "@/lib/ticket-code";
+import { assertStaffFromCookies } from "@/lib/server-staff-auth";
 
 export type CheckResult =
   | {
@@ -27,7 +28,8 @@ export type CheckResult =
       quantity?: number;
     };
 
-export async function checkTicket(input: string | FormData): Promise<CheckResult> {
+/** API route tarafından auth sonrası çağrılır. */
+export async function checkTicketCore(input: string | FormData): Promise<CheckResult> {
   const rawCode =
     typeof input === "string" ? input : String(input.get("ticket_code") || "");
   const ticketCode = extractTicketCode(rawCode);
@@ -235,4 +237,20 @@ export async function checkTicket(input: string | FormData): Promise<CheckResult
     console.error("Ticket check server error:", error);
     return { valid: false, reason: "error", message: "Sunucu hatası" };
   }
+}
+
+/** Yalnızca admin/controller/organizer — çerez oturumu gerekir. */
+export async function checkTicket(input: string | FormData): Promise<CheckResult> {
+  const auth = await assertStaffFromCookies();
+  if (auth.ok === false) {
+    return {
+      valid: false,
+      reason: "error",
+      message:
+        auth.reason === "unauthenticated"
+          ? "Bilet kontrolü için giriş yapmanız gerekiyor."
+          : "Bu işlem için yetkiniz yok.",
+    };
+  }
+  return checkTicketCore(input);
 }

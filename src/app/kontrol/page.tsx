@@ -30,7 +30,7 @@ export default function KontrolPage() {
   const [activeTab, setActiveTab] = useState<"scan" | "profile" | "password">("scan");
   const [manualCode, setManualCode] = useState(codeParam || "");
   const [result, setResult] = useState<CheckResult | null>(null);
-  const [loading, setLoading] = useState(!!codeParam);
+  const [loading, setLoading] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
@@ -50,23 +50,14 @@ export default function KontrolPage() {
   const canShowDashboard =
     !codeParam && !!user && !authLoading && (isStaff || userRole === "controller" || userRole === "admin");
 
+  // QR kodu ile gelen personeli yönetim paneline yönlendir (public lookup yok)
   useEffect(() => {
-    if (!codeParam || !codeParam.trim()) {
-      setLoading(false);
-      return;
+    if (authLoading || !codeParam?.trim()) return;
+    if (!user) return;
+    if (isStaff || userRole === "controller" || userRole === "admin") {
+      window.location.replace(`/yonetim/bilet-kontrol?code=${encodeURIComponent(codeParam.trim())}`);
     }
-    let cancelled = false;
-    (async () => {
-      const res = await checkTicket(codeParam.trim());
-      if (!cancelled) {
-        setResult(res);
-        setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [codeParam]);
+  }, [authLoading, codeParam, user, isStaff, userRole]);
 
   useEffect(() => {
     if (!canShowDashboard) return;
@@ -392,26 +383,47 @@ export default function KontrolPage() {
           Bilet Kontrol
         </h1>
         <p className="text-slate-600 text-center text-sm mb-8">
-          QR kodu okutulduğunda bu sayfa açılır; bilet geçerliliği aşağıda gösterilir.
+          Bilet doğrulama yalnızca yetkili personel tarafından yapılabilir.
         </p>
 
-        {loading && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
-            Kontrol ediliyor...
+        {codeParam && !user && !authLoading && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
+            <p className="mb-4">Bilet kodu algılandı.</p>
+            <p className="text-sm mb-4">
+              Kontrol için personel hesabınızla giriş yapın.
+            </p>
+            <Link
+              href={`/giris?redirect=${encodeURIComponent(`/yonetim/bilet-kontrol?code=${codeParam}`)}`}
+              className="inline-block rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+            >
+              Giriş Yap
+            </Link>
           </div>
         )}
 
-        {!loading && !codeParam && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
-            <p className="mb-4">Bilet kodu bulunamadı.</p>
+        {codeParam && user && !isStaff && userRole !== "controller" && userRole !== "admin" && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-8 text-center text-amber-900">
             <p className="text-sm">
-              Bu sayfaya bilet QR kodu okutulduğunda otomatik gelirsiniz. Manuel kontrol için{" "}
-              <Link href="/giris" className="text-primary-600 underline">giriş yapıp</Link> yönetim panelinden Bilet Kontrol kullanın.
+              Bu hesabın bilet kontrol yetkisi yok. Yönetici veya kontrolör hesabıyla giriş yapın.
             </p>
           </div>
         )}
 
-        {!loading && codeParam && result && resultPanel}
+        {codeParam && authLoading && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-500">
+            Yönlendiriliyor...
+          </div>
+        )}
+
+        {!codeParam && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
+            <p className="mb-4">Bilet kodu bulunamadı.</p>
+            <p className="text-sm">
+              Manuel kontrol için{" "}
+              <Link href="/giris" className="text-primary-600 underline">giriş yapıp</Link> yönetim panelinden Bilet Kontrol kullanın.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

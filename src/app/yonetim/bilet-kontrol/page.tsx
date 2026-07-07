@@ -1,13 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { FileCheck, CheckCircle, XCircle, Calendar, MapPin, User, AlertCircle, Camera, LogIn } from "lucide-react";
 import Link from "next/link";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
-import { checkTicket, type CheckResult } from "@/app/kontrol/actions";
+import type { CheckResult } from "@/app/kontrol/actions";
 import QRScanner from "@/components/QRScanner";
 import { supabase } from "@/lib/supabase-client";
-
 export default function BiletKontrolPage() {
   const { user, loading: authLoading, isAdmin, isController, isOrganizer } = useSimpleAuth();
   const [loading, setLoading] = useState(false);
@@ -16,22 +15,49 @@ export default function BiletKontrolPage() {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [checkinLoading, setCheckinLoading] = useState(false);
   const [checkinDone, setCheckinDone] = useState(false);
+  const autoCheckedCodeRef = useRef<string | null>(null);
 
-  // URL'dan kod parametresini al
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get('code');
-      if (code) {
-        setTicketCode(code);
-        // Otomatik kontrol et
-        const formData = new FormData();
-        formData.append('ticket_code', code);
-        setTimeout(() => handleSubmit(formData), 500);
-      }
+  const canAccessStaff = isAdmin || isController || isOrganizer;
+
+  const checkTicketViaApi = useCallback(async (code: string): Promise<CheckResult> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      return {
+        valid: false,
+        reason: "error",
+        message: "Oturum bulunamadı. Lütfen tekrar giriş yapın.",
+      };
     }
+    const formData = new FormData();
+    formData.append("ticket_code", code);
+    const res = await fetch("/api/check-ticket", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    return (await res.json()) as CheckResult;
   }, []);
 
+  // URL'dan kod — yalnızca oturum + yetki doğrulandıktan sonra otomatik kontrol
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (authLoading || !user || !canAccessStaff) return;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code")?.trim();
+    if (!code || autoCheckedCodeRef.current === code) return;
+
+    autoCheckedCodeRef.current = code;
+    setTicketCode(code);
+    void (async () => {
+      setLoading(true);
+      setResult(null);
+      const res = await checkTicketViaApi(code);
+      setResult(res);
+      setLoading(false);
+    })();
+  }, [authLoading, user, canAccessStaff, checkTicketViaApi]);
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (authLoading) return;
@@ -45,11 +71,11 @@ export default function BiletKontrolPage() {
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     setResult(null);
-    const res = await checkTicket(formData);
+    const code = String(formData.get("ticket_code") || "").trim();
+    const res = await checkTicketViaApi(code);
     setResult(res);
     setLoading(false);
   }
-
   async function handleCheck() {
     if (!ticketCode.trim()) return;
     setCheckinDone(false);
@@ -163,8 +189,14 @@ export default function BiletKontrolPage() {
           Bilet kodunu girin, geçerliliği kontrol edilsin ve girişte kullanıldı olarak işaretlensin.
         </p>
 
-        <form action={handleSubmit} className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-6">
-          <label htmlFor="ticket_code" className="block text-sm font-medium text-slate-700 mb-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            void handleSubmit(formData);
+          }}
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm mb-6"
+        >          <label htmlFor="ticket_code" className="block text-sm font-medium text-slate-700 mb-2">
             Bilet Kodu
           </label>
           <div className="flex gap-3">

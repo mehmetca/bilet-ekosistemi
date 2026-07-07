@@ -1230,6 +1230,38 @@ export async function POST(request: NextRequest) {
     const expectedCurrency = String(
       (eventRow as { currency?: string | null }).currency || "EUR"
     ).toLowerCase();
+
+    // Checkout intent varsa tutar/e-posta bağını doğrula (manipüle edilmiş oturumlara karşı)
+    const { data: checkoutIntent } = await supabase
+      .from("stripe_checkout_intents")
+      .select("total_amount_cents, currency, buyer_email")
+      .eq("stripe_session_id", stripeSessionId)
+      .maybeSingle();
+
+    if (checkoutIntent) {
+      const intentTotal = Number((checkoutIntent as { total_amount_cents?: number }).total_amount_cents || 0);
+      const intentCurrency = String((checkoutIntent as { currency?: string }).currency || "").toLowerCase();
+      const intentEmail = String((checkoutIntent as { buyer_email?: string }).buyer_email || "").toLowerCase();
+      if (paidAmountCents !== intentTotal) {
+        return NextResponse.json(
+          { success: false, message: "Ödeme tutarı sepet kaydı ile uyuşmuyor." },
+          { status: 402 }
+        );
+      }
+      if (intentCurrency && intentCurrency !== expectedCurrency) {
+        return NextResponse.json(
+          { success: false, message: "Para birimi sepet kaydı ile uyuşmuyor." },
+          { status: 402 }
+        );
+      }
+      if (intentEmail && intentEmail !== buyerEmail.toLowerCase()) {
+        return NextResponse.json(
+          { success: false, message: "Alıcı e-postası ödeme oturumu ile uyuşmuyor." },
+          { status: 402 }
+        );
+      }
+    }
+
     if (
       paidAmountCents <= 0 ||
       currentOrderAmountCents <= 0 ||

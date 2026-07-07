@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkTicket } from "@/app/kontrol/actions";
+import { checkTicketCore } from "@/app/kontrol/actions";
 import { requireRole } from "@/lib/api-auth";
 
 /**
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     if (auth instanceof NextResponse) return auth;
 
     const formData = await request.formData();
-    const result = await checkTicket(formData);
+    const result = await checkTicketCore(formData);
     return NextResponse.json(result);
   } catch (error) {
     console.error("check-ticket API error:", error);
