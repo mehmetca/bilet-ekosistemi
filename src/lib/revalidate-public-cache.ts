@@ -9,6 +9,7 @@ export function revalidatePublicEventCaches(): void {
   revalidateTag("sitemap");
   revalidateTag("artists");
   revalidateTag("venues");
+  revalidateTag("cities");
   revalidateTag("advertisements");
 
   for (const locale of routing.locales) {
@@ -16,6 +17,7 @@ export function revalidatePublicEventCaches(): void {
     revalidatePath(`/${locale}`, "page");
     revalidatePath(`/${locale}/arama`, "page");
     revalidatePath(`/${locale}/takvim`, "page");
+    revalidatePath(`/${locale}/sehirler`, "page");
   }
 }
 

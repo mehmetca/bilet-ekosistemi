@@ -9,6 +9,24 @@ import RichTextEditor from "@/components/RichTextEditor";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { isLegacyWordPressImageUrl, resolvePublicImageUrl } from "@/lib/external-image";
 
+async function revalidatePublicSiteCache() {
+  try {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+    const res = await fetch("/api/admin/revalidate-public", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    });
+    if (!res.ok) {
+      console.warn("Public site önbelleği temizlenemedi:", res.status);
+    }
+  } catch (err) {
+    console.warn("Public site önbelleği temizlenemedi:", err);
+  }
+}
+
 interface City {
   id: string;
   slug: string;
@@ -151,6 +169,7 @@ function SehirlerContent() {
       }
 
       await fetchCities();
+      await revalidatePublicSiteCache();
       setShowForm(false);
       setEditingCity(null);
     } catch (error: unknown) {
@@ -168,6 +187,7 @@ function SehirlerContent() {
       const { error } = await supabase.from("cities").delete().eq("id", id);
       if (error) throw error;
       setCities((prev) => prev.filter((c) => c.id !== id));
+      await revalidatePublicSiteCache();
       alert("Şehir silindi!");
     } catch (error) {
       console.error("Şehir silinemedi:", error);

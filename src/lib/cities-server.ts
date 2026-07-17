@@ -24,12 +24,13 @@ async function fetchCityBySlug(slug: string) {
   return data;
 }
 
-const getCityCrossRequest = unstable_cache(fetchCityBySlug, ["city-by-slug"], {
-  revalidate: DATA_CACHE_REVALIDATE.city,
-  tags: ["cities"],
-});
+const getCityCrossRequest = (slug: string) =>
+  unstable_cache(() => fetchCityBySlug(slug), ["city-by-slug", slug], {
+    revalidate: DATA_CACHE_REVALIDATE.city,
+    tags: ["cities"],
+  });
 
-export const getCity = cache((slug: string) => getCityCrossRequest(slug));
+export const getCity = cache((slug: string) => getCityCrossRequest(slug)());
 
 async function fetchCitiesWithEventCounts() {
   const supabase = createServerSupabase();
