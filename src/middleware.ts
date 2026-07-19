@@ -175,6 +175,11 @@ export async function middleware(request: NextRequest) {
     u.pathname = pathname.replace(/^\/yonetim\/banner-yonetimi/, "/yonetim/slider-yonetimi");
     return NextResponse.redirect(u, 308);
   }
+  if (pathname === "/yonetim/siparisler" || pathname.startsWith("/yonetim/siparisler/")) {
+    const u = request.nextUrl.clone();
+    u.pathname = "/yonetim/bilet-listesi";
+    return NextResponse.redirect(u, 308);
+  }
 
   // OAuth: Site URL köküne veya locale köküne ?code= (ve bazen ?state=) düşerse /auth/callback'e al.
   // Supabase yanıtında yalnızca `code` olabiliyor; `state` şartı kaldırıldı.

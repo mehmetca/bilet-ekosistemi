@@ -82,13 +82,9 @@ export default function YonetimDashboard() {
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Bilet Türleri</h3>
           <p className="text-sm text-slate-500">Bilet kategorileri</p>
         </Link>
-        <Link href="/yonetim/siparisler" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Siparişler</h3>
-          <p className="text-sm text-slate-500">Bilet siparişleri</p>
-        </Link>
         <Link href="/yonetim/bilet-listesi" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Bilet Listesi</h3>
-          <p className="text-sm text-slate-500">Satılan biletler</p>
+          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Siparişler / Biletler</h3>
+          <p className="text-sm text-slate-500">Satılan biletler ve siparişler</p>
         </Link>
         <Link href="/yonetim/slider-yonetimi" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Slider</h3>
