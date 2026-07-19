@@ -283,6 +283,7 @@ function EtkinliklerContent() {
         description_tr: ev.description_tr ?? null,
         description_de: ev.description_de ?? null,
         description_en: ev.description_en ?? null,
+        description_ku: ev.description_ku ?? null,
         description_ckb: ev.description_ckb ?? null,
         venue_tr: ev.venue_tr ?? null,
         venue_de: ev.venue_de ?? null,

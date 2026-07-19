@@ -205,6 +205,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const [descriptionTr, setDescriptionTr] = useState("");
   const [descriptionDe, setDescriptionDe] = useState("");
   const [descriptionEn, setDescriptionEn] = useState("");
+  const [descriptionKu, setDescriptionKu] = useState("");
   const [descriptionCkb, setDescriptionCkb] = useState("");
   const [translatingDescriptionCkb, setTranslatingDescriptionCkb] = useState(false);
   const [category, setCategory] = useState<EventCategory>("konser");
@@ -312,6 +313,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       const parsedTr = parseEventDescription((ev.description as string) ?? null);
       const parsedDe = parseEventDescription((ev.description_de as string) ?? null);
       const parsedEn = parseEventDescription((ev.description_en as string) ?? null);
+      const parsedKu = parseEventDescription((ev.description_ku as string) ?? null);
       const parsedCkb = parseEventDescription((ev.description_ckb as string) ?? null);
 
       setEditingEventId(editId);
@@ -323,6 +325,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setDescriptionTr(parsedTr.content || "");
       setDescriptionDe(parsedDe.content || "");
       setDescriptionEn(parsedEn.content || "");
+      setDescriptionKu(parsedKu.content || "");
       setDescriptionCkb(parsedCkb.content || "");
       setCategory(normalizeCategoryForUi((ev as { category?: string | null }).category));
       setImageUrl((ev.image_url as string) || "");
@@ -336,6 +339,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         parsedTr.externalTicketUrl ||
           parsedDe.externalTicketUrl ||
           parsedEn.externalTicketUrl ||
+          parsedKu.externalTicketUrl ||
           parsedCkb.externalTicketUrl ||
           ""
       );
@@ -749,9 +753,9 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   }
 
   async function handleAutoTranslateDescriptionSorani() {
-    const sourceText = descriptionTr.trim();
+    const sourceText = descriptionKu.trim() || descriptionTr.trim();
     if (!sourceText) {
-      alert("Önce Kısa açıklama (TR) alanını doldurun.");
+      alert("Önce Açıklama (TR) veya Açıklama (KU) alanını doldurun.");
       return;
     }
     try {
@@ -761,7 +765,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: sourceText,
-          source: "tr",
+          source: descriptionKu.trim() ? "ku" : "tr",
           target: "ckb",
         }),
       });
@@ -918,6 +922,9 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       const descEn = descriptionEn.trim()
         ? buildEventDescription(descriptionEn.trim(), ticketUrl.trim() || undefined)
         : null;
+      const descKu = descriptionKu.trim()
+        ? buildEventDescription(descriptionKu.trim(), ticketUrl.trim() || undefined)
+        : null;
       /** CKB alanında harici URL gömme; sitede URL `description` / `description_tr` üzerinden okunur. */
       const descCkb = descriptionCkb.trim() || null;
       const organizerName =
@@ -953,6 +960,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         description_tr: descTr || null,
         description_de: descDe,
         description_en: descEn,
+        description_ku: descKu,
         description_ckb: descCkb,
         venue_tr: venueTrVal || null,
         venue_de: null,
@@ -1248,7 +1256,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 <label className="block text-sm font-medium text-slate-700 mb-1">Kısa açıklama (TR)</label>
                 <textarea value={descriptionTr} onChange={(e) => setDescriptionTr(e.target.value)} rows={2} placeholder="Etkinlik hakkında kısa metin" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (DE)</label>
                   <textarea value={descriptionDe} onChange={(e) => setDescriptionDe(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
@@ -1256,6 +1264,10 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (EN)</label>
                   <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (KU)</label>
+                  <textarea value={descriptionKu} onChange={(e) => setDescriptionKu(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
@@ -1276,6 +1288,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   rows={2}
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
                 />
+                <p className="mt-1 text-xs text-slate-500">Çeviri kaynağı: önce KU, boşsa TR.</p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Kategori *</label>
@@ -1338,7 +1351,13 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Kapak görseli</label>
-                <AdminImageUpload value={imageUrl} onChange={setImageUrl} onUploadingChange={setImageUploading} />
+                <AdminImageUpload
+                  value={imageUrl}
+                  onChange={setImageUrl}
+                  onUploadingChange={setImageUploading}
+                  folder="images"
+                  label=""
+                />
               </div>
             </>
           )}

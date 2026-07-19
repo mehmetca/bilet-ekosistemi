@@ -13,7 +13,7 @@ import type { Event, Ticket, Venue } from "@/types/database";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SAFE_ROUTE_SLUG_REGEX = /^[a-zA-Z0-9.-]+$/;
 const CITY_EVENT_COLUMNS =
-  "id,title,slug,date,time,venue,location,image_url,category,price_from,currency,created_at,is_approved,description,title_tr,title_de,title_en,title_ku,title_ckb,description_tr,description_de,description_en,venue_tr,venue_de,venue_en,show_slug,city,venues(city)";
+  "id,title,slug,date,time,venue,location,image_url,category,price_from,currency,created_at,is_approved,description,title_tr,title_de,title_en,title_ku,title_ckb,description_tr,description_de,description_en,description_ku,description_ckb,venue_tr,venue_de,venue_en,show_slug,city,venues(city)";
 const CITY_EVENTS_TARGETED_LIMIT = 96;
 const CITY_EVENTS_FALLBACK_LIMIT = 500;
 

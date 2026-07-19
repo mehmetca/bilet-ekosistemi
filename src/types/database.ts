@@ -38,6 +38,7 @@ export interface Event {
   description_tr?: string | null;
   description_de?: string | null;
   description_en?: string | null;
+  description_ku?: string | null;
   description_ckb?: string | null;
   venue_tr?: string | null;
   venue_de?: string | null;

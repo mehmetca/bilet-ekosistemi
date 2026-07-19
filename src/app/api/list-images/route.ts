@@ -3,11 +3,12 @@ import { requireRoleWithAccessToken, getAuthToken } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 const BUCKET = "uploads";
+const IMAGE_EXT = /\.(jpe?g|png|gif|webp|avif)$/i;
 
 export async function GET(request: NextRequest) {
   const folderRaw = request.nextUrl.searchParams.get("folder") || "";
-  const limitRaw = request.nextUrl.searchParams.get("limit") || "30";
-  const limit = Math.max(1, Math.min(50, Number(limitRaw) || 30));
+  const limitRaw = request.nextUrl.searchParams.get("limit") || "50";
+  const limit = Math.max(1, Math.min(100, Number(limitRaw) || 50));
 
   const folder = folderRaw.replace(/^\/+/, "").trim();
   if (!folder) {
@@ -20,17 +21,22 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase.storage
-      .from(BUCKET)
-      .list(folder, { limit, offset: 0 });
+    const { data, error } = await supabase.storage.from(BUCKET).list(folder, {
+      limit,
+      offset: 0,
+      sortBy: { column: "created_at", order: "desc" },
+    });
 
     if (error) throw error;
 
     const files = Array.isArray(data) ? data : [];
     const images = files
-      .map((entry: any) => {
+      .map((entry: { name?: string; id?: string | null; metadata?: { mimetype?: string } | null }) => {
         const entryName = typeof entry?.name === "string" ? entry.name : null;
-        if (!entryName) return null;
+        if (!entryName || entryName.startsWith(".")) return null;
+        // Klasör girdilerini atla (id null)
+        if (entry.id == null && !IMAGE_EXT.test(entryName)) return null;
+        if (!IMAGE_EXT.test(entryName)) return null;
 
         const filePath =
           entryName.startsWith(`${folder}/`) || entryName === folder
@@ -55,4 +61,3 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Gorseller listelenemedi" }, { status: 500 });
   }
 }
-
