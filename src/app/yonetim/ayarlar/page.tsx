@@ -130,18 +130,6 @@ export default function AyarlarPage() {
               
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">
-                  İletişim E-postası
-                </label>
-                <input
-                  type="email"
-                  value={settings.contactEmail}
-                  onChange={(e) => setSettings({...settings, contactEmail: e.target.value})}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
                   Maksimum Bilet Adedi
                 </label>
                 <input
@@ -168,7 +156,7 @@ export default function AyarlarPage() {
                 <div>
                   <div className="font-medium text-slate-900">Bildirimleri Etkinleştir</div>
                   <div className="text-sm text-slate-500">
-                    Yeni sipariş ve sistem bildirimleri
+                    Açıkken yeni sipariş bildirimleri aşağıdaki adrese gider (alıcı bilet maili ayrı kalır)
                   </div>
                 </div>
                 <button
@@ -184,12 +172,29 @@ export default function AyarlarPage() {
                   />
                 </button>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Bildirim e-postası
+                </label>
+                <input
+                  type="email"
+                  value={settings.contactEmail}
+                  onChange={(e) => setSettings({...settings, contactEmail: e.target.value})}
+                  placeholder="info@kurdevents.com"
+                  disabled={!settings.enableNotifications}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500 disabled:bg-slate-50 disabled:text-slate-400"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Sipariş bildirimleri bu adrese gönderilir. Kaydetmeyi unutmayın.
+                </p>
+              </div>
               
               <div className="flex items-center justify-between">
                 <div>
                   <div className="font-medium text-slate-900">Bakım Modu</div>
                   <div className="text-sm text-slate-500">
-                    Siteyi bakım için geçici olarak kapat
+                    Açıkken ziyaretçiler bakım sayfasını görür; yönetim ve giriş açık kalır (hafif çerez önbelleği)
                   </div>
                 </div>
                 <button
@@ -217,9 +222,10 @@ export default function AyarlarPage() {
             
             <div className="space-y-4">
               <div className="p-4 bg-slate-50 rounded-lg">
-                <div className="font-medium text-slate-900 mb-2">Oturum Süresi</div>
+                <div className="font-medium text-slate-900 mb-2">Oturum Süresi (ziyaretçi)</div>
                 <div className="text-sm text-slate-600">
-                  Kullanıcı oturumları 24 saat sonra otomatik olarak sonlandırılır.
+                  Giriş yapmış ziyaretçiler 24 saat boyunca siteye dönmezse oturum otomatik kapanır.
+                  Admin, organizatör ve kontrolcü oturumları bu süreye bağlı değildir.
                 </div>
               </div>
               

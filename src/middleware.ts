@@ -2,6 +2,13 @@ import createMiddleware from "next-intl/middleware";
 import { routing } from "./i18n/routing";
 import { NextRequest, NextResponse } from "next/server";
 import { withSupabaseAuth } from "@/utils/supabase/middleware";
+import {
+  MAINTENANCE_COOKIE,
+  applyMaintenanceCookie,
+  isBakimPath,
+  isMaintenanceBypassPath,
+  resolveMaintenanceMode,
+} from "@/lib/maintenance-mode";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -101,6 +108,35 @@ export async function middleware(request: NextRequest) {
   if (canonical) return canonical;
 
   const pathname = request.nextUrl.pathname;
+
+  // Bakım modu (hafif): çerez → bellek → DB (nadiren). Yönetim/giriş açık kalır.
+  if (!isMaintenanceBypassPath(pathname)) {
+    try {
+      const mnt = await resolveMaintenanceMode(request.cookies.get(MAINTENANCE_COOKIE)?.value);
+
+      if (isBakimPath(pathname)) {
+        if (!mnt.enabled) {
+          const localeMatch = pathname.match(/^\/(tr|de|en|ku|ckb)(?:\/|$)/);
+          const locale = localeMatch?.[1] || resolveUnprefixedPathLocale(request);
+          const url = request.nextUrl.clone();
+          url.pathname = `/${locale}`;
+          const res = NextResponse.redirect(url);
+          applyMaintenanceCookie(res, false);
+          return res;
+        }
+      } else if (mnt.enabled) {
+        const localeMatch = pathname.match(/^\/(tr|de|en|ku|ckb)(?:\/|$)/);
+        const locale = localeMatch?.[1] || resolveUnprefixedPathLocale(request);
+        const url = request.nextUrl.clone();
+        url.pathname = `/${locale}/bakim`;
+        const res = NextResponse.redirect(url);
+        applyMaintenanceCookie(res, true);
+        return res;
+      }
+    } catch {
+      /* ayar okunamazsa siteyi kapatma */
+    }
+  }
 
   // Legacy /index.html varyantlarini tek kanonik URL'ye yonlendir.
   if (/^\/(?:tr|de|en|ku|ckb)?\/?index\.html$/i.test(pathname)) {

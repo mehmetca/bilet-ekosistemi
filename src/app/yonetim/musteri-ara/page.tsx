@@ -36,7 +36,7 @@ type Profile = {
 
 type Result = {
   profile: Profile;
-  authInfo?: { email?: string; created_at?: string; last_sign_in_at?: string };
+  authInfo?: { email?: string; created_at?: string; last_sign_in_at?: string; user_id?: string };
   orders: OrderRow[];
 };
 
@@ -55,7 +55,7 @@ export default function MusteriAraPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch(
-        `/api/admin/customer-by-kundennummer?kundennummer=${encodeURIComponent(kundennummer.trim())}`,
+        `/api/admin/customer-by-kundennummer?q=${encodeURIComponent(kundennummer.trim())}`,
         { headers: { Authorization: `Bearer ${session?.access_token || ""}` } }
       );
       const data = await res.json();
@@ -85,9 +85,9 @@ export default function MusteriAraPage() {
     <AdminOnlyGuard>
       <div className="p-8">
         <div className="max-w-4xl mx-auto">
-          <h1 className="text-2xl font-bold text-slate-900 mb-6">Müşteri Ara (Kundennummer)</h1>
+          <h1 className="text-2xl font-bold text-slate-900 mb-6">Müşteri Ara</h1>
           <p className="text-slate-600 mb-6">
-            Müşteri numarası ile profil bilgilerini, giriş geçmişini ve siparişlerini görüntüleyin.
+            Kundennummer, e-posta veya müşteri ID (UUID / parça) ile profil, giriş ve siparişleri bulun.
           </p>
 
           <form onSubmit={handleSearch} className="mb-8">
@@ -98,7 +98,7 @@ export default function MusteriAraPage() {
                   type="text"
                   value={kundennummer}
                   onChange={(e) => setKundennummer(e.target.value)}
-                  placeholder="Kundennummer girin (örn: 20250301AB7F3E)"
+                  placeholder="Örn: 20250301AB7F3E, info@mail.com veya cdaf5204"
                   className="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
                 />
               </div>
@@ -110,6 +110,9 @@ export default function MusteriAraPage() {
                 {loading ? "Aranıyor..." : "Ara"}
               </button>
             </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Kundennummer Bilgilerim sayfasındadır (tarih + baş harfler + ID sonu). Kısa ID parçası veya e-posta da kabul edilir.
+            </p>
           </form>
 
           {error && (
@@ -130,6 +133,10 @@ export default function MusteriAraPage() {
                   <div>
                     <span className="text-slate-500">Kundennummer:</span>
                     <span className="ml-2 font-medium">{result.profile.kundennummer || "—"}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Kullanıcı ID:</span>
+                    <span className="ml-2 font-mono text-xs">{result.authInfo?.user_id || "—"}</span>
                   </div>
                   <div>
                     <span className="text-slate-500">Ad Soyad:</span>

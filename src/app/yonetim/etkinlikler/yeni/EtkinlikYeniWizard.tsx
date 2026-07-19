@@ -1218,7 +1218,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (DE)</label>
                   <input type="text" value={titleDe} onChange={(e) => setTitleDe(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
@@ -1227,68 +1227,72 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (EN)</label>
                   <input type="text" value={titleEn} onChange={(e) => setTitleEn(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (KU)</label>
                   <input type="text" value={titleKu} onChange={(e) => setTitleKu(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <label className="block text-sm font-medium text-slate-700">Etkinlik adı (CKB - Sorani)</label>
-                  <button
-                    type="button"
-                    onClick={handleAutoTranslateSorani}
-                    disabled={translatingCkb}
-                    className="rounded-md border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
-                  >
-                    {translatingCkb ? "Çevriliyor..." : "Sorani'ye otomatik çevir"}
-                  </button>
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className="block text-sm font-medium text-slate-700">Etkinlik adı (CKB - Sorani)</label>
+                    <button
+                      type="button"
+                      onClick={handleAutoTranslateSorani}
+                      disabled={translatingCkb}
+                      className="rounded-md border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
+                    >
+                      {translatingCkb ? "Çevriliyor..." : "Sorani'ye otomatik çevir"}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    value={titleCkb}
+                    onChange={(e) => setTitleCkb(e.target.value)}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">Çeviri kaynağı: önce KU, boşsa TR.</p>
                 </div>
-                <input
-                  type="text"
-                  value={titleCkb}
-                  onChange={(e) => setTitleCkb(e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-                <p className="mt-1 text-xs text-slate-500">Çeviri kaynağı: önce KU, boşsa TR.</p>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Kısa açıklama (TR)</label>
-                <textarea value={descriptionTr} onChange={(e) => setDescriptionTr(e.target.value)} rows={2} placeholder="Etkinlik hakkında kısa metin" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Kısa açıklama (TR)</label>
+                  <textarea value={descriptionTr} onChange={(e) => setDescriptionTr(e.target.value)} rows={2} placeholder="Etkinlik hakkında kısa metin" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (DE)</label>
                   <textarea value={descriptionDe} onChange={(e) => setDescriptionDe(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (EN)</label>
                   <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (KU)</label>
-                  <textarea value={descriptionKu} onChange={(e) => setDescriptionKu(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <label className="block text-sm font-medium text-slate-700">Açıklama (CKB - Sorani)</label>
+                    <button
+                      type="button"
+                      onClick={handleAutoTranslateDescriptionSorani}
+                      disabled={translatingDescriptionCkb}
+                      className="rounded-md border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
+                    >
+                      {translatingDescriptionCkb ? "Çevriliyor..." : "Sorani'ye otomatik çevir"}
+                    </button>
+                  </div>
+                  <textarea
+                    value={descriptionCkb}
+                    onChange={(e) => setDescriptionCkb(e.target.value)}
+                    rows={2}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                  <p className="mt-1 text-xs text-slate-500">Çeviri kaynağı: önce KU, boşsa TR.</p>
                 </div>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <label className="block text-sm font-medium text-slate-700">Açıklama (CKB - Sorani)</label>
-                  <button
-                    type="button"
-                    onClick={handleAutoTranslateDescriptionSorani}
-                    disabled={translatingDescriptionCkb}
-                    className="rounded-md border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
-                  >
-                    {translatingDescriptionCkb ? "Çevriliyor..." : "Sorani'ye otomatik çevir"}
-                  </button>
-                </div>
-                <textarea
-                  value={descriptionCkb}
-                  onChange={(e) => setDescriptionCkb(e.target.value)}
-                  rows={2}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-                <p className="mt-1 text-xs text-slate-500">Çeviri kaynağı: önce KU, boşsa TR.</p>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (KU)</label>
+                <textarea value={descriptionKu} onChange={(e) => setDescriptionKu(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Kategori *</label>

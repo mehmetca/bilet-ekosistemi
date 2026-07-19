@@ -4,6 +4,8 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
 import { revalidateSiteSettingsCache } from "@/lib/revalidate-public-cache";
+import { applyMaintenanceCookie, setMaintenanceModeCache } from "@/lib/maintenance-mode";
+import { logAuditServer } from "@/lib/audit";
 
 export const revalidate = 3600;
 
@@ -178,8 +180,28 @@ export async function POST(request: NextRequest) {
     }
 
     revalidateSiteSettingsCache();
+    setMaintenanceModeCache(maintenanceMode);
 
-    return NextResponse.json({
+    const ip =
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      null;
+    await logAuditServer({
+      action: "update",
+      entity_type: "site_settings",
+      details: {
+        siteName,
+        contactEmail,
+        maxTicketQuantity,
+        enableNotifications,
+        maintenanceMode,
+      },
+      user_id: user.id,
+      user_email: user.email ?? null,
+      ip_address: ip,
+    });
+
+    const res = NextResponse.json({
       success: true,
       ...DEFAULT_SETTINGS,
       ...{
@@ -191,6 +213,8 @@ export async function POST(request: NextRequest) {
         maintenanceMode,
       },
     });
+    applyMaintenanceCookie(res, maintenanceMode);
+    return res;
   } catch (e) {
     console.error("Settings POST error:", e);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });

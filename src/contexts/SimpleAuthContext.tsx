@@ -2,6 +2,11 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
+import {
+  clearVisitorActivity,
+  isVisitorIdleExpired,
+  touchVisitorActivity,
+} from "@/lib/visitor-session";
 
 type SupabaseClientModule = typeof import("@/lib/supabase-client");
 let supabaseModulePromise: Promise<SupabaseClientModule> | null = null;
@@ -39,6 +44,8 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   const [loading, setLoading] = useState(true);
   /** Kullanıcının tüm rolleri (ör. hem admin hem organizer). Tek satır limit(1) admin yetkilerini gizliyordu. */
   const [roleSlugs, setRoleSlugs] = useState<string[]>([]);
+  /** Rol sorgusu bu kullanıcı için tamamlandı mı (idle timeout yanlışlıkla staff'a uygulanmasın). */
+  const [roleResolved, setRoleResolved] = useState(false);
   const userRef = useRef<User | null>(null);
   const roleSlugsRef = useRef<string[]>([]);
   const roleFetchInFlightForRef = useRef<string | null>(null);
@@ -66,17 +73,20 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       if (error) {
         setRoleSlugs([]);
         roleSlugsRef.current = [];
+        setRoleResolved(true);
         return null;
       }
 
       const slugs = [...new Set((data || []).map((r) => String(r.role || "").trim()).filter(Boolean))];
       setRoleSlugs(slugs);
       roleSlugsRef.current = slugs;
+      setRoleResolved(true);
       return primaryUserRole(slugs);
     } catch (error) {
       console.error("Role fetch error:", error);
       setRoleSlugs([]);
       roleSlugsRef.current = [];
+      setRoleResolved(true);
       return null;
     } finally {
       roleFetchInFlightForRef.current = null;
@@ -176,6 +186,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
               setUser(null);
               setAccessToken(null);
               setRoleSlugs([]);
+              setRoleResolved(false);
               userRef.current = null;
               roleSlugsRef.current = [];
             }
@@ -211,6 +222,8 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
               setUser(null);
               setAccessToken(null);
               setRoleSlugs([]);
+              setRoleResolved(false);
+              clearVisitorActivity();
               userRef.current = null;
               roleSlugsRef.current = [];
               setLoading(false);
@@ -222,6 +235,13 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
             ) {
               if (session?.user) {
                 const userChanged = userRef.current?.id !== session.user.id;
+                if (userChanged) {
+                  setRoleResolved(false);
+                }
+                // Yeni girişte süreyi sıfırla; INITIAL_SESSION'da dokunma (24s idle bozulmasın)
+                if (event === "SIGNED_IN") {
+                  touchVisitorActivity();
+                }
                 setUser(session.user);
                 setAccessToken(session.access_token ?? null);
                 userRef.current = session.user;
@@ -273,12 +293,55 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     if (error) {
       await supabase.auth.signOut({ scope: "local" }).catch(() => {});
     }
+    clearVisitorActivity();
     setUser(null);
     setAccessToken(null);
     setRoleSlugs([]);
     userRef.current = null;
     roleSlugsRef.current = [];
   }
+
+  /** Ziyaretçi: 24 saat aktivite yoksa oturumu kapat. Admin/organizatör/kontrolcü etkilenmez. */
+  useEffect(() => {
+    if (loading || !user || !roleResolved) return;
+    const isStaff = isAdmin || isOrganizer || isController;
+    if (isStaff) return;
+
+    if (isVisitorIdleExpired()) {
+      void signOut();
+      return;
+    }
+    touchVisitorActivity();
+
+    const onActivity = () => touchVisitorActivity();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") {
+        if (isVisitorIdleExpired()) {
+          void signOut();
+          return;
+        }
+        touchVisitorActivity();
+      }
+    };
+
+    window.addEventListener("click", onActivity, { passive: true });
+    window.addEventListener("keydown", onActivity, { passive: true });
+    document.addEventListener("visibilitychange", onVisibility);
+
+    const intervalId = window.setInterval(() => {
+      if (isVisitorIdleExpired()) {
+        void signOut();
+      }
+    }, 60_000);
+
+    return () => {
+      window.removeEventListener("click", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.clearInterval(intervalId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading, roleResolved, isAdmin, isOrganizer, isController]);
 
   async function refreshRole() {
     if (user) {

@@ -94,19 +94,6 @@ export default function BiletOzetiPage() {
                 </div>
                 <div className="bg-white rounded-xl border border-slate-200 p-5">
                   <div className="flex items-center gap-2 text-slate-600 mb-2">
-                    <PieChart className="h-5 w-5" />
-                    <span className="text-sm font-medium">Doluluk</span>
-                  </div>
-                  <p className="text-2xl font-bold text-slate-900">
-                    {s && s.capacity > 0
-                      ? Math.min(100, Math.round((s.soldTickets / s.capacity) * 100))
-                      : 0}
-                    %
-                  </p>
-                  <p className="text-xs text-slate-500 mt-1">Satılan / toplam kontenjan</p>
-                </div>
-                <div className="bg-white rounded-xl border border-slate-200 p-5">
-                  <div className="flex items-center gap-2 text-slate-600 mb-2">
                     <Euro className="h-5 w-5" />
                     <span className="text-sm font-medium">Brüt tahsilat</span>
                   </div>
@@ -140,6 +127,7 @@ export default function BiletOzetiPage() {
               <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                 <div className="p-4 border-b border-slate-200">
                   <h2 className="font-semibold text-slate-900">Etkinlik bazında</h2>
+                  <p className="text-xs text-slate-500 mt-1">Doluluk oranı her etkinlik için ayrı hesaplanır.</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -150,38 +138,53 @@ export default function BiletOzetiPage() {
                         <th className="p-3 text-right font-medium text-slate-700">Satılan</th>
                         <th className="p-3 text-right font-medium text-slate-700">Kalan</th>
                         <th className="p-3 text-right font-medium text-slate-700">Kontenjan</th>
+                        <th className="p-3 text-right font-medium text-slate-700">
+                          <span className="inline-flex items-center gap-1 justify-end">
+                            <PieChart className="h-3.5 w-3.5" />
+                            Doluluk
+                          </span>
+                        </th>
                         <th className="p-3 text-right font-medium text-slate-700">Brüt</th>
                         <th className="p-3 text-right font-medium text-slate-700">Kargo</th>
                         <th className="p-3 text-right font-medium text-slate-700">Tahm. bilet</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {(data?.events || []).map((row: OrganizerTicketSummaryEvent) => (
-                        <tr key={row.eventId} className="border-b border-slate-100 hover:bg-slate-50/80">
-                          <td className="p-3 text-slate-900 font-medium">{row.title}</td>
-                          <td className="p-3 text-slate-600 whitespace-nowrap">
-                            {row.date
-                              ? new Date(row.date).toLocaleDateString("tr-TR", {
-                                  day: "numeric",
-                                  month: "short",
-                                  year: "numeric",
-                                })
-                              : "—"}
-                          </td>
-                          <td className="p-3 text-right tabular-nums">{row.soldTickets}</td>
-                          <td className="p-3 text-right tabular-nums">{row.remainingTickets}</td>
-                          <td className="p-3 text-right tabular-nums">{row.capacity}</td>
-                          <td className="p-3 text-right tabular-nums font-medium">
-                            {formatPrice(row.grossRevenue, "EUR")}
-                          </td>
-                          <td className="p-3 text-right tabular-nums text-slate-600">
-                            {formatPrice(row.shippingFeesTotal, "EUR")}
-                          </td>
-                          <td className="p-3 text-right tabular-nums text-emerald-800">
-                            {formatPrice(row.ticketRevenueApprox, "EUR")}
-                          </td>
-                        </tr>
-                      ))}
+                      {(data?.events || []).map((row: OrganizerTicketSummaryEvent) => {
+                        const occupancy =
+                          row.capacity > 0
+                            ? Math.min(100, Math.round((row.soldTickets / row.capacity) * 100))
+                            : 0;
+                        return (
+                          <tr key={row.eventId} className="border-b border-slate-100 hover:bg-slate-50/80">
+                            <td className="p-3 text-slate-900 font-medium">{row.title}</td>
+                            <td className="p-3 text-slate-600 whitespace-nowrap">
+                              {row.date
+                                ? new Date(row.date).toLocaleDateString("tr-TR", {
+                                    day: "numeric",
+                                    month: "short",
+                                    year: "numeric",
+                                  })
+                                : "—"}
+                            </td>
+                            <td className="p-3 text-right tabular-nums">{row.soldTickets}</td>
+                            <td className="p-3 text-right tabular-nums">{row.remainingTickets}</td>
+                            <td className="p-3 text-right tabular-nums">{row.capacity}</td>
+                            <td className="p-3 text-right tabular-nums font-medium">
+                              {row.capacity > 0 ? `${occupancy}%` : "—"}
+                            </td>
+                            <td className="p-3 text-right tabular-nums font-medium">
+                              {formatPrice(row.grossRevenue, "EUR")}
+                            </td>
+                            <td className="p-3 text-right tabular-nums text-slate-600">
+                              {formatPrice(row.shippingFeesTotal, "EUR")}
+                            </td>
+                            <td className="p-3 text-right tabular-nums text-emerald-800">
+                              {formatPrice(row.ticketRevenueApprox, "EUR")}
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

@@ -845,35 +845,114 @@ async function sendTicketEmail(payload: TicketMailPayload) {
   }
 }
 
-async function sendAdminPhysicalDeliveryAlert(payload: {
+async function getAdminNotificationConfig(supabase: SupabaseClient): Promise<{
+  enabled: boolean;
+  email: string;
+}> {
+  let enabled = true;
+  let email =
+    (process.env.ADMIN_ORDER_ALERT_EMAIL || "").trim() || "info@kurdevents.com";
+
+  try {
+    const { data } = await supabase
+      .from("site_settings")
+      .select("key, value")
+      .in("key", ["enable_notifications", "contact_email"]);
+
+    const byKey = new Map(
+      ((data || []) as Array<{ key: string; value: unknown }>).map((row) => [row.key, row.value])
+    );
+
+    if (typeof byKey.get("enable_notifications") === "boolean") {
+      enabled = Boolean(byKey.get("enable_notifications"));
+    }
+
+    const contact = byKey.get("contact_email");
+    if (typeof contact === "string" && contact.trim()) {
+      email = contact.trim();
+    }
+  } catch {
+    /* varsayılanlar */
+  }
+
+  return { enabled, email };
+}
+
+async function sendAdminOrderNotification(payload: {
   buyerName: string;
   buyerEmail: string;
-  buyerAddress: string;
-  buyerPlz: string;
-  buyerCity: string;
-  deliveryMethod: "standard" | "express";
-  shippingFee: number;
   quantity: number;
   ticketCode: string;
+  ticketType: string;
+  totalPrice: number;
+  currency?: string;
   eventTitle?: string;
+  eventDate?: string;
+  eventTime?: string;
+  venue?: string;
+  seatDetails?: SeatDetail[];
+  ticketCodes?: string[];
+  physicalDelivery?: "none" | "standard" | "express";
+  buyerAddress?: string | null;
+  buyerPlz?: string | null;
+  buyerCity?: string | null;
+  shippingFee?: number;
+  adminEmail: string;
 }) {
   const resendApiKey = process.env.RESEND_API_KEY;
   const fromAddress = process.env.TICKET_EMAIL_FROM;
-  const adminAlertEmail = process.env.ADMIN_ORDER_ALERT_EMAIL;
-  if (!resendApiKey || !fromAddress || !adminAlertEmail) return { sent: false };
+  if (!resendApiKey || !fromAddress || !payload.adminEmail) {
+    return { sent: false, reason: "Admin bildirim ayarları eksik." };
+  }
 
-  const subject = `Fiziksel bilet siparişi: ${payload.ticketCode}`;
+  const currency = (payload.currency || "EUR").toUpperCase();
+  const isPhysical =
+    payload.physicalDelivery &&
+    payload.physicalDelivery !== "none" &&
+    payload.buyerAddress &&
+    payload.buyerPlz &&
+    payload.buyerCity;
+
+  const seatLines =
+    payload.seatDetails && payload.seatDetails.length > 0
+      ? payload.seatDetails
+          .map((s) => `${s.section_name} / ${s.row_label} / ${s.seat_label}`)
+          .join("<br/>")
+      : "";
+
+  const codes =
+    payload.ticketCodes && payload.ticketCodes.length > 0
+      ? payload.ticketCodes.join(", ")
+      : payload.ticketCode;
+
+  const subject = isPhysical
+    ? `Yeni sipariş (fiziksel): ${payload.ticketCode}`
+    : `Yeni sipariş: ${payload.ticketCode}`;
+
   const html = `
     <div style="font-family:Arial,sans-serif;color:#0f172a;">
-      <h2 style="margin:0 0 10px;">Yeni fiziksel teslimat siparişi</h2>
+      <h2 style="margin:0 0 10px;">Yeni sipariş bildirimi</h2>
       <p style="margin:0 0 8px;"><strong>Etkinlik:</strong> ${payload.eventTitle || "-"}</p>
-      <p style="margin:0 0 8px;"><strong>Bilet Kodu:</strong> ${payload.ticketCode}</p>
+      <p style="margin:0 0 8px;"><strong>Tarih/Saat:</strong> ${payload.eventDate || "-"} ${payload.eventTime || ""}</p>
+      <p style="margin:0 0 8px;"><strong>Mekan:</strong> ${payload.venue || "-"}</p>
+      <p style="margin:0 0 8px;"><strong>Bilet türü:</strong> ${payload.ticketType}</p>
       <p style="margin:0 0 8px;"><strong>Adet:</strong> ${payload.quantity}</p>
-      <p style="margin:0 0 8px;"><strong>Teslimat:</strong> ${payload.deliveryMethod}</p>
-      <p style="margin:0 0 12px;"><strong>Kargo Ücreti:</strong> EUR ${payload.shippingFee.toFixed(2)}</p>
+      <p style="margin:0 0 8px;"><strong>Tutar:</strong> ${currency} ${Number(payload.totalPrice || 0).toFixed(2)}</p>
+      <p style="margin:0 0 8px;"><strong>Bilet kodu(ları):</strong> ${codes}</p>
+      ${seatLines ? `<p style="margin:0 0 8px;"><strong>Koltuklar:</strong><br/>${seatLines}</p>` : ""}
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;" />
-      <p style="margin:0 0 8px;"><strong>Alıcı:</strong> ${payload.buyerName} (${payload.buyerEmail})</p>
+      <p style="margin:0 0 8px;"><strong>Alıcı:</strong> ${payload.buyerName}</p>
+      <p style="margin:0 0 8px;"><strong>E-posta:</strong> ${payload.buyerEmail}</p>
+      ${
+        isPhysical
+          ? `
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;" />
+      <p style="margin:0 0 8px;"><strong>Teslimat:</strong> ${payload.physicalDelivery}</p>
+      <p style="margin:0 0 8px;"><strong>Kargo ücreti:</strong> ${currency} ${Number(payload.shippingFee || 0).toFixed(2)}</p>
       <p style="margin:0;"><strong>Adres:</strong> ${payload.buyerAddress}, ${payload.buyerPlz} ${payload.buyerCity}</p>
+      `
+          : `<p style="margin:0;"><strong>Teslimat:</strong> E-bilet</p>`
+      }
     </div>
   `;
 
@@ -885,12 +964,17 @@ async function sendAdminPhysicalDeliveryAlert(payload: {
     },
     body: JSON.stringify({
       from: fromAddress,
-      to: [adminAlertEmail],
+      to: [payload.adminEmail],
       subject,
       html,
     }),
   });
-  return { sent: res.ok };
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    return { sent: false, reason: text || "Admin bildirimi gönderilemedi." };
+  }
+  return { sent: true };
 }
 
 export async function POST(request: NextRequest) {
@@ -1681,23 +1765,36 @@ export async function POST(request: NextRequest) {
       console.error("Bilet e-postası gönderilemedi:", emailResult.reason);
     }
 
-    if (physicalDelivery !== "none" && buyerAddress && buyerPlz && buyerCity) {
-      try {
-        await sendAdminPhysicalDeliveryAlert({
+    try {
+      const notif = await getAdminNotificationConfig(supabase);
+      if (notif.enabled) {
+        const adminResult = await sendAdminOrderNotification({
           buyerName,
           buyerEmail,
+          quantity,
+          ticketCode,
+          ticketType: ticketTypeDisplay,
+          totalPrice,
+          currency: (eventRow as { currency?: string | null }).currency || "EUR",
+          eventTitle: eventSummary.title,
+          eventDate: eventSummary.date,
+          eventTime: eventSummary.time,
+          venue: eventSummary.venue,
+          seatDetails: seatDetails.length > 0 ? seatDetails : undefined,
+          ticketCodes: ticketCodes.length > 0 ? ticketCodes : undefined,
+          physicalDelivery,
           buyerAddress,
           buyerPlz,
           buyerCity,
-          deliveryMethod: physicalDelivery,
           shippingFee,
-          quantity,
-          ticketCode,
-          eventTitle: eventSummary.title,
+          adminEmail: notif.email,
         });
-      } catch (err) {
-        console.error("Admin fiziksel teslimat bildirimi gönderilemedi:", err);
+        if (!adminResult.sent) {
+          console.error("Admin sipariş bildirimi gönderilemedi:", adminResult.reason);
+        }
       }
+    } catch (err) {
+      console.error("Admin sipariş bildirimi gönderilemedi:", err);
     }
 
     return NextResponse.json({
