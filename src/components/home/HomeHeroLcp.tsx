@@ -20,7 +20,7 @@ export default function HomeHeroLcp({ imageUrl, alt }: HomeHeroLcpProps) {
       alt={alt}
       fill
       priority
-      quality={70}
+      quality={75}
       sizes="100vw"
       className="hero-lcp-img z-0 object-cover"
     />

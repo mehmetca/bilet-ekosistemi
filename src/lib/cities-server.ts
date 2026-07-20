@@ -20,12 +20,17 @@ async function fetchCityBySlug(slug: string) {
     .eq("slug", slug)
     .eq("is_active", true)
     .single();
-  if (error || !data) return null;
+  if (error) {
+    // PGRST116 = no rows — gerçek "bulunamadı"
+    if (error.code === "PGRST116") return null;
+    console.error("fetchCityBySlug error:", error.message, error.code);
+    throw new Error(`City lookup failed: ${error.message}`);
+  }
   return data;
 }
 
 const getCityCrossRequest = (slug: string) =>
-  unstable_cache(() => fetchCityBySlug(slug), ["city-by-slug", slug], {
+  unstable_cache(() => fetchCityBySlug(slug), ["city-by-slug-v2", slug], {
     revalidate: DATA_CACHE_REVALIDATE.city,
     tags: ["cities"],
   });
@@ -51,14 +56,25 @@ async function fetchCitiesWithEventCounts() {
       .order("date", { ascending: true })
       .limit(500),
   ]);
-  if (citiesRes.error) return [];
-  const rawEvents = (eventsRes.data || []) as Record<string, unknown>[];
+
+  // Hata → [] yapma: boş liste Data Cache'e yazılır ve /sehirler günlerce boş kalabilir.
+  // Admin kaydı revalidate ile "düzelmiş" gibi görünür; asıl veri silinmemiştir.
+  if (citiesRes.error) {
+    console.error("fetchCitiesWithEventCounts cities error:", citiesRes.error.message, citiesRes.error.code);
+    throw new Error(`Cities query failed: ${citiesRes.error.message}`);
+  }
+
+  if (eventsRes.error) {
+    console.error("fetchCitiesWithEventCounts events error:", eventsRes.error.message, eventsRes.error.code);
+  }
+
+  const rawEvents = (eventsRes.error ? [] : eventsRes.data || []) as Record<string, unknown>[];
   const cities = citiesRes.data || [];
   return sortCitiesByUpcomingEventCount(cities, rawEvents);
 }
 
 export async function getCitiesWithEventCounts() {
-  return unstable_cache(fetchCitiesWithEventCounts, ["cities-with-events"], {
+  return unstable_cache(fetchCitiesWithEventCounts, ["cities-with-events-v2"], {
     revalidate: DATA_CACHE_REVALIDATE.cities,
     tags: ["cities"],
   })();

@@ -61,6 +61,11 @@ async function fetchHomeShellData(locale: string): Promise<HomeShellData> {
     getHomeSliderAds(locale, "main_slider"),
   ]);
 
+  if (citiesRes.error) {
+    console.error("fetchHomeShellData cities error:", citiesRes.error.message, citiesRes.error.code);
+    throw new Error(`Home cities query failed: ${citiesRes.error.message}`);
+  }
+
   return {
     heroBackgrounds: (heroRes.data || []) as HomeShellData["heroBackgrounds"],
     cities: (citiesRes.data || []) as HomeShellData["cities"],
@@ -69,9 +74,9 @@ async function fetchHomeShellData(locale: string): Promise<HomeShellData> {
 }
 
 export async function getHomeShellData(locale: string): Promise<HomeShellData> {
-  return unstable_cache(() => fetchHomeShellData(locale), ["home-shell", locale], {
+  return unstable_cache(() => fetchHomeShellData(locale), ["home-shell-v2", locale], {
     revalidate: DATA_CACHE_REVALIDATE.home,
-    tags: ["home"],
+    tags: ["home", "cities"],
   })();
 }
 

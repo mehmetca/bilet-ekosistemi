@@ -89,6 +89,8 @@ const nextConfig = {
     return config;
   },
   images: {
+    // Next 16+: Image quality prop must be listed here (hero uses 70; 75 is Next default)
+    qualities: [70, 75],
     remotePatterns: [
       {
         protocol: 'https',

@@ -23,6 +23,8 @@ import {
   X,
   ZoomIn,
   ZoomOut,
+  Link2,
+  MoreHorizontal,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
@@ -1049,6 +1051,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   /** Kullanıcı hangi akıştan ilerleyeceğine kendisi karar verir (başlangıçta ikisi de kapalı). */
   const [bookingMode, setBookingMode] = useState<"price" | "seat" | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
   /** Koltuk seçimi: yüklü plan yapısı (bölüm > sıra > koltuk) */
   const [seatingPlanData, setSeatingPlanData] = useState<SeatPlanSection[] | null>(null);
   const [seatingPlanName, setSeatingPlanName] = useState("");
@@ -1965,24 +1969,108 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     }
   }
 
-  async function handleShare() {
-    const shareUrl = window.location.href;
+  useEffect(() => {
+    if (!shareMenuOpen) return;
+    function onPointerDown(e: MouseEvent | TouchEvent) {
+      const el = shareMenuRef.current;
+      if (el && !el.contains(e.target as Node)) setShareMenuOpen(false);
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") setShareMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [shareMenuOpen]);
+
+  function getShareUrl() {
+    return window.location.href;
+  }
+
+  function getShareText() {
+    return t("shareEventText", { title: localized.title });
+  }
+
+  async function copyShareLink(messageKey: "linkCopied" | "instagramLinkCopied" = "linkCopied") {
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+      setShareMenuOpen(false);
+      setActionMessage(t(messageKey));
+      window.setTimeout(() => setActionMessage(null), 3200);
+    } catch {
+      setActionMessage(t("shareFailed"));
+      window.setTimeout(() => setActionMessage(null), 2200);
+    }
+  }
+
+  function openShareWindow(url: string) {
+    window.open(url, "_blank", "noopener,noreferrer,width=640,height=720");
+    setShareMenuOpen(false);
+    setActionMessage(t("shareOpened"));
+    window.setTimeout(() => setActionMessage(null), 2200);
+  }
+
+  function shareToFacebook() {
+    openShareWindow(
+      `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(getShareUrl())}`
+    );
+  }
+
+  /** Instagram has no web share URL; copy link then open Instagram so the user can paste. */
+  async function shareToInstagram() {
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+    } catch {
+      setActionMessage(t("shareFailed"));
+      window.setTimeout(() => setActionMessage(null), 2200);
+      return;
+    }
+    window.open("https://www.instagram.com/", "_blank", "noopener,noreferrer");
+    setShareMenuOpen(false);
+    setActionMessage(t("instagramLinkCopied"));
+    window.setTimeout(() => setActionMessage(null), 4500);
+  }
+
+  function shareToWhatsApp() {
+    const text = `${getShareText()} ${getShareUrl()}`;
+    openShareWindow(`https://wa.me/?text=${encodeURIComponent(text)}`);
+  }
+
+  function shareToX() {
+    const url = getShareUrl();
+    openShareWindow(
+      `https://twitter.com/intent/tweet?url=${encodeURIComponent(url)}&text=${encodeURIComponent(getShareText())}`
+    );
+  }
+
+  function shareToLinkedIn() {
+    openShareWindow(
+      `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(getShareUrl())}`
+    );
+  }
+
+  async function shareViaSystem() {
+    const shareUrl = getShareUrl();
     try {
       if (navigator.share) {
         await navigator.share({
           title: localized.title,
-          text: t("shareEventText", { title: localized.title }),
+          text: getShareText(),
           url: shareUrl,
         });
+        setShareMenuOpen(false);
         setActionMessage(t("shareOpened"));
         window.setTimeout(() => setActionMessage(null), 2200);
         return;
       }
-
-      await navigator.clipboard.writeText(shareUrl);
-      setActionMessage(t("linkCopied"));
-      window.setTimeout(() => setActionMessage(null), 2200);
-    } catch {
+      await copyShareLink();
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       setActionMessage(t("shareFailed"));
       window.setTimeout(() => setActionMessage(null), 2200);
     }
@@ -2065,13 +2153,99 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   <Heart className="h-4 w-4" />
                   {isFavorite ? t("favorited") : t("favorite")}
                 </button>
-                <button
-                  onClick={handleShare}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  <Share2 className="h-4 w-4" />
-                  {t("share")}
-                </button>
+                <div className="relative" ref={shareMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setShareMenuOpen((open) => !open)}
+                    aria-expanded={shareMenuOpen}
+                    aria-haspopup="menu"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <Share2 className="h-4 w-4" />
+                    {t("share")}
+                  </button>
+                  {shareMenuOpen && (
+                    <div
+                      role="menu"
+                      className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={shareToFacebook}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1877F2] text-xs font-bold text-white">
+                          f
+                        </span>
+                        Facebook
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => void shareToInstagram()}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-[#f58529] via-[#dd2a7b] to-[#8134af] text-[10px] font-bold text-white">
+                          IG
+                        </span>
+                        Instagram
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={shareToWhatsApp}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#25D366] text-[10px] font-bold text-white">
+                          WA
+                        </span>
+                        WhatsApp
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={shareToX}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-black text-xs font-bold text-white">
+                          𝕏
+                        </span>
+                        X
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={shareToLinkedIn}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#0A66C2] text-[10px] font-bold text-white">
+                          in
+                        </span>
+                        LinkedIn
+                      </button>
+                      <div className="my-1 border-t border-slate-100" />
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => void copyShareLink()}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <Link2 className="h-4 w-4 text-slate-500" />
+                        {t("copyLink")}
+                      </button>
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => void shareViaSystem()}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                      >
+                        <MoreHorizontal className="h-4 w-4 text-slate-500" />
+                        {t("shareMore")}
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               {actionMessage && <p className="mt-2 text-xs text-slate-500">{actionMessage}</p>}
             </div>
