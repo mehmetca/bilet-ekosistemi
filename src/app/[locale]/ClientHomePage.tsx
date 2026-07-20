@@ -508,16 +508,7 @@ export default function ClientHomePage({
               <>
                 <Music2 className="h-16 w-16 mx-auto text-slate-300 mb-4" />
                 <p className="text-lg font-medium">{t("noEvents")}</p>
-                <p className="mt-2 text-sm">{t("supabaseHint")}</p>
-                <div className="mt-4 p-4 bg-slate-100 rounded-lg text-left">
-                  <p className="font-medium mb-2">{t("solutionSteps")}</p>
-                  <ol className="text-sm space-y-1">
-                    <li>1. {t("solution1")}</li>
-                    <li>2. {t("solution2")}</li>
-                    <li>3. <code className="bg-slate-200 px-1 rounded">quick-fix.sql</code> {t("solution3")}</li>
-                    <li>4. {t("solution4")}</li>
-                  </ol>
-                </div>
+                <p className="mt-2 text-sm">{t("noEventsSlider")}</p>
               </>
             ) : hasActiveFilters ? (
               <p className="text-lg font-medium">{t("noEventsForFilter")}</p>

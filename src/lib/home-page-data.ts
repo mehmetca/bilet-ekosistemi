@@ -80,7 +80,7 @@ export async function getHomeShellData(locale: string): Promise<HomeShellData> {
   })();
 }
 
-async function fetchHomeEvents(_locale: string): Promise<Event[]> {
+async function fetchHomeEvents(): Promise<Event[]> {
   const supabase = createServerSupabase();
   const { data, error } = await supabase
     .from("events")
@@ -93,14 +93,19 @@ async function fetchHomeEvents(_locale: string): Promise<Event[]> {
     .order("time", { ascending: true })
     .limit(HOME_EVENTS_LIMIT);
 
-  if (error || !data) return [];
+  // Hata → [] yapma: locale bazlı cache (özellikle /de) boş listeyi saatlerce tutabiliyor.
+  if (error) {
+    console.error("fetchHomeEvents error:", error.message, error.code);
+    throw new Error(`Home events query failed: ${error.message}`);
+  }
 
-  const raw = data as Array<Record<string, unknown>>;
+  const raw = (data || []) as Array<Record<string, unknown>>;
   return raw.map(({ venues: _v, ...ev }) => ev) as unknown as Event[];
 }
 
-export async function getHomeEvents(locale: string): Promise<Event[]> {
-  return unstable_cache(() => fetchHomeEvents(locale), ["home-events", locale], {
+/** Sorgu locale’e bağlı değil — tek önbellek; dil başına boş “zehir” cache oluşmasın. */
+export async function getHomeEvents(_locale?: string): Promise<Event[]> {
+  return unstable_cache(fetchHomeEvents, ["home-events-v2"], {
     revalidate: DATA_CACHE_REVALIDATE.home,
     tags: ["home", "events"],
   })();
