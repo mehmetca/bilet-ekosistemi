@@ -105,7 +105,7 @@ async function fetchHomeEvents(): Promise<Event[]> {
 
 /** Sorgu locale’e bağlı değil — tek önbellek; dil başına boş “zehir” cache oluşmasın. */
 export async function getHomeEvents(_locale?: string): Promise<Event[]> {
-  return unstable_cache(fetchHomeEvents, ["home-events-v2"], {
+  return unstable_cache(fetchHomeEvents, ["home-events-v3"], {
     revalidate: DATA_CACHE_REVALIDATE.home,
     tags: ["home", "events"],
   })();

@@ -29,6 +29,7 @@ import { buildEventDescription, parseEventDescription } from "@/lib/eventMeta";
 import AdminImageUpload from "@/components/AdminImageUpload";
 import { formatPrice } from "@/lib/formatPrice";
 import { shortenTicketDisplayName } from "@/lib/ticket-seating-match";
+import { revalidatePublicSiteCache } from "@/lib/revalidate-public-site-client";
 
 const STEPS = [
   { id: 1, label: "Temel bilgiler" },
@@ -1091,12 +1092,20 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         }
 
         alert("Etkinlik güncellendi!");
+        await revalidatePublicSiteCache();
         router.push(`/yonetim/etkinlikler`);
         return;
       }
 
-      if (isOrganizer && user?.id) {
+      if (user?.id && (isOrganizer || isAdmin)) {
         eventData.created_by_user_id = user.id;
+      }
+      // Admin oluşturuyorsa hemen yayında; sadece organizatör ise onaya düşer.
+      // (Admin+organizatör hesaplarında is_approved=false kalmasın.)
+      if (isAdmin) {
+        eventData.is_approved = true;
+        eventData.is_draft = false;
+      } else if (isOrganizer) {
         eventData.is_approved = false;
       }
 
@@ -1147,10 +1156,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         if (ticketsError) throw ticketsError;
       }
 
-      const message = isOrganizer
+      const message = isOrganizer && !isAdmin
         ? "Etkinliğiniz onaya gönderildi. Yönetici onayından sonra yayına alınacaktır."
         : "Etkinlik oluşturuldu!";
       alert(message);
+      await revalidatePublicSiteCache();
       router.push(`/tr/etkinlik/${insertedEventId}`);
     } catch (err) {
       console.error("Wizard submit error:", err);

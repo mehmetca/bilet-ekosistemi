@@ -8,24 +8,7 @@ import AdminImageUploadFixed from "@/components/AdminImageUploadFixed";
 import RichTextEditor from "@/components/RichTextEditor";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { isLegacyWordPressImageUrl, resolvePublicImageUrl } from "@/lib/external-image";
-
-async function revalidatePublicSiteCache() {
-  try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    const res = await fetch("/api/admin/revalidate-public", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    if (!res.ok) {
-      console.warn("Public site önbelleği temizlenemedi:", res.status);
-    }
-  } catch (err) {
-    console.warn("Public site önbelleği temizlenemedi:", err);
-  }
-}
+import { revalidatePublicSiteCache } from "@/lib/revalidate-public-site-client";
 
 interface City {
   id: string;

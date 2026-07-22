@@ -11,24 +11,7 @@ import { CATEGORY_LABELS } from "@/types/database";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { formatPrice } from "@/lib/formatPrice";
 import { logAudit } from "@/lib/audit";
-
-async function revalidatePublicSiteCache() {
-  try {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.access_token) return;
-    const res = await fetch("/api/admin/revalidate-public", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    if (!res.ok) {
-      console.warn("Ana sayfa önbelleği temizlenemedi:", res.status);
-    }
-  } catch (err) {
-    console.warn("Ana sayfa önbelleği temizlenemedi:", err);
-  }
-}
+import { revalidatePublicSiteCache } from "@/lib/revalidate-public-site-client";
 
 async function withTimeout(
   requestFactory: (signal: AbortSignal) => any,
