@@ -178,7 +178,7 @@ export default function AnaHeroSlider({
   if (loading) {
     return (
       <div className="w-full">
-        <div className="h-[58vw] min-h-[220px] max-h-[360px] w-full animate-pulse bg-slate-100 sm:h-[48vw] sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px]" />
+        <div className="aspect-[16/10] min-h-[240px] w-full animate-pulse bg-slate-100 sm:aspect-auto sm:h-[48vw] sm:min-h-0 sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px]" />
       </div>
     );
   }
@@ -235,12 +235,12 @@ export default function AnaHeroSlider({
               const showDateBox = Boolean(overlayDay || overlayMonth || overlayYear);
 
               const slide = (
-                <div className="relative w-full h-[58vw] min-h-[220px] max-h-[360px] sm:h-[48vw] sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px] bg-black">
+                <div className="relative w-full aspect-[16/10] min-h-[240px] bg-black sm:aspect-auto sm:h-[48vw] sm:min-h-0 sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px]">
                     <picture>
                       <img
                         src={ad.image_url}
                         alt={imgAlt}
-                        className="w-full h-full object-cover object-[72%_top] sm:object-top"
+                        className="h-full w-full object-contain object-center sm:object-cover sm:object-center"
                         loading={idx === currentIndex ? "eager" : "lazy"}
                       />
                     </picture>

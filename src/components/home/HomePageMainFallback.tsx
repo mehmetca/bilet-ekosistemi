@@ -7,7 +7,7 @@ export default function HomePageMainFallback() {
           <div className="h-7 w-44 rounded bg-slate-200" />
         </div>
         <div className="border-t border-slate-200">
-          <div className="h-[58vw] min-h-[220px] max-h-[360px] animate-pulse bg-slate-200 sm:h-[48vw] sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px]" />
+          <div className="aspect-[16/10] min-h-[240px] animate-pulse bg-slate-200 sm:aspect-auto sm:h-[48vw] sm:min-h-0 sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px]" />
         </div>
       </div>
       <div className="mt-12">
