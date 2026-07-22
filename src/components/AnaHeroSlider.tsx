@@ -64,14 +64,17 @@ function localizeOverlayMonth(monthRaw: string, locale: string): string {
 
 function splitOverlayMonthYear(raw: string, locale: string): { month: string; year: string } {
   const text = (raw || "").trim();
-  if (!text) return { month: localizeOverlayMonth("Mayıs", locale), year: "2026" };
+  if (!text) return { month: "", year: "" };
   const parts = text.split(/\s+/).filter(Boolean);
-  const yearToken = parts.find((p) => /^\d{4}$/.test(p)) || "2026";
+  const yearToken = parts.find((p) => /^\d{4}$/.test(p)) || "";
   const monthToken =
     parts.find((p) => !/^\d+$/.test(p) && !/^\d{4}$/.test(p)) ||
-    parts[0] ||
-    "Mayıs";
-  return { month: localizeOverlayMonth(monthToken, locale), year: yearToken };
+    parts.find((p) => !/^\d{4}$/.test(p)) ||
+    "";
+  return {
+    month: monthToken ? localizeOverlayMonth(monthToken, locale) : "",
+    year: yearToken,
+  };
 }
 
 export default function AnaHeroSlider({
@@ -221,13 +224,15 @@ export default function AnaHeroSlider({
               const order = idx + 1;
               const imgAlt = ad.title || "Slider";
               const group = "ANA-SLIDER";
-              const overlayTitle = ad.overlay_title?.trim() || ad.title?.trim() || "HARIKA";
-              const overlayDay = ad.overlay_day?.trim() || "05";
-              const overlayMonthYear = ad.overlay_month_year?.trim() || "Mayıs 2026";
+              const overlayTitle = ad.overlay_title?.trim() || "";
+              const overlayDay = ad.overlay_day?.trim() || "";
+              const overlayMonthYear = ad.overlay_month_year?.trim() || "";
+              const hasOverlay = Boolean(overlayTitle || overlayDay || overlayMonthYear);
               const { month: overlayMonth, year: overlayYear } = splitOverlayMonthYear(
                 overlayMonthYear,
                 locale
               );
+              const showDateBox = Boolean(overlayDay || overlayMonth || overlayYear);
 
               const slide = (
                 <div className="relative w-full h-[58vw] min-h-[220px] max-h-[360px] sm:h-[48vw] sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px] bg-black">
@@ -239,19 +244,39 @@ export default function AnaHeroSlider({
                         loading={idx === currentIndex ? "eager" : "lazy"}
                       />
                     </picture>
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
-                    <div className="absolute inset-x-3 bottom-3 z-10 sm:inset-x-auto sm:left-10 sm:right-8 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 md:left-14 md:right-10">
-                      <div className="flex items-end gap-3 sm:items-center sm:gap-8 md:gap-10">
-                        <div className="rounded-xl border border-white/35 bg-black/30 px-2.5 py-2 text-center text-white backdrop-blur-sm sm:rounded-2xl sm:px-5 sm:py-4 md:px-6 md:py-5">
-                          <div className="text-3xl font-extrabold leading-none sm:text-5xl md:text-6xl">{overlayDay}</div>
-                          <div className="mt-1 text-xs font-semibold leading-tight sm:text-base md:text-lg">{overlayMonth}</div>
-                          <div className="mt-0.5 text-xs font-semibold leading-tight sm:text-base md:text-lg">{overlayYear}</div>
+                    {hasOverlay ? (
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+                        <div className="absolute inset-x-3 bottom-3 z-10 sm:inset-x-auto sm:left-10 sm:right-8 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 md:left-14 md:right-10">
+                          <div className="flex items-end gap-3 sm:items-center sm:gap-8 md:gap-10">
+                            {showDateBox ? (
+                              <div className="rounded-xl border border-white/35 bg-black/30 px-2.5 py-2 text-center text-white backdrop-blur-sm sm:rounded-2xl sm:px-5 sm:py-4 md:px-6 md:py-5">
+                                {overlayDay ? (
+                                  <div className="text-3xl font-extrabold leading-none sm:text-5xl md:text-6xl">
+                                    {overlayDay}
+                                  </div>
+                                ) : null}
+                                {overlayMonth ? (
+                                  <div className="mt-1 text-xs font-semibold leading-tight sm:text-base md:text-lg">
+                                    {overlayMonth}
+                                  </div>
+                                ) : null}
+                                {overlayYear ? (
+                                  <div className="mt-0.5 text-xs font-semibold leading-tight sm:text-base md:text-lg">
+                                    {overlayYear}
+                                  </div>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            {overlayTitle ? (
+                              <h3 className="min-w-0 text-2xl font-extrabold leading-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] sm:text-5xl md:text-6xl lg:text-7xl">
+                                {overlayTitle}
+                              </h3>
+                            ) : null}
+                          </div>
                         </div>
-                        <h3 className="min-w-0 text-2xl font-extrabold leading-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] sm:text-5xl md:text-6xl lg:text-7xl">
-                          {overlayTitle}
-                        </h3>
-                      </div>
-                    </div>
+                      </>
+                    ) : null}
                   </div>
               );
 

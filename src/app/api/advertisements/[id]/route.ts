@@ -31,6 +31,8 @@ function pickAdvertisementPayload(body: Record<string, unknown>) {
     }
     payload[field] = value;
   }
+  // Tek slider tipi: her zaman ana slider
+  payload.placement = "main_slider";
   return payload;
 }
 

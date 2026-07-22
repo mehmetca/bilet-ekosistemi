@@ -21,8 +21,20 @@ const ADVERTISEMENT_FIELDS = [
 function pickAdvertisementPayload(body: Record<string, unknown>) {
   const payload: Record<string, unknown> = {};
   for (const field of ADVERTISEMENT_FIELDS) {
-    if (field in body) payload[field] = body[field];
+    if (!(field in body)) continue;
+    const value = body[field];
+    if (
+      (field === "overlay_title" || field === "overlay_day" || field === "overlay_month_year" || field === "link_url") &&
+      typeof value === "string" &&
+      value.trim() === ""
+    ) {
+      payload[field] = null;
+      continue;
+    }
+    payload[field] = value;
   }
+  // Tek slider tipi: her zaman ana slider
+  payload.placement = "main_slider";
   return payload;
 }
 

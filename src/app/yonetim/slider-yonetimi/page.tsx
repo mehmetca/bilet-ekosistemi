@@ -105,11 +105,20 @@ export default function SliderYonetimiPage() {
 
   async function handleAddAd() {
     try {
+      if (!newAd.title.trim()) {
+        alert("Başlık boş olamaz.");
+        return;
+      }
+      if (!newAd.image_url.trim()) {
+        alert("Görsel boş olamaz.");
+        return;
+      }
+
       const headers = await getAuthorizedHeaders();
       const response = await fetch("/api/advertisements", {
         method: "POST",
         headers,
-        body: JSON.stringify(newAd),
+        body: JSON.stringify({ ...newAd, placement: "main_slider" }),
       });
 
       if (!response.ok) {
@@ -154,7 +163,7 @@ export default function SliderYonetimiPage() {
       const response = await fetch(`/api/advertisements/${editingAd.id}`, {
         method: "PUT",
         headers,
-        body: JSON.stringify(newAd),
+        body: JSON.stringify({ ...newAd, placement: "main_slider" }),
       });
 
       if (!response.ok) {
@@ -312,17 +321,6 @@ export default function SliderYonetimiPage() {
                     <option value="en">English (İngilizce)</option>
                   </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Yerleşim</label>
-                  <select
-                    value={newAd.placement}
-                    onChange={(e) => setNewAd({ ...newAd, placement: e.target.value })}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                  >
-                    <option value="news_slider">Haberler slider</option>
-                    <option value="main_slider">Ana slider</option>
-                  </select>
-                </div>
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -335,40 +333,45 @@ export default function SliderYonetimiPage() {
                     Yayında (aktif)
                   </label>
                 </div>
-                {newAd.placement === "main_slider" && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Slider üst yazı başlığı</label>
-                      <input
-                        type="text"
-                        placeholder="HARIKA"
-                        value={newAd.overlay_title}
-                        onChange={(e) => setNewAd({ ...newAd, overlay_title: e.target.value })}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Tarih — gün</label>
-                      <input
-                        type="text"
-                        placeholder="05"
-                        value={newAd.overlay_day}
-                        onChange={(e) => setNewAd({ ...newAd, overlay_day: e.target.value })}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Tarih — ay / yıl</label>
-                      <input
-                        type="text"
-                        placeholder="Mayıs 2026"
-                        value={newAd.overlay_month_year}
-                        onChange={(e) => setNewAd({ ...newAd, overlay_month_year: e.target.value })}
-                        className="w-full rounded-lg border border-slate-300 px-3 py-2"
-                      />
-                    </div>
-                  </>
-                )}
+                <div className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  Üst yazı ve tarih alanları isteğe bağlıdır. Boş bırakırsanız slider yalnızca görsel olarak yayınlanır.
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Slider üst yazı başlığı <span className="font-normal text-slate-400">(opsiyonel)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Örn. HARIKA"
+                    value={newAd.overlay_title}
+                    onChange={(e) => setNewAd({ ...newAd, overlay_title: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Tarih — gün <span className="font-normal text-slate-400">(opsiyonel)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Örn. 05"
+                    value={newAd.overlay_day}
+                    onChange={(e) => setNewAd({ ...newAd, overlay_day: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Tarih — ay / yıl <span className="font-normal text-slate-400">(opsiyonel)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Örn. Mayıs 2026"
+                    value={newAd.overlay_month_year}
+                    onChange={(e) => setNewAd({ ...newAd, overlay_month_year: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2"
+                  />
+                </div>
               </div>
               <AdminImageUploadFixed
                 value={newAd.image_url}
@@ -450,15 +453,9 @@ export default function SliderYonetimiPage() {
                           </div>
                           <div className="flex items-center text-slate-600">
                             <span className="font-medium">Yerleşim:</span>
-                            <span className="ml-1">
-                              {ad.placement === "news_slider"
-                                ? "Haberler slider"
-                                : ad.placement === "main_slider"
-                                  ? "Ana slider"
-                                  : ad.placement}
-                            </span>
+                            <span className="ml-1">Ana slider</span>
                           </div>
-                          {ad.placement === "main_slider" && (
+                          {(ad.overlay_title || ad.overlay_day || ad.overlay_month_year) && (
                             <div className="text-slate-600">
                               <span className="font-medium">Üst yazı:</span>
                               <span className="ml-1">{ad.overlay_title || "-"}</span>
