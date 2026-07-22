@@ -36,7 +36,7 @@ export default function SliderYonetimiPage() {
     title: "",
     image_url: "",
     link_url: "",
-    placement: "news_slider",
+    placement: "main_slider",
     is_active: true,
     locale: "tr" as "tr" | "de" | "en",
     overlay_title: "",
@@ -49,7 +49,13 @@ export default function SliderYonetimiPage() {
   }, []);
 
   useEffect(() => {
-    if (searchParams.get("yeni") === "true") setShowAddForm(true);
+    if (!authLoading && isAdmin) {
+      fetchAdvertisements();
+    }
+  }, [authLoading, isAdmin]);
+
+  useEffect(() => {
+    if (searchParams.get("yeni") === "true") openNewAdForm();
   }, [searchParams]);
 
   async function getAuthorizedHeaders() {
@@ -66,7 +72,11 @@ export default function SliderYonetimiPage() {
 
   async function fetchAdvertisements() {
     try {
-      const response = await fetch("/api/advertisements");
+      const headers = await getAuthorizedHeaders().catch(() => null);
+      const response = await fetch("/api/advertisements", {
+        headers: headers || undefined,
+        cache: "no-store",
+      });
       if (!response.ok) throw new Error("Slider öğeleri yüklenemedi");
       const data = await response.json();
       setAdvertisements(data || []);
@@ -75,6 +85,22 @@ export default function SliderYonetimiPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function openNewAdForm() {
+    setEditingAd(null);
+    setNewAd({
+      title: "",
+      image_url: "",
+      link_url: "",
+      placement: "main_slider",
+      is_active: true,
+      locale: "tr",
+      overlay_title: "",
+      overlay_day: "",
+      overlay_month_year: "",
+    });
+    setShowAddForm(true);
   }
 
   async function handleAddAd() {
@@ -96,7 +122,7 @@ export default function SliderYonetimiPage() {
         title: "",
         image_url: "",
         link_url: "",
-        placement: "news_slider",
+        placement: "main_slider",
         is_active: true,
         locale: "tr",
         overlay_title: "",
@@ -142,7 +168,7 @@ export default function SliderYonetimiPage() {
         title: "",
         image_url: "",
         link_url: "",
-        placement: "news_slider",
+        placement: "main_slider",
         is_active: true,
         locale: "tr",
         overlay_title: "",
@@ -205,7 +231,7 @@ export default function SliderYonetimiPage() {
       title: "",
       image_url: "",
       link_url: "",
-      placement: "news_slider",
+      placement: "main_slider",
       is_active: true,
       locale: "tr",
       overlay_title: "",
@@ -240,7 +266,7 @@ export default function SliderYonetimiPage() {
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-3xl font-bold text-slate-900">Slider yönetimi</h1>
             <button
-              onClick={() => setShowAddForm(true)}
+              onClick={openNewAdForm}
               className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium"
             >
               <Plus className="h-4 w-4" />
@@ -373,7 +399,7 @@ export default function SliderYonetimiPage() {
                 <ImageIcon className="h-16 w-16 mx-auto text-slate-300 mb-4" />
                 <p className="text-slate-500 mb-4">Henüz slider kartı yok.</p>
                 <button
-                  onClick={() => setShowAddForm(true)}
+                  onClick={openNewAdForm}
                   className="text-primary-600 hover:text-primary-700 underline"
                 >
                   İlk kartı ekle

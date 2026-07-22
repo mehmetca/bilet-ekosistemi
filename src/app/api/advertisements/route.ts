@@ -30,6 +30,30 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const locale = searchParams.get("locale") || undefined;
+
+    // Admin paneli: Authorization varsa tum kayitlari (pasif dahil) dondur.
+    const authHeader = request.headers.get("authorization");
+    if (authHeader?.toLowerCase().startsWith("bearer ")) {
+      const auth = await requireAdmin(request);
+      if (!(auth instanceof Response)) {
+        const supabaseAdmin = getSupabaseAdmin();
+        const { data, error } = await supabaseAdmin
+          .from("advertisements")
+          .select(
+            "id,title,image_url,link_url,placement,is_active,locale,overlay_title,overlay_day,overlay_month_year,created_at"
+          )
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Admin advertisements list error:", error.message);
+          return NextResponse.json({ error: "Slider öğeleri yüklenemedi" }, { status: 500 });
+        }
+        return NextResponse.json(data || [], {
+          headers: { "Cache-Control": "no-store" },
+        });
+      }
+    }
+
     const data = await getActiveAdvertisements(locale || undefined);
 
     return NextResponse.json(data, {
