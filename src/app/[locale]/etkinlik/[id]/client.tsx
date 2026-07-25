@@ -1390,14 +1390,23 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     }
   }, [event?.id, hasSeatingPlan, seatHoldSessionId]);
 
+  // Salon planı olan etkinlikte satılan/rezerve koltukları sayfa açılır açılmaz yükle
+  // (fiyat kategorisi modunda bekleme / eski kalan adet olmasın).
   useEffect(() => {
-    if (bookingMode !== "seat") return;
+    if (!event?.id || !hasSeatingPlan) return;
     fetchSoldSeats();
     void fetchHeldByOthersSeats();
-  }, [bookingMode, fetchSoldSeats, fetchHeldByOthersSeats]);
+  }, [event?.id, hasSeatingPlan, fetchSoldSeats, fetchHeldByOthersSeats]);
 
   useEffect(() => {
-    if (!event?.id || !hasSeatingPlan || bookingMode !== "seat") return;
+    if (bookingMode !== "seat" && bookingMode !== "price") return;
+    if (!hasSeatingPlan) return;
+    fetchSoldSeats();
+    void fetchHeldByOthersSeats();
+  }, [bookingMode, hasSeatingPlan, fetchSoldSeats, fetchHeldByOthersSeats]);
+
+  useEffect(() => {
+    if (!event?.id || !hasSeatingPlan || (bookingMode !== "seat" && bookingMode !== "price")) return;
     const onFocus = () => {
       fetchSoldSeats();
       void fetchHeldByOthersSeats();
@@ -1407,12 +1416,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   }, [event?.id, hasSeatingPlan, bookingMode, fetchSoldSeats, fetchHeldByOthersSeats]);
 
   useEffect(() => {
-    if (!event?.id || !hasSeatingPlan || bookingMode !== "seat") return;
+    if (!event?.id || !hasSeatingPlan || (bookingMode !== "seat" && bookingMode !== "price")) return;
     const id = window.setInterval(() => {
       if (document.visibilityState !== "visible") return;
       void fetchHeldByOthersSeats();
       fetchSoldSeats();
-    }, 15000);
+    }, 10000);
     return () => window.clearInterval(id);
   }, [event?.id, hasSeatingPlan, bookingMode, fetchHeldByOthersSeats, fetchSoldSeats]);
 
@@ -1431,11 +1440,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         .catch(() => {});
     };
     refreshTickets();
-    const ms = hasSeatingPlan ? 30000 : 45000;
+    // Fiyat kategorisi modunda kalan adet daha sık güncellensin.
+    const ms = bookingMode === "price" ? 8000 : hasSeatingPlan ? 20000 : 30000;
     const id = window.setInterval(refreshTickets, ms);
     return () => window.clearInterval(id);
   }, [event?.id, event.date, event.time, hasSeatingPlan, isExternalOnlyEvent, bookingMode]);
-
   const musensaalIdMaps = useMemo(() => {
     if (!isMusensaalPlan || !seatingPlanData?.length) return null;
     return buildMusensaalIdMaps(seatingPlanData);
@@ -1511,6 +1520,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
         row.seats.forEach((seat) => {
           if (seat.sales_blocked) return;
           if (soldSeatIds.has(seat.id)) return;
+          if (heldByOthersSeatIds.has(seat.id)) return;
           const meta = seatMetaById.get(seat.id);
           const tid = meta?.ticket?.id;
           if (!tid) return;
@@ -1519,16 +1529,18 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       )
     );
     return m;
-  }, [hasSeatingPlan, seatingPlanData, soldSeatIds, seatMetaById]);
+  }, [hasSeatingPlan, seatingPlanData, soldSeatIds, heldByOthersSeatIds, seatMetaById]);
 
   const effectiveAvailabilityForTicket = useCallback(
     (tk: EventTicket): number => {
-      const catalogAvail = Number(tk.available || 0);
-      if (!hasSeatingPlan || !seatingPlanData?.length) return catalogAvail;
+      const catalogAvail = Math.max(0, Number(tk.available || 0));
+      if (!hasSeatingPlan) return catalogAvail;
+      // Plan yüklenirken seçimi kilitleme — katalog stokuyla hemen devam et.
+      if (seatingPlanLoading || !seatingPlanData?.length) return catalogAvail;
       const seatBacked = remainingSeatSlotsByTicketId.get(tk.id) ?? 0;
-      return seatBacked;
+      return Math.min(catalogAvail, seatBacked);
     },
-    [hasSeatingPlan, seatingPlanData, remainingSeatSlotsByTicketId]
+    [hasSeatingPlan, seatingPlanLoading, seatingPlanData, remainingSeatSlotsByTicketId]
   );
 
   const ticketEffectiveAvailableById = useMemo(() => {
