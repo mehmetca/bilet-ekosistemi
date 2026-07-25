@@ -58,6 +58,10 @@ export default function YonetimDashboard() {
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Salon Yapım Wizard</h3>
           <p className="text-sm text-slate-500">Adım adım salon planı oluşturun</p>
         </Link>
+        <Link href="/yonetim/salon-yapim-wizard-2" className="p-4 border border-teal-200 rounded-lg hover:border-teal-400 hover:bg-teal-50 transition-colors group">
+          <h3 className="font-medium text-slate-900 group-hover:text-teal-800">Salon Yapım Wizard 2</h3>
+          <p className="text-sm text-slate-500">Yön, numaralama, koridor — eski wizard’a dokunmaz</p>
+        </Link>
         <Link href="/yonetim/bilet-kontrol" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Bilet Kontrol</h3>
           <p className="text-sm text-slate-500">Biletleri doğrulayın</p>

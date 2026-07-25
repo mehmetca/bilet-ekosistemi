@@ -16,6 +16,17 @@
 - Etkinlik SSS ve mekan bilgisi bloklari ekle (ulasim, giris kurallari).
 - Etkinlik oncesi hatirlatici ekle (once e-posta, sonra istege bagli SMS).
 
+## Backlog - Uzun vadeli rezervasyon / ertelenmis odeme
+
+Kullanici bugun koltuk veya fiyat kategorisi ayirir; odemeyi etkinlige yaklasik **1 hafta kala** yapar. Odeme yapilmazsa rezervasyon otomatik duser, biletler tekrar satisa acilir.
+
+- [ ] **Rezervasyon modeli:** Anlik sepet hold (dakikalar) ile karismayan, gunler/haftalar suren rezervasyon kaydi (`expires_at` / son odeme tarihi, durum: reserved → paid | expired | cancelled).
+- [ ] **Stok kilidi:** Rezerve edilen koltuk/kategori adedi sure boyunca baskasina satilmaz.
+- [ ] **Otomatik serbest birakma:** Suresi dolan rezervasyonlari iptal eden cron / job.
+- [ ] **Kullanici gorunumu:** Girisli hesapta “Rezervasyonlarim” (etkinlik, koltuklar, son odeme tarihi, “Simdi ode”); e-posta hatirlatma + odeme linki.
+- [ ] **Misafir rezervasyonu (opsiyonel):** E-posta + gizli link; tercihen uye girisi zorunlu tutulur.
+- [ ] **Kosullar / UX:** Rezervasyon kurallarinin net aciklanmasi (odeme yapilmazsa duserer).
+
 ## Faz 3 - Analitik ve Olcekleme
 
 - Admin KPI paneli olustur (gunluk satis, donusum, iade oranlari).

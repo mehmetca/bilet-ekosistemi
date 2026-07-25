@@ -11,7 +11,10 @@ import { createSupabaseServerClient } from "@/lib/supabase-ssr";
 import { getSiteUrl } from "@/lib/site-url";
 import { getStripe } from "@/lib/stripe-server";
 import type { TicketType } from "@/types/database";
-import { planLabelsMatchTicketCatalogName, shortenTicketDisplayName } from "@/lib/ticket-seating-match";
+import {
+  resolveTicketForPlanRow,
+  type TicketLike,
+} from "@/lib/ticket-seating-match";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
@@ -71,15 +74,27 @@ async function getEventSummary(
   };
 }
 
-/** Fiyat kategorisine göre bilet alımında: bu kategorideki en iyi müsait yan yana N koltuğu döndürür. */
+/**
+ * Fiyat kategorisine göre bilet: yalnızca o bilet türüne eşlenen sıralardan
+ * en iyi müsait yan yana N koltuğu döner.
+ * Eski hata: bölüm adı "Balkon Sol" tüm balkon sıralarını (VIP+normal) açıyordu.
+ */
 async function assignBestAvailableSeats(
   supabase: SupabaseClient,
   eventId: string,
   seatingPlanId: string,
+  ticketId: string,
   ticketTypeName: string,
-  quantity: number
+  quantity: number,
+  catalogTickets: TicketLike[]
 ): Promise<string[]> {
-  const hasTicketType = (ticketTypeName || "").trim().length > 0;
+  const targetTicketId = String(ticketId || "").trim();
+  if (!targetTicketId) return [];
+
+  const ticketsForMatch: TicketLike[] =
+    catalogTickets.length > 0
+      ? catalogTickets
+      : [{ id: targetTicketId, name: ticketTypeName }];
 
   const { data: allSections } = await supabase
     .from("seating_plan_sections")
@@ -89,67 +104,70 @@ async function assignBestAvailableSeats(
 
   if (!allSections?.length) return [];
 
-  let sections: typeof allSections;
+  const sectionById = new Map(
+    allSections.map((s) => [
+      s.id,
+      {
+        id: s.id,
+        name: String(s.name || ""),
+        sort_order: (s as { sort_order?: number }).sort_order ?? 0,
+        ticket_type_label: String((s as { ticket_type_label?: string | null }).ticket_type_label || ""),
+      },
+    ])
+  );
 
-  if (hasTicketType) {
-    const { data: rowsLite } = await supabase
-      .from("seating_plan_rows")
-      .select("section_id, ticket_type_label")
-      .in(
-        "section_id",
-        allSections.map((s) => s.id)
-      );
-
-    const matchedSectionIds = new Set<string>();
-
-    for (const s of allSections) {
-      const name = String(s.name || "").trim();
-      const lbl = String((s as { ticket_type_label?: string | null }).ticket_type_label || "").trim();
-      const candidates = [lbl, name, name ? shortenTicketDisplayName(name) : ""].filter(Boolean) as string[];
-      if (candidates.length && planLabelsMatchTicketCatalogName(candidates, ticketTypeName)) {
-        matchedSectionIds.add(s.id);
-      }
-    }
-
-    for (const r of rowsLite || []) {
-      const rl = String((r as { ticket_type_label?: string | null }).ticket_type_label || "").trim();
-      if (!rl) continue;
-      if (planLabelsMatchTicketCatalogName([rl], ticketTypeName)) {
-        matchedSectionIds.add(String((r as { section_id: string }).section_id));
-      }
-    }
-
-    if (matchedSectionIds.size === 0) return [];
-
-    sections = allSections.filter((s) => matchedSectionIds.has(s.id));
-  } else {
-    sections = allSections;
-  }
-
-  if (!sections?.length) return [];
-
-  const sectionIds = sections.map((s: { id: string }) => s.id);
-  const sectionOrder = new Map(sections.map((s: { id: string; sort_order?: number }) => [s.id, s.sort_order ?? 0]));
-
-  const { data: rows } = await supabase
+  const { data: allRows } = await supabase
     .from("seating_plan_rows")
-    .select("id, section_id, row_label, sort_order")
-    .in("section_id", sectionIds)
+    .select("id, section_id, row_label, sort_order, ticket_type_label")
+    .in(
+      "section_id",
+      allSections.map((s) => s.id)
+    )
     .order("sort_order", { ascending: true });
 
-  if (!rows?.length) return [];
+  if (!allRows?.length) return [];
 
-  const rowIds = rows.map((r: { id: string }) => r.id);
+  // Yalnızca bu katalog biletine çözümlenen sıralar
+  const matchedRows = allRows.filter((r) => {
+    const sec = sectionById.get(String((r as { section_id: string }).section_id));
+    if (!sec) return false;
+    const resolved = resolveTicketForPlanRow(
+      {
+        sectionName: sec.name,
+        sectionTicketTypeLabel: sec.ticket_type_label,
+        rowTicketTypeLabel: String((r as { ticket_type_label?: string | null }).ticket_type_label || ""),
+      },
+      ticketsForMatch
+    );
+    return resolved?.id === targetTicketId;
+  });
+
+  if (!matchedRows.length) return [];
+
+  const sectionOrder = new Map(
+    [...sectionById.values()].map((s) => [s.id, s.sort_order] as const)
+  );
+  const rowById = new Map(
+    matchedRows.map((r) => [
+      r.id,
+      {
+        id: r.id,
+        section_id: String((r as { section_id: string }).section_id),
+        row_label: String((r as { row_label?: string }).row_label || ""),
+        sort_order: (r as { sort_order?: number }).sort_order ?? 0,
+      },
+    ])
+  );
+
+  const rowIds = matchedRows.map((r) => r.id as string);
   let seats: { id: string; row_id: string; seat_label: string; sales_blocked?: boolean | null }[];
   try {
     seats = await fetchAllSeatsByRowIds(supabase, rowIds, "id, row_id, seat_label, sales_blocked");
   } catch {
     return [];
   }
-
   if (!seats.length) return [];
 
-  const rowById = new Map(rows.map((r: { id: string; section_id: string; row_label: string; sort_order?: number }) => [r.id, r]));
   const soldSet = new Set<string>();
   const { data: completedOrders } = await supabase
     .from("orders")
@@ -160,13 +178,22 @@ async function assignBestAvailableSeats(
     const { data: orderSeats } = await supabase
       .from("order_seats")
       .select("seat_id")
-      .in("order_id", completedOrders.map((o: { id: string }) => o.id));
+      .in(
+        "order_id",
+        completedOrders.map((o: { id: string }) => o.id)
+      );
     (orderSeats || []).forEach((s: { seat_id: string }) => soldSet.add(s.seat_id));
   }
 
-  type SeatInfo = { id: string; row_id: string; seat_label: string; section_sort: number; row_sort: number };
+  type SeatInfo = {
+    id: string;
+    row_id: string;
+    seat_label: string;
+    section_sort: number;
+    row_sort: number;
+  };
   const available: SeatInfo[] = [];
-  for (const s of seats as { id: string; row_id: string; seat_label: string; sales_blocked?: boolean | null }[]) {
+  for (const s of seats) {
     if (s.sales_blocked) continue;
     if (soldSet.has(s.id)) continue;
     const row = rowById.get(s.row_id);
@@ -176,7 +203,7 @@ async function assignBestAvailableSeats(
       row_id: s.row_id,
       seat_label: s.seat_label,
       section_sort: sectionOrder.get(row.section_id) ?? 0,
-      row_sort: (row as { sort_order?: number }).sort_order ?? 0,
+      row_sort: row.sort_order,
     });
   }
 
@@ -202,7 +229,7 @@ async function assignBestAvailableSeats(
       const slice = list.slice(i, i + quantity);
       const consecutive = slice.every((s, j) => {
         if (j === 0) return true;
-        const prev = parseInt(slice[j - 1].seat_label, 10);
+        const prev = parseInt(slice[j - 1]!.seat_label, 10);
         const curr = parseInt(s.seat_label, 10);
         if (!Number.isNaN(prev) && !Number.isNaN(curr)) return curr === prev + 1;
         return true;
@@ -1165,7 +1192,19 @@ export async function POST(request: NextRequest) {
         ? "vip"
         : "normal";
 
-    // Yer seçimi geldiğinde, tüm koltuklar etkinliğin bağlı olduğu salon planına ait olmalı.
+    const { data: catalogTicketRows } = await supabase
+      .from("tickets")
+      .select("id, name, price, available")
+      .eq("event_id", ticket.event_id);
+    const catalogTickets: TicketLike[] = (catalogTicketRows || []).map((t) => ({
+      id: String(t.id),
+      name: String(t.name || ""),
+      price: Number(t.price) || 0,
+      available: Number(t.available) || 0,
+    }));
+
+    // Yer seçimi geldiğinde, tüm koltuklar etkinliğin bağlı olduğu salon planına ait olmalı
+    // ve seçilen bilet kategorisine eşleşmeli.
     if (seatIds.length > 0 && seatingPlanId) {
       const { data: seatRows, error: seatRowsError } = await supabase
         .from("seats")
@@ -1188,7 +1227,7 @@ export async function POST(request: NextRequest) {
       const rowIds = Array.from(new Set(seatRows.map((s) => (s as { row_id: string }).row_id).filter(Boolean)));
       const { data: planRows, error: planRowsError } = await supabase
         .from("seating_plan_rows")
-        .select("id, section_id")
+        .select("id, section_id, ticket_type_label")
         .in("id", rowIds);
       if (planRowsError || !planRows || planRows.length !== rowIds.length) {
         return NextResponse.json(
@@ -1200,7 +1239,7 @@ export async function POST(request: NextRequest) {
       const sectionIds = Array.from(new Set(planRows.map((r) => (r as { section_id: string }).section_id).filter(Boolean)));
       const { data: sections, error: sectionsError } = await supabase
         .from("seating_plan_sections")
-        .select("id, seating_plan_id")
+        .select("id, seating_plan_id, name, ticket_type_label")
         .in("id", sectionIds);
       if (sectionsError || !sections || sections.length !== sectionIds.length) {
         return NextResponse.json(
@@ -1209,17 +1248,62 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const sectionPlanById = new Map(
-        sections.map((s) => [s.id, (s as { seating_plan_id: string | null }).seating_plan_id])
+      const sectionById = new Map(
+        sections.map((s) => [
+          s.id,
+          {
+            seating_plan_id: (s as { seating_plan_id: string | null }).seating_plan_id,
+            name: String((s as { name?: string }).name || ""),
+            ticket_type_label: String((s as { ticket_type_label?: string | null }).ticket_type_label || ""),
+          },
+        ])
       );
       const invalidSeat = planRows.some(
-        (row) => sectionPlanById.get((row as { section_id: string }).section_id) !== seatingPlanId
+        (row) => sectionById.get((row as { section_id: string }).section_id)?.seating_plan_id !== seatingPlanId
       );
       if (invalidSeat) {
         return NextResponse.json(
           { success: false, message: "Secilen koltuklar bu etkinlige ait degil." },
           { status: 400 }
         );
+      }
+
+      const rowById = new Map(
+        planRows.map((r) => [
+          r.id as string,
+          {
+            section_id: String((r as { section_id: string }).section_id),
+            ticket_type_label: String((r as { ticket_type_label?: string | null }).ticket_type_label || ""),
+          },
+        ])
+      );
+      for (const seat of seatRows) {
+        const row = rowById.get(String((seat as { row_id: string }).row_id));
+        const sec = row ? sectionById.get(row.section_id) : null;
+        if (!row || !sec) {
+          return NextResponse.json(
+            { success: false, message: "Secilen koltuk satiri gecersiz." },
+            { status: 400 }
+          );
+        }
+        const resolved = resolveTicketForPlanRow(
+          {
+            sectionName: sec.name,
+            sectionTicketTypeLabel: sec.ticket_type_label,
+            rowTicketTypeLabel: row.ticket_type_label,
+          },
+          catalogTickets
+        );
+        if (!resolved || resolved.id !== ticket.id) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "Seçilen koltuk bu bilet kategorisine ait değil. Lütfen haritadan doğru kategori koltuklarını seçin.",
+            },
+            { status: 400 }
+          );
+        }
       }
     }
 
@@ -1229,8 +1313,10 @@ export async function POST(request: NextRequest) {
         supabase,
         ticket.event_id,
         seatingPlanId,
+        ticket.id,
         ticketTypeName,
-        quantity
+        quantity,
+        catalogTickets
       );
       if (assigned.length >= quantity) {
         seatIds = assigned.slice(0, quantity);

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireRole } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { fetchAllRowsBySectionIds, fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
+import { insertSeatsBatched } from "@/lib/seating-plans/insert-seats-batched";
+import { countSeatsForPlan } from "@/lib/seating-plans/count-plan-seats";
 
 export const dynamic = "force-dynamic";
 
@@ -122,20 +125,26 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ plan_id: newPlanId, message: "Boş plan kopyalandı." });
   }
 
-  const { data: rows, error: rowsErr } = await supabase
-    .from("seating_plan_rows")
-    .select("id, section_id, row_label, sort_order, ticket_type_label")
-    .in("section_id", oldSectionIds)
-    .order("sort_order");
-
-  if (rowsErr) {
+  let rows: {
+    id: string;
+    section_id: string;
+    row_label: string;
+    sort_order: number | null;
+    ticket_type_label: string | null;
+  }[];
+  try {
+    rows = await fetchAllRowsBySectionIds(supabase, oldSectionIds, "*");
+  } catch (rowsErr) {
     await supabase.from("seating_plans").delete().eq("id", newPlanId);
-    return NextResponse.json({ error: rowsErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: rowsErr instanceof Error ? rowsErr.message : "Sıralar okunamadı." },
+      { status: 500 }
+    );
   }
 
   const rowIdMap = new Map<string, string>();
 
-  for (const row of rows || []) {
+  for (const row of rows) {
     const r = row as Record<string, unknown>;
     const newSectionId = sectionIdMap.get(String(r.section_id));
     if (!newSectionId) continue;
@@ -163,37 +172,73 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ plan_id: newPlanId });
   }
 
-  const { data: seats, error: seatsErr } = await supabase
-    .from("seats")
-    .select("row_id, seat_label, x, y, sales_blocked")
-    .in("row_id", oldRowIds);
-
-  if (seatsErr) {
+  let seats: {
+    row_id: string;
+    seat_label: string;
+    x: number | null;
+    y: number | null;
+    sales_blocked: boolean | null;
+  }[];
+  try {
+    seats = await fetchAllSeatsByRowIds(supabase, oldRowIds, "row_id, seat_label, x, y, sales_blocked");
+  } catch (seatsErr) {
     await supabase.from("seating_plans").delete().eq("id", newPlanId);
-    return NextResponse.json({ error: seatsErr.message }, { status: 500 });
+    return NextResponse.json(
+      { error: seatsErr instanceof Error ? seatsErr.message : "Koltuklar okunamadı." },
+      { status: 500 }
+    );
   }
 
-  const seatPayload = (seats || [])
-    .map((st) => {
-      const s = st as Record<string, unknown>;
+  const seatPayload = seats
+    .map((s) => {
       const nr = rowIdMap.get(String(s.row_id));
       if (!nr) return null;
       return {
         row_id: nr,
-        seat_label: s.seat_label,
+        seat_label: String(s.seat_label),
         x: s.x ?? null,
         y: s.y ?? null,
         sales_blocked: s.sales_blocked === true,
       };
     })
-    .filter(Boolean) as Record<string, unknown>[];
+    .filter(Boolean) as {
+    row_id: string;
+    seat_label: string;
+    x: number | null;
+    y: number | null;
+    sales_blocked: boolean;
+  }[];
 
   if (seatPayload.length > 0) {
-    const { error: insSeatsErr } = await supabase.from("seats").insert(seatPayload);
-    if (insSeatsErr) {
+    try {
+      await insertSeatsBatched(supabase, seatPayload);
+    } catch (insSeatsErr) {
       await supabase.from("seating_plans").delete().eq("id", newPlanId);
-      return NextResponse.json({ error: insSeatsErr.message }, { status: 500 });
+      return NextResponse.json(
+        { error: insSeatsErr instanceof Error ? insSeatsErr.message : "Koltuklar kopyalanamadı." },
+        { status: 500 }
+      );
     }
+  }
+
+  // Kaynakla birebir sayı; "en dolu sıraya eşitle" onarımı kullanılmaz (kısa sıralar bozulmasın).
+  try {
+    const actual = await countSeatsForPlan(supabase, newPlanId);
+    if (actual !== seats.length) {
+      await supabase.from("seating_plans").delete().eq("id", newPlanId);
+      return NextResponse.json(
+        {
+          error: `Kopya koltuk sayısı eşleşmedi (kaynak ${seats.length}, kopya ${actual}).`,
+        },
+        { status: 500 }
+      );
+    }
+  } catch (verifyErr) {
+    await supabase.from("seating_plans").delete().eq("id", newPlanId);
+    return NextResponse.json(
+      { error: verifyErr instanceof Error ? verifyErr.message : "Kopya doğrulanamadı." },
+      { status: 500 }
+    );
   }
 
   const res = NextResponse.json({ plan_id: newPlanId });

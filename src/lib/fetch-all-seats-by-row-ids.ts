@@ -34,3 +34,37 @@ export async function fetchAllSeatsByRowIds<T = Record<string, unknown>>(
   }
   return all;
 }
+
+const SECTION_ID_IN_CHUNK = 80;
+
+/**
+ * Bölüm sıralarını PostgREST satır limiti yüzünden eksik getirmemek için sayfalar.
+ */
+export async function fetchAllRowsBySectionIds<T = Record<string, unknown>>(
+  supabase: SupabaseClient,
+  sectionIds: string[],
+  selectColumns = "id, section_id, row_label, ticket_type_label, sort_order"
+): Promise<T[]> {
+  if (sectionIds.length === 0) return [];
+  const all: T[] = [];
+  for (let c = 0; c < sectionIds.length; c += SECTION_ID_IN_CHUNK) {
+    const idChunk = sectionIds.slice(c, c + SECTION_ID_IN_CHUNK);
+    let from = 0;
+    for (;;) {
+      const { data, error } = await supabase
+        .from("seating_plan_rows")
+        .select(selectColumns)
+        .in("section_id", idChunk)
+        .order("sort_order", { ascending: true })
+        .order("row_label", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error) throw error;
+      const batch = (data || []) as T[];
+      all.push(...batch);
+      if (batch.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+  }
+  return all;
+}

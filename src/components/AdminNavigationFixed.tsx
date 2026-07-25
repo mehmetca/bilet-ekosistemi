@@ -46,6 +46,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       { href: "/yonetim/etkinlikler", label: t("nav.events"), icon: Calendar, description: t("nav.eventsDesc") },
       { href: "/yonetim/mekanlar", label: t("nav.venues"), icon: MapPin, description: t("nav.venuesDesc") },
       { href: "/yonetim/salon-yapim-wizard", label: t("nav.salonWizard"), icon: LayoutGrid, description: t("nav.salonWizardDesc") },
+      { href: "/yonetim/salon-yapim-wizard-2", label: "Salon Wizard 2", icon: LayoutGrid, description: "Yeni salon kurulum sihirbazı (eski wizard’a dokunmaz)" },
       { href: "/yonetim/sehirler", label: t("nav.cities"), icon: MapPin, description: t("nav.citiesDesc") },
       { href: "/yonetim/slider-yonetimi", label: t("nav.slider"), icon: Megaphone, description: t("nav.sliderDesc") },
       { href: "/yonetim/sanatcilar", label: t("nav.artists"), icon: User, description: t("nav.artistsDesc") },

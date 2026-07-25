@@ -51,9 +51,52 @@ export function buildTicketLabelVariants(raw: string): string[] {
   return Array.from(out);
 }
 
+function scoreTicketAgainstLabels(
+  catalogName: string,
+  normalizedLabels: string[]
+): number | null {
+  const full = normalizeTicketMatchText(catalogName);
+  const short = normalizeTicketMatchText(shortenTicketDisplayName(catalogName));
+  if (!full) return null;
+
+  if (normalizedLabels.includes(full)) return 0;
+  if (short && normalizedLabels.includes(short)) return 1;
+  if (
+    normalizedLabels.some(
+      (l) =>
+        (short && (short.endsWith(` ${l}`) || l.endsWith(` ${short}`))) ||
+        full.endsWith(` ${l}`) ||
+        l.endsWith(` ${full}`)
+    )
+  ) {
+    return 2;
+  }
+  // Zayıf: plan etiketi katalog adının kelime-sınırlı parçası (örn. bölüm "Balkon Sol" ⊂ "Balkon Sol VIP")
+  if (
+    normalizedLabels.some((l) => {
+      if (l.length < 4) return false;
+      return (
+        full === l ||
+        full.startsWith(`${l} `) ||
+        full.endsWith(` ${l}`) ||
+        full.includes(` ${l} `) ||
+        (!!short &&
+          (short === l ||
+            short.startsWith(`${l} `) ||
+            short.endsWith(` ${l}`) ||
+            short.includes(` ${l} `)))
+      );
+    })
+  ) {
+    return 3;
+  }
+  return null;
+}
+
 /**
- * Salon tarafı etiketleri (ticket_type_label, bölüm adı vb.) verilen katalog bilet satırına uyuyor mu?
- * EventDetailClient içindeki findTicketByLabels ile aynı skor mantığı.
+ * Salon tarafı etiketleri → katalog bilet.
+ * Eşit skorda daha uzun (spesifik) ad kazanır.
+ * Skor 3 birden fazla adaya uyuyorsa belirsiz sayılır → null (yanlış VIP atamasını önler).
  */
 export function findTicketByLabels(labels: string[], availableTickets: TicketLike[]): TicketLike | null {
   if (!labels.length || !availableTickets.length) return null;
@@ -67,34 +110,30 @@ export function findTicketByLabels(labels: string[], availableTickets: TicketLik
   );
   if (!normalizedLabels.length) return null;
 
-  let best: { ticket: TicketLike; score: number } | null = null;
+  type Scored = { ticket: TicketLike; score: number; nameLen: number };
+  const scored: Scored[] = [];
+
   for (const t of availableTickets) {
     const rawName = String(t.name || "").trim();
     if (!rawName) continue;
-    const full = normalizeTicketMatchText(rawName);
-    const short = normalizeTicketMatchText(shortenTicketDisplayName(rawName));
-    let score: number | null = null;
-
-    if (normalizedLabels.includes(full)) {
-      score = 0;
-    } else if (short && normalizedLabels.includes(short)) {
-      score = 1;
-    } else if (
-      normalizedLabels.some((l) =>
-        (short && (short.endsWith(` ${l}`) || l.endsWith(` ${short}`))) ||
-        full.endsWith(` ${l}`) ||
-        l.endsWith(` ${full}`)
-      )
-    ) {
-      score = 2;
-    } else if (normalizedLabels.some((l) => l.length >= 4 && (full.includes(l) || (short && short.includes(l))))) {
-      score = 3;
-    }
-
+    const score = scoreTicketAgainstLabels(rawName, normalizedLabels);
     if (score === null) continue;
-    if (!best || score < best.score) best = { ticket: t, score };
+    scored.push({
+      ticket: t,
+      score,
+      nameLen: normalizeTicketMatchText(rawName).length,
+    });
   }
-  return best?.ticket ?? null;
+
+  if (!scored.length) return null;
+  scored.sort((a, b) => a.score - b.score || b.nameLen - a.nameLen);
+
+  if (scored[0]!.score >= 3) {
+    const top = scored.filter((s) => s.score === scored[0]!.score);
+    if (top.length > 1) return null;
+  }
+
+  return scored[0]!.ticket;
 }
 
 /** Tek katalog adı için plan etiketleriyle eşleşme (purchase tarafı). */
@@ -102,4 +141,37 @@ export function planLabelsMatchTicketCatalogName(planLabels: string[], catalogTi
   const probe: TicketLike = { id: "__probe__", name: catalogTicketName };
   const hit = findTicketByLabels(planLabels, [probe]);
   return hit?.id === "__probe__";
+}
+
+/** Client getTicketForRow ile aynı etiket yığını. */
+export function buildPlanRowMatchLabels(input: {
+  sectionName?: string | null;
+  sectionTicketTypeLabel?: string | null;
+  rowTicketTypeLabel?: string | null;
+}): string[] {
+  const sectionName = String(input.sectionName || "").trim();
+  const sectionL = String(input.sectionTicketTypeLabel || "").trim();
+  const rowL = String(input.rowTicketTypeLabel || "").trim();
+  return [
+    rowL,
+    sectionL,
+    sectionName,
+    sectionName ? shortenTicketDisplayName(sectionName) : "",
+    rowL && sectionName ? `${sectionName} ${rowL}` : "",
+    rowL && sectionName ? `${sectionName} - ${rowL}` : "",
+    rowL && sectionL ? `${sectionL} ${rowL}` : "",
+    rowL && sectionL ? `${sectionL} - ${rowL}` : "",
+  ].filter(Boolean);
+}
+
+/** Sıra için en uygun katalog bileti (tüm biletler arasında en iyi eşleşme). */
+export function resolveTicketForPlanRow(
+  input: {
+    sectionName?: string | null;
+    sectionTicketTypeLabel?: string | null;
+    rowTicketTypeLabel?: string | null;
+  },
+  availableTickets: TicketLike[]
+): TicketLike | null {
+  return findTicketByLabels(buildPlanRowMatchLabels(input), availableTickets);
 }

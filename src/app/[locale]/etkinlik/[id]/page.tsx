@@ -98,6 +98,7 @@ export default async function EventDetailPage({ params }: PageProps) {
   const allowPreview = await isServerAdmin();
 
   // show_slug ile gruplanmış tur/gösteri sayfası (1+ etkinlik; tek etkinlikte de sayfa görünsün)
+  // Public: yalnızca yayınlanmış. Admin: taslak / onaysız önizleme (allowPreview).
   const showEvents = await getEventsByShowSlug(id, allowPreview);
   if (showEvents.length >= 1) {
     const firstEvent = showEvents[0] as { created_by_user_id?: string; organizer_display_name?: string | null };

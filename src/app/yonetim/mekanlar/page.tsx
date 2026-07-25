@@ -490,7 +490,13 @@ function MekanlarContent() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Bu mekanı silmek istediğinizden emin misiniz?")) return;
+    if (
+      !confirm(
+        "Bu mekanı ve altındaki tüm salon/bölüm/sıra/koltuk kayıtlarını silmek istediğinize emin misiniz?"
+      )
+    ) {
+      return;
+    }
 
     try {
       const { data: usedByEvents } = await supabase
@@ -499,13 +505,41 @@ function MekanlarContent() {
         .eq("venue_id", id)
         .limit(1);
       if (usedByEvents && usedByEvents.length > 0) {
-        alert("Bu mekan en az bir etkinlikte kullanıldığı için kaldırılamaz. Kayıtlı mekanlar etkinlik bitiminde de listede kalır.");
+        alert(
+          "Bu mekan en az bir etkinlikte kullanıldığı için kaldırılamaz. Önce ilgili etkinlikleri silin veya mekanı değiştirin."
+        );
         return;
       }
+
+      // Önce salonları temizle (koltuk/sıra/bölüm); sonra mekan (CASCADE yedek).
+      const { data: plans } = await supabase.from("seating_plans").select("id").eq("venue_id", id);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (token && plans?.length) {
+        for (const p of plans) {
+          const res = await fetch("/api/yonetim/delete-seating-plan", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ seating_plan_id: p.id }),
+          });
+          if (!res.ok) {
+            const json = await res.json().catch(() => ({}));
+            throw new Error(json.error || "Salonlar silinemedi; mekan durduruldu.");
+          }
+        }
+      } else if (plans?.length) {
+        await supabase.from("seating_plans").delete().eq("venue_id", id);
+      }
+
       const { error } = await supabase.from("venues").delete().eq("id", id);
       if (error) throw error;
       setVenues((prev) => prev.filter((v) => v.id !== id));
-      alert("Mekan silindi!");
+      alert("Mekan ve salon kayıtları silindi.");
     } catch (error) {
       console.error("Mekan silinemedi:", error);
       alert("İşlem başarısız: " + (error instanceof Error ? error.message : "Bilinmeyen hata"));
@@ -582,6 +616,22 @@ function MekanlarContent() {
             <p className="text-sm text-slate-600">Mevcut araca dokunmadan adım adım salon planı oluşturun, uzakta şekli görün, yakınlaşınca koltuk seçin.</p>
           </div>
           <span className="text-emerald-700 font-medium text-sm flex-shrink-0 hidden sm:inline">Wizardı aç →</span>
+        </Link>
+
+        <Link
+          href="/yonetim/salon-yapim-wizard-2"
+          className="flex items-center gap-4 rounded-xl border-2 border-teal-200 bg-teal-50/50 p-4 mb-6 hover:border-teal-300 hover:bg-teal-50 transition-colors min-w-0"
+        >
+          <div className="w-12 h-12 rounded-lg bg-teal-100 flex items-center justify-center flex-shrink-0">
+            <LayoutGrid className="h-6 w-6 text-teal-700" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-slate-900">Salon Yapım Wizard 2 (beta)</h3>
+            <p className="text-sm text-slate-600">
+              Yön, tek/çift numaralama, koridor, satışa kapalı — eski wizard’a dokunmaz; beğenmezsen kullanma.
+            </p>
+          </div>
+          <span className="text-teal-800 font-medium text-sm flex-shrink-0 hidden sm:inline">Wizard 2 →</span>
         </Link>
 
         {showForm && (

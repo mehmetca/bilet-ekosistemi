@@ -1,4 +1,5 @@
-/** Sitede listelenen / satın alınabilir etkinlikler için ortak görünürlük kuralı. */
+/** Sitede listelenen / satın alınabilir etkinlikler için ortak görünürlük kuralı.
+ *  Taslaklar public listelerde görünmez; admin detay önizlemesi ayrı yoldan çalışır. */
 export function isEventPubliclyVisible(event: {
   is_active?: boolean | null;
   is_approved?: boolean | null;

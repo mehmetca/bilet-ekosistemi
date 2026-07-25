@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
-import { fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
+import { fetchAllRowsBySectionIds, fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
 import type { EventCategory, EventCurrency } from "@/types/database";
 import {
   CATEGORY_LABELS,
@@ -53,7 +53,12 @@ const BILET_TURU_SECENEKLERI = [
 
 const SALON_PLAN_VALUE_PREFIX = "salon_plan|";
 
-/** Sihirbaz / etkinlik eşlemesi: sırada sadece "vip" yazılmışsa bölüm adı ile birleştirir (örn. Blok A + vip → Blok A vip). */
+/**
+ * Sihirbaz / etkinlik eşlemesi.
+ * - Satırda "Parkett VIP" gibi tam ad varsa olduğu gibi kullanılır.
+ * - Wizard 2 category_only: satır ve bölüm etiketi aynı kategori (VIP) ise bölüm adı eklenmez → tüm VIP’ler tek satırda toplanır.
+ * - Eski kısa etiket: sırada sadece "vip" → "Blok A vip".
+ */
 function expandPlanTicketDisplayName(
   sectionName: string,
   rowTicketType: string | null | undefined,
@@ -64,12 +69,26 @@ function expandPlanTicketDisplayName(
   const st = (sectionTicketType || "").trim();
   const base = rt || st || sn;
   if (!base) return "";
-  if (!sn) return base;
   const lowBase = base.toLowerCase();
   const lowSn = sn.toLowerCase();
-  if (lowBase.startsWith(lowSn + " ") || lowBase === lowSn) return base;
+  const lowRt = rt.toLowerCase();
+  const lowSt = st.toLowerCase();
+
+  if (sn && (lowBase.startsWith(lowSn + " ") || lowBase === lowSn)) return base;
+
+  // Wizard 2: sadece kategori modu — tüm salonda VIP / Kategori 1 tek satırda toplanır
+  if (st === "__category_only__") {
+    return rt || sn || base;
+  }
+
+  // Eski uyum: satır ve bölüm etiketi aynı kısa kategori
+  if (rt && st && lowRt === lowSt && sn && lowSn !== lowRt) {
+    return rt;
+  }
+
+  if (!sn) return base;
   if (rt) return `${sn} ${rt}`.trim();
-  if (st) return `${sn} ${st}`.trim();
+  if (st && lowSt !== lowSn && st !== "__category_only__") return `${sn} ${st}`.trim();
   return base;
 }
 
@@ -440,11 +459,19 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         (a, b) => ((a as { sort_order?: number }).sort_order ?? 0) - ((b as { sort_order?: number }).sort_order ?? 0)
       );
       const sectionIds = sections.map((s) => s.id);
-      const { data: rows } = await supabase
-        .from("seating_plan_rows")
-        .select("id, section_id, row_label, ticket_type_label, sort_order")
-        .in("section_id", sectionIds);
-      if (!rows?.length) {
+      let rows: {
+        id: string;
+        section_id: string;
+        row_label: string;
+        ticket_type_label: string | null;
+        sort_order: number | null;
+      }[] = [];
+      try {
+        rows = await fetchAllRowsBySectionIds(supabase, sectionIds);
+      } catch {
+        rows = [];
+      }
+      if (!rows.length) {
         setSectionCapacitiesByTicketLabel({});
         setPlanDerivedTicketLabels([]);
         setPlanTicketBreakdown([]);
@@ -460,18 +487,19 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         list.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
       }
       const rowIds = rows.map((r) => r.id);
-      let seats: { id: string; row_id: string }[] = [];
+      let seats: { id: string; row_id: string; sales_blocked?: boolean | null }[] = [];
       try {
-        seats = await fetchAllSeatsByRowIds<{ id: string; row_id: string }>(
+        seats = await fetchAllSeatsByRowIds<{ id: string; row_id: string; sales_blocked?: boolean | null }>(
           supabase,
           rowIds,
-          "id, row_id"
+          "id, row_id, sales_blocked"
         );
       } catch {
         seats = [];
       }
       const countByRowId: Record<string, number> = {};
       seats.forEach((s) => {
+        if (s.sales_blocked) return;
         countByRowId[s.row_id] = (countByRowId[s.row_id] || 0) + 1;
       });
 
@@ -1525,10 +1553,10 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 <div className="rounded-lg border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 mb-4 space-y-3">
                   <p className="font-semibold text-slate-900">Oturum planından bilet türleri ve koltuk sayıları</p>
                   <p className="text-xs text-slate-600">
-                    Aşağıdaki <strong>bilet adı</strong>, etkinlik sayfasında koltuk rengi ve fiyat eşlemesi için kullanılır. Sırada sadece{" "}
-                    <em>vip</em> veya <em>Kategori 1</em> yazıyorsa bölüm adı otomatik eklenir (örn. Blok A + vip → Blok A vip). Aynı bilet adına
-                    düşen sıralar üst tabloda tek satırda toplanır. Yeni etkinlikte 3. adımda otomatik bilet satırları bu isimlerle oluşur; siz{" "}
-                    <strong>fiyat</strong> girersiniz.
+                    Salon planındaki düzen burada <strong>otomatik toplanır</strong> (örn. 120× VIP, 200× Kategori 1). Aynı isimli
+                    satırlar birleşir; siz yalnızca <strong>fiyat</strong> yazarsınız. Wizard 2’de bölüm adı Parkett/Balkon ise bilet
+                    adı “Parkett VIP” gibi oluşur; “sadece kategori” modunda tüm VIP’ler tek satırda toplanır. Satışa kapalı koltuklar
+                    sayıya dahil edilmez.
                   </p>
                   <div className="overflow-x-auto rounded-md border border-slate-100">
                     <p className="px-3 py-2 text-xs font-semibold text-slate-700 bg-slate-50 border-b border-slate-100">

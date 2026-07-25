@@ -5,7 +5,6 @@ import type { Event } from "@/types/database";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import type { Locale } from "@/lib/i18n-content";
-import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
 import { Music2 } from "lucide-react";
 
 const fallbackImage =

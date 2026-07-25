@@ -194,43 +194,85 @@ function EtkinliklerContent() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Bu etkinliği silmek istediğinizden emin misiniz?")) return;
-
-    const eventToDelete = events.find((e) => e.id === id);
+    const eventToDelete = events.find((e) => e.id === id) as
+      | (Event & { seating_plan_id?: string | null; is_draft?: boolean })
+      | undefined;
     const title = eventToDelete?.title || id;
+    const seatingPlanId = eventToDelete?.seating_plan_id || null;
+    const isDraft = eventToDelete?.is_draft === true;
+
+    if (
+      !confirm(
+        isDraft
+          ? `"${title}" taslak etkinliğini ve bağlı bilet/sipariş/salon kopyası kayıtlarını silmek istediğinize emin misiniz?`
+          : `"${title}" etkinliğini ve bağlı bilet/sipariş kayıtlarını silmek istediğinize emin misiniz? Yalnızca bu etkinliğe özel salon kopyası varsa o da silinir.`
+      )
+    ) {
+      return;
+    }
 
     try {
-      // FK ilişkileri nedeniyle önce bağlı kayıtları temizle.
-      const { error: ordersError } = await supabase
-        .from("orders")
-        .delete()
-        .eq("event_id", id);
+      // FK: sipariş → bilet → etkinlik. seat_holds / order_seats çoğunlukla CASCADE.
+      const { error: holdsError } = await supabase.from("seat_holds").delete().eq("event_id", id);
+      if (holdsError) console.warn("seat_holds silinemedi:", holdsError);
+
+      const { error: ordersError } = await supabase.from("orders").delete().eq("event_id", id);
       if (ordersError) {
         console.warn("İlişkili siparişler silinemedi:", ordersError);
       }
 
-      const { error: ticketsError } = await supabase
-        .from("tickets")
-        .delete()
-        .eq("event_id", id);
+      const { error: ticketsError } = await supabase.from("tickets").delete().eq("event_id", id);
       if (ticketsError) {
         throw new Error(`Bağlı biletler silinemedi: ${ticketsError.message}`);
       }
 
-      const { error: eventError } = await supabase
-        .from("events")
-        .delete()
-        .eq("id", id);
+      const { error: eventError } = await supabase.from("events").delete().eq("id", id);
       if (eventError) throw eventError;
+
+      // Etkinliğe özel salon kopyası kaldıysa (başka etkinlik kullanmıyorsa) DB'den temizle.
+      if (seatingPlanId) {
+        try {
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          const token = session?.access_token;
+          if (token) {
+            const { data: plan } = await supabase
+              .from("seating_plans")
+              .select("id, name, is_default")
+              .eq("id", seatingPlanId)
+              .maybeSingle();
+            const { count } = await supabase
+              .from("events")
+              .select("id", { count: "exact", head: true })
+              .eq("seating_plan_id", seatingPlanId);
+            const name = String(plan?.name || "");
+            const looksDedicated =
+              name.includes("(etkinlik kopyası)") || / · \d{4}-\d{2}-\d{2}/.test(name);
+            if (plan && (count ?? 0) === 0 && looksDedicated) {
+              await fetch("/api/yonetim/delete-seating-plan", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Authorization: `Bearer ${token}`,
+                },
+                body: JSON.stringify({ seating_plan_id: seatingPlanId }),
+              });
+            }
+          }
+        } catch (planCleanupErr) {
+          console.warn("Salon kopyası temizlenemedi:", planCleanupErr);
+        }
+      }
 
       await logAudit({
         action: "delete",
         entity_type: "event",
         entity_id: id,
-        details: { title },
+        details: { title, seating_plan_id: seatingPlanId, was_draft: isDraft },
       });
-      
-      setEvents(events.filter(event => event.id !== id));
+
+      setEvents(events.filter((event) => event.id !== id));
     } catch (error) {
       console.error("Etkinlik silinemedi:", error);
       const message =

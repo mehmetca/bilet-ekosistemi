@@ -7,7 +7,6 @@ import {
   MapPin,
   Music2,
   Search as SearchIcon,
-  Shield,
   ChevronRight,
   ChevronLeft,
 } from "lucide-react";
@@ -161,14 +160,17 @@ export default function ClientHomePage({
   const [isDateFilterActive, setIsDateFilterActive] = useState(false);
   const [eventDateInput, setEventDateInput] = useState(() => formatLocalDateDMY(new Date()));
   const [sortBy, setSortBy] = useState<"yaklasan" | "populer">("yaklasan");
-  const [events, setEvents] = useState<Event[]>(initialEvents);
+  const [events, setEvents] = useState<Event[]>(() =>
+    initialEvents.filter((e) => isEventPubliclyVisible(e))
+  );
   const [cities, setCities] = useState<City[]>(initialCities);
   const cityScrollRef = useRef<HTMLDivElement>(null);
   const fallbackImage =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
 
   useEffect(() => {
-    setEvents(initialEvents);
+    // Taslak / onaysız etkinlikler ana sayfada asla listelenmez.
+    setEvents(initialEvents.filter((e) => isEventPubliclyVisible(e)));
     setCities(initialCities);
   }, [initialEvents, initialCities]);
 
@@ -264,22 +266,16 @@ export default function ClientHomePage({
     return 0;
   });
 
-  // Aynı gösteri/turden en fazla 1 etkinlik (show_slug, image_url veya başlık ile grupla)
+  // Aynı gösteri/tur: yalnızca ortak show_slug varsa tek kart; slug yoksa her etkinlik ayrı görünür
   const MAX_PER_SHOW = 1;
-  const getShowKey = (event: Event) => {
-    const e = event as Event & { show_slug?: string };
-    if (e.show_slug) return e.show_slug;
-    if (event.image_url) return event.image_url;
-    const title = event.title ?? "";
-    return title.includes(" - ") ? title.split(" - ")[0].trim() : title.split(/\s+/).slice(0, 2).join(" ") || event.id;
-  };
   const displayEvents = (() => {
-    const countByKey = new Map<string, number>();
+    const countBySlug = new Map<string, number>();
     return filteredEvents.filter((event) => {
-      const key = getShowKey(event);
-      const count = countByKey.get(key) || 0;
+      const slug = String((event as Event & { show_slug?: string }).show_slug || "").trim();
+      if (!slug) return true;
+      const count = countBySlug.get(slug) || 0;
       if (count >= MAX_PER_SHOW) return false;
-      countByKey.set(key, count + 1);
+      countBySlug.set(slug, count + 1);
       return true;
     });
   })();
@@ -566,15 +562,6 @@ export default function ClientHomePage({
                         </div>
                       )}
 
-                      {/* Taslak etkinlik göstergesi - sadece admin görür */}
-                      {(event as Event & { is_draft?: boolean }).is_draft && (
-                        <div className="absolute right-2 bottom-2">
-                          <span className="px-2 py-1 text-xs font-bold text-white bg-amber-500 rounded flex items-center gap-1">
-                            <Shield className="h-3 w-3" />
-                            Taslak
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </Link>
                   
@@ -584,12 +571,6 @@ export default function ClientHomePage({
                         <span className="text-xs font-medium text-primary-600">
                           {CATEGORY_LABELS[event.category as keyof typeof CATEGORY_LABELS] ?? event.category ?? "Etkinlik"}
                         </span>
-                        {(event as Event & { is_draft?: boolean }).is_draft && (
-                          <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded flex items-center gap-1">
-                            <Shield className="h-3 w-3" />
-                            Taslak (Sadece Sen)
-                          </span>
-                        )}
                         {eventStatus.isPast && (
                           <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
                             {t("eventEnded")}

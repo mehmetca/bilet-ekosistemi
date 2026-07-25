@@ -37,7 +37,7 @@ import { extractMapEmbedUrl } from "@/lib/mapEmbed";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/lib/supabase-client";
-import { fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
+import { fetchAllRowsBySectionIds, fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
 import { getPlan } from "@/lib/seating-plans";
 import { musensaal } from "@/lib/seating-plans/musensaal";
 import SalonPlanViewer from "@/components/SalonPlanViewer";
@@ -56,7 +56,11 @@ import { planSectionsMatchMusensaalTemplate } from "@/lib/seating-plans/musensaa
 import { collapseDuplicateAdjacentTicketLabel } from "@/lib/collapse-duplicate-ticket-label";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import { getTicketCategoryColorHex, lightenHex } from "@/lib/seating-plans/ticket-category-colors";
-import { findTicketByLabels, shortenTicketDisplayName } from "@/lib/ticket-seating-match";
+import {
+  findTicketByLabels,
+  resolveTicketForPlanRow,
+  shortenTicketDisplayName,
+} from "@/lib/ticket-seating-match";
 import type { TicketLike } from "@/lib/ticket-seating-match";
 
 const SEAT_HOLD_LS_KEY = "seatHoldSessionId";
@@ -215,17 +219,12 @@ function getTicketForRow(
   sectionIndex: number,
   availableTickets: TicketLike[]
 ): { ticket: TicketLike; matchedBy: "name" | "index" } {
-  const rowL = (row?.ticket_type_label || "").trim();
-  const sectionName = (section.name ?? "").trim();
-  const byRow = findTicketByLabels(
-    [
-      rowL,
-      section.ticket_type_label || "",
-      sectionName,
-      shortenTicketDisplayName(sectionName),
-      rowL && sectionName ? `${sectionName} ${rowL}` : "",
-      rowL && sectionName ? `${sectionName} - ${rowL}` : "",
-    ].filter(Boolean),
+  const byRow = resolveTicketForPlanRow(
+    {
+      sectionName: section.name,
+      sectionTicketTypeLabel: section.ticket_type_label,
+      rowTicketTypeLabel: row?.ticket_type_label,
+    },
     availableTickets
   );
   if (byRow) return { ticket: byRow, matchedBy: "name" };
@@ -261,14 +260,26 @@ function SeatMapSvg({
   seatLabelWord: string;
 }) {
   const [hoveredSeatId, setHoveredSeatId] = useState<string | null>(null);
-  const pad = 12;
-  const stageH = 32;
-  const mapW = 720;
-  const stageGap = 8;
-  const sectionGap = 8;
-  const corridorGap = 36;
+  const pad = 8;
+  const stageH = 28;
+  const stageGap = 6;
+  const sectionGap = 6;
+  const corridorGap = 10;
+  /** Sıra etiketi (S1…) için kolon içi sabit pay — koltukların üstüne binmesin */
+  const rowLabelGutter = 18;
   const nSections = sections.length;
   if (nSections === 0) return null;
+  /** Sütun: önce section_align (Wizard 2), yoksa isimdeki sol/sağ. */
+  const sectionColumn = (s: SeatPlanSection): 0 | 1 | 2 => {
+    const align = s.section_align;
+    if (align === "left") return 0;
+    if (align === "right") return 2;
+    if (align === "center") return 1;
+    const n = String(s.name || "").toLowerCase();
+    if (n.includes("sol") || n.includes("left")) return 0;
+    if (n.includes("sağ") || n.includes("sag") || n.includes("right")) return 2;
+    return 1;
+  };
   const sectionGroup = (name: string) => {
     const n = name.toLowerCase();
     if (n.includes("sol") || n.includes("left")) return 0;
@@ -288,15 +299,15 @@ function SeatMapSvg({
   const sectionDepth = (name: string) => {
     const n = name.toLowerCase();
     if (n.includes("ön") || n.includes("on") || n.includes("front")) return 0;
-    if (n.includes("orta") || n.includes("middle")) return 1;
-    if (n.includes("arka") || n.includes("back")) return 2;
+    if (n.includes("orta") || n.includes("middle") || n.includes("parkett")) return 1;
+    if (n.includes("arka") || n.includes("back") || n.includes("hinten") || n.includes("rear")) return 2;
     return 0;
   };
   /**
    * Bölüm sıralaması:
-   * 1) Sol / Orta / Sağ koridor grubu (her zaman koridor ilk belirleyici).
-   * 2) Aynı blok içinde en küçük sıra numarası (örn. VIP=S1-3 → sahneye en yakın → en üstte).
-   * 3) Tie-break: DB sort_order (sections dizisindeki sıra).
+   * 1) Sol / Orta / Sağ sütunu (section_align veya isim).
+   * 2) Aynı blok içinde en küçük sıra numarası (VIP=S1-3 → sahneye en yakın).
+   * 3) Tie-break: DB sort_order.
    */
   const sectionOriginalIndex = new Map(sections.map((s, idx) => [s.id, idx] as const));
   const sectionMinRowNum = (s: SeatPlanSection): number => {
@@ -308,8 +319,8 @@ function SeatMapSvg({
     return Number.isFinite(min) ? min : Number.MAX_SAFE_INTEGER;
   };
   const displaySections = [...sections].sort((a, b) => {
-    const ga = sectionGroup(String(a.name || ""));
-    const gb = sectionGroup(String(b.name || ""));
+    const ga = sectionColumn(a);
+    const gb = sectionColumn(b);
     if (ga !== gb) return ga - gb;
     const da = sectionDepth(String(a.name || ""));
     const db = sectionDepth(String(b.name || ""));
@@ -319,31 +330,70 @@ function SeatMapSvg({
     if (ra !== rb) return ra - rb;
     return (sectionOriginalIndex.get(a.id) ?? 0) - (sectionOriginalIndex.get(b.id) ?? 0);
   });
-  const sectionMaxRows = Math.max(...displaySections.map((s) => s.rows.length), 1);
-  const sectionMaxSeats = Math.max(
-    ...displaySections.flatMap((s) => s.rows.map((r) => r.seats.length)),
-    1
-  );
-  const leftSections = displaySections.filter((s) => sectionGroup(String(s.name || "")) === 0);
-  const centerSections = displaySections.filter((s) => sectionGroup(String(s.name || "")) === 1);
-  const rightSections = displaySections.filter((s) => sectionGroup(String(s.name || "")) === 2);
+  const maxSeatsIn = (list: SeatPlanSection[]) =>
+    Math.max(1, ...list.flatMap((s) => s.rows.map((r) => r.seats.length)), 1);
+  const leftSections = displaySections.filter((s) => sectionColumn(s) === 0);
+  const centerSections = displaySections.filter((s) => sectionColumn(s) === 1);
+  const rightSections = displaySections.filter((s) => sectionColumn(s) === 2);
+  const leftMaxSeats = maxSeatsIn(leftSections);
+  const centerMaxSeats = maxSeatsIn(centerSections);
+  const rightMaxSeats = maxSeatsIn(rightSections);
+  const sectionMaxSeats = Math.max(leftMaxSeats, centerMaxSeats, rightMaxSeats, 1);
 
-  const usableW = mapW - pad * 2;
   const baseY = pad + stageH + stageGap;
   /** Aynı bloka ait bölümlerin (örn. "Orta salon - VIP", "Orta salon - Kategori 1") üstündeki tek başlık. */
-  const groupHeaderH = 24;
-  const sectionBottomPad = 8;
+  const groupHeaderH = 18;
+  const sectionBottomPad = 4;
   /** Aynı grup içinde bölümler arası boşluk: 0 (tek parça blok görünümü). */
   const sectionInGroupGap = 0;
   /** Farklı bloklar (gruplar) arası boşluk. */
-  const groupStackGap = 18;
+  const groupStackGap = 8;
 
-  const hasSideTop = leftSections.length > 0 || rightSections.length > 0;
-  const hasLeftRightPair = leftSections.length > 0 && rightSections.length > 0;
-  const topLaneGap = hasLeftRightPair ? corridorGap : sectionGap;
-  const topLaneW = hasLeftRightPair ? (usableW - topLaneGap) / 2 : usableW;
-  const topLeftX = pad + (hasLeftRightPair ? 0 : (usableW - topLaneW) / 2);
-  const topRightX = hasLeftRightPair ? topLeftX + topLaneW + topLaneGap : topLeftX;
+  const hasLeft = leftSections.length > 0;
+  const hasRight = rightSections.length > 0;
+  const hasCenter = centerSections.length > 0;
+  /** Sol | Orta | Sağ yan yana (Musensaal / üretim görünümü) */
+  const useTrioLayout = hasCenter && (hasLeft || hasRight);
+  const hasLeftRightPair = hasLeft && hasRight;
+  const corridorCount = (hasLeft ? 1 : 0) + (hasRight ? 1 : 0);
+  const trioGapTotal = corridorCount * corridorGap;
+
+  /**
+   * Sütun genişliği koltuk sayısına göre (sabit % değil).
+   * Hedef: ~14–16px koltuk; harita gerektiğinde genişler.
+   */
+  const targetSeat = 17;
+  const colContentPad = 6; // kart içi yan pay — koltuklar çerçeveye yakın
+  const widthForSeats = (seatCount: number) =>
+    Math.max(100, seatCount * targetSeat + colContentPad + rowLabelGutter);
+
+  let leftLaneW = hasLeft ? widthForSeats(leftMaxSeats) : 0;
+  let rightLaneW = hasRight ? widthForSeats(rightMaxSeats) : 0;
+  let centerLaneW = hasCenter ? widthForSeats(centerMaxSeats) : 0;
+  if (!useTrioLayout && hasCenter && !hasLeft && !hasRight) {
+    centerLaneW = Math.max(centerLaneW, 480);
+  }
+  if (hasLeftRightPair && !hasCenter) {
+    leftLaneW = widthForSeats(leftMaxSeats);
+    rightLaneW = widthForSeats(rightMaxSeats);
+  }
+
+  const contentW = useTrioLayout
+    ? leftLaneW + centerLaneW + rightLaneW + trioGapTotal
+    : hasLeftRightPair && !hasCenter
+      ? leftLaneW + rightLaneW + corridorGap
+      : Math.max(centerLaneW, leftLaneW, rightLaneW, 480);
+  const mapW = Math.max(720, Math.min(1200, contentW + pad * 2));
+  const usableW = mapW - pad * 2;
+  // Fazla boşluk varsa orta sütunu genişlet (koltuklar yine kendi aralığında ortalanır)
+  if (useTrioLayout && usableW > contentW) {
+    centerLaneW += usableW - contentW;
+  }
+
+  const topLeftX = pad;
+  const topCenterX = pad + leftLaneW + (hasLeft ? corridorGap : 0);
+  const topRightX = pad + leftLaneW + (hasLeft ? corridorGap : 0) + centerLaneW + (hasRight ? corridorGap : 0);
+  const topLaneW = hasLeftRightPair && !hasCenter ? (usableW - corridorGap) / 2 : leftLaneW || rightLaneW || usableW;
 
   /**
    * Bölümleri blok adı prefix'ine göre grupla:
@@ -373,22 +423,23 @@ function SeatMapSvg({
   const leftGroups = groupSections(leftSections);
   const rightGroups = groupSections(rightSections);
   const centerGroups = groupSections(centerSections);
-  const centerGroupCount = centerGroups.length;
-  /** Tek blok grubu → full width; birden fazla grup → 2 sütun (3+ grup için satır geçişi). */
-  const centerSlotW =
-    centerGroupCount <= 1
-      ? Math.min(usableW, Math.max(220, usableW - 16))
-      : Math.max(200, Math.min(340, (usableW - sectionGap) / 2));
 
-  /** Koltuk ölçeği: en dar yerleşim kutusuna göre (üst şerit veya orta ızgarada dar sütun). */
-  const sectionWForSeats = hasSideTop
-    ? Math.min(Math.max(220, topLaneW - 8), centerSections.length ? centerSlotW : Math.max(220, topLaneW - 8))
-    : centerSlotW;
-
-  const seatSize = Math.min((sectionWForSeats - 26) / sectionMaxSeats, 18, 22);
-  const rowH = Math.max(22, Math.min(30, seatSize * 1.45));
-  /** Dar çerçeve: koltuk merkezleri birbirine yakın (eski 2.4 çarpanı fazla boşluk bırakıyordu). */
-  const seatW = Math.min((sectionWForSeats - 26) / sectionMaxSeats, seatSize * 1.28);
+  /**
+   * Koltuk boyutu: her sütunun kendi max koltuk sayısına göre hesaplanır,
+   * sonra tutarlı görünüm için minimum alınır (global max / dar sütun tuzağı yok).
+   */
+  const seatPitchForCol = (colW: number, seats: number) => {
+    const inner = Math.max(40, colW - colContentPad - rowLabelGutter);
+    return inner / Math.max(1, seats);
+  };
+  const pitches: number[] = [];
+  if (hasLeft) pitches.push(seatPitchForCol(leftLaneW, leftMaxSeats));
+  if (hasRight) pitches.push(seatPitchForCol(rightLaneW, rightMaxSeats));
+  if (hasCenter) pitches.push(seatPitchForCol(centerLaneW, centerMaxSeats));
+  if (!pitches.length) pitches.push(targetSeat);
+  const seatW = Math.min(18, Math.max(11, Math.min(...pitches)));
+  const seatSize = Math.min(16, Math.max(10, seatW * 0.88));
+  const rowH = Math.max(22, Math.min(30, seatSize * 1.5));
   /** Bir bölümün yalnızca koltuk gövdesi (header yok; başlık grup seviyesinde tek). */
   const getSectionBodyH = (s: SeatPlanSection) => Math.max(1, s.rows.length) * rowH + sectionBottomPad;
 
@@ -449,50 +500,49 @@ function SeatMapSvg({
     return lastBottom;
   };
 
-  if (hasSideTop) {
-    if (leftGroups.length) placeGroups(leftGroups, topLeftX, topLaneW, "left");
-    if (rightGroups.length) placeGroups(rightGroups, topRightX, topLaneW, "right");
-  }
-
-  let yCenterBand = baseY;
-  if (hasSideTop) {
-    let maxTop = baseY;
-    for (const [, g] of groupLayout) {
-      maxTop = Math.max(maxTop, g.sy + g.h);
-    }
-    yCenterBand = maxTop + groupStackGap;
-  }
-
-  if (centerGroups.length) {
+  if (useTrioLayout) {
+    // Sol | Orta (Parkett) | Sağ — aynı yükseklik bandında (canlı Musensaal düzeni gibi)
+    if (leftGroups.length) placeGroups(leftGroups, topLeftX, leftLaneW, "left", baseY);
+    if (centerGroups.length) placeGroups(centerGroups, topCenterX, centerLaneW, "center", baseY);
+    if (rightGroups.length) placeGroups(rightGroups, topRightX, rightLaneW, "right", baseY);
+  } else if (hasLeftRightPair && !hasCenter) {
+    const halfW = (usableW - corridorGap) / 2;
+    if (leftGroups.length) placeGroups(leftGroups, pad, halfW, "left", baseY);
+    if (rightGroups.length) placeGroups(rightGroups, pad + halfW + corridorGap, halfW, "right", baseY);
+  } else if (centerGroups.length) {
+    const slotW =
+      centerGroups.length <= 1
+        ? Math.min(usableW, Math.max(220, usableW - 16))
+        : Math.max(200, Math.min(340, (usableW - sectionGap) / 2));
     let i = 0;
-    let y = yCenterBand;
+    let y = baseY;
     while (i < centerGroups.length) {
       const remaining = centerGroups.length - i;
       const inRow = remaining === 1 ? 1 : 2;
       const rowGroups = centerGroups.slice(i, i + inRow);
-      const rowWidth = rowGroups.length * centerSlotW + (rowGroups.length - 1) * sectionGap;
+      const rowWidth = rowGroups.length * slotW + (rowGroups.length - 1) * sectionGap;
       const startX = pad + Math.max(0, (usableW - rowWidth) / 2);
       let rowBottom = y;
       rowGroups.forEach((grp, c) => {
-        const sx = startX + c * (centerSlotW + sectionGap);
-        const colBottom = placeGroups([grp], sx, centerSlotW, `center-${i}-${c}`, y);
+        const sx = startX + c * (slotW + sectionGap);
+        const colBottom = placeGroups([grp], sx, slotW, `center-${i}-${c}`, y);
         rowBottom = Math.max(rowBottom, colBottom);
       });
       contentBottom = Math.max(contentBottom, rowBottom);
       y = rowBottom + groupStackGap;
       i += inRow;
     }
+  } else {
+    if (leftGroups.length) placeGroups(leftGroups, pad, usableW, "left", baseY);
+    if (rightGroups.length) placeGroups(rightGroups, pad, usableW, "right", baseY);
   }
 
   const mapH = Math.max(300, contentBottom - baseY + sectionBottomPad);
 
   const stageTarget = sectionMaxSeats * seatW * 1.05;
-  const stageWRaw = Math.max(mapW * 0.24, Math.min(mapW * 0.38, stageTarget));
-  const stageW = Math.min(
-    stageWRaw,
-    hasLeftRightPair ? (topLaneW * 2 + topLaneGap) * 0.92 : Math.max(centerSlotW, topLaneW) * 0.92
-  );
-  const stageX = pad + (mapW - stageW) / 2;
+  const stageWRaw = Math.max(mapW * 0.28, Math.min(mapW * 0.42, stageTarget));
+  const stageW = Math.min(stageWRaw, usableW * 0.5);
+  const stageX = pad + (usableW - stageW) / 2;
 
   return (
     <svg
@@ -508,17 +558,17 @@ function SeatMapSvg({
             y={g.sy}
             width={g.w}
             height={g.h}
-            rx={6}
-            fill="#ffffff"
-            stroke="#94a3b8"
-            strokeWidth={1}
+            rx={4}
+            fill="#fafafa"
+            stroke="#e2e8f0"
+            strokeWidth={0.75}
           />
           <text
             x={g.sx + g.w / 2}
-            y={g.sy + 16}
+            y={g.sy + 13}
             textAnchor="middle"
-            fill="#334155"
-            fontSize={11}
+            fill="#64748b"
+            fontSize={10}
             fontWeight={600}
           >
             {g.label}
@@ -537,27 +587,31 @@ function SeatMapSvg({
             {section.rows.map((row, ri) => {
               const rowY = sy + ri * rowH + rowH / 2;
               const rowSeatCount = Math.max(row.seats.length, 1);
-              const rowSeatAreaW = Math.max(0, rowSeatCount * seatW);
-              const usableLeft = sx + 10;
-              const usableRight = sx + blockW - 10;
-              const usableW = Math.max(0, usableRight - usableLeft);
+              const group = sectionColumn(section);
+              // Sol: etiket solda → koltuklar gutter'dan sonra. Sağ: etiket sağda → koltuklar gutter'dan önce.
+              const seatLeft = group === 2 ? sx + 3 : sx + rowLabelGutter;
+              const seatRight = group === 2 ? sx + blockW - rowLabelGutter : sx + blockW - 3;
+              const seatBandW = Math.max(0, seatRight - seatLeft);
+              // Bu sıradaki tüm koltuklar (kapalı dahil) sığsın — pitch sıraya göre
+              const pitch = Math.min(seatW, seatBandW / rowSeatCount);
+              const drawSize = Math.min(seatSize, pitch * 0.9);
+              const rowSeatAreaW = rowSeatCount * pitch;
               const persistAlign = section.section_align;
               const align =
                 persistAlign === "left" || persistAlign === "center" || persistAlign === "right"
                   ? persistAlign
                   : sectionAlignment(String(section.name || ""));
-              let rowStartX = usableLeft;
-              if (align === "center") {
-                rowStartX = usableLeft + Math.max(0, (usableW - rowSeatAreaW) / 2);
-              } else if (align === "right") {
-                rowStartX = usableRight - rowSeatAreaW;
+              const effectiveAlign =
+                group === 0 ? "left" : group === 2 ? "right" : align === "left" || align === "right" ? align : "center";
+              let rowStartX = seatLeft;
+              if (effectiveAlign === "center") {
+                rowStartX = seatLeft + Math.max(0, (seatBandW - rowSeatAreaW) / 2);
+              } else if (effectiveAlign === "right") {
+                rowStartX = seatRight - rowSeatAreaW;
               }
-              const group = sectionGroup(String(section.name || ""));
-              const rowLabelGap = Math.max(6, Math.min(12, seatW * 0.6));
-              const rowLabelX = group === 2
-                ? Math.min(sx + blockW - 6, rowStartX + rowSeatAreaW + rowLabelGap)
-                : Math.max(sx + 6, rowStartX - rowLabelGap);
+              const rowLabelX = group === 2 ? sx + blockW - 3 : sx + 2;
               const rowLabelAnchor = group === 2 ? "end" : "start";
+              const seatFont = Math.max(6, Math.min(9, drawSize * 0.48));
               return (
                 <g key={`row-${section.id}-${row.id}`}>
                   <text
@@ -571,7 +625,7 @@ function SeatMapSvg({
                     {row.row_label}
                   </text>
                   {row.seats.map((seat, ci) => {
-                const cx = rowStartX + ci * seatW + seatW / 2;
+                const cx = rowStartX + ci * pitch + pitch / 2;
                 const cy = rowY;
                 const isHeld = heldSeatIds.has(seat.id);
                 const isSold = soldSeatIds.has(seat.id);
@@ -581,29 +635,29 @@ function SeatMapSvg({
                 const isHovered = hoveredSeatId === seat.id;
                 const catHex = seatCategoryHexBySeatId.get(seat.id) ?? "#64748b";
                 let fill: string;
-                let stroke: string;
+                let stroke = "none";
                 let sw = 0;
-                if (isSold) {
-                  fill = "#d1d5db";
-                  stroke = "#d1d5db";
-                } else if (isSalesBlocked) {
-                  // Satılmış ile aynı gri — muhasebe/sipariş yok, sadece satışa kapalı
-                  fill = "#d1d5db";
-                  stroke = "#d1d5db";
+                let labelFill = "#ffffff";
+                // Satılmış + satışa kapalı: aynı düz gri (çizgi/kesik çizgi yok)
+                if (isSold || isSalesBlocked) {
+                  fill = "#cbd5e1";
+                  labelFill = "#475569";
                 } else if (isUnavailable) {
                   fill = "#cbd5e1";
-                  stroke = "#94a3b8";
-                  sw = 1.5;
+                  labelFill = "#64748b";
                 } else if (isHeld) {
                   fill = HELD_SEAT_FLUO;
                   stroke = HELD_SEAT_FLUO;
+                  labelFill = "#0f172a";
                 } else if (isHovered) {
                   fill = HELD_SEAT_FLUO;
                   stroke = HELD_SEAT_FLUO;
+                  labelFill = "#0f172a";
                 } else {
                   fill = catHex;
                   stroke = catHex;
                   sw = 0;
+                  labelFill = "#ffffff";
                 }
                 return (
                   <g
@@ -615,7 +669,7 @@ function SeatMapSvg({
                     <circle
                       cx={cx}
                       cy={cy}
-                      r={seatSize / 2}
+                      r={drawSize / 2}
                       fill={fill}
                       stroke={stroke}
                       strokeWidth={sw}
@@ -625,8 +679,24 @@ function SeatMapSvg({
                       onMouseEnter={() => !isUnavailable && setHoveredSeatId(seat.id)}
                       onMouseLeave={() => setHoveredSeatId((prev) => (prev === seat.id ? null : prev))}
                     >
-                      <title>{seatTitleById?.get(seat.id) || `${seatLabelWord} ${seat.seat_label}`}</title>
+                      <title>
+                        {seatTitleById?.get(seat.id) ||
+                          `${seatLabelWord} ${seat.seat_label}${isSalesBlocked ? " (satışa kapalı)" : ""}`}
+                      </title>
                     </circle>
+                    {drawSize >= 10 && (
+                      <text
+                        x={cx}
+                        y={cy + seatFont * 0.35}
+                        textAnchor="middle"
+                        fill={labelFill}
+                        fontSize={seatFont}
+                        fontWeight={600}
+                        style={{ pointerEvents: "none" }}
+                      >
+                        {seat.seat_label}
+                      </text>
+                    )}
                   </g>
                 );
               })}
@@ -711,26 +781,50 @@ function SeatMapWithZoom({
     return () => el.removeEventListener("wheel", onWheel);
   }, []);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button !== 0) return;
+  const beginDrag = useCallback((clientX: number, clientY: number) => {
     didMove.current = false;
-    dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+    dragStart.current = { x: clientX, y: clientY, panX: pan.x, panY: pan.y };
     setIsDragging(true);
   }, [pan]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+  const moveDrag = useCallback((clientX: number, clientY: number) => {
     if (!isDragging) return;
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
+    const dx = clientX - dragStart.current.x;
+    const dy = clientY - dragStart.current.y;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove.current = true;
     setPan({ x: dragStart.current.panX + dx, y: dragStart.current.panY + dy });
   }, [isDragging]);
 
-  const handleMouseUp = useCallback(() => {
+  const endDrag = useCallback(() => {
     setIsDragging(false);
   }, []);
 
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    beginDrag(e.clientX, e.clientY);
+  }, [beginDrag]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    moveDrag(e.clientX, e.clientY);
+  }, [moveDrag]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (!t) return;
+    beginDrag(t.clientX, t.clientY);
+  }, [beginDrag]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    if (!t) return;
+    moveDrag(t.clientX, t.clientY);
+  }, [moveDrag]);
+
   const handleSeatClick = useCallback((seatId: string) => {
+    // Kaydırma sonrası yanlışlıkla koltuk seçilmesin
+    if (didMove.current) return;
     onSeatToggle(seatId);
   }, [onSeatToggle]);
 
@@ -743,11 +837,26 @@ function SeatMapWithZoom({
       if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove.current = true;
       setPan({ x: dragStart.current.panX + dx, y: dragStart.current.panY + dy });
     };
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length !== 1) return;
+      const t = e.touches[0];
+      if (!t) return;
+      const dx = t.clientX - dragStart.current.x;
+      const dy = t.clientY - dragStart.current.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) didMove.current = true;
+      setPan({ x: dragStart.current.panX + dx, y: dragStart.current.panY + dy });
+    };
     window.addEventListener("mouseup", onUp);
     window.addEventListener("mousemove", onMove);
+    window.addEventListener("touchend", onUp);
+    window.addEventListener("touchcancel", onUp);
+    window.addEventListener("touchmove", onTouchMove, { passive: true });
     return () => {
       window.removeEventListener("mouseup", onUp);
       window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("touchend", onUp);
+      window.removeEventListener("touchcancel", onUp);
+      window.removeEventListener("touchmove", onTouchMove);
     };
   }, [isDragging]);
 
@@ -891,8 +1000,12 @@ function SeatMapWithZoom({
         }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseUp}
-        onMouseUp={handleMouseUp}
+        onMouseLeave={endDrag}
+        onMouseUp={endDrag}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={endDrag}
+        onTouchCancel={endDrag}
         role="application"
         aria-label={t("seatMapAriaLabel")}
       >
@@ -1251,10 +1364,15 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     );
   }, [seatingPlanName, seatingPlanData]);
 
+  /** Wizard 2 / hizalı planlarda Duisburg uyarısı gösterme */
+  const hasPersistedAlign = !!seatingPlanData?.some(
+    (s) => s.section_align === "left" || s.section_align === "center" || s.section_align === "right"
+  );
   const showDuisburgVisualHint =
     seatMapView === "map" &&
     !isMusensaalPlan &&
     !isImagePlan &&
+    !hasPersistedAlign &&
     !!seatingPlanData?.length &&
     seatingPlanLooksLikeGermanTheaterButNotImage(seatingPlanData);
 
@@ -1282,13 +1400,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           if (!cancelled) setSeatingPlanData([]);
           return;
         }
-        const { data: rows } = await supabase
-          .from("seating_plan_rows")
-          .select("id, section_id, row_label, ticket_type_label")
-          .in("section_id", sections.map((s) => s.id))
-          .order("section_id")
-          .order("sort_order")
-          .range(0, 4999);
+        const rows = await fetchAllRowsBySectionIds<{
+          id: string;
+          section_id: string;
+          row_label: string;
+          ticket_type_label?: string | null;
+          sort_order?: number | null;
+        }>(supabase, sections.map((s) => s.id));
         if (cancelled) return;
         if (!rows?.length) {
           if (!cancelled) {
@@ -1303,15 +1421,20 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           sales_blocked?: boolean | null;
         }>(supabase, rows.map((r) => r.id), "id, row_id, seat_label, sales_blocked");
         if (cancelled) return;
+        const seatsByRowId = new Map<string, typeof seats>();
+        for (const s of seats) {
+          const list = seatsByRowId.get(s.row_id) || [];
+          list.push(s);
+          seatsByRowId.set(s.row_id, list);
+        }
         const rowsBySection = new Map<string, SeatPlanRow[]>();
         rows.forEach((r) => {
           const list = rowsBySection.get(r.section_id) || [];
-          const rowSeats = seats
-            .filter((s) => s.row_id === r.id)
+          const rowSeats = (seatsByRowId.get(r.id) || [])
             .map((s) => ({
               id: s.id,
               seat_label: s.seat_label,
-              sales_blocked: (s as { sales_blocked?: boolean | null }).sales_blocked === true,
+              sales_blocked: s.sales_blocked === true,
             }))
             .sort((a, b) => {
               const na = Number(String(a.seat_label).trim());
@@ -1323,17 +1446,24 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               if (!aNum && bNum) return 1;
               return String(a.seat_label).localeCompare(String(b.seat_label), undefined, { numeric: true, sensitivity: "base" });
             });
+          // Boş sıra bile gösterilsin (eksik görünmesin)
           list.push({
             id: r.id,
             row_label: r.row_label,
-            ticket_type_label: (r as { ticket_type_label?: string | null }).ticket_type_label ?? null,
+            ticket_type_label: r.ticket_type_label ?? null,
             seats: rowSeats,
           });
           rowsBySection.set(r.section_id, list);
         });
+        const sortOrderByRowId = new Map(rows.map((r) => [r.id, Number(r.sort_order)] as const));
         const result: SeatPlanSection[] = sections.map((s) => {
           const sectionRows = rowsBySection.get(s.id) || [];
           const sorted = [...sectionRows].sort((a, b) => {
+            const sa = sortOrderByRowId.get(a.id);
+            const sb = sortOrderByRowId.get(b.id);
+            if (sa != null && sb != null && Number.isFinite(sa) && Number.isFinite(sb) && sa !== sb) {
+              return sa - sb;
+            }
             const na = Number(a.row_label);
             const nb = Number(b.row_label);
             if (!Number.isNaN(na) && !Number.isNaN(nb)) return na - nb;
@@ -1624,7 +1754,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     seatMetaById.forEach((meta, seatId) => {
       const tid = meta.ticket?.id;
       const catalogAvail = Number(meta.ticket?.available ?? 0);
-      if (!hasSeatingPlan && catalogAvail <= 0) {
+      // Katalog stoku bitmiş kategorinin koltukları haritada da dolu görünsün
+      // (yanlış otomatik atama sonrası sağ VIP boş kalıp VIP=0 görünmesin).
+      if (catalogAvail <= 0) {
         s.add(seatId);
         return;
       }
@@ -2541,16 +2673,14 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                                 (selectableSeatIdsByCategory ? !selectableSeatIdsByCategory.has(seat.id) : false)
                                               }
                                               onClick={handleClick}
-                                              className={`w-9 h-9 rounded-full text-sm font-medium transition-colors outline-none focus-visible:outline-none ${
-                                                isSold
-                                                  ? "bg-slate-300 text-slate-700 cursor-not-allowed ring-0"
-                                                  : isBlocked
-                                                    ? "bg-amber-200 text-amber-950 cursor-not-allowed ring-1 ring-amber-400"
+                                              className={`w-9 h-9 rounded-full text-sm font-medium transition-colors outline-none focus-visible:outline-none border-0 ring-0 shadow-none ${
+                                                isSold || isBlocked
+                                                  ? "bg-slate-300 text-slate-700 cursor-not-allowed"
                                                   : selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seat.id)
-                                                    ? "bg-slate-300 text-slate-500 cursor-not-allowed ring-0"
+                                                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
                                                   : isHeld
-                                                    ? "text-slate-900 cursor-pointer ring-0 shadow-none border-0"
-                                                    : "text-slate-900 ring-0 border-0 hover:bg-[#39ff14] hover:text-slate-900"
+                                                    ? "text-slate-900 cursor-pointer"
+                                                    : "text-slate-900 hover:bg-[#39ff14] hover:text-slate-900"
                                               } ${!isHeld && !isSold && !isBlocked && cartTotalTicketsCount >= maxTicketsPerOrder ? "opacity-50 cursor-not-allowed" : ""}`}
                                               style={
                                                 isSold || isBlocked || (selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seat.id))

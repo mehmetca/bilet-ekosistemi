@@ -1,11 +1,24 @@
 "use client";
 
-import { Suspense, useState, useEffect, type ReactNode } from "react";
+import { Suspense, useState, useEffect, useRef, type ReactNode, type PointerEvent as ReactPointerEvent } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { ArrowLeft, Plus, ChevronDown, ChevronRight, Copy, Trash2, Ban } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Plus,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Trash2,
+  Ban,
+  Move,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
-import { fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
+import { fetchAllRowsBySectionIds, fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
+import { insertSeatsBatched } from "@/lib/seating-plans/insert-seats-batched";
 import OrganizerOrAdminGuard from "@/components/OrganizerOrAdminGuard";
 import { getMusensaalTemplateCopy } from "@/lib/seating-plans/musensaal-to-db";
 import { getPlan } from "@/lib/seating-plans";
@@ -191,6 +204,7 @@ function OturumPlaniContent() {
   const [copyingTemplate, setCopyingTemplate] = useState(false);
   const [addingMissingRows, setAddingMissingRows] = useState(false);
   const [addingMissingSeats, setAddingMissingSeats] = useState(false);
+  const [repairingSeats, setRepairingSeats] = useState(false);
   const [salonPresetId, setSalonPresetId] = useState<SalonPresetId>("single_center");
   const [salonPresetRows, setSalonPresetRows] = useState(12);
   const [salonPresetSeats, setSalonPresetSeats] = useState(16);
@@ -204,6 +218,36 @@ function OturumPlaniContent() {
     Record<string, "none" | "horizontal" | "vertical">
   >({});
   const [newSectionCorridorAfterSeat, setNewSectionCorridorAfterSeat] = useState<Record<string, string>>({});
+  /** Canlı önizleme: bölüm kartı genişlik/yükseklik (px) — sadece görünüm, kayda yazılmaz */
+  const [previewSizeBySection, setPreviewSizeBySection] = useState<Record<string, { w: number; h: number }>>({});
+  /** Canlı önizleme tuvali: zoom + pan (plana göre) */
+  const [previewCanvasByPlan, setPreviewCanvasByPlan] = useState<
+    Record<string, { zoom: number; x: number; y: number }>
+  >({});
+  const previewDragRef = useRef<{
+    planId: string;
+    mode: "pan" | "resize";
+    sectionId?: string;
+    edge?: "e" | "s" | "se";
+    startX: number;
+    startY: number;
+    origX: number;
+    origY: number;
+    origW: number;
+    origH: number;
+  } | null>(null);
+
+  const getPreviewCanvas = (planId: string) =>
+    previewCanvasByPlan[planId] ?? { zoom: 0.9, x: 16, y: 16 };
+
+  const getPreviewSize = (sectionId: string, seatHint: number, rowCount: number) => {
+    const cur = previewSizeBySection[sectionId];
+    if (cur) return cur;
+    return {
+      w: Math.min(960, Math.max(200, seatHint * 22 + 56)),
+      h: Math.min(720, Math.max(96, rowCount * 26 + 52)),
+    };
+  };
 
   const parseNumericRange = (value: string): { start: number; end: number } | null => {
     const m = value.trim().match(/^(\d+)\s*-\s*(\d+)$/);
@@ -253,19 +297,15 @@ function OturumPlaniContent() {
 
         const sectionIds = (sections || []).map((s) => s.id);
         if (sectionIds.length) {
-          const { data: rows } = await supabase
-            .from("seating_plan_rows")
-            .select("*")
-            .in("section_id", sectionIds)
-            .order("sort_order");
+          const rows = await fetchAllRowsBySectionIds<SeatingPlanRow>(supabase, sectionIds, "*");
           const bySection: Record<string, SeatingPlanRow[]> = {};
-          (rows || []).forEach((r) => {
+          rows.forEach((r) => {
             if (!bySection[r.section_id]) bySection[r.section_id] = [];
             bySection[r.section_id].push(r);
           });
           setRowsBySection(bySection);
 
-          const rowIds = (rows || []).map((r) => r.id);
+          const rowIds = rows.map((r) => r.id);
           if (rowIds.length) {
             const seats = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
             const byRow: Record<string, Seat[]> = {};
@@ -312,12 +352,29 @@ function OturumPlaniContent() {
     setSectionsByPlan((prev) => ({ ...prev, [planId]: data || [] }));
   };
   const refreshRows = async (sectionId: string) => {
-    const { data } = await supabase
-      .from("seating_plan_rows")
-      .select("*")
-      .eq("section_id", sectionId)
-      .order("sort_order");
-    setRowsBySection((prev) => ({ ...prev, [sectionId]: data || [] }));
+    const rows = await fetchAllRowsBySectionIds<SeatingPlanRow>(supabase, [sectionId], "*");
+    setRowsBySection((prev) => ({ ...prev, [sectionId]: rows }));
+  };
+
+  /** Planın sıra + koltuklarını sayfalı okuyup state'e yazar (PostgREST 1000 limiti bypass). */
+  const reloadPlanRowsAndSeats = async (planId: string, sectionIds: string[]) => {
+    if (!sectionIds.length) return;
+    const rows = await fetchAllRowsBySectionIds<SeatingPlanRow>(supabase, sectionIds, "*");
+    const bySection: Record<string, SeatingPlanRow[]> = {};
+    rows.forEach((r) => {
+      if (!bySection[r.section_id]) bySection[r.section_id] = [];
+      bySection[r.section_id].push(r);
+    });
+    setRowsBySection((prev) => ({ ...prev, ...bySection }));
+    const rowIds = rows.map((r) => r.id);
+    if (!rowIds.length) return;
+    const seats = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
+    const byRow: Record<string, Seat[]> = {};
+    seats.forEach((s) => {
+      if (!byRow[s.row_id]) byRow[s.row_id] = [];
+      byRow[s.row_id].push(s);
+    });
+    setSeatsByRow((prev) => ({ ...prev, ...byRow }));
   };
 
   const normalizeRowsOrder = (sectionId: string, sourceRows?: SeatingPlanRow[]) => {
@@ -648,9 +705,14 @@ function OturumPlaniContent() {
       const { data: existingSections } = await supabase.from("seating_plan_sections").select("id").eq("seating_plan_id", planId);
       const sectionIds = (existingSections || []).map((s) => s.id);
       if (sectionIds.length > 0) {
-        const { data: rowsToDelete } = await supabase.from("seating_plan_rows").select("id").in("section_id", sectionIds);
-        const rowIds = (rowsToDelete || []).map((r) => r.id);
-        if (rowIds.length > 0) await supabase.from("seats").delete().in("row_id", rowIds);
+        const rowsToDelete = await fetchAllRowsBySectionIds<{ id: string }>(supabase, sectionIds, "id");
+        const rowIds = rowsToDelete.map((r) => r.id);
+        if (rowIds.length > 0) {
+          for (let i = 0; i < rowIds.length; i += 150) {
+            const chunk = rowIds.slice(i, i + 150);
+            await supabase.from("seats").delete().in("row_id", chunk);
+          }
+        }
         await supabase.from("seating_plan_rows").delete().in("section_id", sectionIds);
         await supabase.from("seating_plan_sections").delete().eq("seating_plan_id", planId);
       }
@@ -667,8 +729,7 @@ function OturumPlaniContent() {
         .select()
         .single();
       if (sectionErr || !sectionData) {
-        console.error("Section insert failed:", section.name, sectionErr);
-        continue;
+        throw new Error(`Bölüm yazılamadı (${section.name}): ${sectionErr?.message || "bilinmeyen hata"}`);
       }
       const sectionId = sectionData.id;
       for (let ri = 0; ri < section.rows.length; ri++) {
@@ -679,14 +740,19 @@ function OturumPlaniContent() {
           .select()
           .single();
         if (rowErr || !rowData) {
-          console.error("Row insert failed:", section.name, row.row_label, rowErr);
-          continue;
+          throw new Error(
+            `Sıra yazılamadı (${section.name} ${row.row_label}): ${rowErr?.message || "bilinmeyen hata"}`
+          );
         }
         const toInsert = row.seat_labels.map((seat_label) => ({ row_id: rowData.id, seat_label }));
-        for (let chunk = 0; chunk < toInsert.length; chunk += 50) {
-          const batch = toInsert.slice(chunk, chunk + 50);
-          const { error: seatErr } = await supabase.from("seats").insert(batch);
-          if (seatErr) console.error("Seats insert failed:", section.name, row.row_label, seatErr);
+        try {
+          await insertSeatsBatched(supabase, toInsert);
+        } catch (seatErr) {
+          throw new Error(
+            `Koltuklar yazılamadı (${section.name} sıra ${row.row_label}): ${
+              seatErr instanceof Error ? seatErr.message : "bilinmeyen hata"
+            }`
+          );
         }
       }
     }
@@ -708,8 +774,24 @@ function OturumPlaniContent() {
         alert("Plan oluşturulamadı: " + (planErr?.message || "Bilinmeyen hata"));
         return;
       }
-      await runMusensaalTemplate(planData.id, true);
+      try {
+        await runMusensaalTemplate(planData.id, true);
+      } catch (e) {
+        await supabase.from("seating_plans").delete().eq("id", planData.id);
+        alert(e instanceof Error ? e.message : "Şablon uygulanamadı; plan geri alındı.");
+        return;
+      }
       await refreshPlans();
+      const { data: sections } = await supabase
+        .from("seating_plan_sections")
+        .select("*")
+        .eq("seating_plan_id", planData.id)
+        .order("sort_order");
+      setSectionsByPlan((prev) => ({ ...prev, [planData.id]: sections || [] }));
+      await reloadPlanRowsAndSeats(
+        planData.id,
+        (sections || []).map((s) => s.id)
+      );
       setExpandedPlan(planData.id);
     } finally {
       setCopyingTemplate(false);
@@ -736,11 +818,12 @@ function OturumPlaniContent() {
         const tSection = template.sections[si];
         const dbSection = dbSections[si];
         if (!dbSection || dbSection.name !== tSection.name) continue;
-        const { data: existingRows } = await supabase
-          .from("seating_plan_rows")
-          .select("id, row_label")
-          .eq("section_id", dbSection.id);
-        const existingLabels = new Set((existingRows || []).map((r) => String(r.row_label).trim()));
+        const existingRows = await fetchAllRowsBySectionIds<{ id: string; row_label: string }>(
+          supabase,
+          [dbSection.id],
+          "id, row_label"
+        );
+        const existingLabels = new Set(existingRows.map((r) => String(r.row_label).trim()));
         for (let ri = 0; ri < tSection.rows.length; ri++) {
           const tRow = tSection.rows[ri];
           const rowLabel = String(tRow.row_label).trim();
@@ -751,14 +834,21 @@ function OturumPlaniContent() {
             .select()
             .single();
           if (rowErr || !rowData) {
-            console.error("Row insert failed:", dbSection.name, rowLabel, rowErr);
-            continue;
+            alert(
+              `Sıra yazılamadı (${dbSection.name} ${rowLabel}): ${rowErr?.message || "bilinmeyen hata"}`
+            );
+            return;
           }
           const toInsert = tRow.seat_labels.map((seat_label) => ({ row_id: rowData.id, seat_label }));
-          for (let chunk = 0; chunk < toInsert.length; chunk += 50) {
-            const batch = toInsert.slice(chunk, chunk + 50);
-            const { error: seatErr } = await supabase.from("seats").insert(batch);
-            if (seatErr) console.error("Seats insert failed:", dbSection.name, rowLabel, seatErr);
+          try {
+            await insertSeatsBatched(supabase, toInsert);
+          } catch (seatErr) {
+            alert(
+              `Koltuklar yazılamadı (${dbSection.name} ${rowLabel}): ${
+                seatErr instanceof Error ? seatErr.message : "bilinmeyen hata"
+              }`
+            );
+            return;
           }
           existingLabels.add(rowLabel);
           added++;
@@ -767,23 +857,7 @@ function OturumPlaniContent() {
       if (added > 0) {
         await refreshPlans();
         const sectionIds = (dbSections || []).map((s) => s.id);
-        const { data: rows } = await supabase.from("seating_plan_rows").select("*").in("section_id", sectionIds).order("sort_order");
-        const bySection: Record<string, SeatingPlanRow[]> = {};
-        (rows || []).forEach((r) => {
-          if (!bySection[r.section_id]) bySection[r.section_id] = [];
-          bySection[r.section_id].push(r);
-        });
-        setRowsBySection((prev) => ({ ...prev, ...bySection }));
-        const rowIds = (rows || []).map((r) => r.id);
-        if (rowIds?.length) {
-          const seats = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
-          const byRow: Record<string, Seat[]> = {};
-          seats.forEach((s) => {
-            if (!byRow[s.row_id]) byRow[s.row_id] = [];
-            byRow[s.row_id].push(s);
-          });
-          setSeatsByRow((prev) => ({ ...prev, ...byRow }));
-        }
+        await reloadPlanRowsAndSeats(planId, sectionIds);
         setExpandedPlan(planId);
         alert(`${added} eksik sıra eklendi.`);
       } else {
@@ -816,57 +890,46 @@ function OturumPlaniContent() {
         const dbSection = dbSections[si];
         if (!dbSection || dbSection.name !== tSection.name) continue;
         const tRowByLabel = new Map(tSection.rows.map((r) => [String(r.row_label).trim(), r]));
-        const { data: dbRows } = await supabase
-          .from("seating_plan_rows")
-          .select("id, row_label")
-          .eq("section_id", dbSection.id);
+        const dbRows = await fetchAllRowsBySectionIds<{ id: string; row_label: string }>(
+          supabase,
+          [dbSection.id],
+          "id, row_label"
+        );
         const existingSeats = await fetchAllSeatsByRowIds<{ row_id: string }>(
           supabase,
-          (dbRows || []).map((r) => r.id),
+          dbRows.map((r) => r.id),
           "row_id"
         );
         const seatCountByRowId = new Map<string, number>();
         existingSeats.forEach((s) => {
           seatCountByRowId.set(s.row_id, (seatCountByRowId.get(s.row_id) ?? 0) + 1);
         });
-        for (const dbRow of dbRows || []) {
+        for (const dbRow of dbRows) {
           const count = seatCountByRowId.get(dbRow.id) ?? 0;
           if (count > 0) continue;
           const rowLabel = String(dbRow.row_label).trim();
           const tRow = tRowByLabel.get(rowLabel);
           if (!tRow || !tRow.seat_labels.length) continue;
           const toInsert = tRow.seat_labels.map((seat_label) => ({ row_id: dbRow.id, seat_label }));
-          for (let chunk = 0; chunk < toInsert.length; chunk += 50) {
-            const batch = toInsert.slice(chunk, chunk + 50);
-            const { error: seatErr } = await supabase.from("seats").insert(batch);
-            if (seatErr) {
-              console.error("Seats insert failed:", dbSection.name, rowLabel, seatErr);
-              break;
-            }
-            seatsAdded += batch.length;
+          try {
+            await insertSeatsBatched(supabase, toInsert);
+            seatsAdded += toInsert.length;
+            rowsFilled++;
+          } catch (seatErr) {
+            alert(
+              `Koltuklar yazılamadı (${dbSection.name} ${rowLabel}): ${
+                seatErr instanceof Error ? seatErr.message : "bilinmeyen hata"
+              }`
+            );
+            return;
           }
-          rowsFilled++;
         }
       }
       if (rowsFilled > 0 || seatsAdded > 0) {
-        const sectionIds = dbSections.map((s) => s.id);
-        const { data: rows } = await supabase.from("seating_plan_rows").select("*").in("section_id", sectionIds).order("sort_order");
-        const bySection: Record<string, SeatingPlanRow[]> = {};
-        (rows || []).forEach((r) => {
-          if (!bySection[r.section_id]) bySection[r.section_id] = [];
-          bySection[r.section_id].push(r);
-        });
-        setRowsBySection((prev) => ({ ...prev, ...bySection }));
-        const rowIds = (rows || []).map((r) => r.id);
-        if (rowIds?.length) {
-          const seats = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
-          const byRow: Record<string, Seat[]> = {};
-          seats.forEach((s) => {
-            if (!byRow[s.row_id]) byRow[s.row_id] = [];
-            byRow[s.row_id].push(s);
-          });
-          setSeatsByRow((prev) => ({ ...prev, ...byRow }));
-        }
+        await reloadPlanRowsAndSeats(
+          planId,
+          dbSections.map((s) => s.id)
+        );
         setExpandedPlan(planId);
         alert(`${rowsFilled} sıraya toplam ${seatsAdded} koltuk eklendi.`);
       } else {
@@ -881,7 +944,12 @@ function OturumPlaniContent() {
     if (!confirm("Bu planın tüm bölüm/sıra/koltuk verileri silinip Musensaal şablonu yeniden uygulanacak. Devam?")) return;
     setCopyingTemplate(true);
     try {
-      await runMusensaalTemplate(planId, false);
+      try {
+        await runMusensaalTemplate(planId, false);
+      } catch (e) {
+        alert(e instanceof Error ? e.message : "Şablon yeniden uygulanamadı.");
+        return;
+      }
       await refreshPlans();
       const { data: sections } = await supabase
         .from("seating_plan_sections")
@@ -894,30 +962,10 @@ function OturumPlaniContent() {
         byPlan[s.seating_plan_id].push(s);
       });
       setSectionsByPlan((prev) => ({ ...prev, ...byPlan }));
-      const sectionIds = (sections || []).map((s) => s.id);
-      if (sectionIds.length) {
-        const { data: rows } = await supabase
-          .from("seating_plan_rows")
-          .select("*")
-          .in("section_id", sectionIds)
-          .order("sort_order");
-        const bySection: Record<string, SeatingPlanRow[]> = {};
-        (rows || []).forEach((r) => {
-          if (!bySection[r.section_id]) bySection[r.section_id] = [];
-          bySection[r.section_id].push(r);
-        });
-        setRowsBySection((prev) => ({ ...prev, ...bySection }));
-        const rowIds = (rows || []).map((r) => r.id);
-        if (rowIds.length) {
-          const seats = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
-          const byRow: Record<string, Seat[]> = {};
-          seats.forEach((s) => {
-            if (!byRow[s.row_id]) byRow[s.row_id] = [];
-            byRow[s.row_id].push(s);
-          });
-          setSeatsByRow((prev) => ({ ...prev, ...byRow }));
-        }
-      }
+      await reloadPlanRowsAndSeats(
+        planId,
+        (sections || []).map((s) => s.id)
+      );
       setExpandedPlan(planId);
     } finally {
       setCopyingTemplate(false);
@@ -931,10 +979,55 @@ function OturumPlaniContent() {
   };
 
   const deletePlan = async (planId: string) => {
-    if (!confirm("Bu salonu ve tüm bölüm/sıra/koltuk verilerini silmek istediğinize emin misiniz?")) return;
-    const { error } = await supabase.from("seating_plans").delete().eq("id", planId);
-    if (error) alert("Silinemedi: " + error.message);
-    else await refreshPlans();
+    if (
+      !confirm(
+        "Bu salonu ve tüm bölüm/sıra/koltuk verilerini silmek istediğinize emin misiniz? Bağlı etkinliklerin salon bağlantısı kaldırılır. Satılmış koltuk varsa silinmez."
+      )
+    ) {
+      return;
+    }
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        alert("Oturum gerekli");
+        return;
+      }
+      const res = await fetch("/api/yonetim/delete-seating-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ seating_plan_id: planId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(json.error || "Salon silinemedi");
+        return;
+      }
+      const sectionIds = (sectionsByPlan[planId] || []).map((s) => s.id);
+      const rowIds = sectionIds.flatMap((sid) => (rowsBySection[sid] || []).map((r) => r.id));
+      setSectionsByPlan((prev) => {
+        const next = { ...prev };
+        delete next[planId];
+        return next;
+      });
+      setRowsBySection((prev) => {
+        const next = { ...prev };
+        for (const sid of sectionIds) delete next[sid];
+        return next;
+      });
+      setSeatsByRow((prev) => {
+        const next = { ...prev };
+        for (const rid of rowIds) delete next[rid];
+        return next;
+      });
+      setExpandedPlan((id) => (id === planId ? null : id));
+      await refreshPlans();
+      alert(json.message || "Salon silindi.");
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Salon silinemedi");
+    }
   };
 
   const parseRange = (raw: string): { start: number; end: number } | null => {
@@ -1105,6 +1198,45 @@ function OturumPlaniContent() {
     if (bad.length) alert("Okunamayan satırlar:\n" + bad.join("\n"));
   };
 
+  /** Boş / eksik koltuklu sıraları aynı bölümdeki en dolu sıraya göre tamamlar. */
+  const handleRepairMissingSeats = async (planId: string) => {
+    if (
+      !confirm(
+        "Eksik koltuklar, her bölümdeki en dolu sıranın numaralarına göre tamamlanacak. Mevcut koltuklar silinmez. Devam?"
+      )
+    ) {
+      return;
+    }
+    setRepairingSeats(true);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        alert("Oturum gerekli");
+        return;
+      }
+      const res = await fetch("/api/yonetim/repair-seating-plan-seats", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ seating_plan_id: planId }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        alert(json.error || "Onarım başarısız");
+        return;
+      }
+      alert(json.message || "Tamamlandı");
+      // Planı yeniden yükle
+      window.location.reload();
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Onarım hatası");
+    } finally {
+      setRepairingSeats(false);
+    }
+  };
+
   const handleSavePlan = async (planId: string) => {
     const draftSections = sectionsByPlan[planId] || [];
     try {
@@ -1149,14 +1281,15 @@ function OturumPlaniContent() {
         .map((s) => s.id)
         .filter((id) => !keptSectionIds.has(id));
       if (sectionsToDelete.length) {
-        const { data: rowsInRemovedSections } = await supabase
-          .from("seating_plan_rows")
-          .select("id")
-          .in("section_id", sectionsToDelete);
-        const rids = (rowsInRemovedSections || []).map((r) => r.id);
+        const rowsInRemovedSections = await fetchAllRowsBySectionIds<{ id: string }>(
+          supabase,
+          sectionsToDelete,
+          "id"
+        );
+        const rids = rowsInRemovedSections.map((r) => r.id);
         if (rids.length) {
-          const { data: seatsTouch } = await supabase.from("seats").select("id").in("row_id", rids);
-          if ((seatsTouch || []).some((s) => soldSet.has(s.id))) {
+          const seatsTouch = await fetchAllSeatsByRowIds<{ id: string }>(supabase, rids, "id");
+          if (seatsTouch.some((s) => soldSet.has(s.id))) {
             fail("Satılmış koltuk bulunan bölüm silinemez. İptal edilmemiş siparişlerdeki koltukları koruyun.");
             return;
           }
@@ -1232,20 +1365,26 @@ function OturumPlaniContent() {
         if (!mappedSectionId) continue;
         const draftRows = rowsBySection[section.id] || [];
 
-        const { data: dbRows, error: dbRowsError } = await supabase
-          .from("seating_plan_rows")
-          .select("id")
-          .eq("section_id", mappedSectionId);
-        if (dbRowsError) {
-          fail("Salon kaydedilemedi: " + dbRowsError.message);
+        let dbRows: { id: string }[];
+        try {
+          dbRows = await fetchAllRowsBySectionIds<{ id: string }>(supabase, [mappedSectionId], "id");
+        } catch (dbRowsError) {
+          fail(
+            "Salon kaydedilemedi: " +
+              (dbRowsError instanceof Error ? dbRowsError.message : "Sıralar okunamadı")
+          );
           return;
         }
 
         const keptRowIds = new Set(draftRows.filter((r) => !r.id.startsWith("tmp_")).map((r) => r.id));
-        const rowsToDelete = (dbRows || []).map((r) => r.id).filter((id) => !keptRowIds.has(id));
+        const rowsToDelete = dbRows.map((r) => r.id).filter((id) => !keptRowIds.has(id));
         if (rowsToDelete.length) {
-          const { data: seatsInDeletedRows } = await supabase.from("seats").select("id").in("row_id", rowsToDelete);
-          if ((seatsInDeletedRows || []).some((s) => soldSet.has(s.id))) {
+          const seatsInDeletedRows = await fetchAllSeatsByRowIds<{ id: string }>(
+            supabase,
+            rowsToDelete,
+            "id"
+          );
+          if (seatsInDeletedRows.some((s) => soldSet.has(s.id))) {
             fail("Satılmış koltuk içeren sıra silinemez. İptal edilmemiş siparişlerdeki sıraları koruyun.");
             return;
           }
@@ -1304,12 +1443,18 @@ function OturumPlaniContent() {
             return;
           }
           const draftSeats = seatsByRow[row.id] || [];
-          const { data: dbSeats, error: dbSeatsError } = await supabase
-            .from("seats")
-            .select("id, seat_label")
-            .eq("row_id", mappedRowId);
-          if (dbSeatsError) {
-            fail("Salon kaydedilemedi: " + dbSeatsError.message);
+          let dbSeats: { id: string; seat_label: string }[];
+          try {
+            dbSeats = await fetchAllSeatsByRowIds<{ id: string; seat_label: string }>(
+              supabase,
+              [mappedRowId],
+              "id, seat_label"
+            );
+          } catch (dbSeatsError) {
+            fail(
+              "Salon kaydedilemedi: " +
+                (dbSeatsError instanceof Error ? dbSeatsError.message : "Koltuklar okunamadı")
+            );
             return;
           }
 
@@ -1327,11 +1472,27 @@ function OturumPlaniContent() {
           }
 
           const dbByLabel = new Map<string, { id: string; seat_label: string }>();
-          for (const s of dbSeats || []) {
+          for (const s of dbSeats) {
             dbByLabel.set(normalizeSeatLabel(s.seat_label), s);
           }
 
-          const seatsToDelete = (dbSeats || [])
+          const dbCount = dbSeats.length;
+          const draftCount = draftByLabel.size;
+          // Eksik yüklenen taslakla kaydetmek DB koltuklarını siler — engelle.
+          if (dbCount > 0 && draftCount === 0) {
+            fail(
+              `Sıra "${row.row_label}": taslakta koltuk yok ama veritabanında ${dbCount} koltuk var. Sayfayı yenileyip tekrar kaydedin.`
+            );
+            return;
+          }
+          if (dbCount >= 4 && draftCount < Math.ceil(dbCount * 0.5)) {
+            fail(
+              `Sıra "${row.row_label}": taslakta ${draftCount} koltuk, veritabanında ${dbCount}. Eksik yükleme riski — sayfayı yenileyip tekrar deneyin.`
+            );
+            return;
+          }
+
+          const seatsToDelete = dbSeats
             .filter((s) => !draftByLabel.has(normalizeSeatLabel(s.seat_label)))
             .map((s) => s.id);
           const blockedSeatDelete = seatsToDelete.filter((id) => soldSet.has(id));
@@ -1376,6 +1537,9 @@ function OturumPlaniContent() {
         }
       }
 
+      // Not: kayıt sonrası otomatik "eksik koltuk doldur" çağrılmaz —
+      // bilinçli kısa sıraları (balkon vs parkett) bozmasın. Manuel buton ayrı.
+
       await refreshSections(planId);
       const { data: sectionsAfter } = await supabase
         .from("seating_plan_sections")
@@ -1384,32 +1548,10 @@ function OturumPlaniContent() {
         .order("sort_order");
       const nextSections = sectionsAfter || [];
       setSectionsByPlan((prev) => ({ ...prev, [planId]: nextSections }));
-
-      const sectionIds = nextSections.map((s) => s.id);
-      if (sectionIds.length) {
-        const { data: rowsAfter } = await supabase
-          .from("seating_plan_rows")
-          .select("*")
-          .in("section_id", sectionIds)
-          .order("sort_order");
-        const nextRowsBySection: Record<string, SeatingPlanRow[]> = {};
-        (rowsAfter || []).forEach((r) => {
-          if (!nextRowsBySection[r.section_id]) nextRowsBySection[r.section_id] = [];
-          nextRowsBySection[r.section_id].push(r);
-        });
-        setRowsBySection((prev) => ({ ...prev, ...nextRowsBySection }));
-
-        const rowIds = (rowsAfter || []).map((r) => r.id);
-        if (rowIds.length) {
-          const seatsAfter = await fetchAllSeatsByRowIds<Seat>(supabase, rowIds, "*");
-          const nextSeatsByRow: Record<string, Seat[]> = {};
-          seatsAfter.forEach((s) => {
-            if (!nextSeatsByRow[s.row_id]) nextSeatsByRow[s.row_id] = [];
-            nextSeatsByRow[s.row_id].push(s);
-          });
-          setSeatsByRow((prev) => ({ ...prev, ...nextSeatsByRow }));
-        }
-      }
+      await reloadPlanRowsAndSeats(
+        planId,
+        nextSections.map((s) => s.id)
+      );
 
       setSaveFeedbackByPlan((prev) => ({
         ...prev,
@@ -1630,7 +1772,9 @@ function OturumPlaniContent() {
                 {plan.is_default && <span className="text-xs bg-primary-100 text-primary-700 px-2 py-0.5 rounded">Varsayılan</span>}
               </span>
               <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                {plan.name && plan.name.includes("Musensaal") && (
+                {/* Musensaal araçları: isimde "Musensaal" olmasa bile yapısal eşleşmede göster (Salon deneme vb.) */}
+                {(plan.name?.includes("Musensaal") ||
+                  planHasMusensaalStructure(sectionsByPlan[plan.id] || [])) && (
                   <>
                     <button
                       type="button"
@@ -1655,7 +1799,7 @@ function OturumPlaniContent() {
                       onClick={() => handleResyncMusensaal(plan.id)}
                       disabled={copyingTemplate || addingMissingRows || addingMissingSeats}
                       className="text-sm text-amber-700 hover:text-amber-800 border border-amber-300 px-2 py-1 rounded"
-                      title="Bölüm/sıra/koltuk verilerini siler ve güncel Musensaal şablonunu yeniden uygular (Parkett 1–29, Empore Hinten 5–12 vb.)."
+                      title="Bölüm/sıra/koltuk verilerini siler ve güncel Musensaal şablonunu yeniden uygular."
                     >
                       Şablonu yeniden uygula
                     </button>
@@ -1834,8 +1978,15 @@ function OturumPlaniContent() {
                 {(() => {
                   const planSections = sectionsByPlan[plan.id] || [];
                   if (!planSections.length) return null;
-                  const sectionGroup = (name: string) => {
-                    const n = String(name || "").toLowerCase();
+                  /**
+                   * Önizleme sütunu: önce section_align / taslak hizalama (Wizard 2 sol-sağ Balkon gibi),
+                   * yoksa isimdeki sol/sağ ipucu.
+                   */
+                  const sectionPreviewColumn = (s: SeatingPlanSection): 0 | 1 | 2 => {
+                    const align = getSectionAlign(s.id, s.name, s.section_align ?? null);
+                    if (align === "left") return 0;
+                    if (align === "right") return 2;
+                    const n = String(s.name || "").toLowerCase();
                     if (n.includes("sol") || n.includes("left")) return 0;
                     if (n.includes("sağ") || n.includes("sag") || n.includes("right")) return 2;
                     return 1;
@@ -1850,11 +2001,57 @@ function OturumPlaniContent() {
                   });
                   const hasAnyRows = orderedSections.some((s) => (rowsBySection[s.id] || []).length > 0);
                   if (!hasAnyRows) return null;
-                  const leftSections = orderedSections.filter((s) => sectionGroup(s.name) === 0);
-                  const centerSections = orderedSections.filter((s) => sectionGroup(s.name) === 1);
-                  const rightSections = orderedSections.filter((s) => sectionGroup(s.name) === 2);
+                  const leftSections = orderedSections.filter((s) => sectionPreviewColumn(s) === 0);
+                  const centerSections = orderedSections.filter((s) => sectionPreviewColumn(s) === 1);
+                  const rightSections = orderedSections.filter((s) => sectionPreviewColumn(s) === 2);
                   const onlyCenterSide =
                     leftSections.length === 0 && rightSections.length === 0 && centerSections.length > 0;
+                  const canvas = getPreviewCanvas(plan.id);
+                  const startResize = (
+                    e: ReactPointerEvent<HTMLElement>,
+                    sectionId: string,
+                    edge: "e" | "s" | "se",
+                    size: { w: number; h: number }
+                  ) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    previewDragRef.current = {
+                      planId: plan.id,
+                      mode: "resize",
+                      sectionId,
+                      edge,
+                      startX: e.clientX,
+                      startY: e.clientY,
+                      origX: 0,
+                      origY: 0,
+                      origW: size.w,
+                      origH: size.h,
+                    };
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                  };
+                  const onResizeMove = (e: ReactPointerEvent<HTMLElement>) => {
+                    const d = previewDragRef.current;
+                    if (!d || d.mode !== "resize" || !d.sectionId) return;
+                    const dx = (e.clientX - d.startX) / (canvas.zoom || 1);
+                    const dy = (e.clientY - d.startY) / (canvas.zoom || 1);
+                    let w = d.origW;
+                    let h = d.origH;
+                    if (d.edge === "e" || d.edge === "se") w = Math.max(160, Math.min(1400, d.origW + dx));
+                    if (d.edge === "s" || d.edge === "se") h = Math.max(80, Math.min(1000, d.origH + dy));
+                    setPreviewSizeBySection((prev) => ({
+                      ...prev,
+                      [d.sectionId!]: { w: Math.round(w), h: Math.round(h) },
+                    }));
+                  };
+                  const endResize = (e: ReactPointerEvent<HTMLElement>) => {
+                    if (previewDragRef.current?.mode === "resize") previewDragRef.current = null;
+                    try {
+                      e.currentTarget.releasePointerCapture(e.pointerId);
+                    } catch {
+                      /* ignore */
+                    }
+                  };
+
                   const renderSectionCard = (section: SeatingPlanSection) => {
                     const align = getSectionAlign(section.id, section.name, section.section_align ?? null);
                     const side = sectionNameGroup(section.name).side;
@@ -1862,180 +2059,435 @@ function OturumPlaniContent() {
                     if (!rows.length) return null;
                     const cm = section.corridor_mode ?? "none";
                     const afterSeat = (section.corridor_after_seat_label ?? "").trim();
-                    /** En az ~16 koltuk tek satırda sığsın (önizleme); dar ekranda yatay kaydırma. */
-                    const sectionCardClass =
-                      cm === "horizontal"
-                        ? "min-w-0 w-full basis-full shrink-0 rounded border border-slate-200 bg-white p-1"
-                        : onlyCenterSide
-                          ? "min-w-[min(100%,34rem)] w-max max-w-full shrink-0 rounded border border-slate-200 bg-white p-1"
-                          : "min-w-[min(100%,34rem)] w-max max-w-full shrink-0 rounded border border-slate-200 bg-white p-1";
+                    const maxSeats = Math.max(
+                      1,
+                      ...rows.map((r) => (seatsByRow[r.id] || []).length),
+                      8
+                    );
+                    const size = getPreviewSize(section.id, maxSeats, rows.length);
                     return (
-                      <div key={section.id} className={sectionCardClass}>
-                        <div className="mb-1 flex items-center justify-between gap-1">
-                          <div className="text-xs font-semibold text-slate-700">{section.name}</div>
-                          <div className="inline-flex rounded border border-slate-300 bg-white p-0.5">
-                            <button
-                              type="button"
-                              onClick={() => setSectionAlignDraft((prev) => ({ ...prev, [section.id]: "left" }))}
-                              className={`rounded px-1.5 py-0.5 text-[10px] ${align === "left" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}
-                            >
-                              Sola Yasla
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setSectionAlignDraft((prev) => ({ ...prev, [section.id]: "center" }))}
-                              className={`rounded px-1.5 py-0.5 text-[10px] ${align === "center" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}
-                            >
-                              Ortala
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setSectionAlignDraft((prev) => ({ ...prev, [section.id]: "right" }))}
-                              className={`rounded px-1.5 py-0.5 text-[10px] ${align === "right" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}
-                            >
-                              Sağa Yasla
-                            </button>
-                          </div>
-                        </div>
-                        <div className="space-y-0.5">
-                          {rows.map((row) => {
-                            const rowLabel = String(row.row_label || "");
-                            const seats = sortSeatsByLabel(seatsByRow[row.id] || []);
-                            const rowTicket =
-                              (rowTicketLabelDraft[row.id] ??
-                                row.ticket_type_label ??
-                                sectionTicketLabel[section.id] ??
-                                section.ticket_type_label ??
-                                ""
-                              ).trim();
-                            const seatSplit =
-                              cm === "vertical" && afterSeat
-                                ? splitSeatsAfterSeatLabel(seats, afterSeat)
-                                : null;
-                            const renderSeatDot = (seat: Seat) => (
-                              <span
-                                key={seat.id}
-                                className={`inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-medium text-white transition-colors ${getTicketColor(rowTicket)} hover:!bg-[#39ff14] hover:!text-slate-900 hover:ring-2 hover:ring-[#166534]`}
-                                title={`${section.name} · Sıra ${rowLabel} · Koltuk ${seat.seat_label}${rowTicket ? ` · ${rowTicket}` : ""}`}
+                      <div
+                        key={section.id}
+                        className="relative shrink-0 overflow-hidden rounded border-2 border-slate-300 bg-white shadow-sm"
+                        style={{ width: size.w, height: size.h }}
+                      >
+                        <div className="flex h-full flex-col p-1.5">
+                          <div className="mb-1 flex shrink-0 items-center justify-between gap-1">
+                            <div className="truncate text-xs font-semibold text-slate-700" title={section.name}>
+                              {section.name}
+                            </div>
+                            <div className="inline-flex shrink-0 rounded border border-slate-300 bg-white p-0.5">
+                              <button
+                                type="button"
+                                onClick={() => setSectionAlignDraft((prev) => ({ ...prev, [section.id]: "left" }))}
+                                className={`rounded px-1.5 py-0.5 text-[10px] ${align === "left" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}
                               >
-                                {seat.seat_label}
-                              </span>
-                            );
-                            const seatClusterClass = `flex flex-nowrap gap-1 items-center ${
-                              align === "left"
-                                ? "justify-start"
-                                : align === "right"
-                                ? "justify-end"
-                                : "justify-center"
-                            }`;
-                            return (
-                              <div key={row.id} className="flex min-w-0 items-center gap-1">
-                                {side !== "right" && (
-                                  <div className="w-10 shrink-0 text-[11px] font-medium text-slate-600 text-left">S{rowLabel}</div>
-                                )}
-                                <div
-                                  className={`flex min-w-0 flex-nowrap gap-1 flex-1 items-center overflow-x-auto ${align === "left" ? "justify-start" : align === "right" ? "justify-end" : "justify-center"}`}
+                                Sola
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSectionAlignDraft((prev) => ({ ...prev, [section.id]: "center" }))}
+                                className={`rounded px-1.5 py-0.5 text-[10px] ${align === "center" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                              >
+                                Orta
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSectionAlignDraft((prev) => ({ ...prev, [section.id]: "right" }))}
+                                className={`rounded px-1.5 py-0.5 text-[10px] ${align === "right" ? "bg-slate-800 text-white" : "text-slate-600 hover:bg-slate-100"}`}
+                              >
+                                Sağa
+                              </button>
+                            </div>
+                          </div>
+                          <div className="min-h-0 flex-1 space-y-0.5 overflow-auto">
+                            {rows.map((row) => {
+                              const rowLabel = String(row.row_label || "");
+                              const seats = sortSeatsByLabel(seatsByRow[row.id] || []);
+                              const rowTicket =
+                                (rowTicketLabelDraft[row.id] ??
+                                  row.ticket_type_label ??
+                                  sectionTicketLabel[section.id] ??
+                                  section.ticket_type_label ??
+                                  ""
+                                ).trim();
+                              const seatSplit =
+                                cm === "vertical" && afterSeat
+                                  ? splitSeatsAfterSeatLabel(seats, afterSeat)
+                                  : null;
+                              const renderSeatDot = (seat: Seat) => (
+                                <span
+                                  key={seat.id}
+                                  className={`inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-medium text-white transition-colors ${getTicketColor(rowTicket)} hover:!bg-[#39ff14] hover:!text-slate-900 hover:ring-2 hover:ring-[#166534]`}
+                                  title={`${section.name} · Sıra ${rowLabel} · Koltuk ${seat.seat_label}${rowTicket ? ` · ${rowTicket}` : ""}`}
                                 >
-                                  {seatSplit ? (
-                                    <>
-                                      <div className={seatClusterClass}>{seatSplit[0].map(renderSeatDot)}</div>
-                                      <div
-                                        className="w-2 shrink-0 self-stretch min-h-[1.25rem] rounded-sm bg-amber-200/90 border border-amber-400/60"
-                                        title={`Koridor: koltuk ${afterSeat} sonrası`}
-                                      />
-                                      <div className={seatClusterClass}>{seatSplit[1].map(renderSeatDot)}</div>
-                                    </>
-                                  ) : (
-                                    <div className={seatClusterClass}>{seats.map(renderSeatDot)}</div>
+                                  {seat.seat_label}
+                                </span>
+                              );
+                              const seatClusterClass = `flex flex-nowrap gap-1 items-center ${
+                                align === "left"
+                                  ? "justify-start"
+                                  : align === "right"
+                                  ? "justify-end"
+                                  : "justify-center"
+                              }`;
+                              return (
+                                <div key={row.id} className="flex min-w-max items-center gap-1">
+                                  {side !== "right" && (
+                                    <div className="w-10 shrink-0 text-left text-[11px] font-medium text-slate-600">
+                                      S{rowLabel}
+                                    </div>
+                                  )}
+                                  <div
+                                    className={`flex flex-nowrap items-center gap-1 ${align === "left" ? "justify-start" : align === "right" ? "justify-end" : "justify-center"}`}
+                                  >
+                                    {seatSplit ? (
+                                      <>
+                                        <div className={seatClusterClass}>{seatSplit[0].map(renderSeatDot)}</div>
+                                        <div
+                                          className="w-2 min-h-[1.25rem] shrink-0 self-stretch rounded-sm border border-amber-400/60 bg-amber-200/90"
+                                          title={`Koridor: koltuk ${afterSeat} sonrası`}
+                                        />
+                                        <div className={seatClusterClass}>{seatSplit[1].map(renderSeatDot)}</div>
+                                      </>
+                                    ) : (
+                                      <div className={seatClusterClass}>{seats.map(renderSeatDot)}</div>
+                                    )}
+                                  </div>
+                                  {side === "right" && (
+                                    <div className="w-10 shrink-0 text-right text-[11px] font-medium text-slate-600">
+                                      S{rowLabel}
+                                    </div>
                                   )}
                                 </div>
-                                {side === "right" && (
-                                  <div className="w-10 shrink-0 text-[11px] font-medium text-slate-600 text-right">S{rowLabel}</div>
-                                )}
-                              </div>
-                            );
-                          })}
+                              );
+                            })}
+                          </div>
+                          <p className="mt-0.5 shrink-0 text-[9px] text-slate-400">
+                            {Math.round(size.w)}×{Math.round(size.h)} — kenardan sürükleyerek boyutlandır
+                          </p>
                         </div>
+                        {/* Sağ kenar: genişlik */}
+                        <div
+                          role="separator"
+                          aria-label="Genişlik"
+                          title="Sağa/sola uzat"
+                          className="absolute inset-y-0 right-0 z-10 w-2 cursor-ew-resize bg-teal-500/0 hover:bg-teal-500/40"
+                          onPointerDown={(e) => startResize(e, section.id, "e", size)}
+                          onPointerMove={onResizeMove}
+                          onPointerUp={endResize}
+                          onPointerCancel={endResize}
+                        />
+                        {/* Alt kenar: yükseklik */}
+                        <div
+                          role="separator"
+                          aria-label="Yükseklik"
+                          title="Aşağı/yukarı uzat"
+                          className="absolute inset-x-0 bottom-0 z-10 h-2 cursor-ns-resize bg-teal-500/0 hover:bg-teal-500/40"
+                          onPointerDown={(e) => startResize(e, section.id, "s", size)}
+                          onPointerMove={onResizeMove}
+                          onPointerUp={endResize}
+                          onPointerCancel={endResize}
+                        />
+                        {/* Köşe */}
+                        <div
+                          role="separator"
+                          aria-label="Boyut"
+                          title="Çapraz uzat"
+                          className="absolute bottom-0 right-0 z-20 h-4 w-4 cursor-nwse-resize rounded-tl bg-teal-600/80"
+                          onPointerDown={(e) => startResize(e, section.id, "se", size)}
+                          onPointerMove={onResizeMove}
+                          onPointerUp={endResize}
+                          onPointerCancel={endResize}
+                        />
                       </div>
                     );
                   };
+
+                  const vaultViewportRef = (el: HTMLDivElement | null) => {
+                    if (!el) return;
+                    el.onwheel = (ev: WheelEvent) => {
+                      ev.preventDefault();
+                      if (ev.ctrlKey || ev.metaKey) {
+                        const delta = ev.deltaY > 0 ? -0.08 : 0.08;
+                        setPreviewCanvasByPlan((prev) => {
+                          const cur = prev[plan.id] ?? { zoom: 0.9, x: 16, y: 16 };
+                          return {
+                            ...prev,
+                            [plan.id]: {
+                              ...cur,
+                              zoom: Math.min(2.4, Math.max(0.35, cur.zoom + delta)),
+                            },
+                          };
+                        });
+                      } else {
+                        setPreviewCanvasByPlan((prev) => {
+                          const cur = prev[plan.id] ?? { zoom: 0.9, x: 16, y: 16 };
+                          return {
+                            ...prev,
+                            [plan.id]: {
+                              ...cur,
+                              x: cur.x - ev.deltaX,
+                              y: cur.y - ev.deltaY,
+                            },
+                          };
+                        });
+                      }
+                    };
+                  };
+
                   return (
                     <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4">
-                      <h3 className="text-sm font-semibold text-slate-800 mb-2">Salon önizleme (canlı taslak)</h3>
-                      <p className="text-xs text-slate-500 mb-3">
-                        Bu alan kaydetmeden önce mevcut taslağı gösterir. Veritabanına yazmak için <strong>Salonu Kaydet</strong> kullanın. Bölüm sırası listedeki
-                        sıraya göredir; yalnızca isimde <em>sol/left</em> veya <em>sağ/right</em> geçenler yan koridorun solunda veya sağında, diğerleri altta yan
-                        yana yerleşir. Aynı blok adıyla başlayan (örn. &quot;Orta salon - VIP&quot;, &quot;Orta salon - Kategori 1&quot;) bölümler önizlemede tek sütun olarak alt alta yığılır.
-                      </p>
-                      <div className="overflow-x-auto">
-                        <div className="min-w-0 max-w-full rounded-lg border border-slate-100 bg-slate-50 p-2">
-                          <div className="mx-auto mb-2 w-64 rounded bg-slate-800 py-1.5 text-center text-xs font-semibold tracking-wide text-white">
-                            SAHNE
-                          </div>
-                          {onlyCenterSide ? (
-                            <div className="flex w-full flex-col items-stretch gap-y-1">
-                              {(() => {
-                                /**
-                                 * Bölüm adından blok prefix'ini ("Orta salon - VIP" → "Orta salon") çıkarıp aynı bloka ait
-                                 * bölümleri tek sütunda alt alta yığarız. Birden fazla blok grubu varsa gruplar yan yana
-                                 * yerleştirilir; ekran daralırsa flex-wrap ile alt satıra iner.
-                                 */
-                                const getBlockPrefix = (name: string): string => {
-                                  const raw = String(name || "");
-                                  const i = raw.indexOf(" - ");
-                                  return (i > 0 ? raw.slice(0, i) : raw).trim();
+                      <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <h3 className="text-sm font-semibold text-slate-800">Salon önizleme (canlı taslak)</h3>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Kategorileri / bilet etiketlerini ayarladıktan sonra buradan <strong>Salonu Kaydet</strong> ile kalıcı yap.
+                            Blok kenarından boyutlandırma ve kaydırma sadece önizleme içindir (kayda yazılmaz).
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleSavePlan(plan.id)}
+                            disabled={saveFeedbackByPlan[plan.id]?.type === "saving"}
+                            className="mr-1 inline-flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60"
+                          >
+                            Salonu Kaydet
+                          </button>
+                          <span className="mr-1 inline-flex items-center gap-1 text-[10px] text-slate-500">
+                            <Move className="h-3.5 w-3.5" /> Kaydır
+                          </span>
+                          <button
+                            type="button"
+                            className="rounded border border-slate-200 bg-white p-1.5 hover:bg-slate-50"
+                            title="Uzaklaştır"
+                            onClick={() =>
+                              setPreviewCanvasByPlan((prev) => {
+                                const cur = prev[plan.id] ?? { zoom: 0.9, x: 16, y: 16 };
+                                return {
+                                  ...prev,
+                                  [plan.id]: { ...cur, zoom: Math.max(0.35, cur.zoom - 0.12) },
                                 };
-                                const groups: SeatingPlanSection[][] = [];
-                                const idxMap = new Map<string, number>();
-                                for (const s of centerSections) {
-                                  const key = getBlockPrefix(s.name);
-                                  let gi = idxMap.get(key);
-                                  if (gi === undefined) {
-                                    gi = groups.length;
-                                    idxMap.set(key, gi);
-                                    groups.push([]);
-                                  }
-                                  groups[gi].push(s);
-                                }
-                                if (groups.length <= 1) {
-                                  return (groups[0] ?? centerSections).map((s) => renderSectionCard(s));
-                                }
-                                return (
-                                  <div className="flex w-full flex-row flex-wrap items-start justify-center gap-x-2 gap-y-1">
-                                    {groups.map((grp, gi) => (
-                                      <div
-                                        key={`preview-blockcol-${gi}`}
-                                        className="flex min-w-0 flex-1 flex-col items-stretch gap-y-1"
-                                      >
-                                        {grp.map((s) => renderSectionCard(s))}
-                                      </div>
-                                    ))}
-                                  </div>
-                                );
-                              })()}
+                              })
+                            }
+                          >
+                            <ZoomOut className="h-4 w-4" />
+                          </button>
+                          <span className="w-12 text-center text-xs tabular-nums">{Math.round(canvas.zoom * 100)}%</span>
+                          <button
+                            type="button"
+                            className="rounded border border-slate-200 bg-white p-1.5 hover:bg-slate-50"
+                            title="Yakınlaştır"
+                            onClick={() =>
+                              setPreviewCanvasByPlan((prev) => {
+                                const cur = prev[plan.id] ?? { zoom: 0.9, x: 16, y: 16 };
+                                return {
+                                  ...prev,
+                                  [plan.id]: { ...cur, zoom: Math.min(2.4, cur.zoom + 0.12) },
+                                };
+                              })
+                            }
+                          >
+                            <ZoomIn className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded border border-slate-200 px-2 py-1 text-[11px] hover:bg-slate-50"
+                            onClick={() => {
+                              setPreviewCanvasByPlan((prev) => ({
+                                ...prev,
+                                [plan.id]: { zoom: 0.9, x: 16, y: 16 },
+                              }));
+                              const ids = orderedSections.map((s) => s.id);
+                              setPreviewSizeBySection((prev) => {
+                                const next = { ...prev };
+                                for (const id of ids) delete next[id];
+                                return next;
+                              });
+                            }}
+                          >
+                            Sıfırla
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded border border-slate-200 p-1.5 hover:bg-slate-50"
+                            title="Sola kaydır"
+                            onClick={() =>
+                              setPreviewCanvasByPlan((prev) => {
+                                const cur = prev[plan.id] ?? { zoom: 0.9, x: 16, y: 16 };
+                                return { ...prev, [plan.id]: { ...cur, x: cur.x + 80 } };
+                              })
+                            }
+                          >
+                            <ArrowLeft className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded border border-slate-200 p-1.5 hover:bg-slate-50"
+                            title="Sağa kaydır"
+                            onClick={() =>
+                              setPreviewCanvasByPlan((prev) => {
+                                const cur = prev[plan.id] ?? { zoom: 0.9, x: 16, y: 16 };
+                                return { ...prev, [plan.id]: { ...cur, x: cur.x - 80 } };
+                              })
+                            }
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div
+                        ref={vaultViewportRef}
+                        className="relative h-[min(70vh,620px)] w-full touch-none select-none overflow-hidden rounded-lg border border-slate-300 bg-slate-100 cursor-grab active:cursor-grabbing"
+                        onPointerDown={(e) => {
+                          if ((e.target as HTMLElement).closest("[role='separator'],button,a,input,select")) return;
+                          previewDragRef.current = {
+                            planId: plan.id,
+                            mode: "pan",
+                            startX: e.clientX,
+                            startY: e.clientY,
+                            origX: canvas.x,
+                            origY: canvas.y,
+                            origW: 0,
+                            origH: 0,
+                          };
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                        }}
+                        onPointerMove={(e) => {
+                          const d = previewDragRef.current;
+                          if (!d || d.mode !== "pan" || d.planId !== plan.id) return;
+                          setPreviewCanvasByPlan((prev) => ({
+                            ...prev,
+                            [plan.id]: {
+                              zoom: canvas.zoom,
+                              x: d.origX + (e.clientX - d.startX),
+                              y: d.origY + (e.clientY - d.startY),
+                            },
+                          }));
+                        }}
+                        onPointerUp={(e) => {
+                          if (previewDragRef.current?.mode === "pan") previewDragRef.current = null;
+                          try {
+                            e.currentTarget.releasePointerCapture(e.pointerId);
+                          } catch {
+                            /* ignore */
+                          }
+                        }}
+                      >
+                        <div
+                          className="absolute left-0 top-0 origin-top-left will-change-transform"
+                          style={{
+                            transform: `translate(${canvas.x}px, ${canvas.y}px) scale(${canvas.zoom})`,
+                          }}
+                        >
+                          <div className="flex min-w-max flex-col gap-3 p-2">
+                            <div className="mx-auto w-64 rounded bg-slate-800 py-1.5 text-center text-xs font-semibold tracking-wide text-white">
+                              SAHNE
                             </div>
-                          ) : (
-                            <div className="flex flex-col gap-1">
-                              <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-x-1">
-                                <div className="flex min-w-0 flex-col gap-1">
+                            {onlyCenterSide ? (
+                              <div className="flex min-w-max flex-row flex-wrap items-start gap-3">
+                                {(() => {
+                                  const getBlockPrefix = (name: string): string => {
+                                    const raw = String(name || "");
+                                    const i = raw.indexOf(" - ");
+                                    return (i > 0 ? raw.slice(0, i) : raw).trim();
+                                  };
+                                  const groups: SeatingPlanSection[][] = [];
+                                  const idxMap = new Map<string, number>();
+                                  for (const s of centerSections) {
+                                    const key = getBlockPrefix(s.name);
+                                    let gi = idxMap.get(key);
+                                    if (gi === undefined) {
+                                      gi = groups.length;
+                                      idxMap.set(key, gi);
+                                      groups.push([]);
+                                    }
+                                    groups[gi].push(s);
+                                  }
+                                  if (groups.length <= 1) {
+                                    return (groups[0] ?? centerSections).map((s) => renderSectionCard(s));
+                                  }
+                                  return groups.map((grp, gi) => (
+                                    <div
+                                      key={`preview-blockcol-${gi}`}
+                                      className="flex flex-col items-stretch gap-2"
+                                    >
+                                      {grp.map((s) => renderSectionCard(s))}
+                                    </div>
+                                  ));
+                                })()}
+                              </div>
+                            ) : (
+                              <div className="flex min-w-max flex-row items-start gap-3">
+                                {/* Sol balkon / sol blok — solda */}
+                                <div className="flex flex-col gap-2">
                                   {leftSections.map((s) => renderSectionCard(s))}
                                 </div>
-                                <div
-                                  className="w-3 min-h-[4rem] shrink-0 self-stretch rounded bg-slate-200/80"
-                                  title="Koridor"
-                                />
-                                <div className="flex min-w-0 flex-col gap-1">
+                                {leftSections.length > 0 && (
+                                  <div
+                                    className="w-3 min-h-[4rem] shrink-0 self-stretch rounded bg-slate-200/80"
+                                    title="Koridor"
+                                  />
+                                )}
+                                {/* Parkett / orta salon — ortada */}
+                                <div className="flex flex-col gap-2">
+                                  {centerSections.map((s) => renderSectionCard(s))}
+                                </div>
+                                {rightSections.length > 0 && (
+                                  <div
+                                    className="w-3 min-h-[4rem] shrink-0 self-stretch rounded bg-slate-200/80"
+                                    title="Koridor"
+                                  />
+                                )}
+                                {/* Sağ balkon / sağ blok — sağda */}
+                                <div className="flex flex-col gap-2">
                                   {rightSections.map((s) => renderSectionCard(s))}
                                 </div>
                               </div>
-                              {centerSections.length > 0 ? (
-                                <div className="flex flex-wrap items-start justify-center gap-x-1 gap-y-1 border-t border-slate-200/80 pt-1">
-                                  {centerSections.map((s) => renderSectionCard(s))}
-                                </div>
-                              ) : null}
-                            </div>
-                          )}
+                            )}
+                          </div>
                         </div>
+                        <div className="pointer-events-none absolute bottom-2 left-2 rounded bg-black/50 px-2 py-1 text-[10px] text-white">
+                          Sürükle = kaydır · blok kenarı = boyut
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex flex-wrap items-center gap-3 rounded-lg border border-primary-200 bg-primary-50/60 px-3 py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => handleSavePlan(plan.id)}
+                          disabled={saveFeedbackByPlan[plan.id]?.type === "saving"}
+                          className="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-60"
+                        >
+                          Salonu Kaydet
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleRepairMissingSeats(plan.id)}
+                          disabled={repairingSeats}
+                          className="inline-flex items-center gap-1 rounded-lg border border-amber-400 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900 hover:bg-amber-100 disabled:opacity-60"
+                          title="Boş sıralara / eksik koltuklara, bölümdeki en dolu sıradaki numaraları ekler"
+                        >
+                          {repairingSeats ? "Dolduruluyor…" : "Eksik koltukları doldur"}
+                        </button>
+                        <p className="text-xs text-slate-600">
+                          Etkinlikte görünmeyen sıralar genelde DB’de koltuksuzdur — önce bu butonu kullanın.
+                        </p>
+                        {saveFeedbackByPlan[plan.id] && (
+                          <p
+                            className={`w-full text-xs ${
+                              saveFeedbackByPlan[plan.id]?.type === "ok"
+                                ? "text-emerald-700"
+                                : saveFeedbackByPlan[plan.id]?.type === "saving"
+                                ? "text-slate-600"
+                                : "text-red-600"
+                            }`}
+                          >
+                            {saveFeedbackByPlan[plan.id]?.message}
+                          </p>
+                        )}
                       </div>
                     </div>
                   );

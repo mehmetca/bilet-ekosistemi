@@ -78,6 +78,7 @@ export type EventLookupResult = {
 
 function classifyPreviewEvent(event: Event | null | undefined): EventLookupResult | null {
   if (!event || event.is_active === false) return null;
+  // allowPreview=true iken admin taslak / onaysız görebilir; public sorgulara hiç girmez.
   if (event.is_draft) return { event, isDraft: true };
   if (!event.is_approved) return { event, isUnapproved: true };
   return null;
@@ -125,15 +126,27 @@ async function fetchEventsByShowSlug(showSlug: string, allowPreview = false): Pr
         .order("date", { ascending: true })
         .order("time", { ascending: true });
 
+    let published: Event[] = [];
     const { data, error } = await publishedShow().eq("show_slug", showSlugTrimmed);
-    if (!error && data && data.length > 0) return data as Event[];
+    if (!error && data && data.length > 0) published = data as Event[];
+    else {
+      const { data: ciData, error: ciError } = await publishedShow().ilike("show_slug", showSlugTrimmed);
+      if (!ciError && ciData && ciData.length > 0) published = ciData as Event[];
+    }
 
-    const { data: ciData, error: ciError } = await publishedShow().ilike("show_slug", showSlugTrimmed);
-    if (!ciError && ciData && ciData.length > 0) return ciData as Event[];
+    if (!allowPreview) return published;
 
-    if (allowPreview) return fetchPreviewEventsByShowSlug(showSlugTrimmed);
-
-    return [];
+    // Admin: yayınlanmış + aynı show_slug altındaki taslak/onaysız tarihleri birleştir.
+    const preview = await fetchPreviewEventsByShowSlug(showSlugTrimmed);
+    if (preview.length === 0) return published;
+    const byId = new Map<string, Event>();
+    for (const e of published) byId.set(e.id, e);
+    for (const e of preview) byId.set(e.id, e);
+    return [...byId.values()].sort((a, b) => {
+      const da = `${a.date} ${a.time || "00:00"}`;
+      const db = `${b.date} ${b.time || "00:00"}`;
+      return da.localeCompare(db, undefined, { numeric: true });
+    });
   } catch {
     return [];
   }
