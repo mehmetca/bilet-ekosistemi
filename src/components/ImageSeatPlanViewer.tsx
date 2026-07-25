@@ -273,10 +273,8 @@ export default function ImageSeatPlanViewer({
             type="button"
             className={
               "absolute z-10 flex items-center justify-center rounded-full pointer-events-auto touch-manipulation transition-all duration-150 -translate-x-1/2 -translate-y-1/2 p-0 leading-none overflow-hidden " +
-              (sold
+              (sold || blocked
                 ? "cursor-not-allowed bg-slate-300 text-slate-800 ring-0 shadow-none"
-                : blocked
-                  ? "cursor-not-allowed bg-amber-200 text-amber-950 ring-1 ring-amber-500"
                 : selected
                   ? "cursor-pointer bg-[#39ff14] text-slate-900 ring-0 shadow-none border-0"
                   : "cursor-pointer bg-sky-200 text-slate-800 ring-0 shadow-sm border-0 hover:!bg-[#39ff14] hover:!text-slate-900 focus-visible:outline-none focus-visible:ring-0")

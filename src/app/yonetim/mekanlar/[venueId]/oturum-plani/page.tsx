@@ -71,6 +71,15 @@ function sortSeatsByLabel(seats: Seat[]) {
   });
 }
 
+/** Satılmış koltuklara dokunmadan sales_blocked bayrağını ayarlar. */
+function applySalesBlockedToSeats(
+  seats: Seat[],
+  blocked: boolean,
+  soldIds: Set<string>
+): Seat[] {
+  return seats.map((st) => (soldIds.has(st.id) ? st : { ...st, sales_blocked: blocked }));
+}
+
 /** Sıra editöründe elle taşınmamışsa koltukları varsayılan ızgaraya hizalar; aksi halde `seats` aynı referansla döner. */
 function alignSeatsToGridIfStillDefault(seats: Seat[]): Seat[] {
   if (seats.length === 0) return seats;
@@ -608,6 +617,28 @@ function OturumPlaniContent() {
     setSeatsByRow((prev) => ({ ...prev, [rowId]: [...existing, ...toDraftSeats] }));
     setNewSeatRange((prev) => ({ ...prev, [rowId]: "" }));
     autoNormalizeSeatPositionsIfUnedited(rowId);
+  };
+
+  /** Bir sıradaki tüm koltukları satışa kapat / aç (gerçek satılmış koltuklara dokunulmaz). */
+  const setRowSalesBlocked = (rowId: string, planId: string, blocked: boolean) => {
+    const soldSet = new Set(soldSeatIdsByPlan[planId] ?? []);
+    setSeatsByRow((prev) => ({
+      ...prev,
+      [rowId]: applySalesBlockedToSeats(prev[rowId] || [], blocked, soldSet),
+    }));
+  };
+
+  /** Bir bölümdeki tüm koltukları satışa kapat / aç. */
+  const setSectionSalesBlocked = (sectionId: string, planId: string, blocked: boolean) => {
+    const soldSet = new Set(soldSeatIdsByPlan[planId] ?? []);
+    const rowIds = (rowsBySection[sectionId] || []).map((r) => r.id);
+    setSeatsByRow((prev) => {
+      const next = { ...prev };
+      for (const rowId of rowIds) {
+        next[rowId] = applySalesBlockedToSeats(prev[rowId] || [], blocked, soldSet);
+      }
+      return next;
+    });
   };
 
   /** Şablondan kopya oluşturur veya mevcut Musensaal planını şablonla yeniler. */
@@ -2095,18 +2126,59 @@ function OturumPlaniContent() {
                         {expandedSection === section.id ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                         {section.name}
                       </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteSection(section.id, plan.id, section.name)}
-                        className="inline-flex items-center gap-1 rounded border border-red-300 bg-white px-2 py-1 text-xs text-red-600 hover:bg-red-50"
-                        title="Bölümü sil"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        Bölümü Sil
-                      </button>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSectionSalesBlocked(section.id, plan.id, true)}
+                          className="inline-flex items-center gap-1 rounded border border-slate-400 bg-slate-100 px-2 py-1 text-xs font-medium text-slate-800 hover:bg-slate-200"
+                          title="Bu bölümdeki tüm koltukları satışa kapat (satılmış gibi gri görünür; muhasebeye girmez)"
+                        >
+                          <Ban className="h-3 w-3" />
+                          Bölümü kapat
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setSectionSalesBlocked(section.id, plan.id, false)}
+                          className="inline-flex items-center gap-1 rounded border border-emerald-300 bg-white px-2 py-1 text-xs font-medium text-emerald-800 hover:bg-emerald-50"
+                          title="Bu bölümdeki kapalı koltukları tekrar satışa aç"
+                        >
+                          Bölümü aç
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteSection(section.id, plan.id, section.name)}
+                          className="inline-flex items-center gap-1 rounded border border-red-300 bg-white px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                          title="Bölümü sil"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          Bölümü Sil
+                        </button>
+                      </div>
                     </div>
                     {expandedSection === section.id && (
                       <div className="mt-3 ml-4 space-y-3">
+                        <div className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                          <p className="font-semibold text-slate-900">Satışa kapalı koltuklar</p>
+                          <p className="mt-1">
+                            Gri görünen koltuklar sitede <strong>satılmış gibi</strong> görünür ama sipariş/muhasebeye
+                            eklenmez. Tek koltuk için koltuğa tıklayın; sıra veya tüm bölüm için aşağıdaki butonları kullanın.
+                            Değişiklikten sonra salonu <strong>Kaydet</strong> etmeyi unutmayın.
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-3 text-[11px]">
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="inline-block h-3 w-3 rounded-full bg-slate-300 ring-1 ring-slate-400" />
+                              Kapalı / satılmış görünüm
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="inline-block h-3 w-3 rounded-full bg-emerald-200 ring-1 ring-emerald-500" />
+                              Gerçek satılmış (siparişten)
+                            </span>
+                            <span className="inline-flex items-center gap-1.5">
+                              <span className="inline-block h-3 w-3 rounded-full bg-slate-100 ring-1 ring-slate-300" />
+                              Satışa açık
+                            </span>
+                          </div>
+                        </div>
                         <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-start sm:gap-3">
                           <div>
                             <label className="text-sm text-slate-600 block mb-1">Bilet türü (etkinlikte eşlenecek)</label>
@@ -2305,29 +2377,60 @@ function OturumPlaniContent() {
                         </div>
                         {(rowsBySection[section.id] || []).map((row) => {
                           const soldSet = new Set(soldSeatIdsByPlan[plan.id] ?? []);
-                          const rowHasSoldSeat = (seatsByRow[row.id] || []).some((s) => soldSet.has(s.id));
+                          const rowSeats = seatsByRow[row.id] || [];
+                          const rowHasSoldSeat = rowSeats.some((s) => soldSet.has(s.id));
+                          const rowBlockedCount = rowSeats.filter((s) => s.sales_blocked && !soldSet.has(s.id)).length;
+                          const rowAllBlocked =
+                            rowSeats.length > 0 &&
+                            rowSeats.every((s) => soldSet.has(s.id) || s.sales_blocked === true);
                           return (
                           <div key={row.id} className="rounded border border-slate-200 bg-white p-3">
-                            <div className="flex items-center justify-between gap-2">
-                              <p className="text-sm font-medium text-slate-700">Sıra {row.row_label}</p>
-                              <button
-                                type="button"
-                                disabled={rowHasSoldSeat}
-                                onClick={() => handleDeleteRow(row.id, section.id, plan.id)}
-                                className={`p-1 rounded ${
-                                  rowHasSoldSeat
-                                    ? "text-slate-300 cursor-not-allowed"
-                                    : "hover:bg-red-50 text-slate-500 hover:text-red-600"
-                                }`}
-                                title={
-                                  rowHasSoldSeat
-                                    ? "Sırada satılmış koltuk var; sıra silinemez"
-                                    : "Sırayı ve tüm koltuklarını sil"
-                                }
-                                aria-label={`Sıra ${row.row_label} sil`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-slate-700">
+                                Sıra {row.row_label}
+                                {rowBlockedCount > 0 ? (
+                                  <span className="ml-2 text-xs font-normal text-slate-500">
+                                    ({rowBlockedCount} kapalı)
+                                  </span>
+                                ) : null}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setRowSalesBlocked(row.id, plan.id, !rowAllBlocked)}
+                                  className={`inline-flex items-center gap-1 rounded px-2 py-1 text-xs font-medium ${
+                                    rowAllBlocked
+                                      ? "border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                                      : "border border-slate-400 bg-slate-100 text-slate-800 hover:bg-slate-200"
+                                  }`}
+                                  title={
+                                    rowAllBlocked
+                                      ? "Bu sırayı satışa aç"
+                                      : "Bu sıranın tamamını satışa kapat (satılmış gibi gri; muhasebeye girmez)"
+                                  }
+                                >
+                                  <Ban className="h-3.5 w-3.5" />
+                                  {rowAllBlocked ? "Sırayı aç" : "Sırayı kapat"}
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={rowHasSoldSeat}
+                                  onClick={() => handleDeleteRow(row.id, section.id, plan.id)}
+                                  className={`p-1 rounded ${
+                                    rowHasSoldSeat
+                                      ? "text-slate-300 cursor-not-allowed"
+                                      : "hover:bg-red-50 text-slate-500 hover:text-red-600"
+                                  }`}
+                                  title={
+                                    rowHasSoldSeat
+                                      ? "Sırada satılmış koltuk var; sıra silinemez"
+                                      : "Sırayı ve tüm koltuklarını sil"
+                                  }
+                                  aria-label={`Sıra ${row.row_label} sil`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
                             </div>
                             <div className="mt-2 flex flex-wrap items-center gap-2">
                               <label className="text-xs text-slate-600">Sıra kategorisi:</label>
@@ -2357,59 +2460,53 @@ function OturumPlaniContent() {
                                 Ekle
                               </button>
                               <span className="text-slate-500 text-sm">
-                                ({(seatsByRow[row.id] || []).length} koltuk)
+                                ({rowSeats.length} koltuk)
                               </span>
                             </div>
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {sortSeatsByLabel(seatsByRow[row.id] || []).map((s) => {
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {sortSeatsByLabel(rowSeats).map((s) => {
                                 const isSoldSeat = soldSet.has(s.id);
+                                const isBlocked = !isSoldSeat && s.sales_blocked === true;
                                 return (
                                 <span
                                   key={s.id}
-                                  className={`inline-flex items-center gap-0.5 rounded pl-2 pr-1 py-0.5 text-xs ${
+                                  className={`inline-flex items-center gap-0.5 rounded-md pl-2 pr-0.5 py-0.5 text-xs font-medium ${
                                     isSoldSeat
                                       ? "bg-emerald-100 text-emerald-950 ring-1 ring-emerald-400"
-                                      : s.sales_blocked
-                                        ? "bg-amber-100 text-amber-950 ring-1 ring-amber-300"
-                                        : "bg-slate-100 text-slate-700"
+                                      : isBlocked
+                                        ? "bg-slate-300 text-slate-800 ring-1 ring-slate-500"
+                                        : "bg-slate-100 text-slate-700 ring-1 ring-slate-200"
                                   }`}
                                 >
-                                  {s.seat_label}
-                                  {isSoldSeat ? (
-                                    <span className="text-[10px] font-semibold text-emerald-800 px-0.5" title="İptal edilmemiş siparişte">
-                                      Satıldı
-                                    </span>
-                                  ) : null}
                                   <button
                                     type="button"
                                     disabled={isSoldSeat}
-                                    onClick={() =>
+                                    onClick={() => {
+                                      if (isSoldSeat) return;
                                       setSeatsByRow((prev) => ({
                                         ...prev,
                                         [row.id]: (prev[row.id] || []).map((st) =>
                                           st.id === s.id ? { ...st, sales_blocked: !st.sales_blocked } : st
                                         ),
-                                      }))
-                                    }
-                                    className={`p-0.5 rounded ${
-                                      isSoldSeat
-                                        ? "text-slate-300 cursor-not-allowed"
-                                        : s.sales_blocked
-                                          ? "hover:bg-slate-200 text-amber-800"
-                                          : "hover:bg-slate-200 text-slate-500 hover:text-amber-700"
+                                      }));
+                                    }}
+                                    className={`inline-flex items-center gap-1 py-0.5 ${
+                                      isSoldSeat ? "cursor-not-allowed" : "hover:opacity-80"
                                     }`}
                                     title={
                                       isSoldSeat
-                                        ? "Satılmış koltukta satış engeli değiştirilemez"
-                                        : s.sales_blocked
-                                          ? "Satışa aç"
-                                          : "Satışa kapat"
-                                    }
-                                    aria-label={
-                                      s.sales_blocked ? `Koltuk ${s.seat_label} satışa aç` : `Koltuk ${s.seat_label} satışa kapat`
+                                        ? "Gerçek satılmış koltuk (sipariş)"
+                                        : isBlocked
+                                          ? "Satışa kapalı — tıklayınca açılır (muhasebeye girmez)"
+                                          : "Satışa açık — tıklayınca kapatılır (satılmış gibi görünür)"
                                     }
                                   >
-                                    <Ban className="h-3 w-3" />
+                                    {s.seat_label}
+                                    {isSoldSeat ? (
+                                      <span className="text-[10px] font-semibold">Satıldı</span>
+                                    ) : isBlocked ? (
+                                      <span className="text-[10px] font-semibold">Kapalı</span>
+                                    ) : null}
                                   </button>
                                   <button
                                     type="button"

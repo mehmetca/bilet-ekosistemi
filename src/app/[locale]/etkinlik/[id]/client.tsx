@@ -587,9 +587,9 @@ function SeatMapSvg({
                   fill = "#d1d5db";
                   stroke = "#d1d5db";
                 } else if (isSalesBlocked) {
-                  fill = "#fde68a";
-                  stroke = "#b45309";
-                  sw = 1.5;
+                  // Satılmış ile aynı gri — muhasebe/sipariş yok, sadece satışa kapalı
+                  fill = "#d1d5db";
+                  stroke = "#d1d5db";
                 } else if (isUnavailable) {
                   fill = "#cbd5e1";
                   stroke = "#94a3b8";

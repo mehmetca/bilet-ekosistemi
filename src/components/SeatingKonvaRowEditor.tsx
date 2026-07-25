@@ -140,8 +140,8 @@ export default function SeatingKonvaRowEditor({
       group.add(
         new Konva.Circle({
           radius: R,
-          fill: s.sales_blocked ? "#fde68a" : "#e2e8f0",
-          stroke: s.sales_blocked ? "#b45309" : "#64748b",
+          fill: s.sales_blocked ? "#d1d5db" : "#e2e8f0",
+          stroke: s.sales_blocked ? "#94a3b8" : "#64748b",
           strokeWidth: 1.5,
         })
       );
