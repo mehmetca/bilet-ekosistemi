@@ -75,7 +75,7 @@ export default function HomeHeroControls() {
         className="mt-10 flex flex-wrap items-center justify-center gap-2 text-xs list-none p-0 m-0"
         aria-label={t("paymentMethodsLabel")}
       >
-        {["VISA", "Mastercard", "AMEX", "Apple Pay", "Google Pay", "3D Secure"].map((badge) => (
+        {["VISA", "Mastercard", "AMEX", "Apple Pay", "Google Pay", "Stripe", "3D Secure"].map((badge) => (
           <li
             key={badge}
             className="rounded-full border border-white/40 bg-white/10 px-3 py-2 text-white/95"

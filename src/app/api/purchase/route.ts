@@ -253,29 +253,42 @@ async function assignBestAvailableSeats(
   return available.slice(0, quantity).map((s) => s.id);
 }
 
+/** E-posta HTML enjeksiyonuna karşı kullanıcı/alan metinlerini kaçır. */
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, barcodeContentId: string) {
+  const buyerName = escapeHtml(payload.buyerName);
+  const eventTitle = escapeHtml(payload.eventTitle || "Etkinlik");
+  const ticketCode = escapeHtml(payload.ticketCode);
+  const venueText = escapeHtml(payload.venue || "-");
+  const locationText = escapeHtml(payload.location || "-");
   const eventDateText = payload.eventDate
-    ? new Date(payload.eventDate).toLocaleDateString("tr-TR")
+    ? escapeHtml(new Date(payload.eventDate).toLocaleDateString("tr-TR"))
     : "-";
-  const timeText = payload.eventTime || "--:--";
+  const timeText = escapeHtml(payload.eventTime || "--:--");
   const priceText = Number(payload.totalPrice).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const locationText = payload.location || "-";
-  const venueText = payload.venue || "-";
   const multiSeat = payload.seatDetails && payload.seatDetails.length > 1;
   const multiCode = payload.ticketCodes && payload.ticketCodes.length > 1;
 
   if (multiSeat) {
     const rows = payload.seatDetails!.map(
       (s, i) =>
-        `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;">${i + 1}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;">${s.ticket_code || payload.ticketCode}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${s.section_name} · Sıra ${s.row_label} · Nr ${s.seat_label}</td></tr>`
+        `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;">${i + 1}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;">${escapeHtml(s.ticket_code || payload.ticketCode)}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(s.section_name)} · Sıra ${escapeHtml(s.row_label)} · Nr ${escapeHtml(s.seat_label)}</td></tr>`
     ).join("");
     return `
     <div style="font-family:Arial,sans-serif;background:#eef2f7;padding:24px;">
       <div style="max-width:900px;margin:0 auto;">
-        <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${payload.buyerName},</h2>
+        <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${buyerName},</h2>
         <p style="margin:0 0 8px;color:#334155;">Siparişiniz tamamlandı. <strong>${payload.seatDetails!.length} adet bilet</strong> siparişiniz oluşturuldu.</p>
         <p style="margin:0 0 14px;color:#334155;">Ekteki PDF dosyasında her bilet <strong>ayrı sayfada</strong> yer alır; her sayfada o bilete özel bilet kodu ve koltuk bilgisi vardır.</p>
-        <p style="margin:0 0 6px;color:#0f172a;font-weight:700;">${payload.eventTitle || "Etkinlik"}</p>
+        <p style="margin:0 0 6px;color:#0f172a;font-weight:700;">${eventTitle}</p>
         <p style="margin:0 0 14px;color:#64748b;font-size:14px;">${eventDateText}, ${timeText} · ${venueText}</p>
         <table style="border-collapse:collapse;width:100%;max-width:600px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;">
           <thead><tr style="background:#f1f5f9;"><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">No</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">Bilet Kodu</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">Koltuk</th></tr></thead>
@@ -293,16 +306,16 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
     const rows = payload.ticketCodes!
       .map(
         (code, i) =>
-          `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;">${i + 1}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;">${code}</td></tr>`
+          `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;">${i + 1}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;">${escapeHtml(code)}</td></tr>`
       )
       .join("");
     return `
     <div style="font-family:Arial,sans-serif;background:#eef2f7;padding:24px;">
       <div style="max-width:900px;margin:0 auto;">
-        <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${payload.buyerName},</h2>
+        <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${buyerName},</h2>
         <p style="margin:0 0 8px;color:#334155;">Siparişiniz tamamlandı. <strong>${payload.ticketCodes!.length} adet bilet</strong> siparişiniz oluşturuldu.</p>
         <p style="margin:0 0 14px;color:#334155;">Ekteki PDF dosyasında her bilet <strong>ayrı sayfada</strong> yer alır; her sayfada o bilete özel bilet kodu ve QR bulunur.</p>
-        <p style="margin:0 0 6px;color:#0f172a;font-weight:700;">${payload.eventTitle || "Etkinlik"}</p>
+        <p style="margin:0 0 6px;color:#0f172a;font-weight:700;">${eventTitle}</p>
         <p style="margin:0 0 14px;color:#64748b;font-size:14px;">${eventDateText}, ${timeText} · ${venueText}</p>
         <table style="border-collapse:collapse;width:100%;max-width:600px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;">
           <thead><tr style="background:#f1f5f9;"><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">No</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">Bilet Kodu</th></tr></thead>
@@ -316,15 +329,25 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
   `;
   }
 
-  const leftVerticalTicketCodeHtml = payload.ticketCode
+  const leftVerticalTicketCodeHtml = ticketCode
     .split("")
     .map((ch) => `<span style="display:block;line-height:9px;">${ch}</span>`)
     .join("");
+  const ticketType = escapeHtml(payload.ticketType);
+  const seatLine =
+    payload.seatDetails && payload.seatDetails.length > 0
+      ? payload.seatDetails
+          .map(
+            (s) =>
+              `${escapeHtml(s.section_name)} · Sıra ${escapeHtml(s.row_label)} · Nr ${escapeHtml(s.seat_label)}`
+          )
+          .join("; ")
+      : "";
 
   return `
     <div style="font-family:Arial,sans-serif;background:#eef2f7;padding:24px;">
       <div style="max-width:900px;margin:0 auto;">
-        <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${payload.buyerName},</h2>
+        <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${buyerName},</h2>
         <p style="margin:0 0 14px;color:#334155;">Siparişiniz tamamlandı. Biletiniz aşağıdadır.</p>
         <div style="position:relative;background:#fff;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;">
           <div style="position:absolute;top:0;bottom:0;left:73%;border-left:2px dashed #94a3b8;"></div>
@@ -344,21 +367,23 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
                     </td>
                     <td style="vertical-align:top;">
                       <p style="margin:0;color:#000;font-size:10px;font-weight:700;letter-spacing:.4px;">MUSTERI/ETKINLIK BILETI</p>
-                      <p style="margin:6px 0 0;font-size:52px;line-height:50px;font-weight:900;color:#000;">${payload.eventTitle || "Etkinlik"}</p>
+                      <p style="margin:6px 0 0;font-size:52px;line-height:50px;font-weight:900;color:#000;">${eventTitle}</p>
                       <p style="margin:12px 0 0;font-size:18px;line-height:22px;font-weight:800;color:#000;">${eventDateText}, ${timeText}</p>
                       <p style="margin:4px 0 0;font-size:13px;line-height:16px;color:#000;font-weight:700;">${venueText}</p>
                       <p style="margin:2px 0 0;font-size:13px;color:#000;">${locationText}</p>
                       <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;border-collapse:collapse;">
                         <tr>
                           <td style="padding:2px 0;font-size:12px;color:#000;">Bilet Turu</td>
-                          <td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${payload.ticketType}</td>
+                          <td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${ticketType}</td>
                         </tr>
-                        ${(payload.seatDetails && payload.seatDetails.length > 0)
-    ? `<tr><td style="padding:2px 0;font-size:12px;color:#000;">Platz / Koltuk</td><td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${payload.seatDetails.map((s) => `${s.section_name} · Sıra ${s.row_label} · Nr ${s.seat_label}`).join("; ")}</td></tr>`
-    : ""}
+                        ${
+                          seatLine
+                            ? `<tr><td style="padding:2px 0;font-size:12px;color:#000;">Platz / Koltuk</td><td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${seatLine}</td></tr>`
+                            : ""
+                        }
                         <tr>
                           <td style="padding:2px 0;font-size:12px;color:#000;">Kisi/Adet</td>
-                          <td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${payload.buyerName} / ${payload.quantity}</td>
+                          <td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${buyerName} / ${payload.quantity}</td>
                         </tr>
                         <tr>
                           <td style="padding:2px 0;font-size:12px;color:#000;">Toplam</td>
@@ -372,7 +397,7 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
               <td style="width:27%;padding:14px 16px;vertical-align:top;">
                 <p style="margin:0;font-size:10px;color:#000;font-weight:700;letter-spacing:.6px;">KOPARILABILIR BOLUM</p>
                 <p style="margin:8px 0 0;font-size:12px;color:#000;font-weight:700;">Bilet Kodu</p>
-                <p style="margin:2px 0 0;font-size:18px;color:#000;font-weight:800;letter-spacing:1px;font-family:monospace;">${payload.ticketCode}</p>
+                <p style="margin:2px 0 0;font-size:18px;color:#000;font-weight:800;letter-spacing:1px;font-family:monospace;">${ticketCode}</p>
                 <p style="margin:10px 0 0;font-size:11px;color:#000;">Giris Noktasi</p>
                 <p style="margin:2px 0 0;font-size:13px;color:#000;font-weight:700;">EINGANG X</p>
                 <div style="margin-top:10px;text-align:center;">
@@ -955,14 +980,17 @@ async function sendAdminOrderNotification(payload: {
   const seatLines =
     payload.seatDetails && payload.seatDetails.length > 0
       ? payload.seatDetails
-          .map((s) => `${s.section_name} / ${s.row_label} / ${s.seat_label}`)
+          .map(
+            (s) =>
+              `${escapeHtml(s.section_name)} / ${escapeHtml(s.row_label)} / ${escapeHtml(s.seat_label)}`
+          )
           .join("<br/>")
       : "";
 
   const codes =
     payload.ticketCodes && payload.ticketCodes.length > 0
-      ? payload.ticketCodes.join(", ")
-      : payload.ticketCode;
+      ? payload.ticketCodes.map(escapeHtml).join(", ")
+      : escapeHtml(payload.ticketCode);
 
   const subject = isPhysical
     ? `Yeni sipariş (fiziksel): ${payload.ticketCode}`
@@ -971,24 +999,24 @@ async function sendAdminOrderNotification(payload: {
   const html = `
     <div style="font-family:Arial,sans-serif;color:#0f172a;">
       <h2 style="margin:0 0 10px;">Yeni sipariş bildirimi</h2>
-      <p style="margin:0 0 8px;"><strong>Etkinlik:</strong> ${payload.eventTitle || "-"}</p>
-      <p style="margin:0 0 8px;"><strong>Tarih/Saat:</strong> ${payload.eventDate || "-"} ${payload.eventTime || ""}</p>
-      <p style="margin:0 0 8px;"><strong>Mekan:</strong> ${payload.venue || "-"}</p>
-      <p style="margin:0 0 8px;"><strong>Bilet türü:</strong> ${payload.ticketType}</p>
+      <p style="margin:0 0 8px;"><strong>Etkinlik:</strong> ${escapeHtml(payload.eventTitle || "-")}</p>
+      <p style="margin:0 0 8px;"><strong>Tarih/Saat:</strong> ${escapeHtml(payload.eventDate || "-")} ${escapeHtml(payload.eventTime || "")}</p>
+      <p style="margin:0 0 8px;"><strong>Mekan:</strong> ${escapeHtml(payload.venue || "-")}</p>
+      <p style="margin:0 0 8px;"><strong>Bilet türü:</strong> ${escapeHtml(payload.ticketType)}</p>
       <p style="margin:0 0 8px;"><strong>Adet:</strong> ${payload.quantity}</p>
-      <p style="margin:0 0 8px;"><strong>Tutar:</strong> ${currency} ${Number(payload.totalPrice || 0).toFixed(2)}</p>
+      <p style="margin:0 0 8px;"><strong>Tutar:</strong> ${escapeHtml(currency)} ${Number(payload.totalPrice || 0).toFixed(2)}</p>
       <p style="margin:0 0 8px;"><strong>Bilet kodu(ları):</strong> ${codes}</p>
       ${seatLines ? `<p style="margin:0 0 8px;"><strong>Koltuklar:</strong><br/>${seatLines}</p>` : ""}
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;" />
-      <p style="margin:0 0 8px;"><strong>Alıcı:</strong> ${payload.buyerName}</p>
-      <p style="margin:0 0 8px;"><strong>E-posta:</strong> ${payload.buyerEmail}</p>
+      <p style="margin:0 0 8px;"><strong>Alıcı:</strong> ${escapeHtml(payload.buyerName)}</p>
+      <p style="margin:0 0 8px;"><strong>E-posta:</strong> ${escapeHtml(payload.buyerEmail)}</p>
       ${
         isPhysical
           ? `
       <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;" />
-      <p style="margin:0 0 8px;"><strong>Teslimat:</strong> ${payload.physicalDelivery}</p>
-      <p style="margin:0 0 8px;"><strong>Kargo ücreti:</strong> ${currency} ${Number(payload.shippingFee || 0).toFixed(2)}</p>
-      <p style="margin:0;"><strong>Adres:</strong> ${payload.buyerAddress}, ${payload.buyerPlz} ${payload.buyerCity}</p>
+      <p style="margin:0 0 8px;"><strong>Teslimat:</strong> ${escapeHtml(payload.physicalDelivery)}</p>
+      <p style="margin:0 0 8px;"><strong>Kargo ücreti:</strong> ${escapeHtml(currency)} ${Number(payload.shippingFee || 0).toFixed(2)}</p>
+      <p style="margin:0;"><strong>Adres:</strong> ${escapeHtml(payload.buyerAddress)}, ${escapeHtml(payload.buyerPlz)} ${escapeHtml(payload.buyerCity)}</p>
       `
           : `<p style="margin:0;"><strong>Teslimat:</strong> E-bilet</p>`
       }

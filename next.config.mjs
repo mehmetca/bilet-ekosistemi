@@ -48,29 +48,78 @@ const nextConfig = {
     ];
   },
   async headers() {
-    if (process.env.NODE_ENV !== "development") return [];
-    // _next ve statik asset'lere dokunma; chunk 500 hatalarını önlemek için sadece sayfa isteklerine header ekle
-    return [
+    const isDev = process.env.NODE_ENV === "development";
+
+    /** Tüm ortamlarda (HTML fetch araçları header görmese de tarayıcıya gider). */
+    const securityHeaders = [
+      { key: "X-Frame-Options", value: "DENY" },
+      { key: "X-Content-Type-Options", value: "nosniff" },
+      { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       {
-        source: "/((?!_next|api|favicon|.*\\.(?:ico|png|jpg|jpeg|gif|svg|woff2?|css|js)$).*)",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "no-store, no-cache, must-revalidate, max-age=0",
-          },
-        ],
+        key: "Permissions-Policy",
+        value: "camera=(self), microphone=(), geolocation=(), payment=(self)",
       },
-      // public/seatplans — tarayıcı eski SVG’yi tutmasın (Duisburg plan güncellemeleri)
+      { key: "X-DNS-Prefetch-Control", value: "on" },
       {
-        source: "/seatplans/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "no-store, no-cache, must-revalidate, max-age=0",
-          },
-        ],
+        key: "Content-Security-Policy",
+        value: [
+          "default-src 'self'",
+          "base-uri 'self'",
+          "object-src 'none'",
+          "frame-ancestors 'none'",
+          // Next.js + Stripe Checkout Embedded; 'unsafe-inline'/'unsafe-eval' App Router için gerekli
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com https://va.vercel-scripts.com https://*.sentry.io https://browser.sentry-cdn.com",
+          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+          "img-src 'self' data: blob: https:",
+          "font-src 'self' data: https://fonts.gstatic.com",
+          "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://vitals.vercel-insights.com https://*.vercel-insights.com https://translate.googleapis.com",
+          "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.youtube.com https://www.youtube-nocookie.com https://youtube.com",
+          "media-src 'self' https: blob:",
+          "form-action 'self' https://hooks.stripe.com",
+          "upgrade-insecure-requests",
+        ].join("; "),
       },
     ];
+
+    if (!isDev) {
+      securityHeaders.push({
+        key: "Strict-Transport-Security",
+        value: "max-age=63072000; includeSubDomains; preload",
+      });
+    }
+
+    const rules = [
+      {
+        source: "/:path*",
+        headers: securityHeaders,
+      },
+    ];
+
+    if (isDev) {
+      // _next ve statik asset'lere dokunma; chunk 500 hatalarını önlemek için sadece sayfa isteklerine header ekle
+      rules.push(
+        {
+          source: "/((?!_next|api|favicon|.*\\.(?:ico|png|jpg|jpeg|gif|svg|woff2?|css|js)$).*)",
+          headers: [
+            {
+              key: "Cache-Control",
+              value: "no-store, no-cache, must-revalidate, max-age=0",
+            },
+          ],
+        },
+        {
+          source: "/seatplans/:path*",
+          headers: [
+            {
+              key: "Cache-Control",
+              value: "no-store, no-cache, must-revalidate, max-age=0",
+            },
+          ],
+        }
+      );
+    }
+
+    return rules;
   },
   // Vercel build'in lint uyarılarından düşmemesi için (lint yerelde npm run lint ile çalıştırılabilir)
   eslint: { ignoreDuringBuilds: true },

@@ -53,7 +53,7 @@
       "delivery": "Instant Delivery",
       "deliveryDesc": "Bi lez û bez",
       "payment": "Payment Ewle",
-      "paymentDesc": "Binesaziya dravdanê ya ewledar ku ji hêla 3D Secure ve tê piştgirî kirin",
+      "paymentDesc": "Binesaziya dravdanê ya Stripe bi 3D Secure (SCA)",
       "inventory": "Inventory Live",
       "inventoryDesc": "hebûna dema rast"
     },
@@ -559,7 +559,7 @@
     "liveStock": "Live Stock",
     "onlinePayment": "Mercên Tezmînata Serhêl",
     "refundPage": "Mercên Veger û Betalkirinê",
-    "securePaymentDesc": "Binesaziya dravdana piştgirî ya 3D Ewle tê bikar anîn.",
+    "securePaymentDesc": "Dravdan bi Stripe tê kirin; agahiyên qartê li ser serverên me nayên hilanîn. 3D Secure di çarçoveya EU SCA de tê piştgirîkirin.",
     "refundPolicyDesc": "Mercên vegerandinê ji hêla organîzatorê bûyerê ve têne destnîşankirin. Li gorî bûyer û şert û mercên kampanyayê vegerandin an guhertin dikarin bêne kirin. Ji kerema xwe berî kirînê şert û mercên bûyera têkildar binihêrin.",
     "shippingPolicyDesc": "Barkirina standard (DE): 2-4 rojên kar. Barkirina bilez (DE): Fermanên ku berî nîvro (Duşem-Fi) hatine danîn dê roja karûbarê din werin radest kirin. Bilêta dîjîtal: Piştî peymanê di cih de dikare were çap kirin. Bilêtên çapkirî ji bo xercê ne; Ew ji kesên ku heqê barkêşiyê didin tê radest kirin. Vebijarkên barkirinê di selika kirînê de têne peyda kirin.",
     "liveStockDesc": "Agahdariya stock tavilê tê nûve kirin.",
