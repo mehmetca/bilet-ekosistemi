@@ -12,6 +12,7 @@ import {
   type ArtistGalleryPosition,
 } from "@/lib/artistProfile";
 import { slugify } from "@/lib/slugify";
+import { revalidatePublicSiteCache } from "@/lib/revalidate-public-site-client";
 
 type ArtistFormState = {
   id: string | null;
@@ -334,6 +335,8 @@ export default function SanatcilarPage() {
       setArtists((prev) => prev.filter((artist) => artist.id !== form.id));
       void loadArtists({ quiet: true });
       setForm(EMPTY_FORM);
+      await revalidatePublicSiteCache();
+      setToast({ type: "success", message: "Sanatçı silindi." });
     } catch (error) {
       setToast({ type: "error", message: `Silme başarısız: ${(error as Error).message}` });
     } finally {
@@ -484,6 +487,7 @@ export default function SanatcilarPage() {
       }
 
       void loadArtists({ quiet: true });
+      await revalidatePublicSiteCache();
       setToast({ type: "success", message: "Sanatçı kaydedildi." });
     } catch (error) {
       setToast({ type: "error", message: `Kaydetme başarısız: ${(error as Error).message}` });

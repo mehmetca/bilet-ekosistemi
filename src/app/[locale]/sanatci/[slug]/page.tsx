@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getArtistBySlug } from "@/lib/artists-server";
 import { parseArtistBio } from "@/lib/artistProfile";
 import { getLocalizedArtist, type Locale } from "@/lib/i18n-content";
@@ -57,6 +58,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   }
 
+  const canonicalSlug = artist.slug || slug;
   const localized = getLocalizedArtist(artist as unknown as Record<string, unknown>, locale);
   const parsed = parseArtistBio(localized.bio || artist.bio);
   const title = `${localized.name || artist.name} | KurdEvents`;
@@ -66,7 +68,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     .trim()
     .slice(0, 160);
   const base = getSiteUrl();
-  const path = `/sanatci/${slug}`;
+  const path = `/sanatci/${canonicalSlug}`;
   const canonical = `${base}/${locale}${path}`;
   const languages: Record<string, string> = {};
   for (const l of routing.locales) {
@@ -98,6 +100,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function ArtistPage({ params }: PageProps) {
   const { slug, locale = routing.defaultLocale } = await params;
   const artist = await getArtistBySlug(slug);
+
+  // Eski bozuk slug (ayfer-dzda) → doğru slug'a yönlendir
+  if (artist?.slug && artist.slug !== slug) {
+    redirect(`/${locale}/sanatci/${artist.slug}`);
+  }
 
   let videoJsonLd: Array<Record<string, unknown>> = [];
   if (artist) {

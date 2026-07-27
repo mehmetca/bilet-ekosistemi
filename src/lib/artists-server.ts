@@ -2,6 +2,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
+import { legacyBrokenSlugify, slugify } from "@/lib/slugify";
 import type { Artist } from "@/types/database";
 
 async function fetchArtistsForIndex(): Promise<Artist[]> {
@@ -34,4 +35,26 @@ const getArtistCrossRequest = unstable_cache(fetchArtistBySlug, ["artist-by-slug
   tags: ["artists"],
 });
 
-export const getArtistBySlug = cache((slug: string) => getArtistCrossRequest(slug));
+/** Eski bozuk slug (ayfer-dzda) ile mevcut sanatçıyı bul. */
+async function findArtistByLegacySlug(requestedSlug: string): Promise<Artist | null> {
+  const artists = await getArtistsForIndex();
+  const needle = requestedSlug.trim().toLowerCase();
+  if (!needle) return null;
+
+  for (const artist of artists) {
+    const names = [artist.name, (artist as { name_tr?: string | null }).name_tr].filter(
+      Boolean
+    ) as string[];
+    for (const name of names) {
+      if (legacyBrokenSlugify(name) === needle) return artist;
+      if (slugify(name) === needle && artist.slug !== needle) return artist;
+    }
+  }
+  return null;
+}
+
+export const getArtistBySlug = cache(async (slug: string): Promise<Artist | null> => {
+  const direct = await getArtistCrossRequest(slug);
+  if (direct) return direct;
+  return findArtistByLegacySlug(slug);
+});

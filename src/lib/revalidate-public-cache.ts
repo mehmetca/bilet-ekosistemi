@@ -18,6 +18,8 @@ export function revalidatePublicEventCaches(): void {
     revalidatePath(`/${locale}/arama`, "page");
     revalidatePath(`/${locale}/takvim`, "page");
     revalidatePath(`/${locale}/sehirler`, "page");
+    revalidatePath(`/${locale}/sanatci`, "page");
+    revalidatePath(`/${locale}/sanatci`, "layout");
   }
 }
 
