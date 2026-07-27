@@ -11,6 +11,7 @@ import {
   parseArtistBio,
   type ArtistGalleryPosition,
 } from "@/lib/artistProfile";
+import { slugify } from "@/lib/slugify";
 
 type ArtistFormState = {
   id: string | null;
@@ -92,15 +93,6 @@ const GALLERY_POSITION_OPTIONS: Array<{
 ];
 
 const CARD_LINE_OPTIONS = [1, 2, 3, 4, 5, 6];
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-");
-}
 
 async function withTimeout<T>(
   requestFactory: (signal: AbortSignal) => PromiseLike<T>,
@@ -648,12 +640,30 @@ export default function SanatcilarPage() {
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input
-              value={form.slug}
-              onChange={(e) => setFormField("slug", slugify(e.target.value))}
-              placeholder="slug"
-              className="rounded-lg border border-slate-300 px-3 py-2"
-            />
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Slug (URL)</label>
+              <div className="flex gap-2">
+                <input
+                  value={form.slug}
+                  onChange={(e) => setFormField("slug", slugify(e.target.value))}
+                  placeholder="slug"
+                  className="flex-1 rounded-lg border border-slate-300 px-3 py-2"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    setFormField("slug", slugify((form.name_tr || form.name).trim()))
+                  }
+                  className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                  title="İsimden slug üret"
+                >
+                  İsimden üret
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-slate-500">
+                Örn. Ayfer Düzdaş → ayfer-duzdas. Kaydetmeden sayfa açılmaz.
+              </p>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

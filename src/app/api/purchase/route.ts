@@ -16,6 +16,7 @@ import {
   type TicketLike,
 } from "@/lib/ticket-seating-match";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
+import { getFulfillmentAuthToken } from "@/lib/fulfillment-auth";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -185,6 +186,16 @@ async function assignBestAvailableSeats(
     (orderSeats || []).forEach((s: { seat_id: string }) => soldSet.add(s.seat_id));
   }
 
+  // Aktif hold’lu koltukları kategori atamasından çıkar (başkasının sepetindeki koltuğu çalma)
+  const heldSet = new Set<string>();
+  const nowIso = new Date().toISOString();
+  const { data: activeHolds } = await supabase
+    .from("seat_holds")
+    .select("seat_id")
+    .eq("event_id", eventId)
+    .gt("held_until", nowIso);
+  (activeHolds || []).forEach((h: { seat_id: string }) => heldSet.add(h.seat_id));
+
   type SeatInfo = {
     id: string;
     row_id: string;
@@ -196,6 +207,7 @@ async function assignBestAvailableSeats(
   for (const s of seats) {
     if (s.sales_blocked) continue;
     if (soldSet.has(s.id)) continue;
+    if (heldSet.has(s.id)) continue;
     const row = rowById.get(s.row_id);
     if (!row) continue;
     available.push({
@@ -1063,6 +1075,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Yalnızca sunucu fulfillment (webhook / ensure-fulfillment) sipariş üretebilir
+    const expectedFulfillmentToken = getFulfillmentAuthToken();
+    const providedFulfillmentToken = String(formData.get("fulfillment_token") || "").trim();
+    if (
+      !expectedFulfillmentToken ||
+      !providedFulfillmentToken ||
+      providedFulfillmentToken !== expectedFulfillmentToken
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Sipariş yalnızca ödeme doğrulama akışı üzerinden oluşturulabilir.",
+        },
+        { status: 403 }
+      );
+    }
+
     if (quantity < 1) {
       return NextResponse.json(
         { success: false, message: "Miktar en az 1 olmalıdır." },
@@ -1401,14 +1430,21 @@ export async function POST(request: NextRequest) {
       (eventRow as { currency?: string | null }).currency || "EUR"
     ).toLowerCase();
 
-    // Checkout intent varsa tutar/e-posta bağını doğrula (manipüle edilmiş oturumlara karşı)
+    // Checkout intent varsa tutar/e-posta/sepet satırı bağını doğrula
     const { data: checkoutIntent } = await supabase
       .from("stripe_checkout_intents")
-      .select("total_amount_cents, currency, buyer_email")
+      .select("total_amount_cents, currency, buyer_email, cart_json")
       .eq("stripe_session_id", stripeSessionId)
       .maybeSingle();
 
-    if (checkoutIntent) {
+    if (!checkoutIntent) {
+      return NextResponse.json(
+        { success: false, message: "Ödeme oturumu kaydı bulunamadı." },
+        { status: 402 }
+      );
+    }
+
+    {
       const intentTotal = Number((checkoutIntent as { total_amount_cents?: number }).total_amount_cents || 0);
       const intentCurrency = String((checkoutIntent as { currency?: string }).currency || "").toLowerCase();
       const intentEmail = String((checkoutIntent as { buyer_email?: string }).buyer_email || "").toLowerCase();
@@ -1427,6 +1463,39 @@ export async function POST(request: NextRequest) {
       if (intentEmail && intentEmail !== buyerEmail.toLowerCase()) {
         return NextResponse.json(
           { success: false, message: "Alıcı e-postası ödeme oturumu ile uyuşmuyor." },
+          { status: 402 }
+        );
+      }
+
+      const cartJson = (checkoutIntent as { cart_json?: unknown }).cart_json;
+      const cartLines = Array.isArray(cartJson) ? cartJson : [];
+      type CartLine = { ticketId?: string; quantity?: number; seatIds?: string[] };
+      const matchingLines = (cartLines as CartLine[]).filter(
+        (line) => String(line?.ticketId || "") === ticketId
+      );
+      if (matchingLines.length === 0) {
+        return NextResponse.json(
+          { success: false, message: "Bu bilet ödeme sepetinde yok." },
+          { status: 402 }
+        );
+      }
+
+      const seatsMatchLine = (line: CartLine) => {
+        const lineSeats = Array.isArray(line.seatIds) ? line.seatIds.map(String) : [];
+        // Haritadan seçilmiş koltuklar: birebir eşleşmeli
+        if (lineSeats.length > 0) {
+          if (seatIds.length !== lineSeats.length) return false;
+          const wanted = new Set(lineSeats);
+          return seatIds.every((id) => wanted.has(id));
+        }
+        // Kategori / genel giriş: adet eşleşir; koltuklar sonradan atanmış olabilir
+        const lineQty = Math.max(1, Number(line.quantity) || 1);
+        return lineQty === quantity;
+      };
+
+      if (!matchingLines.some(seatsMatchLine)) {
+        return NextResponse.json(
+          { success: false, message: "Sepet satırı (adet/koltuk) ödeme kaydı ile uyuşmuyor." },
           { status: 402 }
         );
       }
@@ -1704,6 +1773,65 @@ export async function POST(request: NextRequest) {
         p_ticket_id: ticketId,
         p_quantity: quantity,
       });
+
+      // Unique (stripe_session_id, ticket_id) yarışında mevcut siparişi idempotent dön
+      if ((orderError as { code?: string }).code === "23505") {
+        const { data: racedOrders } = await supabase
+          .from("orders")
+          .select("id, quantity, total_price, ticket_code, buyer_name")
+          .eq("stripe_session_id", stripeSessionId)
+          .eq("ticket_id", ticketId)
+          .eq("status", "completed")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        const raced = racedOrders?.[0] as
+          | {
+              id: string;
+              quantity: number;
+              total_price: number | string;
+              ticket_code: string | null;
+              buyer_name: string | null;
+            }
+          | undefined;
+        if (raced) {
+          const { data: racedSeats } = await supabase
+            .from("order_seats")
+            .select("section_name, row_label, seat_label, ticket_code")
+            .eq("order_id", raced.id);
+          const { data: racedUnits } = await supabase
+            .from("order_ticket_units")
+            .select("ticket_code")
+            .eq("order_id", raced.id);
+          const seatDetailsRaced = (racedSeats || []).map((s) => ({
+            section_name: String((s as { section_name?: string }).section_name || ""),
+            row_label: String((s as { row_label?: string }).row_label || ""),
+            seat_label: String((s as { seat_label?: string }).seat_label || ""),
+            ticket_code: String((s as { ticket_code?: string }).ticket_code || ""),
+          }));
+          const unitCodes = (racedUnits || [])
+            .map((u) => String((u as { ticket_code?: string }).ticket_code || ""))
+            .filter(Boolean);
+          return NextResponse.json({
+            success: true,
+            message: "Siparişiniz başarıyla oluşturuldu!",
+            ticketCode: raced.ticket_code || "",
+            emailSent: true,
+            orderDetails: {
+              buyerName: raced.buyer_name || buyerName,
+              quantity: Number(raced.quantity || 0),
+              ticketType: ticket.name || ticket.ticket_type || "Standart",
+              ticketTier: orderTicketTier,
+              price: Number(raced.total_price),
+              seatDetails: seatDetailsRaced.length > 0 ? seatDetailsRaced : undefined,
+              ticketCodes:
+                unitCodes.length > 0
+                  ? unitCodes
+                  : seatDetailsRaced.map((s) => s.ticket_code).filter(Boolean),
+            },
+          });
+        }
+      }
+
       return NextResponse.json(
         { success: false, message: `Sipariş oluşturulamadı: ${orderError.message}. Tekrar deneyin.` },
         { status: 500 }

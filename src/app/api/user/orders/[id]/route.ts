@@ -3,6 +3,11 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * Kullanıcı sipariş iptali.
+ * Ödenmiş (Stripe) completed siparişler silinemez — DB fonksiyonu engeller.
+ * Diğerleri soft-cancel + stok/koltuk serbest bırakır (hard delete yok).
+ */
 export async function DELETE(
   _request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -20,12 +25,13 @@ export async function DELETE(
     if (!token) {
       return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
     }
-    const { data: { user } } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser(token);
     if (!user) {
       return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
     }
 
-    // Veritabanı fonksiyonu ile sil (daha güvenilir)
     const { data: result, error } = await supabase.rpc("delete_my_order", {
       p_order_id: orderId,
       p_user_id: user.id,
@@ -34,57 +40,10 @@ export async function DELETE(
 
     if (error) {
       console.error("RPC delete_my_order error:", error);
-      // Fonksiyon yoksa veya hata alırsa manuel silme dene
-      const { data: order, error: orderError } = await supabase
-        .from("orders")
-        .select("id, user_id, buyer_email, ticket_id, quantity")
-        .eq("id", orderId)
-        .maybeSingle();
-
-      if (orderError || !order) {
-        return NextResponse.json({ error: "Sipariş bulunamadı" }, { status: 404 });
-      }
-
-      const isOwner =
-        order.user_id === user.id ||
-        (user.email &&
-          order.buyer_email &&
-          order.buyer_email.trim().toLowerCase() === user.email.trim().toLowerCase());
-
-      if (!isOwner) {
-        return NextResponse.json({ error: "Bu siparişe erişim yetkiniz yok" }, { status: 403 });
-      }
-
-      if (order.ticket_id && order.quantity) {
-        const { data: ticket } = await supabase
-          .from("tickets")
-          .select("available, quantity")
-          .eq("id", order.ticket_id)
-          .single();
-        if (ticket) {
-          const nextAvailable = Math.min(
-            Number(ticket.quantity || 0),
-            Number(ticket.available || 0) + order.quantity
-          );
-          await supabase.from("tickets").update({ available: nextAvailable }).eq("id", order.ticket_id);
-        }
-      }
-
-      // Önce order_seats kayıtlarını sil (RLS cascade sorununu önlemek için)
-      const { error: deleteSeatsError } = await supabase
-        .from("order_seats")
-        .delete()
-        .eq("order_id", orderId);
-      if (deleteSeatsError) {
-        console.error("Order seats delete error:", deleteSeatsError);
-      }
-
-      const { error: deleteError } = await supabase.from("orders").delete().eq("id", orderId);
-      if (deleteError) {
-        console.error("Order delete error:", deleteError);
-        return NextResponse.json({ error: "Sipariş silinemedi" }, { status: 500 });
-      }
-      return NextResponse.json({ success: true });
+      return NextResponse.json(
+        { error: "Sipariş iptal edilemedi. Lütfen destek ile iletişime geçin." },
+        { status: 500 }
+      );
     }
 
     const res = result as { success?: boolean; error?: string } | null;
@@ -98,7 +57,7 @@ export async function DELETE(
       return NextResponse.json({ error: res.error }, { status: 400 });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, cancelled: true });
   } catch (err) {
     console.error("user orders DELETE error:", err);
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });

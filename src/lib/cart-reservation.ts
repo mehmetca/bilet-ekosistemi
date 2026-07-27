@@ -3,6 +3,14 @@ export const CART_RESERVATION_MS = 10 * 60 * 1000;
 
 export const CART_RESERVATION_SECONDS = Math.round(CART_RESERVATION_MS / 1000);
 
+/**
+ * Stripe Checkout açıkken hold’un düşmemesi için uzatma süresi.
+ * (3DS / yavaş form > 10 dk sürebilir.)
+ */
+export const CHECKOUT_HOLD_MS = 35 * 60 * 1000;
+
+export const CHECKOUT_HOLD_SECONDS = Math.round(CHECKOUT_HOLD_MS / 1000);
+
 /** localStorage: sepet rezervasyonunun bittiği an (epoch ms) */
 export const CART_EXPIRY_KEY = "bilet_ekosistemi_cart_expires_at";
 

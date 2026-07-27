@@ -10,6 +10,7 @@ import {
 import {
   type CheckoutPhysicalDelivery,
 } from "@/lib/checkout-shipping";
+import { CHECKOUT_HOLD_SECONDS } from "@/lib/cart-reservation";
 
 export const runtime = "nodejs";
 
@@ -115,6 +116,33 @@ export async function POST(request: NextRequest) {
     }
 
     const priced = pricing;
+
+    // Checkout süresince koltuk hold’larını uzat (ödeme ekranı > sepet rezervasyonu)
+    const seatIdsToExtend = [
+      ...new Set(
+        priced.lines.flatMap((line) => (Array.isArray(line.seatIds) ? line.seatIds : []))
+      ),
+    ];
+    if (seatIdsToExtend.length > 0) {
+      const eventIds = [...new Set(priced.lines.map((l) => l.eventId))];
+      for (const eventId of eventIds) {
+        const seatsForEvent = priced.lines
+          .filter((l) => l.eventId === eventId)
+          .flatMap((l) => l.seatIds || []);
+        for (const seatId of [...new Set(seatsForEvent)]) {
+          const { error: holdError } = await supabaseAdmin.rpc("hold_seat", {
+            p_event_id: eventId,
+            p_seat_id: seatId,
+            p_user_id: userId,
+            p_session_id: userId ? null : seatHoldSessionId,
+            p_hold_seconds: CHECKOUT_HOLD_SECONDS,
+          });
+          if (holdError) {
+            console.error("Checkout hold extend failed:", holdError, { eventId, seatId });
+          }
+        }
+      }
+    }
 
     const { data: intentRow, error: intentError } = await supabaseAdmin
       .from("stripe_checkout_intents")

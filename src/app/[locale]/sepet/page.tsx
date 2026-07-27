@@ -288,136 +288,100 @@ export default function CheckoutPage() {
     pendingData?: PendingStripeCheckoutData | null,
     stripeSessionId?: string | null
   ) => {
-    const finalEmail = (
-      pendingData?.buyerEmail?.trim() ||
-      buyerEmail.trim() ||
-      user?.email ||
-      ""
-    ).trim();
+    const normalizedSessionId = (stripeSessionId || "").trim();
+    if (!normalizedSessionId) {
+      setError(tEvent("purchaseError"));
+      return false;
+    }
+
     const finalName =
       pendingData?.buyerName?.trim() ||
       buyerName.trim() ||
       (user?.email ? user.email.split("@")[0] : "") ||
       "Müşteri";
-    const finalAddress = pendingData?.buyerAddress?.trim() || buyerAddress.trim();
-    const finalPlz = pendingData?.buyerPlz?.trim() || buyerPlz.trim();
-    const finalCity = pendingData?.buyerCity?.trim() || buyerCity.trim();
-    const finalDeliveryChoice = pendingData?.deliveryChoice || deliveryChoice;
-    const finalPhysicalDelivery: CheckoutPhysicalDelivery =
-      finalDeliveryChoice === "e_ticket" ? "none" : finalDeliveryChoice;
-    const finalSeatHoldSessionId = pendingData?.seatHoldSessionId ?? seatHoldSessionId;
+
     setError(null);
     setIsPending(true);
-    const orderResults: typeof results = [];
 
     try {
-      let token = authAccessToken;
-      if (!token) {
-        let { data: { session } } = await supabase.auth.getSession();
-        if (!session?.access_token && user) {
-          await supabase.auth.refreshSession();
-          const r = await supabase.auth.getSession();
-          session = r.data.session;
-        }
-        token = session?.access_token ?? null;
-      }
-      const headers: Record<string, string> = {};
-      if (token) headers.Authorization = `Bearer ${token}`;
-
-      let shippingApplied = false;
-      for (const item of items) {
-        const formData = new FormData();
-        formData.append("ticket_id", item.ticketId);
-        const seatIdsAligned =
-          item.seatIds && item.seatIds.length > 0
-            ? item.seatIds.slice(0, Math.min(item.seatIds.length, item.quantity))
-            : [];
-        const purchaseQty = seatIdsAligned.length > 0 ? seatIdsAligned.length : item.quantity;
-        formData.append("quantity", String(purchaseQty));
-        formData.append("buyer_name", finalName);
-        formData.append("buyer_email", finalEmail);
-        if (stripeSessionId) formData.append("stripe_session_id", stripeSessionId);
-        if (user?.id) formData.append("client_user_id", user.id);
-        if (finalAddress) formData.append("buyer_address", finalAddress);
-        if (finalPlz) formData.append("buyer_plz", finalPlz);
-        if (finalCity) formData.append("buyer_city", finalCity);
-        const shouldApplyShippingForThisItem =
-          !shippingApplied && finalPhysicalDelivery !== "none";
-        formData.append(
-          "physical_delivery",
-          shouldApplyShippingForThisItem ? finalPhysicalDelivery : "none"
-        );
-        if (seatIdsAligned.length > 0) {
-          formData.append("seat_ids", JSON.stringify(seatIdsAligned));
-          if (finalSeatHoldSessionId) {
-            formData.append("seat_hold_session_id", finalSeatHoldSessionId);
-          }
-        }
-        const fee = item.eventCheckoutFee;
-        const shouldApplyProcessingFee = fee != null && fee > 0;
-        if (shouldApplyProcessingFee) {
-          formData.append("include_checkout_processing_fee", "true");
-        }
-
-        const res = await fetch("/api/purchase", {
+      // Webhook ile aynı atomik fulfill yolu; istemci doğrudan /api/purchase çağırmaz
+      let attempt = 0;
+      let lastMessage = tEvent("purchaseError");
+      while (attempt < 12) {
+        attempt += 1;
+        const res = await fetch("/api/stripe/ensure-fulfillment", {
           method: "POST",
-          headers,
-          body: formData,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionId: normalizedSessionId }),
         });
-        const data = await res.json();
+        const data = (await res.json()) as {
+          success?: boolean;
+          inProgress?: boolean;
+          refunded?: boolean;
+          message?: string;
+          orders?: Array<{
+            ticketId: string;
+            ticketCode?: string;
+            quantity: number;
+            price: number;
+            buyerName?: string;
+            seatDetails?: Array<{ section_name: string; row_label: string; seat_label: string }>;
+            ticketCodes?: string[];
+          }>;
+        };
 
-        if (data.success) {
-          if (shouldApplyShippingForThisItem) shippingApplied = true;
-          const od = data.orderDetails as
-            | {
-                price?: number;
-                seatDetails?: Array<{ section_name: string; row_label: string; seat_label: string }>;
-                ticketCodes?: string[];
-                ticketTier?: TicketType;
-              }
-            | undefined;
-          orderResults.push({
-            success: true,
-            ticketCode: data.ticketCode,
-            message: t("orderCreatedSuccess"),
-            emailSent: data.emailSent !== false,
-            orderDetails: {
-              buyerName: finalName,
-              quantity: purchaseQty,
-              ticketTier: od?.ticketTier ?? "normal",
-              price: typeof od?.price === "number" ? od.price : item.price * purchaseQty,
-              seatDetails: od?.seatDetails,
-              ticketCodes: od?.ticketCodes,
-            },
+        if (data.success && Array.isArray(data.orders)) {
+          const orderResults = data.orders.map((order) => {
+            const cartItem = items.find((i) => i.ticketId === order.ticketId);
+            return {
+              success: true as const,
+              ticketCode: order.ticketCode,
+              message: t("orderCreatedSuccess"),
+              emailSent: true,
+              orderDetails: {
+                buyerName: order.buyerName || finalName,
+                quantity: order.quantity,
+                ticketTier: "normal" as TicketType,
+                price: order.price,
+                seatDetails: order.seatDetails,
+                ticketCodes: order.ticketCodes,
+              },
+            };
           });
-        } else {
-          orderResults.push({
-            success: false,
-            message: data.message || tEvent("purchaseError"),
-          });
-        }
-      }
 
-      setResults(orderResults);
-      const allSuccess = orderResults.every((r) => r.success);
-      if (allSuccess) {
-        setHasSuccessfulCheckout(true);
-        setCompletedItems([...items]);
-        clearCart();
-        setCheckoutClientSecret(null);
-        setCheckoutSessionId(null);
-        setCurrentStep(1);
-        try {
-          sessionStorage.removeItem(PENDING_STRIPE_CHECKOUT_KEY);
-        } catch {
-          /* ignore */
+          if (orderResults.length === 0) {
+            setError(tEvent("purchaseError"));
+            return false;
+          }
+
+          setResults(orderResults);
+          setHasSuccessfulCheckout(true);
+          setCompletedItems([...items]);
+          clearCart();
+          setCheckoutClientSecret(null);
+          setCheckoutSessionId(null);
+          setCurrentStep(1);
+          try {
+            sessionStorage.removeItem(PENDING_STRIPE_CHECKOUT_KEY);
+          } catch {
+            /* ignore */
+          }
+          return true;
         }
-      } else {
+
+        if (data.inProgress || res.status === 202) {
+          lastMessage = data.message || lastMessage;
+          await new Promise((r) => setTimeout(r, 1500));
+          continue;
+        }
+
         setHasSuccessfulCheckout(false);
-        const firstFailed = orderResults.find((r) => !r.success);
-        if (firstFailed?.message) setError(firstFailed.message);
+        setError(data.message || lastMessage);
+        return false;
       }
-      return allSuccess;
+
+      setError(lastMessage);
+      return false;
     } catch {
       setError(tEvent("purchaseError"));
       return false;
@@ -425,19 +389,12 @@ export default function CheckoutPage() {
       setIsPending(false);
     }
   }, [
-    buyerAddress,
-    buyerCity,
-    buyerEmail,
     buyerName,
-    buyerPlz,
     clearCart,
-    deliveryChoice,
     items,
-    seatHoldSessionId,
     t,
     tEvent,
     user,
-    authAccessToken,
   ]);
 
   const finalizePaidOrder = useCallback(

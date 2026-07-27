@@ -160,15 +160,23 @@ export async function POST(request: NextRequest) {
       );
       if (scopeError) return scopeError;
 
-      const { error: unitUpdateError } = await supabase
+      const { data: updatedUnits, error: unitUpdateError } = await supabase
         .from("order_ticket_units")
         .update({ checked_at: new Date().toISOString() })
-        .eq("id", ticketUnit.id);
+        .eq("id", ticketUnit.id)
+        .is("checked_at", null)
+        .select("id");
       if (unitUpdateError) {
         console.error("checkin-ticket ticket_unit update error:", unitUpdateError);
         return NextResponse.json(
           { success: false, message: "Giriş işaretlenemedi." },
           { status: 500 }
+        );
+      }
+      if (!updatedUnits || updatedUnits.length === 0) {
+        return NextResponse.json(
+          { success: false, message: "Bu bilet daha önce giriş yapılmış." },
+          { status: 400 }
         );
       }
       return NextResponse.json({
@@ -227,15 +235,23 @@ export async function POST(request: NextRequest) {
       );
       if (scopeError) return scopeError;
 
-      const { error: seatUpdateError } = await supabase
+      const { data: updatedSeats, error: seatUpdateError } = await supabase
         .from("order_seats")
         .update({ checked_at: new Date().toISOString() })
-        .eq("id", orderSeat.id);
+        .eq("id", orderSeat.id)
+        .is("checked_at", null)
+        .select("id");
       if (seatUpdateError) {
         console.error("checkin-ticket order_seats update error:", seatUpdateError);
         return NextResponse.json(
           { success: false, message: "Giriş işaretlenemedi." },
           { status: 500 }
+        );
+      }
+      if (!updatedSeats || updatedSeats.length === 0) {
+        return NextResponse.json(
+          { success: false, message: "Bu bilet daha önce giriş yapılmış." },
+          { status: 400 }
         );
       }
       return NextResponse.json({
@@ -297,16 +313,25 @@ export async function POST(request: NextRequest) {
     const scopeError = await requireCheckinScope(supabase, auth, eventCreatorId);
     if (scopeError) return scopeError;
 
-    const { error: updateError } = await supabase
+    const { data: updatedOrders, error: updateError } = await supabase
       .from("orders")
       .update({ checked_at: new Date().toISOString() })
-      .eq("id", order.id);
+      .eq("id", order.id)
+      .is("checked_at", null)
+      .select("id");
 
     if (updateError) {
       console.error("checkin-ticket update error:", updateError);
       return NextResponse.json(
         { success: false, message: "Giriş işaretlenemedi." },
         { status: 500 }
+      );
+    }
+
+    if (!updatedOrders || updatedOrders.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Bu bilet daha önce giriş yapılmış." },
+        { status: 400 }
       );
     }
 
