@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { sendControllerGuideEmail } from "@/lib/send-controller-guide-email";
+import { publicErrorMessage } from "@/lib/api-error";
 
 async function getAuthedUser(request: NextRequest) {
   const token = request.headers.get("authorization")?.replace("Bearer ", "").trim();
@@ -22,7 +23,12 @@ export async function GET(request: NextRequest) {
       .select("*")
       .eq("user_id", user.id)
       .maybeSingle();
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      return NextResponse.json(
+        { error: publicErrorMessage("Başvuru bilgisi alınamadı.", error) },
+        { status: 500 }
+      );
+    }
     return NextResponse.json(data || null);
   } catch (err) {
     console.error("controller-request GET error:", err);
@@ -35,8 +41,8 @@ export async function POST(request: NextRequest) {
     const user = await getAuthedUser(request);
     if (!user) return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
     const body = (await request.json()) as { full_name?: string; phone?: string };
-    const fullName = (body.full_name || "").trim();
-    const phone = (body.phone || "").trim();
+    const fullName = (body.full_name || "").trim().slice(0, 200);
+    const phone = (body.phone || "").trim().slice(0, 40);
     if (!fullName || !phone) {
       return NextResponse.json({ error: "Ad Soyad ve telefon zorunludur" }, { status: 400 });
     }
@@ -55,9 +61,13 @@ export async function POST(request: NextRequest) {
       },
       { onConflict: "user_id" }
     );
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) {
+      return NextResponse.json(
+        { error: publicErrorMessage("Başvuru kaydedilemedi.", error) },
+        { status: 500 }
+      );
+    }
 
-    // Başvuru kaydı başarılıysa kılavuz mailini gönder (best effort)
     if (user.email) {
       const mailRes = await sendControllerGuideEmail({
         email: user.email,
@@ -74,4 +84,3 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Sunucu hatası" }, { status: 500 });
   }
 }
-
