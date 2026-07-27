@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireRole } from "@/lib/api-auth";
+import { publicErrorMessage } from "@/lib/api-error";
 
 export async function GET(request: NextRequest) {
   const auth = await requireRole(request, ["admin", "organizer"]);
@@ -71,7 +72,10 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      return NextResponse.json({ message: error.message }, { status: 500 });
+      return NextResponse.json(
+        { message: publicErrorMessage("Siparişler alınamadı.", error) },
+        { status: 500 }
+      );
     }
 
     const orders = data || [];

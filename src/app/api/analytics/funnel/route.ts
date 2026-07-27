@@ -1,5 +1,6 @@
 import { createServerSupabase } from "@/lib/supabase-server";
 import { NextResponse } from "next/server";
+import { publicErrorMessage } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,10 @@ export async function POST(request: Request) {
       });
       if (error) {
         console.error("event_views insert error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+          { error: publicErrorMessage("Analitik kaydı alınamadı.", error) },
+          { status: 500 }
+        );
       }
       return NextResponse.json({ ok: true });
     }
@@ -36,11 +40,14 @@ export async function POST(request: Request) {
         ticket_id: ticket_id || null,
         session_id: session_id || null,
         hero_variant: hero_variant || null,
-        success: false, // API yanıtından sonra güncellenebilir
+        success: false,
       });
       if (error) {
         console.error("purchase_intents insert error:", error);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json(
+          { error: publicErrorMessage("Analitik kaydı alınamadı.", error) },
+          { status: 500 }
+        );
       }
       return NextResponse.json({ ok: true });
     }

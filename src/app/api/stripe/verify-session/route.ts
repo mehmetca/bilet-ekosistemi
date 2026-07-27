@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getStripe } from "@/lib/stripe-server";
+import { publicErrorMessage } from "@/lib/api-error";
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,7 +43,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : "Stripe oturumu doğrulanamadı.",
+        message: publicErrorMessage(
+          "Stripe oturumu doğrulanamadı.",
+          error instanceof Error ? error : null
+        ),
       },
       { status: 500 }
     );

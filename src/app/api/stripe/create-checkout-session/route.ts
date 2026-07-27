@@ -255,7 +255,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : "Stripe oturumu oluşturulamadı.",
+        message:
+          process.env.NODE_ENV === "production"
+            ? "Stripe oturumu oluşturulamadı."
+            : error instanceof Error
+              ? error.message
+              : "Stripe oturumu oluşturulamadı.",
       },
       { status: 500 }
     );

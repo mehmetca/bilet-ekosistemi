@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { publicErrorMessage } from "@/lib/api-error";
 
 async function getSupabaseServer(request: NextRequest) {
   const supabase = getSupabaseAdmin();
@@ -22,7 +23,10 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: publicErrorMessage("Profil alınamadı.", error) },
+        { status: 500 }
+      );
     }
     return NextResponse.json(data || null);
   } catch (err) {
@@ -112,12 +116,18 @@ export async function POST(request: NextRequest) {
         .update(row)
         .eq("user_id", user.id);
       if (updErr) {
-        return NextResponse.json({ error: updErr.message }, { status: 500 });
+        return NextResponse.json(
+          { error: publicErrorMessage("Profil güncellenemedi.", updErr) },
+          { status: 500 }
+        );
       }
     } else {
       const { error: insErr } = await supabase.from("user_profiles").insert(row);
       if (insErr) {
-        return NextResponse.json({ error: insErr.message }, { status: 500 });
+        return NextResponse.json(
+          { error: publicErrorMessage("Profil kaydedilemedi.", insErr) },
+          { status: 500 }
+        );
       }
     }
 

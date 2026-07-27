@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { publicErrorMessage } from "@/lib/api-error";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,7 +27,10 @@ export async function POST(request: NextRequest) {
     }
     const { error } = await supabase.auth.admin.updateUserById(user.id, { password });
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: publicErrorMessage("Şifre güncellenemedi.", error) },
+        { status: 500 }
+      );
     }
     return NextResponse.json({ success: true });
   } catch (err) {

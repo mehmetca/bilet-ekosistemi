@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { publicErrorMessage } from "@/lib/api-error";
 
 async function getSupabaseWithUser(request: NextRequest) {
   const supabase = getSupabaseAdmin();
@@ -22,7 +23,10 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: publicErrorMessage("Başvuru bilgisi alınamadı.", error) },
+        { status: 500 }
+      );
     }
     // Organizatör ama organizer_requests boşsa (admin tarafından eklenmiş olabilir) organizer_profiles + user_profiles'dan al
     if (!reqData) {
