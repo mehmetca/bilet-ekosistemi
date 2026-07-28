@@ -2181,8 +2181,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   }
 
   function shareToWhatsApp() {
-    const text = `${getShareText()} ${getShareUrl()}`;
-    openShareWindow(`https://wa.me/?text=${encodeURIComponent(text)}`);
+    const text = `${getShareText()}\n\n${getShareUrl()}`;
+    openShareWindow(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`);
   }
 
   function shareToX() {
@@ -2204,7 +2204,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       if (navigator.share) {
         await navigator.share({
           title: localized.title,
-          text: getShareText(),
           url: shareUrl,
         });
         setShareMenuOpen(false);

@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
 import { Printer, Download } from "lucide-react";
+import AddWalletButtons from "./AddWalletButtons";
 import type { EventCurrency, TicketType } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 import { formatEventDateDMY } from "@/lib/date-utils";
@@ -600,11 +601,11 @@ export default function TicketPrint({
         })}
       </div>
 
-      {/* Yazdır ve İndir butonları */}
-      <div className="flex flex-wrap justify-center gap-3 print:hidden">
+      {/* Yazdır, İndir ve Cüzdana Ekle butonları */}
+      <div className="flex flex-wrap items-center justify-center gap-3 print:hidden">
         <button
           onClick={handlePrint}
-          className="flex items-center gap-2 rounded-lg bg-primary-600 px-6 py-3 font-semibold text-white transition-colors hover:bg-primary-700"
+          className="flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 font-semibold text-white transition-colors hover:bg-primary-700 shadow-md"
         >
           <Printer className="h-5 w-5" />
           {tUi("print")}
@@ -612,11 +613,22 @@ export default function TicketPrint({
         <button
           onClick={handleDownload}
           disabled={downloading}
-          className="flex items-center gap-2 rounded-lg border-2 border-primary-600 bg-white px-6 py-3 font-semibold text-primary-600 transition-colors hover:bg-primary-50 disabled:opacity-60"
+          className="flex items-center gap-2 rounded-xl border-2 border-primary-600 bg-white px-5 py-2.5 font-semibold text-primary-600 transition-colors hover:bg-primary-50 disabled:opacity-60 shadow-md"
         >
           <Download className="h-5 w-5" />
           {downloading ? tUi("downloading") : tUi("download")}
         </button>
+
+        {/* Apple Wallet & Google Wallet Butonları */}
+        <AddWalletButtons
+          ticketCode={ticketCode}
+          eventTitle={displayEventTitle}
+          eventDate={eventDateText}
+          eventTime={timeText}
+          venue={venue}
+          seatInfo={singleSeatDetail ? formatSeatLine(singleSeatDetail) : String(ticketTier || "Genel")}
+          buyerName={buyerName}
+        />
       </div>
       <p className="text-center text-xs text-slate-500 print:hidden">
         {tUi("printDownloadHint")}

@@ -54,8 +54,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const description =
     eventDescription?.replace(/<[^>]*>/g, "").slice(0, 160) ||
     `${eventTitle} - ${event.date} ${event.time || ""} ${localized.venue || event.venue || ""}.`;
-  const imageUrl = event.image_url || undefined;
   const base = getSiteUrl();
+  const ogParams = new URLSearchParams();
+  ogParams.set("title", eventTitle);
+  if (event.date) ogParams.set("date", `${event.date} ${event.time || ""}`.trim());
+  if (localized.venue || event.venue) ogParams.set("venue", localized.venue || event.venue || "");
+  if (event.image_url) ogParams.set("image", event.image_url);
+
+  const dynamicOgImageUrl = `${base}/api/og?${ogParams.toString()}`;
   const path = eventPathFromId(id, showEvents, event);
   const canonical = `${base}/${locale}${path}`;
   const languages: Record<string, string> = {};
@@ -80,13 +86,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       siteName: "KurdEvents",
       locale: ogLocale,
       type: "website",
-      images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630, alt: eventTitle }] : undefined,
+      images: [{ url: dynamicOgImageUrl, width: 1200, height: 630, alt: eventTitle }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: imageUrl ? [imageUrl] : undefined,
+      images: [dynamicOgImageUrl],
     },
     alternates: { canonical, languages },
   };
