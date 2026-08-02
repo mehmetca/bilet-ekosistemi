@@ -74,7 +74,7 @@ async function fetchCitiesWithEventCounts() {
 }
 
 export async function getCitiesWithEventCounts() {
-  return unstable_cache(fetchCitiesWithEventCounts, ["cities-with-events-v2"], {
+  return unstable_cache(fetchCitiesWithEventCounts, ["cities-with-events-v3"], {
     revalidate: DATA_CACHE_REVALIDATE.cities,
     tags: ["cities"],
   })();

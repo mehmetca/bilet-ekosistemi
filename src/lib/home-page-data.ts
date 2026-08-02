@@ -6,7 +6,7 @@ import { getHomeSliderAds } from "@/lib/home-slider-ads";
 import type { Event } from "@/types/database";
 
 const HOME_EVENTS_COLUMNS =
-  "id,title,slug,date,time,venue,location,image_url,category,price_from,currency,created_at,is_active,is_approved,is_draft,homepage_featured_order,title_tr,title_de,title_en,title_ku,title_ckb,venue_tr,venue_de,venue_en,show_slug,venues(city)";
+  "id,title,slug,date,time,venue,location,city,address,image_url,category,price_from,currency,created_at,is_active,is_approved,is_draft,homepage_featured_order,title_tr,title_de,title_en,title_ku,title_ckb,venue_tr,venue_de,venue_en,show_slug,venues(city)";
 
 const HOME_EVENTS_LIMIT = 72;
 
@@ -74,7 +74,7 @@ async function fetchHomeShellData(locale: string): Promise<HomeShellData> {
 }
 
 export async function getHomeShellData(locale: string): Promise<HomeShellData> {
-  return unstable_cache(() => fetchHomeShellData(locale), ["home-shell-v2", locale], {
+  return unstable_cache(() => fetchHomeShellData(locale), ["home-shell-v3", locale], {
     revalidate: DATA_CACHE_REVALIDATE.home,
     tags: ["home", "cities"],
   })();
@@ -100,12 +100,15 @@ async function fetchHomeEvents(): Promise<Event[]> {
   }
 
   const raw = (data || []) as Array<Record<string, unknown>>;
-  return raw.map(({ venues: _v, ...ev }) => ev) as unknown as Event[];
+  return raw.map((row) => {
+    const { venues, ...ev } = row;
+    return { ...(ev as unknown as Event), venues: venues as Event["venues"] } as unknown as Event;
+  }) as Event[];
 }
 
 /** Sorgu locale’e bağlı değil — tek önbellek; dil başına boş “zehir” cache oluşmasın. */
 export async function getHomeEvents(_locale?: string): Promise<Event[]> {
-  return unstable_cache(fetchHomeEvents, ["home-events-v3"], {
+  return unstable_cache(fetchHomeEvents, ["home-events-v4"], {
     revalidate: DATA_CACHE_REVALIDATE.home,
     tags: ["home", "events"],
   })();
