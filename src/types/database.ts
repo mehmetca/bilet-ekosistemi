@@ -9,6 +9,8 @@ export interface Event {
   city?: string | null;
   /** Tam adres (detay sayfası) */
   address?: string | null;
+  /** Mekan ilişkisi üzerinden gelen şehir bilgisi (çok şehirli etkinlikler için) */
+  venues?: Array<{ city?: string | null }> | { city?: string | null } | null;
   venue: string;
   venue_id?: string | null;
   price_from: number;
