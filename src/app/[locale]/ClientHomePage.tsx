@@ -106,53 +106,26 @@ function getLocalISODateString(d: Date): string {
   return `${yyyy}-${mm}-${dd}`;
 }
 
-function getEventCityLabel(event: Event): string {
+function getEventCityLabels(event: Event): string[] {
   const e = event as Event & {
     city?: string | null;
-    address?: string | null;
-    venues?: Array<{ city?: string | null }> | { city?: string | null } | null;
   };
 
-  const explicitCity = (e.city || "").trim();
-  if (explicitCity) return explicitCity;
+  const candidates: string[] = [];
+  const pushCandidate = (value?: string | null) => {
+    const candidate = (value || "").trim();
+    if (!candidate) return;
+    const normalized = candidate.replace(/\s+/g, " ").trim();
+    if (!normalized) return;
 
-  const venues = e.venues;
-  if (Array.isArray(venues)) {
-    const venueCity = (venues[0]?.city || "").trim();
-    if (venueCity) return venueCity;
-  } else if (venues && typeof venues === "object" && "city" in venues) {
-    const venueCity = String((venues as { city?: string | null }).city || "").trim();
-    if (venueCity) return venueCity;
-  }
-
-  const address = (e.address || event.location || "").trim();
-  if (!address) return "";
-
-  const looksLikeAddress = /\d/.test(address) || /(straße|strasse|street|road|weg|platz|allee|gasse|ufer|ring|boulevard|avenue|\bstr\b|\bst\b)/i.test(address);
-  if (looksLikeAddress) return "";
-
-  const segments = address
-    .split(",")
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-
-  if (segments.length > 1) {
-    for (let index = segments.length - 1; index >= 0; index -= 1) {
-      const segment = segments[index];
-      const cleaned = segment.replace(/^\d{3,5}\s*/, "").trim();
-      if (!cleaned) continue;
-      if (/^(germany|deutschland|france|italy|spain|turkey|turkiye|uk|england|netherlands|switzerland|austria|belgium|poland|czechia|czech republic)$/i.test(cleaned)) {
-        continue;
-      }
-      if (/(straße|strasse|street|road|weg|platz|allee|gasse|ufer|ring|boulevard|avenue)/i.test(cleaned)) {
-        continue;
-      }
-      return cleaned;
+    const lowered = normalized.toLocaleLowerCase("tr-TR");
+    if (!candidates.some((item) => item.toLocaleLowerCase("tr-TR") === lowered)) {
+      candidates.push(normalized);
     }
-  }
+  };
 
-  const lastSegment = segments[segments.length - 1] || "";
-  return lastSegment.replace(/^\d{3,5}\s*/, "").trim();
+  pushCandidate(e.city);
+  return candidates;
 }
 
 function formatLocalDateDMY(d: Date): string {
@@ -249,12 +222,13 @@ export default function ClientHomePage({
     const byKey = new Map<string, string>();
 
     upcomingEvents.forEach((event) => {
-      const cityName = getEventCityLabel(event);
-      if (!cityName) return;
-      const normalized = cityName.trim();
-      const key = getNormalizedCityKey(normalized);
-      if (!key) return;
-      if (!byKey.has(key)) byKey.set(key, normalized);
+      const cityNames = getEventCityLabels(event);
+      cityNames.forEach((cityName) => {
+        const normalized = cityName.trim();
+        const key = getNormalizedCityKey(normalized);
+        if (!key) return;
+        if (!byKey.has(key)) byKey.set(key, normalized);
+      });
     });
 
     return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b, "tr"));
@@ -296,10 +270,10 @@ export default function ClientHomePage({
           searchableWords.some((w) => isNearMatch(token, w))
       );
 
-    const eventCityName = getEventCityLabel(event);
+    const eventCityNames = getEventCityLabels(event);
     const matchesCity =
       selectedCity === "all" ||
-      getNormalizedCityKey(eventCityName) === getNormalizedCityKey(selectedCity);
+      eventCityNames.some((cityName) => getNormalizedCityKey(cityName) === getNormalizedCityKey(selectedCity));
     const matchesCategory = selectedCategory === "all" || event.category === selectedCategory;
 
     const matchesEventDate = !isDateFilterActive || eventDateISO(event) === eventDate;
