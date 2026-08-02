@@ -64,6 +64,10 @@ function normalizeForSearch(value: string): string {
     .trim();
 }
 
+function getNormalizedCityKey(value: string): string {
+  return normalizeForSearch(value);
+}
+
 function isNearMatch(token: string, candidate: string): boolean {
   if (!token || !candidate) return false;
   if (candidate.includes(token)) return true;
@@ -100,6 +104,55 @@ function getLocalISODateString(d: Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
+}
+
+function getEventCityLabel(event: Event): string {
+  const e = event as Event & {
+    city?: string | null;
+    address?: string | null;
+    venues?: Array<{ city?: string | null }> | { city?: string | null } | null;
+  };
+
+  const explicitCity = (e.city || "").trim();
+  if (explicitCity) return explicitCity;
+
+  const venues = e.venues;
+  if (Array.isArray(venues)) {
+    const venueCity = (venues[0]?.city || "").trim();
+    if (venueCity) return venueCity;
+  } else if (venues && typeof venues === "object" && "city" in venues) {
+    const venueCity = String((venues as { city?: string | null }).city || "").trim();
+    if (venueCity) return venueCity;
+  }
+
+  const address = (e.address || event.location || "").trim();
+  if (!address) return "";
+
+  const looksLikeAddress = /\d/.test(address) || /(straße|strasse|street|road|weg|platz|allee|gasse|ufer|ring|boulevard|avenue|\bstr\b|\bst\b)/i.test(address);
+  if (looksLikeAddress) return "";
+
+  const segments = address
+    .split(",")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (segments.length > 1) {
+    for (let index = segments.length - 1; index >= 0; index -= 1) {
+      const segment = segments[index];
+      const cleaned = segment.replace(/^\d{3,5}\s*/, "").trim();
+      if (!cleaned) continue;
+      if (/^(germany|deutschland|france|italy|spain|turkey|turkiye|uk|england|netherlands|switzerland|austria|belgium|poland|czechia|czech republic)$/i.test(cleaned)) {
+        continue;
+      }
+      if (/(straße|strasse|street|road|weg|platz|allee|gasse|ufer|ring|boulevard|avenue)/i.test(cleaned)) {
+        continue;
+      }
+      return cleaned;
+    }
+  }
+
+  const lastSegment = segments[segments.length - 1] || "";
+  return lastSegment.replace(/^\d{3,5}\s*/, "").trim();
 }
 
 function formatLocalDateDMY(d: Date): string {
@@ -194,15 +247,16 @@ export default function ClientHomePage({
   // Şehir listesi: tekrarsız, virgülden önceki kısım + büyük/küçük harf farkı birleştirilir (örn. 3x Berlin → 1)
   const cityOptions = (() => {
     const byKey = new Map<string, string>();
+
     upcomingEvents.forEach((event) => {
-      const e = event as Event & { city?: string | null };
-      const raw = (e.city || event.location || "").trim();
-      if (!raw) return;
-      const cityPart = raw.includes(",") ? raw.split(",")[0].trim() : raw;
-      if (!cityPart) return;
-      const key = cityPart.toLowerCase();
-      if (!byKey.has(key)) byKey.set(key, cityPart);
+      const cityName = getEventCityLabel(event);
+      if (!cityName) return;
+      const normalized = cityName.trim();
+      const key = getNormalizedCityKey(normalized);
+      if (!key) return;
+      if (!byKey.has(key)) byKey.set(key, normalized);
     });
+
     return Array.from(byKey.values()).sort((a, b) => a.localeCompare(b, "tr"));
   })();
 
@@ -242,9 +296,10 @@ export default function ClientHomePage({
           searchableWords.some((w) => isNearMatch(token, w))
       );
 
-    const eventCityRaw = (event as Event & { city?: string | null }).city || event.location || "";
-    const eventCityPart = eventCityRaw.includes(",") ? eventCityRaw.split(",")[0].trim() : eventCityRaw.trim();
-    const matchesCity = selectedCity === "all" || eventCityPart.toLowerCase() === selectedCity.toLowerCase();
+    const eventCityName = getEventCityLabel(event);
+    const matchesCity =
+      selectedCity === "all" ||
+      getNormalizedCityKey(eventCityName) === getNormalizedCityKey(selectedCity);
     const matchesCategory = selectedCategory === "all" || event.category === selectedCategory;
 
     const matchesEventDate = !isDateFilterActive || eventDateISO(event) === eventDate;
