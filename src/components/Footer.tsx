@@ -4,7 +4,23 @@ import { useEffect, useState } from "react";
 import NextLink from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
-import { Instagram, Facebook, Twitter, Youtube } from "lucide-react";
+import {
+  Instagram,
+  Facebook,
+  Twitter,
+  Youtube,
+  Music,
+  Send,
+  MessageSquare,
+  Globe,
+  Linkedin,
+  Video,
+} from "lucide-react";
+
+interface SocialItem {
+  platform: string;
+  url: string;
+}
 
 const infoMenuLinks = [
   { href: "/bilgilendirme", labelKey: "footer.information" },
@@ -32,47 +48,57 @@ function hrefWithLocale(locale: string, href: string): string {
   return `/${locale}${href}`;
 }
 
-function SocialRow({ className }: { className?: string }) {
-  const linkClass =
-    "text-slate-600 hover:text-primary-600 transition-colors";
+function renderSocialIcon(platform: string) {
+  const p = (platform || "").toLowerCase().trim();
+  switch (p) {
+    case "instagram":
+      return <Instagram className="h-5 w-5" />;
+    case "facebook":
+      return <Facebook className="h-5 w-5" />;
+    case "twitter":
+    case "x":
+      return <Twitter className="h-5 w-5" />;
+    case "youtube":
+      return <Youtube className="h-5 w-5" />;
+    case "spotify":
+    case "music":
+      return <Music className="h-5 w-5" />;
+    case "telegram":
+      return <Send className="h-5 w-5" />;
+    case "whatsapp":
+      return <MessageSquare className="h-5 w-5" />;
+    case "linkedin":
+      return <Linkedin className="h-5 w-5" />;
+    case "tiktok":
+      return <Video className="h-5 w-5" />;
+    default:
+      return <Globe className="h-5 w-5" />;
+  }
+}
+
+function SocialRow({ className, items }: { className?: string; items: SocialItem[] }) {
+  const linkClass = "text-slate-600 hover:text-primary-600 transition-colors";
+  if (!items || items.length === 0) return null;
+
   return (
     <div className={className}>
-      <a
-        href="https://instagram.com/kurdeventofficial"
-        target="_blank"
-        rel="noopener noreferrer"
-        className={linkClass}
-        aria-label="Instagram"
-      >
-        <Instagram className="h-5 w-5" />
-      </a>
-      <a
-        href="https://www.facebook.com/KurdEventOfficial"
-        target="_blank"
-        rel="noopener noreferrer"
-        className={linkClass}
-        aria-label="Facebook"
-      >
-        <Facebook className="h-5 w-5" />
-      </a>
-      <a
-        href="https://twitter.com/Kurd_Event"
-        target="_blank"
-        rel="noopener noreferrer"
-        className={linkClass}
-        aria-label="Twitter"
-      >
-        <Twitter className="h-5 w-5" />
-      </a>
-      <a
-        href="https://youtube.com/@kurdevent"
-        target="_blank"
-        rel="noopener noreferrer"
-        className={linkClass}
-        aria-label="YouTube"
-      >
-        <Youtube className="h-5 w-5" />
-      </a>
+      {items.map((item, index) => {
+        if (!item.url) return null;
+        const platformName = item.platform ? item.platform.charAt(0).toUpperCase() + item.platform.slice(1) : "Social";
+        return (
+          <a
+            key={index}
+            href={item.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={linkClass}
+            aria-label={platformName}
+            title={platformName}
+          >
+            {renderSocialIcon(item.platform)}
+          </a>
+        );
+      })}
     </div>
   );
 }
@@ -81,9 +107,23 @@ export default function Footer() {
   const t = useTranslations();
   const locale = useLocale();
   const [mounted, setMounted] = useState(false);
+  const [socialLinks, setSocialLinks] = useState<SocialItem[]>([
+    { platform: "instagram", url: "https://instagram.com/kurdeventofficial" },
+    { platform: "facebook", url: "https://www.facebook.com/KurdEventOfficial" },
+    { platform: "twitter", url: "https://twitter.com/Kurd_Event" },
+    { platform: "youtube", url: "https://youtube.com/@kurdevent" },
+  ]);
 
   useEffect(() => {
     setMounted(true);
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (Array.isArray(data?.socialLinks) && data.socialLinks.length > 0) {
+          setSocialLinks(data.socialLinks);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   if (!mounted) return null;
@@ -109,7 +149,7 @@ export default function Footer() {
             <p className="max-w-[260px] text-center text-sm text-slate-600 md:text-left">
               {t("footer.tagline")}
             </p>
-            <SocialRow className="mt-4 flex flex-wrap items-center justify-center gap-4 md:justify-start" />
+            <SocialRow items={socialLinks} className="mt-4 flex flex-wrap items-center justify-center gap-4 md:justify-start" />
           </div>
 
           <div className="flex flex-col items-center md:items-start">

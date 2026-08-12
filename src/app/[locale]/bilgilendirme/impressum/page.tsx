@@ -1,11 +1,60 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
+
+interface ImpressumData {
+  companyName: string;
+  addressValue: string;
+  registrationValue: string;
+  vatIdValue: string;
+  emails: string;
+  phoneValue: string;
+  responsibleValue: string;
+  disputeDesc: string;
+}
 
 export default function ImpressumPage() {
   const t = useTranslations("impressum");
   const locale = useLocale();
   const dateLocale = locale === "tr" ? "tr-TR" : locale === "de" ? "de-DE" : "en-US";
+
+  const [impressum, setImpressum] = useState<ImpressumData>({
+    companyName: t("companyName"),
+    addressValue: t("addressValue"),
+    registrationValue: t("registrationValue"),
+    vatIdValue: t("vatIdValue"),
+    emails: `hallo@kurdevents.org, eventseat21@gmail.com, ${t("emailValue")}`,
+    phoneValue: t("phoneValue"),
+    responsibleValue: t("responsibleValue"),
+    disputeDesc: t("disputeDesc"),
+  });
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.impressum && typeof data.impressum === "object") {
+          setImpressum((prev) => ({
+            ...prev,
+            companyName: data.impressum.companyName || prev.companyName,
+            addressValue: data.impressum.addressValue || prev.addressValue,
+            registrationValue: data.impressum.registrationValue || prev.registrationValue,
+            vatIdValue: data.impressum.vatIdValue || prev.vatIdValue,
+            emails: data.impressum.emails || prev.emails,
+            phoneValue: data.impressum.phoneValue || prev.phoneValue,
+            responsibleValue: data.impressum.responsibleValue || prev.responsibleValue,
+            disputeDesc: data.impressum.disputeDesc || prev.disputeDesc,
+          }));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const emailList = impressum.emails
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
 
   return (
     <div className="w-full min-w-0">
@@ -22,40 +71,42 @@ export default function ImpressumPage() {
         <div className="rounded-lg border border-slate-200 bg-white p-6 space-y-4">
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("company")}</h3>
-            <p className="text-slate-900 font-medium">{t("companyName")}</p>
+            <p className="text-slate-900 font-medium">{impressum.companyName}</p>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("address")}</h3>
-            <p className="text-slate-700 whitespace-pre-line">{t("addressValue")}</p>
+            <p className="text-slate-700 whitespace-pre-line">{impressum.addressValue}</p>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("registration")}</h3>
-            <p className="text-slate-700">{t("registrationValue")}</p>
+            <p className="text-slate-700">{impressum.registrationValue}</p>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("vatId")}</h3>
-            <p className="text-slate-700">{t("vatIdValue")}</p>
+            <p className="text-slate-700">{impressum.vatIdValue}</p>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("contact")}</h3>
-            <p className="text-slate-700">{t("email")}: hallo@kurdevents.org</p>
-            <p className="text-slate-700">{t("email")}: eventseat21@gmail.com</p>
-            <p className="text-slate-700">
-              {t("email")}: {t("emailValue")}
-            </p>
-            <p className="text-slate-700 mt-1">
-              {t("phone")}: {t("phoneValue")}
-            </p>
+            {emailList.map((email, idx) => (
+              <p key={idx} className="text-slate-700">
+                {t("email")}: {email}
+              </p>
+            ))}
+            {impressum.phoneValue && (
+              <p className="text-slate-700 mt-1">
+                {t("phone")}: {impressum.phoneValue}
+              </p>
+            )}
           </div>
           <div>
             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-1">{t("responsible")}</h3>
-            <p className="text-slate-700">{t("responsibleValue")}</p>
+            <p className="text-slate-700">{impressum.responsibleValue}</p>
           </div>
         </div>
 
         <section className="rounded-lg border border-slate-200 bg-white p-4">
           <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">{t("dispute")}</h3>
-          <p className="text-slate-700 text-sm">{t("disputeDesc")}</p>
+          <p className="text-slate-700 text-sm whitespace-pre-line">{impressum.disputeDesc}</p>
         </section>
       </div>
     </div>

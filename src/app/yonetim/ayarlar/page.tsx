@@ -1,9 +1,38 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, Database, Shield, Bell } from "lucide-react";
+import { Save, Database, Shield, Bell, Share2, Plus, Trash2, Building2 } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { supabase } from "@/lib/supabase-client";
+
+export interface SocialLinkItem {
+  platform: string;
+  url: string;
+}
+
+export interface ImpressumSettings {
+  companyName: string;
+  addressValue: string;
+  registrationValue: string;
+  vatIdValue: string;
+  emails: string;
+  phoneValue: string;
+  responsibleValue: string;
+  disputeDesc: string;
+}
+
+const PLATFORM_OPTIONS = [
+  { value: "instagram", label: "Instagram" },
+  { value: "facebook", label: "Facebook" },
+  { value: "twitter", label: "Twitter / X" },
+  { value: "youtube", label: "YouTube" },
+  { value: "tiktok", label: "TikTok" },
+  { value: "linkedin", label: "LinkedIn" },
+  { value: "spotify", label: "Spotify" },
+  { value: "telegram", label: "Telegram" },
+  { value: "whatsapp", label: "WhatsApp" },
+  { value: "website", label: "Web Sitesi" },
+];
 
 export default function AyarlarPage() {
   const [loading, setLoading] = useState(false);
@@ -14,7 +43,23 @@ export default function AyarlarPage() {
     contactEmail: "info@kurdevents.com",
     maxTicketQuantity: 10,
     enableNotifications: true,
-    maintenanceMode: false
+    maintenanceMode: false,
+    socialLinks: [
+      { platform: "instagram", url: "https://instagram.com/kurdeventofficial" },
+      { platform: "facebook", url: "https://www.facebook.com/KurdEventOfficial" },
+      { platform: "twitter", url: "https://twitter.com/Kurd_Event" },
+      { platform: "youtube", url: "https://youtube.com/@kurdevent" },
+    ] as SocialLinkItem[],
+    impressum: {
+      companyName: "White de Soul GmbH",
+      addressValue: "Schulstraße 35\n31708 Ahnsen\nDeutschland",
+      registrationValue: "HRB 201659 (Registergericht: Amtsgericht Stadthagen)",
+      vatIdValue: "DE 32 6783 412",
+      emails: "hallo@kurdevents.org, eventseat21@gmail.com, whitedesoul@gmail.com",
+      phoneValue: "+49 1724 395 385",
+      responsibleValue: "Herr Özgül Adsiz",
+      disputeDesc: "AB tüketicileri, çevrimiçi uyuşmazlık çözüm platformunu kullanabilir: https://www.verbraucher-schlichter.de/",
+    } as ImpressumSettings,
   });
 
   useEffect(() => {
@@ -44,6 +89,8 @@ export default function AyarlarPage() {
             typeof data?.maintenanceMode === "boolean"
               ? data.maintenanceMode
               : s.maintenanceMode,
+          socialLinks: Array.isArray(data?.socialLinks) ? data.socialLinks : s.socialLinks,
+          impressum: data?.impressum && typeof data.impressum === "object" ? { ...s.impressum, ...data.impressum } : s.impressum,
         }));
       })
       .catch(() => {});
@@ -68,6 +115,8 @@ export default function AyarlarPage() {
           maxTicketQuantity: settings.maxTicketQuantity,
           enableNotifications: settings.enableNotifications,
           maintenanceMode: settings.maintenanceMode,
+          socialLinks: settings.socialLinks,
+          impressum: settings.impressum,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -84,6 +133,28 @@ export default function AyarlarPage() {
     }
   }
 
+  function handleAddSocialLink() {
+    setSettings((s) => ({
+      ...s,
+      socialLinks: [...s.socialLinks, { platform: "instagram", url: "" }],
+    }));
+  }
+
+  function handleRemoveSocialLink(index: number) {
+    setSettings((s) => ({
+      ...s,
+      socialLinks: s.socialLinks.filter((_, i) => i !== index),
+    }));
+  }
+
+  function handleUpdateSocialLink(index: number, field: keyof SocialLinkItem, value: string) {
+    setSettings((s) => {
+      const updated = [...s.socialLinks];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...s, socialLinks: updated };
+    });
+  }
+
   return (
     <AdminOnlyGuard>
     <div className="p-8">
@@ -92,7 +163,7 @@ export default function AyarlarPage() {
           Sistem Ayarları
         </h1>
         <p className="text-slate-600 mb-8">
-          Sistem genel ayarlarını yapılandırın.
+          Sistem genel ayarlarını, sosyal medya bağlantılarını ve künye / Impressum bilgilerini yapılandırın.
         </p>
 
         <div className="space-y-6">
@@ -142,6 +213,190 @@ export default function AyarlarPage() {
                 />
               </div>
             </div>
+          </div>
+
+          {/* Impressum & Şirket İletişim Bilgileri */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+              <Building2 className="h-5 w-5 text-slate-600" />
+              Impressum & Şirket İletişim Bilgileri
+            </h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Sitedeki Impressum (Künye) sayfasında gösterilecek yasal şirket ve iletişim bilgilerini yapılandırın.
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Şirket Unvanı
+                </label>
+                <input
+                  type="text"
+                  value={settings.impressum.companyName}
+                  onChange={(e) => setSettings({...settings, impressum: {...settings.impressum, companyName: e.target.value}})}
+                  placeholder="White de Soul GmbH"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Ticaret Sicil No & Mahkemesi
+                </label>
+                <input
+                  type="text"
+                  value={settings.impressum.registrationValue}
+                  onChange={(e) => setSettings({...settings, impressum: {...settings.impressum, registrationValue: e.target.value}})}
+                  placeholder="HRB 201659 (Registergericht: Amtsgericht Stadthagen)"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Vergi Numarası (USt-IdNr.)
+                </label>
+                <input
+                  type="text"
+                  value={settings.impressum.vatIdValue}
+                  onChange={(e) => setSettings({...settings, impressum: {...settings.impressum, vatIdValue: e.target.value}})}
+                  placeholder="DE 32 6783 412"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Telefon Numarası
+                </label>
+                <input
+                  type="text"
+                  value={settings.impressum.phoneValue}
+                  onChange={(e) => setSettings({...settings, impressum: {...settings.impressum, phoneValue: e.target.value}})}
+                  placeholder="+49 1724 395 385"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Sorumlu Kişi (Vertreten durch)
+                </label>
+                <input
+                  type="text"
+                  value={settings.impressum.responsibleValue}
+                  onChange={(e) => setSettings({...settings, impressum: {...settings.impressum, responsibleValue: e.target.value}})}
+                  placeholder="Herr Özgül Adsiz"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  E-posta Adresleri (Virgülle ayırın)
+                </label>
+                <input
+                  type="text"
+                  value={settings.impressum.emails}
+                  onChange={(e) => setSettings({...settings, impressum: {...settings.impressum, emails: e.target.value}})}
+                  placeholder="hallo@kurdevents.org, eventseat21@gmail.com, whitedesoul@gmail.com"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Tebligat & Şirket Adresi
+                </label>
+                <textarea
+                  value={settings.impressum.addressValue}
+                  onChange={(e) => setSettings({...settings, impressum: {...settings.impressum, addressValue: e.target.value}})}
+                  rows={3}
+                  placeholder="Schulstraße 35&#10;31708 Ahnsen&#10;Deutschland"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Uyuşmazlık Çözümü Metni & Linki
+                </label>
+                <textarea
+                  value={settings.impressum.disputeDesc}
+                  onChange={(e) => setSettings({...settings, impressum: {...settings.impressum, disputeDesc: e.target.value}})}
+                  rows={2}
+                  placeholder="AB tüketicileri, çevrimiçi uyuşmazlık çözüm platformunu kullanabilir: https://www.verbraucher-schlichter.de/"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Sosyal Medya Ayarları */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                <Share2 className="h-5 w-5 text-slate-600" />
+                Sosyal Medya Bağlantıları
+              </h3>
+              <button
+                type="button"
+                onClick={handleAddSocialLink}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-primary-700 bg-primary-50 hover:bg-primary-100 rounded-lg transition-colors"
+              >
+                <Plus className="h-4 w-4" />
+                Yeni Sosyal Medya Ekle
+              </button>
+            </div>
+            
+            <p className="text-sm text-slate-500 mb-4">
+              Footer ve site genelinde görüntülenecek sosyal medya ikonlarını ve bağlantı adreslerini yönetin.
+            </p>
+
+            {settings.socialLinks.length === 0 ? (
+              <div className="p-4 bg-slate-50 rounded-lg text-center text-sm text-slate-500">
+                Henüz eklenmiş sosyal medya bağlantısı yok. Yukarıdaki butondan ekleyebilirsiniz.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {settings.socialLinks.map((item, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="w-1/3 min-w-[130px]">
+                      <select
+                        value={item.platform}
+                        onChange={(e) => handleUpdateSocialLink(index, "platform", e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:border-primary-500 focus:ring-primary-500"
+                      >
+                        {PLATFORM_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="flex-1">
+                      <input
+                        type="url"
+                        value={item.url}
+                        onChange={(e) => handleUpdateSocialLink(index, "url", e.target.value)}
+                        placeholder="https://..."
+                        className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white focus:border-primary-500 focus:ring-primary-500"
+                      />
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSocialLink(index)}
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Bağlantıyı Sil"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Bildirim Ayarları */}
@@ -246,7 +501,7 @@ export default function AyarlarPage() {
               className="flex items-center gap-2 px-6 py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Save className="h-4 w-4" />
-              {loading ? "Kaydediliyor..." : "Ayarları Kaydet"}
+              {loading ? "Kaydedilizce..." : "Ayarları Kaydet"}
             </button>
           </div>
         </div>

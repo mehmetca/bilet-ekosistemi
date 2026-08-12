@@ -10,6 +10,24 @@ import { logAuditServer } from "@/lib/audit";
 export const revalidate = 3600;
 
 const DEFAULT_MAX_TICKET_QUANTITY = 10;
+const DEFAULT_SOCIAL_LINKS = [
+  { platform: "instagram", url: "https://instagram.com/kurdeventofficial" },
+  { platform: "facebook", url: "https://www.facebook.com/KurdEventOfficial" },
+  { platform: "twitter", url: "https://twitter.com/Kurd_Event" },
+  { platform: "youtube", url: "https://youtube.com/@kurdevent" },
+];
+
+const DEFAULT_IMPRESSUM = {
+  companyName: "White de Soul GmbH",
+  addressValue: "Schulstraße 35\n31708 Ahnsen\nDeutschland",
+  registrationValue: "HRB 201659 (Registergericht: Amtsgericht Stadthagen)",
+  vatIdValue: "DE 32 6783 412",
+  emails: "hallo@kurdevents.org, eventseat21@gmail.com, whitedesoul@gmail.com",
+  phoneValue: "+49 1724 395 385",
+  responsibleValue: "Herr Özgül Adsiz",
+  disputeDesc: "AB tüketicileri, çevrimiçi uyuşmazlık çözüm platformunu kullanabilir: https://www.verbraucher-schlichter.de/",
+};
+
 const DEFAULT_SETTINGS = {
   siteName: "KurdEvents",
   siteDescription: "Modern bilet satış platformu",
@@ -17,6 +35,8 @@ const DEFAULT_SETTINGS = {
   maxTicketQuantity: DEFAULT_MAX_TICKET_QUANTITY,
   enableNotifications: true,
   maintenanceMode: false,
+  socialLinks: DEFAULT_SOCIAL_LINKS,
+  impressum: DEFAULT_IMPRESSUM,
 };
 
 type SettingsResponse = typeof DEFAULT_SETTINGS;
@@ -33,6 +53,39 @@ function normalizeSettings(rows: SiteSettingRow[] | null | undefined): SettingsR
     typeof rawMax === "number"
       ? Math.max(1, Math.min(100, Math.floor(rawMax)))
       : DEFAULT_MAX_TICKET_QUANTITY;
+
+  const rawSocial = byKey.get("social_links");
+  let socialLinks = DEFAULT_SOCIAL_LINKS;
+  if (Array.isArray(rawSocial)) {
+    socialLinks = rawSocial
+      .filter(
+        (item: any) =>
+          item &&
+          typeof item === "object" &&
+          typeof item.platform === "string" &&
+          typeof item.url === "string"
+      )
+      .map((item: any) => ({
+        platform: String(item.platform).trim(),
+        url: String(item.url).trim(),
+      }));
+  }
+
+  const rawImpressum = byKey.get("impressum_settings");
+  let impressum = DEFAULT_IMPRESSUM;
+  if (rawImpressum && typeof rawImpressum === "object") {
+    const imp = rawImpressum as Record<string, unknown>;
+    impressum = {
+      companyName: typeof imp.companyName === "string" ? imp.companyName : DEFAULT_IMPRESSUM.companyName,
+      addressValue: typeof imp.addressValue === "string" ? imp.addressValue : DEFAULT_IMPRESSUM.addressValue,
+      registrationValue: typeof imp.registrationValue === "string" ? imp.registrationValue : DEFAULT_IMPRESSUM.registrationValue,
+      vatIdValue: typeof imp.vatIdValue === "string" ? imp.vatIdValue : DEFAULT_IMPRESSUM.vatIdValue,
+      emails: typeof imp.emails === "string" ? imp.emails : DEFAULT_IMPRESSUM.emails,
+      phoneValue: typeof imp.phoneValue === "string" ? imp.phoneValue : DEFAULT_IMPRESSUM.phoneValue,
+      responsibleValue: typeof imp.responsibleValue === "string" ? imp.responsibleValue : DEFAULT_IMPRESSUM.responsibleValue,
+      disputeDesc: typeof imp.disputeDesc === "string" ? imp.disputeDesc : DEFAULT_IMPRESSUM.disputeDesc,
+    };
+  }
 
   return {
     siteName: typeof byKey.get("site_name") === "string" ? String(byKey.get("site_name")) : DEFAULT_SETTINGS.siteName,
@@ -53,6 +106,8 @@ function normalizeSettings(rows: SiteSettingRow[] | null | undefined): SettingsR
       typeof byKey.get("maintenance_mode") === "boolean"
         ? Boolean(byKey.get("maintenance_mode"))
         : DEFAULT_SETTINGS.maintenanceMode,
+    socialLinks,
+    impressum,
   };
 }
 
@@ -69,6 +124,8 @@ async function fetchPublicSettings(): Promise<SettingsResponse> {
       "max_ticket_quantity",
       "enable_notifications",
       "maintenance_mode",
+      "social_links",
+      "impressum_settings",
     ]);
 
   if (error) return DEFAULT_SETTINGS;
@@ -147,6 +204,30 @@ export async function POST(request: NextRequest) {
       typeof body.enableNotifications === "boolean" ? body.enableNotifications : undefined;
     const maintenanceMode =
       typeof body.maintenanceMode === "boolean" ? body.maintenanceMode : undefined;
+    const socialLinks = Array.isArray(body.socialLinks)
+      ? body.socialLinks
+          .filter(
+            (item: any) =>
+              item && typeof item.platform === "string" && typeof item.url === "string"
+          )
+          .map((item: any) => ({
+            platform: String(item.platform).trim().toLowerCase(),
+            url: String(item.url).trim(),
+          }))
+      : undefined;
+    const impressum =
+      body.impressum && typeof body.impressum === "object"
+        ? {
+            companyName: String(body.impressum.companyName || "").trim(),
+            addressValue: String(body.impressum.addressValue || "").trim(),
+            registrationValue: String(body.impressum.registrationValue || "").trim(),
+            vatIdValue: String(body.impressum.vatIdValue || "").trim(),
+            emails: String(body.impressum.emails || "").trim(),
+            phoneValue: String(body.impressum.phoneValue || "").trim(),
+            responsibleValue: String(body.impressum.responsibleValue || "").trim(),
+            disputeDesc: String(body.impressum.disputeDesc || "").trim(),
+          }
+        : undefined;
 
     if (
       siteName === undefined ||
@@ -154,7 +235,9 @@ export async function POST(request: NextRequest) {
       contactEmail === undefined ||
       maxTicketQuantity === undefined ||
       enableNotifications === undefined ||
-      maintenanceMode === undefined
+      maintenanceMode === undefined ||
+      socialLinks === undefined ||
+      impressum === undefined
     ) {
       return NextResponse.json(
         { error: "Ayar alanları geçersiz. Tüm alanları doğru formatta gönderin." },
@@ -169,6 +252,8 @@ export async function POST(request: NextRequest) {
       { key: "max_ticket_quantity", value: maxTicketQuantity },
       { key: "enable_notifications", value: enableNotifications },
       { key: "maintenance_mode", value: maintenanceMode },
+      { key: "social_links", value: socialLinks },
+      { key: "impressum_settings", value: impressum },
     ];
 
     const { error: upsertError } = await supabase
@@ -195,6 +280,8 @@ export async function POST(request: NextRequest) {
         maxTicketQuantity,
         enableNotifications,
         maintenanceMode,
+        socialLinks,
+        impressum,
       },
       user_id: user.id,
       user_email: user.email ?? null,
@@ -211,6 +298,8 @@ export async function POST(request: NextRequest) {
         maxTicketQuantity,
         enableNotifications,
         maintenanceMode,
+        socialLinks,
+        impressum,
       },
     });
     applyMaintenanceCookie(res, maintenanceMode);
