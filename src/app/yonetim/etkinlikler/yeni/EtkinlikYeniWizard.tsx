@@ -1189,7 +1189,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         : "Etkinlik oluşturuldu!";
       alert(message);
       await revalidatePublicSiteCache();
-      router.push(`/tr/etkinlik/${insertedEventId}`);
+      if (isAdmin) {
+        router.push(`/tr/etkinlik/${insertedEventId}`);
+      } else {
+        router.push(`/yonetim/etkinlikler`);
+      }
     } catch (err) {
       console.error("Wizard submit error:", err);
       let msg = "Bilinmeyen hata";
