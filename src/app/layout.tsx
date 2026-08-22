@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import DeferredSpeedInsights from "@/components/DeferredSpeedInsights";
 import Providers from "@/components/Providers";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import { getSiteUrl } from "@/lib/site-url";
@@ -48,7 +47,6 @@ export default function RootLayout({
         <SimpleAuthProvider>
           <Providers>{children}</Providers>
         </SimpleAuthProvider>
-        <DeferredSpeedInsights />
       </body>
     </html>
   );

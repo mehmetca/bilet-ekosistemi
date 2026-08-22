@@ -1,6 +1,6 @@
 /**
  * Etkinlik hatırlatma maili gönderir.
- * Resend API kullanır (bilet maili ile aynı altyapı).
+ * SMTP kullanır (bilet maili ile aynı altyapı).
  */
 
 import nodemailer from "nodemailer";
