@@ -11,18 +11,27 @@ export async function sendControllerGuideEmail(input: {
     const smtpUser = process.env.SMTP_USER;
     const smtpPass = process.env.SMTP_PASS;
     const smtpFrom = process.env.SMTP_FROM;
+
     if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
+      console.error("SMTP ENV eksik:", {
+        smtpHost,
+        smtpPort,
+        smtpUser,
+        smtpPass,
+        smtpFrom,
+      });
       return { sent: false, reason: "SMTP yapılandırması eksik." };
     }
 
     const guideUrl = `${getSiteUrl()}/yonetim/bilet-kontrol/kullanim-klavuzu`;
+
     const subject = "KurdEvents Kontrolör Kullanım Kılavuzu";
     const html = `
       <div style="font-family:Arial,sans-serif;background:#eef2f7;padding:24px;">
         <div style="max-width:620px;margin:0 auto;background:#fff;border-radius:12px;padding:24px;border:1px solid #e2e8f0;">
           <h2 style="margin:0 0 12px;color:#0f172a;">Merhaba ${input.fullName},</h2>
           <p style="margin:0 0 10px;color:#334155;line-height:1.6;">
-            Kontrolör başvurun alınmıştır. Onay sürecinden sonra bilet kontrol görevine başlayabilirsiniz.
+            Kontrolör başvurun alınmıştır. Onay sürecinden sonra bilet kontrol görevine başlayabilirsin.
           </p>
           <p style="margin:0 0 10px;color:#334155;line-height:1.6;">
             Aşağıdaki bağlantıda görselli kullanım kılavuzu yer alır:
@@ -42,7 +51,7 @@ export async function sendControllerGuideEmail(input: {
     const transporter = nodemailer.createTransport({
       host: smtpHost,
       port: Number(smtpPort),
-      secure: false,
+      secure: false, // SES için doğru
       auth: {
         user: smtpUser,
         pass: smtpPass,
@@ -56,10 +65,12 @@ export async function sendControllerGuideEmail(input: {
       html,
     };
 
-    await transporter.sendMail(mailOptions);
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Mail gönderildi:", info.messageId);
+
     return { sent: true };
   } catch (error: any) {
+    console.error("Mail gönderilemedi:", error);
     return { sent: false, reason: error.message };
   }
 }
-
