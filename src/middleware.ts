@@ -17,6 +17,10 @@ const AUTH_SESSION_PATH_RE =
   /^\/(?:yonetim|auth|kontrol)(?:\/|$)|^\/(?:(?:tr|de|en|ku|ckb)\/)?(?:giris|sifre-yenile|sepet|bilgilerim|organizator-basvuru|panel)(?:\/|$)/;
 const SUPABASE_SESSION_COOKIE_RE = /^sb-.+-auth-token(?:\.\d+)?$/;
 
+// Maintenance mode cache - CPU yoğunluk azaltmak için
+const maintenanceCache = new Map<string, {enabled: boolean, timestamp: number}>();
+const MAINTENANCE_CACHE_DURATION = 60000; // 1 dakika
+
 function isAppLocale(v: string | undefined | null): v is (typeof routing.locales)[number] {
   return !!v && APP_LOCALES.includes(v);
 }
@@ -112,7 +116,17 @@ export async function middleware(request: NextRequest) {
   // Bakım modu (hafif): çerez → bellek → DB (nadiren). Yönetim/giriş açık kalır.
   if (!isMaintenanceBypassPath(pathname)) {
     try {
-      const mnt = await resolveMaintenanceMode(request.cookies.get(MAINTENANCE_COOKIE)?.value);
+      const cookieValue = request.cookies.get(MAINTENANCE_COOKIE)?.value;
+      const cacheKey = cookieValue || 'default';
+      const cached = maintenanceCache.get(cacheKey);
+      
+      let mnt;
+      if (cached && Date.now() - cached.timestamp < MAINTENANCE_CACHE_DURATION) {
+        mnt = { enabled: cached.enabled };
+      } else {
+        mnt = await resolveMaintenanceMode(cookieValue);
+        maintenanceCache.set(cacheKey, { enabled: mnt.enabled, timestamp: Date.now() });
+      }
 
       if (isBakimPath(pathname)) {
         if (!mnt.enabled) {

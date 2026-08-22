@@ -12,7 +12,17 @@ const nextConfig = {
   transpilePackages: ["lucide-react", "next-intl", "use-intl", "konva"],
   experimental: {
     optimizePackageImports: ["lucide-react"],
+    // ISR optimization
+    isrMemoryCacheSize: 50, // MB
+    staleTimes: {
+      static: 180, // 3 minutes
+      dynamic: 3600, // 1 hour
+    },
   },
+  
+  // Cloudflare Pages için ayarlar (geçiş hazırlığı)
+  // Bunları Vercel deployment'de sorun yaratmaz
+  trailingSlash: true,
   // Sentry / OpenTelemetry webpack vendor-chunks (örn. @opentelemetry.js) Windows dev'de
   // eksik dosya → MODULE_NOT_FOUND. Sunucuda paketleri bundle dışı bırakır.
   serverExternalPackages: [
@@ -117,6 +127,28 @@ const nextConfig = {
           ],
         }
       );
+    } else {
+      // Production'da agresif caching
+      rules.push(
+        {
+          source: "/api/events",
+          headers: [
+            {
+              key: "Cache-Control",
+              value: "public, s-maxage=60, stale-while-revalidate=30",
+            },
+          ],
+        },
+        {
+          source: "/api/(.*)",
+          headers: [
+            {
+              key: "Cache-Control",
+              value: "public, s-maxage=30, stale-while-revalidate=15",
+            },
+          ],
+        }
+      );
     }
 
     return rules;
@@ -160,7 +192,13 @@ const nextConfig = {
         pathname: '/uploads/**',
       },
     ],
+    // Cache optimization
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60,
   },
+  // Cache optimization
+  swcMinify: true,
+  compress: true,
 };
 
 export default async function config(phase) {

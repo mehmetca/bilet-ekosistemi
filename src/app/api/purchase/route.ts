@@ -17,6 +17,7 @@ import {
 } from "@/lib/ticket-seating-match";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { getFulfillmentAuthToken } from "@/lib/fulfillment-auth";
+import nodemailer from "nodemailer";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -186,7 +187,7 @@ async function assignBestAvailableSeats(
     (orderSeats || []).forEach((s: { seat_id: string }) => soldSet.add(s.seat_id));
   }
 
-  // Aktif hold’lu koltukları kategori atamasından çıkar (başkasının sepetindeki koltuğu çalma)
+  // Aktif hold'lu koltukları kategori atamasından çıkar (başkasının sepetindeki koltuğu çalma)
   const heldSet = new Set<string>();
   const nowIso = new Date().toISOString();
   const { data: activeHolds } = await supabase
@@ -256,10 +257,10 @@ async function assignBestAvailableSeats(
 /** E-posta HTML enjeksiyonuna karşı kullanıcı/alan metinlerini kaçır. */
 function escapeHtml(value: unknown): string {
   return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/"/g, """)
     .replace(/'/g, "&#39;");
 }
 
@@ -277,6 +278,7 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
   const multiSeat = payload.seatDetails && payload.seatDetails.length > 1;
   const multiCode = payload.ticketCodes && payload.ticketCodes.length > 1;
 
+  // Primary HTML - tek bilet veya çoklu koltuk
   if (multiSeat) {
     const rows = payload.seatDetails!.map(
       (s, i) =>
@@ -302,7 +304,10 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
   `;
   }
 
-  if (multiCode) {
+  // Single ticket mode or multiCode
+  const isMultiCode = payload.ticketCodes && payload.ticketCodes.length > 1;
+
+  if (isMultiCode) {
     const rows = payload.ticketCodes!
       .map(
         (code, i) =>
@@ -329,6 +334,7 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
   `;
   }
 
+  // Single ticket - main layout
   const leftVerticalTicketCodeHtml = ticketCode
     .split("")
     .map((ch) => `<span style="display:block;line-height:9px;">${ch}</span>`)
@@ -369,18 +375,14 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
                       <p style="margin:0;color:#000;font-size:10px;font-weight:700;letter-spacing:.4px;">MUSTERI/ETKINLIK BILETI</p>
                       <p style="margin:6px 0 0;font-size:52px;line-height:50px;font-weight:900;color:#000;">${eventTitle}</p>
                       <p style="margin:12px 0 0;font-size:18px;line-height:22px;font-weight:800;color:#000;">${eventDateText}, ${timeText}</p>
-                      <p style="margin:4px 0 0;font-size:13px;line-height:16px;color:#000;font-weight:700;">${venueText}</p>
+                      <p style="margin:4px 0 0;font-size:13px;color:#000;">${venueText}</p>
                       <p style="margin:2px 0 0;font-size:13px;color:#000;">${locationText}</p>
                       <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;border-collapse:collapse;">
                         <tr>
                           <td style="padding:2px 0;font-size:12px;color:#000;">Bilet Turu</td>
                           <td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${ticketType}</td>
                         </tr>
-                        ${
-                          seatLine
-                            ? `<tr><td style="padding:2px 0;font-size:12px;color:#000;">Platz / Koltuk</td><td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${seatLine}</td></tr>`
-                            : ""
-                        }
+                        ${seatLine ? `<tr><td style="padding:2px 0;font-size:12px;color:#000;">Platz / Koltuk</td><td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${seatLine}</td></tr>` : ""}
                         <tr>
                           <td style="padding:2px 0;font-size:12px;color:#000;">Kisi/Adet</td>
                           <td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${buyerName} / ${payload.quantity}</td>
@@ -802,110 +804,62 @@ async function buildTicketPdfMultiPageBase64(payload: TicketMailPayload): Promis
 
 async function sendTicketEmail(payload: TicketMailPayload) {
   try {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey) {
-      return { sent: false, reason: "RESEND_API_KEY tanımlı değil." };
-    }
-
-    const fromAddress = process.env.TICKET_EMAIL_FROM;
-    if (!fromAddress) {
-      return { sent: false, reason: "TICKET_EMAIL_FROM tanımlı değil (doğrulanmış gönderici adresi girin)." };
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = process.env.SMTP_PORT;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpFrom = process.env.SMTP_FROM;
+    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
+      return { sent: false, reason: "SMTP yapılandırması eksik." };
     }
 
     const subject = `Biletiniz hazır: ${payload.ticketCode}`;
-  const qrCodeDataUrl = await buildQrCodeDataUrl(payload);
-  const barcodeDataUrl = await buildCode128DataUrl(payload.ticketCode);
-  const qrContentId = `ticket-qr-${payload.ticketCode.toLowerCase()}`;
-  const barcodeContentId = `ticket-barcode-${payload.ticketCode.toLowerCase()}`;
-  const html = buildTicketEmailHtml(payload, qrContentId, barcodeContentId);
+    const qrCodeDataUrl = await buildQrCodeDataUrl(payload);
+    const barcodeDataUrl = await buildCode128DataUrl(payload.ticketCode);
+    const qrContentId = `ticket-qr-${payload.ticketCode.toLowerCase()}`;
+    const barcodeContentId = `ticket-barcode-${payload.ticketCode.toLowerCase()}`;
+    const html = buildTicketEmailHtml(payload, qrContentId, barcodeContentId);
     const pdfAttachment = await buildTicketPdfMultiPageBase64(payload);
-  const qrAttachment = dataUrlToBase64(qrCodeDataUrl);
-  const barcodeAttachment = dataUrlToBase64(barcodeDataUrl);
+    const qrAttachment = dataUrlToBase64(qrCodeDataUrl);
+    const barcodeAttachment = dataUrlToBase64(barcodeDataUrl);
 
-    const primaryResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${resendApiKey}`,
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: Number(smtpPort),
+      secure: false,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
       },
-      body: JSON.stringify({
-        from: fromAddress,
-        to: [payload.buyerEmail],
-        subject,
-        html,
-        attachments: [
-          {
-            filename: "kurdevents-e-bilet.pdf",
-            content: pdfAttachment,
-          },
-          {
-            filename: "kurdevents-e-ticket-qr.png",
-            content: qrAttachment,
-            content_id: qrContentId,
-          },
-          {
-            filename: "kurdevents-e-ticket-barcode.png",
-            content: barcodeAttachment,
-            content_id: barcodeContentId,
-          },
-        ],
-      }),
     });
 
-    if (primaryResponse.ok) {
-      return { sent: true };
-    }
-
-    const primaryErrorText = await primaryResponse.text();
-
-    // Fallback: daha da sade içerik, sadece PDF eki.
-    const fallbackHtml = `
-      <div style="font-family:Arial,sans-serif;color:#0f172a;">
-        <h2 style="margin:0 0 10px;">Merhaba ${payload.buyerName},</h2>
-        <p style="margin:0 0 8px;">Biletiniz hazır.</p>
-        <p style="margin:0 0 4px;"><strong>Bilet Kodu:</strong> ${payload.ticketCode}</p>
-        <p style="margin:0 0 4px;"><strong>Etkinlik:</strong> ${payload.eventTitle || "Etkinlik"}</p>
-        <p style="margin:0 0 4px;"><strong>Tarih/Saat:</strong> ${payload.eventDate || "-"} ${payload.eventTime || "--:--"}</p>
-        <p style="margin:0;">PDF bilet ektedir.</p>
-      </div>
-    `;
-
-    const fallbackResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${resendApiKey}`,
-      },
-      body: JSON.stringify({
-        from: fromAddress,
-        to: [payload.buyerEmail],
-        subject,
-        html: fallbackHtml,
-        attachments: [
-          {
-            filename: "kurdevents-e-bilet.pdf",
-            content: pdfAttachment,
-          },
-        ],
-      }),
-    });
-
-    if (fallbackResponse.ok) {
-      return { sent: true };
-    }
-
-    const fallbackErrorText = await fallbackResponse.text();
-    return {
-      sent: false,
-      reason: `Primary: ${primaryErrorText || `HTTP ${primaryResponse.status}`} | Fallback: ${
-        fallbackErrorText || `HTTP ${fallbackResponse.status}`
-      }`,
+    const mailOptions = {
+      from: smtpFrom,
+      to: [payload.buyerEmail],
+      subject,
+      html,
+      attachments: [
+        {
+          filename: "kurdevents-e-bilet.pdf",
+          content: pdfAttachment,
+        },
+        {
+          filename: "kurdevents-e-ticket-qr.png",
+          content: qrAttachment,
+          content_id: qrContentId,
+        },
+        {
+          filename: "kurdevents-e-ticket-barcode.png",
+          content: barcodeAttachment,
+          content_id: barcodeContentId,
+        },
+      ],
     };
-  } catch (error) {
-    return {
-      sent: false,
-      reason: error instanceof Error ? error.message : "Bilinmeyen e-posta hatası",
-    };
+
+    await transporter.sendMail(mailOptions);
+    return { sent: true };
+  } catch (error: any) {
+    return { sent: false, reason: error.message };
   }
 }
 
@@ -963,85 +917,91 @@ async function sendAdminOrderNotification(payload: {
   shippingFee?: number;
   adminEmail: string;
 }) {
-  const resendApiKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.TICKET_EMAIL_FROM;
-  if (!resendApiKey || !fromAddress || !payload.adminEmail) {
-    return { sent: false, reason: "Admin bildirim ayarları eksik." };
-  }
+  try {
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = process.env.SMTP_PORT;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpFrom = process.env.SMTP_FROM;
+    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
+      return { sent: false, reason: "SMTP yapılandırması eksik." };
+    }
 
-  const currency = (payload.currency || "EUR").toUpperCase();
-  const isPhysical =
-    payload.physicalDelivery &&
-    payload.physicalDelivery !== "none" &&
-    payload.buyerAddress &&
-    payload.buyerPlz &&
-    payload.buyerCity;
+    const currency = (payload.currency || "EUR").toUpperCase();
+    const isPhysical =
+      payload.physicalDelivery &&
+      payload.physicalDelivery !== "none" &&
+      payload.buyerAddress &&
+      payload.buyerPlz &&
+      payload.buyerCity;
 
-  const seatLines =
-    payload.seatDetails && payload.seatDetails.length > 0
-      ? payload.seatDetails
-          .map(
-            (s) =>
-              `${escapeHtml(s.section_name)} / ${escapeHtml(s.row_label)} / ${escapeHtml(s.seat_label)}`
-          )
-          .join("<br/>")
-      : "";
+    const seatLines =
+      payload.seatDetails && payload.seatDetails.length > 0
+        ? payload.seatDetails
+            .map(
+              (s) =>
+                `${escapeHtml(s.section_name)} / ${escapeHtml(s.row_label)} / ${escapeHtml(s.seat_label)}`
+            )
+            .join("<br/>")
+        : "";
 
-  const codes =
-    payload.ticketCodes && payload.ticketCodes.length > 0
-      ? payload.ticketCodes.map(escapeHtml).join(", ")
-      : escapeHtml(payload.ticketCode);
+    const codes =
+      payload.ticketCodes && payload.ticketCodes.length > 0
+        ? payload.ticketCodes.map(escapeHtml).join(", ")
+        : escapeHtml(payload.ticketCode);
 
-  const subject = isPhysical
-    ? `Yeni sipariş (fiziksel): ${payload.ticketCode}`
-    : `Yeni sipariş: ${payload.ticketCode}`;
+    const subject = isPhysical
+      ? `Yeni sipariş (fiziksel): ${payload.ticketCode}`
+      : `Yeni sipariş: ${payload.ticketCode}`;
 
-  const html = `
-    <div style="font-family:Arial,sans-serif;color:#0f172a;">
-      <h2 style="margin:0 0 10px;">Yeni sipariş bildirimi</h2>
-      <p style="margin:0 0 8px;"><strong>Etkinlik:</strong> ${escapeHtml(payload.eventTitle || "-")}</p>
-      <p style="margin:0 0 8px;"><strong>Tarih/Saat:</strong> ${escapeHtml(payload.eventDate || "-")} ${escapeHtml(payload.eventTime || "")}</p>
-      <p style="margin:0 0 8px;"><strong>Mekan:</strong> ${escapeHtml(payload.venue || "-")}</p>
-      <p style="margin:0 0 8px;"><strong>Bilet türü:</strong> ${escapeHtml(payload.ticketType)}</p>
-      <p style="margin:0 0 8px;"><strong>Adet:</strong> ${payload.quantity}</p>
-      <p style="margin:0 0 8px;"><strong>Tutar:</strong> ${escapeHtml(currency)} ${Number(payload.totalPrice || 0).toFixed(2)}</p>
-      <p style="margin:0 0 8px;"><strong>Bilet kodu(ları):</strong> ${codes}</p>
-      ${seatLines ? `<p style="margin:0 0 8px;"><strong>Koltuklar:</strong><br/>${seatLines}</p>` : ""}
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;" />
-      <p style="margin:0 0 8px;"><strong>Alıcı:</strong> ${escapeHtml(payload.buyerName)}</p>
-      <p style="margin:0 0 8px;"><strong>E-posta:</strong> ${escapeHtml(payload.buyerEmail)}</p>
-      ${
-        isPhysical
+    const html = `
+      <div style="font-family:Arial,sans-serif;color:#0f172a;">
+        <h2 style="margin:0 0 10px;">Yeni sipariş bildirimi</h2>
+        <p style="margin:0 0 8px;"><strong>Etkinlik:</strong> ${escapeHtml(payload.eventTitle || "-")}</p>
+        <p style="margin:0 0 8px;"><strong>Tarih/Saat:</strong> ${escapeHtml(payload.eventDate || "-")} ${escapeHtml(payload.eventTime || "")}</p>
+        <p style="margin:0 0 8px;"><strong>Mekan:</strong> ${escapeHtml(payload.venue || "-")}</p>
+        <p style="margin:0 0 8px;"><strong>Bilet türü:</strong> ${escapeHtml(payload.ticketType)}</p>
+        <p style="margin:0 0 8px;"><strong>Adet:</strong> ${payload.quantity}</p>
+        <p style="margin:0 0 8px;"><strong>Tutar:</strong> ${escapeHtml(currency)} ${Number(payload.totalPrice || 0).toFixed(2)}</p>
+        <p style="margin:0 0 8px;"><strong>Bilet kodu(ları):</strong> ${codes}</p>
+        ${seatLines ? `<p style="margin:0 0 8px;"><strong>Koltuklar:</strong><br/>${seatLines}</p>` : ""}
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;" />
+        <p style="margin:0 0 8px;"><strong>Alıcı:</strong> ${escapeHtml(payload.buyerName)}</p>
+        <p style="margin:0 0 8px;"><strong>E-posta:</strong> ${escapeHtml(payload.buyerEmail)}</p>
+        ${isPhysical
           ? `
-      <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;" />
-      <p style="margin:0 0 8px;"><strong>Teslimat:</strong> ${escapeHtml(payload.physicalDelivery)}</p>
-      <p style="margin:0 0 8px;"><strong>Kargo ücreti:</strong> ${escapeHtml(currency)} ${Number(payload.shippingFee || 0).toFixed(2)}</p>
-      <p style="margin:0;"><strong>Adres:</strong> ${escapeHtml(payload.buyerAddress)}, ${escapeHtml(payload.buyerPlz)} ${escapeHtml(payload.buyerCity)}</p>
-      `
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:12px 0;" />
+        <p style="margin:0 0 8px;"><strong>Teslimat:</strong> ${escapeHtml(payload.physicalDelivery)}</p>
+        <p style="margin:0 0 8px;"><strong>Kargo ücreti:</strong> ${escapeHtml(currency)} ${Number(payload.shippingFee || 0).toFixed(2)}</p>
+        <p style="margin:0;"><strong>Adres:</strong> ${escapeHtml(payload.buyerAddress)}, ${escapeHtml(payload.buyerPlz)} ${escapeHtml(payload.buyerCity)}</p>
+        `
           : `<p style="margin:0;"><strong>Teslimat:</strong> E-bilet</p>`
-      }
-    </div>
-  `;
+        }
+      </div>
+    `;
 
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${resendApiKey}`,
-    },
-    body: JSON.stringify({
-      from: fromAddress,
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: Number(smtpPort),
+      secure: false,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
+      },
+    });
+
+    const mailOptions = {
+      from: smtpFrom,
       to: [payload.adminEmail],
       subject,
       html,
-    }),
-  });
+    };
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    return { sent: false, reason: text || "Admin bildirimi gönderilemedi." };
+    await transporter.sendMail(mailOptions);
+    return { sent: true };
+  } catch (error: any) {
+    return { sent: false, reason: error.message };
   }
-  return { sent: true };
 }
 
 export async function POST(request: NextRequest) {
@@ -1138,11 +1098,7 @@ export async function POST(request: NextRequest) {
     if (shippingFee > 0) {
       if (!buyerAddress || !buyerPlz || !buyerCity) {
         return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Basılı bilet gönderimi için adres, posta kodu ve şehir alanlarının tamamı zorunludur.",
-          },
+          { success: false, message: "Basılı bilet gönderimi için adres, posta kodu ve şehir alanlarının tamamı zorunludur." },
           { status: 400 }
         );
       }
@@ -1540,7 +1496,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Aynı oturum+aynı bilet kombinasyonu daha önce tamamlandıysa tekrar sipariş üretme.
+    // Aynı oturum+aynı bilet kombinasyonu daha önce tamamlanda sipariş üretme.
     // Not: Bu kontrolü ödeme tutarı dağıtım kontrolünden önce yapıyoruz.
     // Aksi halde duplicate finalize çağrısı idempotent olarak başarılı dönmek yerine
     // "sipariş tutarı aşılıyor" hatasına düşebiliyor.

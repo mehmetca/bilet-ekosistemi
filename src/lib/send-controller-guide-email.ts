@@ -1,14 +1,19 @@
 import { getSiteUrl } from "@/lib/site-url";
+import nodemailer from "nodemailer";
 
 export async function sendControllerGuideEmail(input: {
   email: string;
   fullName: string;
 }): Promise<{ sent: boolean; reason?: string }> {
   try {
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const fromAddress = process.env.TICKET_EMAIL_FROM;
-    if (!resendApiKey) return { sent: false, reason: "RESEND_API_KEY tanımlı değil." };
-    if (!fromAddress) return { sent: false, reason: "TICKET_EMAIL_FROM tanımlı değil." };
+    const smtpHost = process.env.SMTP_HOST;
+    const smtpPort = process.env.SMTP_PORT;
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
+    const smtpFrom = process.env.SMTP_FROM;
+    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
+      return { sent: false, reason: "SMTP yapılandırması eksik." };
+    }
 
     const guideUrl = `${getSiteUrl()}/yonetim/bilet-kontrol/kullanim-klavuzu`;
     const subject = "KurdEvents Kontrolör Kullanım Kılavuzu";
@@ -34,25 +39,27 @@ export async function sendControllerGuideEmail(input: {
       </div>
     `;
 
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${resendApiKey}`,
+    const transporter = nodemailer.createTransport({
+      host: smtpHost,
+      port: Number(smtpPort),
+      secure: false,
+      auth: {
+        user: smtpUser,
+        pass: smtpPass,
       },
-      body: JSON.stringify({
-        from: fromAddress,
-        to: [input.email],
-        subject,
-        html,
-      }),
     });
 
-    if (response.ok) return { sent: true };
-    const errText = await response.text();
-    return { sent: false, reason: errText || `HTTP ${response.status}` };
-  } catch (error) {
-    return { sent: false, reason: error instanceof Error ? error.message : "Bilinmeyen e-posta hatası" };
+    const mailOptions = {
+      from: smtpFrom,
+      to: input.email,
+      subject,
+      html,
+    };
+
+    await transporter.sendMail(mailOptions);
+    return { sent: true };
+  } catch (error: any) {
+    return { sent: false, reason: error.message };
   }
 }
 
