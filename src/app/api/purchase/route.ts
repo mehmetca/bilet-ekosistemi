@@ -260,7 +260,7 @@ function escapeHtml(value: unknown): string {
     .replace(/&/g, "&")
     .replace(/</g, "<")
     .replace(/>/g, ">")
-    .replace(/"/g, """)
+    .replace(/"/g, "")
     .replace(/'/g, "&#39;");
 }
 

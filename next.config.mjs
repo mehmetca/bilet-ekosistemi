@@ -8,17 +8,17 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // next-intl / use-intl: tek React grafiği (use-intl serverExternal yapılırsa SSR'de useMemo null hatası)
   transpilePackages: ["lucide-react", "next-intl", "use-intl", "konva"],
   experimental: {
     optimizePackageImports: ["lucide-react"],
-    // ISR optimization
-    isrMemoryCacheSize: 50, // MB
     staleTimes: {
-      static: 180, // 3 minutes
-      dynamic: 3600, // 1 hour
+      static: 180,
+      dynamic: 3600,
     },
   },
+};
+
+export default nextConfig;
   
   // Cloudflare Pages için ayarlar (geçiş hazırlığı)
   // Bunları Vercel deployment'de sorun yaratmaz
