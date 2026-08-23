@@ -4,7 +4,10 @@ import { BrevoClient } from "@getbrevo/brevo";
 export async function GET() {
   return NextResponse.json({ 
     success: true, 
-    message: "Production mail test endpoint çalışıyor" 
+    message: "Production mail test endpoint çalışıyor",
+    brevoApiKey: process.env.BREVO_API_KEY ? "Yüklü (ilk 10 karakter: " + process.env.BREVO_API_KEY.substring(0, 10) + "...)" : "YÜKLENMEDİ",
+    fromEmail: process.env.BREVO_FROM_EMAIL,
+    fromName: process.env.BREVO_FROM_NAME
   });
 }
 
