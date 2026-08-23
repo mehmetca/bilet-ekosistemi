@@ -181,6 +181,17 @@ export default function LoginPage() {
         } catch (_) {
           // Profil kaydı başarısız olsa da üyelik tamamlandı
         }
+
+        // Hoş geldin maili gönder
+        try {
+          await fetch("/api/welcome", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: regEmail.trim() }),
+          });
+        } catch (_) {
+          // Mail gönderme hatası kaydı engellemesin
+        }
       }
 
       setRegSuccess(t("successRegistered"));
