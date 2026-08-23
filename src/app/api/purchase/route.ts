@@ -17,7 +17,7 @@ import {
 } from "@/lib/ticket-seating-match";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { getFulfillmentAuthToken } from "@/lib/fulfillment-auth";
-import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
+import { Brevo } from "@getbrevo/brevo";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -804,12 +804,12 @@ async function buildTicketPdfMultiPageBase64(payload: TicketMailPayload): Promis
 
 async function sendTicketEmail(payload: TicketMailPayload) {
   try {
-    const mailerSendApiKey = process.env.MAILERSEND_API_KEY;
-    const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
-    const fromName = process.env.MAILERSEND_FROM_NAME;
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    const fromEmail = process.env.BREVO_FROM_EMAIL;
+    const fromName = process.env.BREVO_FROM_NAME;
 
-    if (!mailerSendApiKey || !fromEmail || !fromName) {
-      return { sent: false, reason: "MailerSend yapılandırması eksik." };
+    if (!brevoApiKey || !fromEmail || !fromName) {
+      return { sent: false, reason: "Brevo yapılandırması eksik." };
     }
 
     const subject = `Biletiniz hazır: ${payload.ticketCode}`;
@@ -822,37 +822,37 @@ async function sendTicketEmail(payload: TicketMailPayload) {
     const qrAttachment = dataUrlToBase64(qrCodeDataUrl);
     const barcodeAttachment = dataUrlToBase64(barcodeDataUrl);
 
-    const mailerSend = new MailerSend({
-      apiKey: mailerSendApiKey,
-    });
+    const brevo = new Brevo();
+    brevo.setApiKey(brevoApiKey);
 
-    const sentFrom = new Sender(fromEmail, fromName);
-    const recipients = [new Recipient(payload.buyerEmail, payload.buyerName || "Müşteri")];
-
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo(recipients)
-      .setSubject(subject)
-      .setHtml(html)
-      .setAttachments([
+    const sendSmtpEmail = {
+      to: [{
+        email: payload.buyerEmail,
+        name: payload.buyerName || "Müşteri"
+      }],
+      sender: {
+        name: fromName,
+        email: fromEmail
+      },
+      subject: subject,
+      htmlContent: html,
+      attachment: [
         {
           content: pdfAttachment,
-          filename: "kurdevents-e-bilet.pdf",
-          disposition: "attachment",
+          name: "kurdevents-e-bilet.pdf"
         },
         {
           content: qrAttachment,
-          filename: "kurdevents-e-ticket-qr.png",
-          disposition: "attachment",
+          name: "kurdevents-e-ticket-qr.png"
         },
         {
           content: barcodeAttachment,
-          filename: "kurdevents-e-ticket-barcode.png",
-          disposition: "attachment",
-        },
-      ]);
+          name: "kurdevents-e-ticket-barcode.png"
+        }
+      ]
+    };
 
-    await mailerSend.email.send(emailParams);
+    await brevo.sendTransacEmail(sendSmtpEmail);
     return { sent: true };
   } catch (error: any) {
     return { sent: false, reason: error.message };
@@ -914,12 +914,12 @@ async function sendAdminOrderNotification(payload: {
   adminEmail: string;
 }) {
   try {
-    const mailerSendApiKey = process.env.MAILERSEND_API_KEY;
-    const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
-    const fromName = process.env.MAILERSEND_FROM_NAME;
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    const fromEmail = process.env.BREVO_FROM_EMAIL;
+    const fromName = process.env.BREVO_FROM_NAME;
 
-    if (!mailerSendApiKey || !fromEmail || !fromName) {
-      return { sent: false, reason: "MailerSend yapılandırması eksik." };
+    if (!brevoApiKey || !fromEmail || !fromName) {
+      return { sent: false, reason: "Brevo yapılandırması eksik." };
     }
 
     const currency = (payload.currency || "EUR").toUpperCase();
@@ -975,20 +975,23 @@ async function sendAdminOrderNotification(payload: {
       </div>
     `;
 
-    const mailerSend = new MailerSend({
-      apiKey: mailerSendApiKey,
-    });
+    const brevo = new Brevo();
+    brevo.setApiKey(brevoApiKey);
 
-    const sentFrom = new Sender(fromEmail, fromName);
-    const recipients = [new Recipient(payload.adminEmail, "Admin")];
+    const sendSmtpEmail = {
+      to: [{
+        email: payload.adminEmail,
+        name: "Admin"
+      }],
+      sender: {
+        name: fromName,
+        email: fromEmail
+      },
+      subject: subject,
+      htmlContent: html
+    };
 
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo(recipients)
-      .setSubject(subject)
-      .setHtml(html);
-
-    await mailerSend.email.send(emailParams);
+    await brevo.sendTransacEmail(sendSmtpEmail);
     return { sent: true };
   } catch (error: any) {
     return { sent: false, reason: error.message };

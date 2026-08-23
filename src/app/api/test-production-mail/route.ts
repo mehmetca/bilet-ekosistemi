@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
+import { Brevo } from "@getbrevo/brevo";
 
 export async function GET() {
   return NextResponse.json({ 
@@ -23,38 +23,40 @@ export async function POST(req: NextRequest) {
     }
 
     // Production environment variables'ı kullan
-    const mailerSendApiKey = process.env.MAILERSEND_API_KEY;
-    const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
-    const fromName = process.env.MAILERSEND_FROM_NAME;
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    const fromEmail = process.env.BREVO_FROM_EMAIL;
+    const fromName = process.env.BREVO_FROM_NAME;
 
-    if (!mailerSendApiKey || !fromEmail || !fromName) {
-      console.error("MailerSend ENV eksik:", {
-        mailerSendApiKey,
+    if (!brevoApiKey || !fromEmail || !fromName) {
+      console.error("Brevo ENV eksik:", {
+        brevoApiKey,
         fromEmail,
         fromName,
       });
       return NextResponse.json({ 
         success: false, 
-        error: "MailerSend yapılandırması eksik. Environment variables kontrol edin." 
+        error: "Brevo yapılandırması eksik. Environment variables kontrol edin." 
       }, { status: 500 });
     }
 
     console.log("Production mail test başlıyor:", { fromEmail, fromName, testEmail });
 
-    const mailerSend = new MailerSend({
-      apiKey: mailerSendApiKey,
-    });
+    const brevo = new Brevo();
+    brevo.setApiKey(brevoApiKey);
 
-    const sentFrom = new Sender(fromEmail, fromName);
-    const recipients = [new Recipient(testEmail, testEmail)];
-
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo(recipients)
-      .setSubject("Production MailerSend Test Maili - KurdEvents")
-      .setHtml(`
+    const sendSmtpEmail = {
+      to: [{
+        email: testEmail,
+        name: testEmail
+      }],
+      sender: {
+        name: fromName,
+        email: fromEmail
+      },
+      subject: "Production Brevo Test Maili - KurdEvents",
+      htmlContent: `
         <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2>Production MailerSend Test Başarılı! 🎉</h2>
+          <h2>Production Brevo Test Başarılı! 🎉</h2>
           <p>Test maili başarıyla gönderildi.</p>
           <p><strong>Gönderen:</strong> ${fromEmail}</p>
           <p><strong>Tarih:</strong> ${new Date().toLocaleString('tr-TR')}</p>
@@ -62,10 +64,11 @@ export async function POST(req: NextRequest) {
           <hr>
           <p style="color: #666; font-size: 12px;">Bu bir test mailidir. KurdEvents mail sistemi çalışıyor!</p>
         </div>
-      `);
+      `
+    };
 
     console.log("Mail gönderme başlıyor...");
-    const response = await mailerSend.email.send(emailParams);
+    const response = await brevo.sendTransacEmail(sendSmtpEmail);
     console.log("Mail gönderildi:", response);
 
     return NextResponse.json({ 

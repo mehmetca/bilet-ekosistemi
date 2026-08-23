@@ -1,22 +1,22 @@
 import { getSiteUrl } from "@/lib/site-url";
-import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
+import { Brevo } from "@getbrevo/brevo";
 
 export async function sendControllerGuideEmail(input: {
   email: string;
   fullName: string;
 }): Promise<{ sent: boolean; reason?: string }> {
   try {
-    const mailerSendApiKey = process.env.MAILERSEND_API_KEY;
-    const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
-    const fromName = process.env.MAILERSEND_FROM_NAME;
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    const fromEmail = process.env.BREVO_FROM_EMAIL;
+    const fromName = process.env.BREVO_FROM_NAME;
 
-    if (!mailerSendApiKey || !fromEmail || !fromName) {
-      console.error("MailerSend ENV eksik:", {
-        mailerSendApiKey,
+    if (!brevoApiKey || !fromEmail || !fromName) {
+      console.error("Brevo ENV eksik:", {
+        brevoApiKey,
         fromEmail,
         fromName,
       });
-      return { sent: false, reason: "MailerSend yapılandırması eksik." };
+      return { sent: false, reason: "Brevo yapılandırması eksik." };
     }
 
     const guideUrl = `${getSiteUrl()}/yonetim/bilet-kontrol/kullanim-klavuzu`;
@@ -44,20 +44,23 @@ export async function sendControllerGuideEmail(input: {
       </div>
     `;
 
-    const mailerSend = new MailerSend({
-      apiKey: mailerSendApiKey,
-    });
+    const brevo = new Brevo();
+    brevo.setApiKey(brevoApiKey);
 
-    const sentFrom = new Sender(fromEmail, fromName);
-    const recipients = [new Recipient(input.email, input.fullName)];
+    const sendSmtpEmail = {
+      to: [{
+        email: input.email,
+        name: input.fullName
+      }],
+      sender: {
+        name: fromName,
+        email: fromEmail
+      },
+      subject: subject,
+      htmlContent: html
+    };
 
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo(recipients)
-      .setSubject(subject)
-      .setHtml(html);
-
-    const info = await mailerSend.email.send(emailParams);
+    const info = await brevo.sendTransacEmail(sendSmtpEmail);
     console.log("Mail gönderildi:", info);
 
     return { sent: true };

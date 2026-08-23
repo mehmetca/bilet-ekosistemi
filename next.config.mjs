@@ -179,9 +179,6 @@ const nextConfig = {
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60,
   },
-
-  swcMinify: true,
-  compress: true,
 };
 
 export default async function config(phase) {

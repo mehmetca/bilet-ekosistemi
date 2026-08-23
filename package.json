@@ -25,6 +25,7 @@
     "seatplan:refresh-duisburg-visual": "npm run seatplan:build-duisburg-coords && npm run seatplan:duisburg-section-labels"
   },
   "dependencies": {
+    "@getbrevo/brevo": "^6.0.3",
     "@sentry/nextjs": "^10.42.0",
     "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.3.1",

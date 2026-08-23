@@ -15,6 +15,17 @@ const intlMiddleware = createMiddleware(routing);
 const APP_LOCALES = routing.locales as readonly string[];
 const AUTH_SESSION_PATH_RE =
   /^\/(?:yonetim|auth|kontrol)(?:\/|$)|^\/(?:(?:tr|de|en|ku|ckb)\/)?(?:giris|sifre-yenile|sepet|bilgilerim|organizator-basvuru|panel)(?:\/|$)/;
+
+// Test paths için auth bypass
+const BYPASS_AUTH_PATHS = [
+  "/test-mail",
+  "/api/test-mail",
+  "/api/test-simple",
+  "/api/test-simple/",
+  "/api/test-mail/",
+  "/api/mail-test",
+  "/api/mail-test/"
+];
 const SUPABASE_SESSION_COOKIE_RE = /^sb-.+-auth-token(?:\.\d+)?$/;
 
 // Maintenance mode cache - CPU yoğunluk azaltmak için
@@ -112,6 +123,13 @@ export async function middleware(request: NextRequest) {
   if (canonical) return canonical;
 
   const pathname = request.nextUrl.pathname;
+  console.log("Middleware called for pathname:", pathname);
+
+  // Test paths için auth bypass ve intl middleware bypass
+  if (BYPASS_AUTH_PATHS.some(path => pathname.startsWith(path))) {
+    console.log("Bypassing middleware for:", pathname);
+    return NextResponse.next();
+  }
 
   // Bakım modu (hafif): çerez → bellek → DB (nadiren). Yönetim/giriş açık kalır.
   if (!isMaintenanceBypassPath(pathname)) {

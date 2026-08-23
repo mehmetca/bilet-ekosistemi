@@ -1,9 +1,9 @@
 /**
  * Etkinlik hatırlatma maili gönderir.
- * Mailersend API kullanır (bilet maili ile aynı altyapı).
+ * Brevo API kullanır (bilet maili ile aynı altyapı).
  */
 
-import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
+import { Brevo } from "@getbrevo/brevo";
 
 export type ReminderMailPayload = {
   email: string;
@@ -16,12 +16,12 @@ export type ReminderMailPayload = {
 
 export async function sendReminderEmail(payload: ReminderMailPayload): Promise<{ sent: boolean; reason?: string }> {
   try {
-    const mailerSendApiKey = process.env.MAILERSEND_API_KEY;
-    const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
-    const fromName = process.env.MAILERSEND_FROM_NAME;
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    const fromEmail = process.env.BREVO_FROM_EMAIL;
+    const fromName = process.env.BREVO_FROM_NAME;
 
-    if (!mailerSendApiKey || !fromEmail || !fromName) {
-      return { sent: false, reason: "MailerSend yapılandırması eksik." };
+    if (!brevoApiKey || !fromEmail || !fromName) {
+      return { sent: false, reason: "Brevo yapılandırması eksik." };
     }
 
     const dateFormatted = new Date(payload.eventDate).toLocaleDateString("tr-TR", {
@@ -56,20 +56,23 @@ export async function sendReminderEmail(payload: ReminderMailPayload): Promise<{
       </div>
     `;
 
-    const mailerSend = new MailerSend({
-      apiKey: mailerSendApiKey,
-    });
+    const brevo = new Brevo();
+    brevo.setApiKey(brevoApiKey);
 
-    const sentFrom = new Sender(fromEmail, fromName);
-    const recipients = [new Recipient(payload.email, payload.email)];
+    const sendSmtpEmail = {
+      to: [{
+        email: payload.email,
+        name: payload.email
+      }],
+      sender: {
+        name: fromName,
+        email: fromEmail
+      },
+      subject: subject,
+      htmlContent: html
+    };
 
-    const emailParams = new EmailParams()
-      .setFrom(sentFrom)
-      .setTo(recipients)
-      .setSubject(subject)
-      .setHtml(html);
-
-    await mailerSend.email.send(emailParams);
+    await brevo.sendTransacEmail(sendSmtpEmail);
     return { sent: true };
   } catch (error: any) {
     return { sent: false, reason: error.message };
