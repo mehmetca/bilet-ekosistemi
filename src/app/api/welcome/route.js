@@ -1,4 +1,4 @@
-import { Brevo } from "@getbrevo/brevo";
+import { BrevoClient } from "@getbrevo/brevo";
 
 export async function POST(req) {
   const { email } = await req.json();
@@ -16,8 +16,9 @@ export async function POST(req) {
     return new Response(JSON.stringify({ success: false, reason: "Brevo yapılandırması eksik." }), { status: 500 });
   }
 
-  const brevo = new Brevo();
-  brevo.setApiKey(brevoApiKey);
+  const brevo = new BrevoClient({
+    apiKey: brevoApiKey,
+  });
 
   const sendSmtpEmail = {
     to: [{
@@ -37,7 +38,7 @@ export async function POST(req) {
     `
   };
 
-  await brevo.sendTransacEmail(sendSmtpEmail);
+  await brevo.transactionalEmails.sendTransacEmail(sendSmtpEmail);
 
   return new Response(JSON.stringify({ success: true }));
 }

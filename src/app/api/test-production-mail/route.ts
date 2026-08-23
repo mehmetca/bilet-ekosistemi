@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Brevo } from "@getbrevo/brevo";
+import { BrevoClient } from "@getbrevo/brevo";
 
 export async function GET() {
   return NextResponse.json({ 
@@ -41,8 +41,9 @@ export async function POST(req: NextRequest) {
 
     console.log("Production mail test başlıyor:", { fromEmail, fromName, testEmail });
 
-    const brevo = new Brevo();
-    brevo.setApiKey(brevoApiKey);
+    const brevo = new BrevoClient({
+      apiKey: brevoApiKey,
+    });
 
     const sendSmtpEmail = {
       to: [{
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
     };
 
     console.log("Mail gönderme başlıyor...");
-    const response = await brevo.sendTransacEmail(sendSmtpEmail);
+    const response = await brevo.transactionalEmails.sendTransacEmail(sendSmtpEmail);
     console.log("Mail gönderildi:", response);
 
     return NextResponse.json({ 

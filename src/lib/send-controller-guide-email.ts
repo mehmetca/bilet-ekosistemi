@@ -1,5 +1,5 @@
 import { getSiteUrl } from "@/lib/site-url";
-import { Brevo } from "@getbrevo/brevo";
+import { BrevoClient } from "@getbrevo/brevo";
 
 export async function sendControllerGuideEmail(input: {
   email: string;
@@ -44,8 +44,9 @@ export async function sendControllerGuideEmail(input: {
       </div>
     `;
 
-    const brevo = new Brevo();
-    brevo.setApiKey(brevoApiKey);
+    const brevo = new BrevoClient({
+      apiKey: brevoApiKey,
+    });
 
     const sendSmtpEmail = {
       to: [{
@@ -60,7 +61,7 @@ export async function sendControllerGuideEmail(input: {
       htmlContent: html
     };
 
-    const info = await brevo.sendTransacEmail(sendSmtpEmail);
+    const info = await brevo.transactionalEmails.sendTransacEmail(sendSmtpEmail);
     console.log("Mail gönderildi:", info);
 
     return { sent: true };

@@ -17,7 +17,7 @@ import {
 } from "@/lib/ticket-seating-match";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { getFulfillmentAuthToken } from "@/lib/fulfillment-auth";
-import { Brevo } from "@getbrevo/brevo";
+import { BrevoClient } from "@getbrevo/brevo";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -822,8 +822,9 @@ async function sendTicketEmail(payload: TicketMailPayload) {
     const qrAttachment = dataUrlToBase64(qrCodeDataUrl);
     const barcodeAttachment = dataUrlToBase64(barcodeDataUrl);
 
-    const brevo = new Brevo();
-    brevo.setApiKey(brevoApiKey);
+    const brevo = new BrevoClient({
+      apiKey: brevoApiKey,
+    });
 
     const sendSmtpEmail = {
       to: [{
@@ -852,7 +853,7 @@ async function sendTicketEmail(payload: TicketMailPayload) {
       ]
     };
 
-    await brevo.sendTransacEmail(sendSmtpEmail);
+    await brevo.transactionalEmails.sendTransacEmail(sendSmtpEmail);
     return { sent: true };
   } catch (error: any) {
     return { sent: false, reason: error.message };
@@ -975,8 +976,9 @@ async function sendAdminOrderNotification(payload: {
       </div>
     `;
 
-    const brevo = new Brevo();
-    brevo.setApiKey(brevoApiKey);
+    const brevo = new BrevoClient({
+      apiKey: brevoApiKey,
+    });
 
     const sendSmtpEmail = {
       to: [{
@@ -991,7 +993,7 @@ async function sendAdminOrderNotification(payload: {
       htmlContent: html
     };
 
-    await brevo.sendTransacEmail(sendSmtpEmail);
+    await brevo.transactionalEmails.sendTransacEmail(sendSmtpEmail);
     return { sent: true };
   } catch (error: any) {
     return { sent: false, reason: error.message };
