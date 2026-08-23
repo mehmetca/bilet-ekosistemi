@@ -1,26 +1,22 @@
 import { getSiteUrl } from "@/lib/site-url";
-import nodemailer from "nodemailer";
+import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 
 export async function sendControllerGuideEmail(input: {
   email: string;
   fullName: string;
 }): Promise<{ sent: boolean; reason?: string }> {
   try {
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = process.env.SMTP_PORT;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpFrom = process.env.SMTP_FROM;
+    const mailerSendApiKey = process.env.MAILERSEND_API_KEY;
+    const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
+    const fromName = process.env.MAILERSEND_FROM_NAME;
 
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
-      console.error("SMTP ENV eksik:", {
-        smtpHost,
-        smtpPort,
-        smtpUser,
-        smtpPass,
-        smtpFrom,
+    if (!mailerSendApiKey || !fromEmail || !fromName) {
+      console.error("MailerSend ENV eksik:", {
+        mailerSendApiKey,
+        fromEmail,
+        fromName,
       });
-      return { sent: false, reason: "SMTP yapılandırması eksik." };
+      return { sent: false, reason: "MailerSend yapılandırması eksik." };
     }
 
     const guideUrl = `${getSiteUrl()}/yonetim/bilet-kontrol/kullanim-klavuzu`;
@@ -48,25 +44,21 @@ export async function sendControllerGuideEmail(input: {
       </div>
     `;
 
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: Number(smtpPort),
-      secure: false, // SES için doğru
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
+    const mailerSend = new MailerSend({
+      apiKey: mailerSendApiKey,
     });
 
-    const mailOptions = {
-      from: smtpFrom,
-      to: input.email,
-      subject,
-      html,
-    };
+    const sentFrom = new Sender(fromEmail, fromName);
+    const recipients = [new Recipient(input.email, input.fullName)];
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Mail gönderildi:", info.messageId);
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(recipients)
+      .setSubject(subject)
+      .setHtml(html);
+
+    const info = await mailerSend.email.send(emailParams);
+    console.log("Mail gönderildi:", info);
 
     return { sent: true };
   } catch (error: any) {

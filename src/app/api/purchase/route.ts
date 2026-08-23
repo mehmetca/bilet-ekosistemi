@@ -17,7 +17,7 @@ import {
 } from "@/lib/ticket-seating-match";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { getFulfillmentAuthToken } from "@/lib/fulfillment-auth";
-import nodemailer from "nodemailer";
+import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 
 /** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
 function generateTicketCode(): string {
@@ -804,13 +804,12 @@ async function buildTicketPdfMultiPageBase64(payload: TicketMailPayload): Promis
 
 async function sendTicketEmail(payload: TicketMailPayload) {
   try {
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = process.env.SMTP_PORT;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpFrom = process.env.SMTP_FROM;
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
-      return { sent: false, reason: "SMTP yapılandırması eksik." };
+    const mailerSendApiKey = process.env.MAILERSEND_API_KEY;
+    const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
+    const fromName = process.env.MAILERSEND_FROM_NAME;
+
+    if (!mailerSendApiKey || !fromEmail || !fromName) {
+      return { sent: false, reason: "MailerSend yapılandırması eksik." };
     }
 
     const subject = `Biletiniz hazır: ${payload.ticketCode}`;
@@ -823,40 +822,34 @@ async function sendTicketEmail(payload: TicketMailPayload) {
     const qrAttachment = dataUrlToBase64(qrCodeDataUrl);
     const barcodeAttachment = dataUrlToBase64(barcodeDataUrl);
 
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: Number(smtpPort),
-      secure: false,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
+    const mailerSend = new MailerSend({
+      apiKey: mailerSendApiKey,
     });
 
-    const mailOptions = {
-      from: smtpFrom,
-      to: [payload.buyerEmail],
-      subject,
-      html,
-      attachments: [
-        {
-          filename: "kurdevents-e-bilet.pdf",
-          content: pdfAttachment,
-        },
-        {
-          filename: "kurdevents-e-ticket-qr.png",
-          content: qrAttachment,
-          content_id: qrContentId,
-        },
-        {
-          filename: "kurdevents-e-ticket-barcode.png",
-          content: barcodeAttachment,
-          content_id: barcodeContentId,
-        },
-      ],
-    };
+    const sentFrom = new Sender(fromEmail, fromName);
+    const recipients = [new Recipient(payload.buyerEmail, payload.buyerName || "Müşteri")];
 
-    await transporter.sendMail(mailOptions);
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(recipients)
+      .setSubject(subject)
+      .setHtml(html)
+      .setAttachments([
+        {
+          content: pdfAttachment,
+          filename: "kurdevents-e-bilet.pdf",
+        },
+        {
+          content: qrAttachment,
+          filename: "kurdevents-e-ticket-qr.png",
+        },
+        {
+          content: barcodeAttachment,
+          filename: "kurdevents-e-ticket-barcode.png",
+        },
+      ]);
+
+    await mailerSend.email.send(emailParams);
     return { sent: true };
   } catch (error: any) {
     return { sent: false, reason: error.message };

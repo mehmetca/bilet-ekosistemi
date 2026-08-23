@@ -1,9 +1,9 @@
 /**
  * Etkinlik hatırlatma maili gönderir.
- * SMTP kullanır (bilet maili ile aynı altyapı).
+ * Mailersend API kullanır (bilet maili ile aynı altyapı).
  */
 
-import nodemailer from "nodemailer";
+import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 
 export type ReminderMailPayload = {
   email: string;
@@ -16,13 +16,12 @@ export type ReminderMailPayload = {
 
 export async function sendReminderEmail(payload: ReminderMailPayload): Promise<{ sent: boolean; reason?: string }> {
   try {
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = process.env.SMTP_PORT;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpFrom = process.env.SMTP_FROM;
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
-      return { sent: false, reason: "SMTP yapılandırması eksik." };
+    const mailerSendApiKey = process.env.MAILERSEND_API_KEY;
+    const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
+    const fromName = process.env.MAILERSEND_FROM_NAME;
+
+    if (!mailerSendApiKey || !fromEmail || !fromName) {
+      return { sent: false, reason: "MailerSend yapılandırması eksik." };
     }
 
     const dateFormatted = new Date(payload.eventDate).toLocaleDateString("tr-TR", {
@@ -57,24 +56,20 @@ export async function sendReminderEmail(payload: ReminderMailPayload): Promise<{
       </div>
     `;
 
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: Number(smtpPort),
-      secure: false, // 587, not 465
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
+    const mailerSend = new MailerSend({
+      apiKey: mailerSendApiKey,
     });
 
-    const mailOptions = {
-      from: smtpFrom,
-      to: payload.email,
-      subject,
-      html,
-    };
+    const sentFrom = new Sender(fromEmail, fromName);
+    const recipients = [new Recipient(payload.email, payload.email)];
 
-    await transporter.sendMail(mailOptions);
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(recipients)
+      .setSubject(subject)
+      .setHtml(html);
+
+    await mailerSend.email.send(emailParams);
     return { sent: true };
   } catch (error: any) {
     return { sent: false, reason: error.message };
