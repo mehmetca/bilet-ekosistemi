@@ -914,13 +914,12 @@ async function sendAdminOrderNotification(payload: {
   adminEmail: string;
 }) {
   try {
-    const smtpHost = process.env.SMTP_HOST;
-    const smtpPort = process.env.SMTP_PORT;
-    const smtpUser = process.env.SMTP_USER;
-    const smtpPass = process.env.SMTP_PASS;
-    const smtpFrom = process.env.SMTP_FROM;
-    if (!smtpHost || !smtpPort || !smtpUser || !smtpPass || !smtpFrom) {
-      return { sent: false, reason: "SMTP yapılandırması eksik." };
+    const mailerSendApiKey = process.env.MAILERSEND_API_KEY;
+    const fromEmail = process.env.MAILERSEND_FROM_EMAIL;
+    const fromName = process.env.MAILERSEND_FROM_NAME;
+
+    if (!mailerSendApiKey || !fromEmail || !fromName) {
+      return { sent: false, reason: "MailerSend yapılandırması eksik." };
     }
 
     const currency = (payload.currency || "EUR").toUpperCase();
@@ -976,24 +975,20 @@ async function sendAdminOrderNotification(payload: {
       </div>
     `;
 
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port: Number(smtpPort),
-      secure: false,
-      auth: {
-        user: smtpUser,
-        pass: smtpPass,
-      },
+    const mailerSend = new MailerSend({
+      apiKey: mailerSendApiKey,
     });
 
-    const mailOptions = {
-      from: smtpFrom,
-      to: [payload.adminEmail],
-      subject,
-      html,
-    };
+    const sentFrom = new Sender(fromEmail, fromName);
+    const recipients = [new Recipient(payload.adminEmail, "Admin")];
 
-    await transporter.sendMail(mailOptions);
+    const emailParams = new EmailParams()
+      .setFrom(sentFrom)
+      .setTo(recipients)
+      .setSubject(subject)
+      .setHtml(html);
+
+    await mailerSend.email.send(emailParams);
     return { sent: true };
   } catch (error: any) {
     return { sent: false, reason: error.message };
