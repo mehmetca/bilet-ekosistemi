@@ -53,7 +53,7 @@ const nextConfig = {
     const isDev = process.env.NODE_ENV === "development";
 
     const securityHeaders = [
-      { key: "X-Frame-Options", value: "DENY" },
+      { key: "X-Frame-Options", value: "SAMEORIGIN" },
       { key: "X-Content-Type-Options", value: "nosniff" },
       { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
       {
@@ -67,13 +67,13 @@ const nextConfig = {
           "default-src 'self'",
           "base-uri 'self'",
           "object-src 'none'",
-          "frame-ancestors 'none'",
+          "frame-ancestors 'self'",
           "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com https://*.sentry.io https://browser.sentry-cdn.com",
           "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
           "img-src 'self' data: blob: https:",
           "font-src 'self' data: https://fonts.gstatic.com",
           "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://translate.googleapis.com",
-          "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.youtube.com https://www.youtube-nocookie.com https://youtube.com",
+          "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.youtube.com https://www.youtube-nocookie.com https://youtube.com https://www.google.com https://www.openstreetmap.org https://*.openstreetmap.org",
           "media-src 'self' https: blob:",
           "form-action 'self' https://hooks.stripe.com",
           "upgrade-insecure-requests",
