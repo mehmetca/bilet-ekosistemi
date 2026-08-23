@@ -264,7 +264,7 @@ function escapeHtml(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, barcodeContentId: string) {
+function buildTicketEmailHtml(payload: TicketMailPayload, qrCodeDataUrl: string, barcodeDataUrl: string) {
   const buyerName = escapeHtml(payload.buyerName);
   const eventTitle = escapeHtml(payload.eventTitle || "Etkinlik");
   const ticketCode = escapeHtml(payload.ticketCode);
@@ -367,7 +367,7 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
                   <tr>
                     <td style="width:74px;vertical-align:top;padding-right:12px;">
                       <div style="display:flex;gap:6px;align-items:flex-start;">
-                        <img src="cid:${barcodeContentId}" alt="Bilet Barkod" width="42" height="250" style="display:block;border:1px solid #cbd5e1;background:#fff;" />
+                        <img src="${barcodeDataUrl}" alt="Bilet Barkod" width="42" height="250" style="display:block;border:1px solid #cbd5e1;background:#fff;" />
                         <div style="margin-top:0;font-size:9px;color:#000;letter-spacing:.7px;font-family:monospace;display:inline-block;">${leftVerticalTicketCodeHtml}</div>
                       </div>
                     </td>
@@ -403,7 +403,7 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrContentId: string, b
                 <p style="margin:10px 0 0;font-size:11px;color:#000;">Giris Noktasi</p>
                 <p style="margin:2px 0 0;font-size:13px;color:#000;font-weight:700;">EINGANG X</p>
                 <div style="margin-top:10px;text-align:center;">
-                  <img src="cid:${qrContentId}" alt="Bilet QR Kodu" width="130" height="130" style="border:1px solid #cbd5e1;padding:6px;background:#fff;" />
+                  <img src="${qrCodeDataUrl}" alt="Bilet QR Kodu" width="130" height="130" style="border:1px solid #cbd5e1;padding:6px;background:#fff;" />
                 </div>
                 <p style="margin:6px 0 0;font-size:10px;color:#000;text-align:center;">QR kodu giriste okutunuz</p>
               </td>
@@ -815,9 +815,7 @@ async function sendTicketEmail(payload: TicketMailPayload) {
     const subject = `Biletiniz hazır: ${payload.ticketCode}`;
     const qrCodeDataUrl = await buildQrCodeDataUrl(payload);
     const barcodeDataUrl = await buildCode128DataUrl(payload.ticketCode);
-    const qrContentId = `ticket-qr-${payload.ticketCode.toLowerCase()}`;
-    const barcodeContentId = `ticket-barcode-${payload.ticketCode.toLowerCase()}`;
-    const html = buildTicketEmailHtml(payload, qrContentId, barcodeContentId);
+    const html = buildTicketEmailHtml(payload, qrCodeDataUrl, barcodeDataUrl);
     const pdfAttachment = await buildTicketPdfMultiPageBase64(payload);
     const qrAttachment = dataUrlToBase64(qrCodeDataUrl);
     const barcodeAttachment = dataUrlToBase64(barcodeDataUrl);
