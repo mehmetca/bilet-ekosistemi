@@ -1,7 +1,7 @@
 import { BrevoClient } from "@getbrevo/brevo";
 
 export async function POST(req) {
-  const { email } = await req.json();
+  const { email, firstName, lastName } = await req.json();
 
   const brevoApiKey = process.env.BREVO_API_KEY;
   const fromEmail = process.env.BREVO_FROM_EMAIL;
@@ -20,10 +20,13 @@ export async function POST(req) {
     apiKey: brevoApiKey,
   });
 
+  // Ad soyad varsa kullan, yoksa email ile hitap et
+  const displayName = firstName && lastName ? `${firstName} ${lastName}` : email;
+
   const sendSmtpEmail = {
     to: [{
       email: email,
-      name: email
+      name: displayName
     }],
     sender: {
       name: fromName,
@@ -31,7 +34,7 @@ export async function POST(req) {
     },
     subject: "KurdEvents'e Hoş Geldiniz!",
     htmlContent: `
-      <p>Merhaba ${email},</p>
+      <p>Merhaba ${displayName},</p>
       <p>KurdEvents'e katıldığınız için teşekkür ederiz! Artık etkinliklere göz atabilir, bilet satın alabilir ve topluluğumuzun bir parçası olabilirsiniz.</p>
       <p>Hesabınız başarıyla oluşturuldu. Herhangi bir sorunuz olursa bize istediğiniz zaman ulaşabilirsiniz.</p>
       <p>Keyifli etkinlikler dileriz!<br><strong>KurdEvents Ekibi</strong></p>
