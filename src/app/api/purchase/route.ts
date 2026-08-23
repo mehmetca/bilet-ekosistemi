@@ -838,14 +838,17 @@ async function sendTicketEmail(payload: TicketMailPayload) {
         {
           content: pdfAttachment,
           filename: "kurdevents-e-bilet.pdf",
+          disposition: "attachment",
         },
         {
           content: qrAttachment,
           filename: "kurdevents-e-ticket-qr.png",
+          disposition: "attachment",
         },
         {
           content: barcodeAttachment,
           filename: "kurdevents-e-ticket-barcode.png",
+          disposition: "attachment",
         },
       ]);
 
