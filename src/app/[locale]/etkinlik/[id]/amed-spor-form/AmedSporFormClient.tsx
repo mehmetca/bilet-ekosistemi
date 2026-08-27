@@ -584,11 +584,11 @@ export default function AmedSporFormClient({
                   <div className="text-xs text-slate-600 mb-2">
                     {formatEventDateDMY(amedEvent.date)}
                   </div>
-                  <div className="text-sm font-bold text-primary-600">
-                    {Number(amedEvent.price_from) > 0
-                      ? formatPrice(Number(amedEvent.price_from), amedEvent.currency)
-                      : t("free")}
-                  </div>
+                  {Number(amedEvent.price_from) > 0 && (
+                    <div className="text-sm font-bold text-primary-600">
+                      {formatPrice(Number(amedEvent.price_from), amedEvent.currency)}
+                    </div>
+                  )}
                 </div>
               </Link>
             ))
