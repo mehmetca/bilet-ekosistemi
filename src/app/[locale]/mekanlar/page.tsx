@@ -1,7 +1,7 @@
 import { getVenuesList } from "@/lib/venues-server";
 import MekanlarClient from "./MekanlarClient";
 
-export const revalidate = 1800;
+export const revalidate = 60;
 
 type VenueFaqItem = { soru: string; cevap: string };
 

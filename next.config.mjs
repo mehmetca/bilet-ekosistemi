@@ -52,6 +52,27 @@ const nextConfig = {
   async headers() {
     const isDev = process.env.NODE_ENV === "development";
 
+    const cspDirectives = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com https://*.sentry.io https://browser.sentry-cdn.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob: https:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://translate.googleapis.com",
+      "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.youtube.com https://www.youtube-nocookie.com https://youtube.com https://www.google.com https://www.openstreetmap.org https://*.openstreetmap.org",
+      "media-src 'self' https: blob:",
+      "form-action 'self' https://hooks.stripe.com",
+    ];
+
+    // Dev: `upgrade-insecure-requests` localhost http -> https yükseltmesini tetikleyip
+    // API isteklerinde ERR_SSL_PROTOCOL_ERROR'a yol açıyor; dev'de atlıyoruz.
+    if (!isDev) {
+      cspDirectives.push("upgrade-insecure-requests");
+    }
+
     const securityHeaders = [
       { key: "X-Frame-Options", value: "SAMEORIGIN" },
       { key: "X-Content-Type-Options", value: "nosniff" },
@@ -63,21 +84,7 @@ const nextConfig = {
       { key: "X-DNS-Prefetch-Control", value: "on" },
       {
         key: "Content-Security-Policy",
-        value: [
-          "default-src 'self'",
-          "base-uri 'self'",
-          "object-src 'none'",
-          "frame-ancestors 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://*.stripe.com https://*.sentry.io https://browser.sentry-cdn.com",
-          "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-          "img-src 'self' data: blob: https:",
-          "font-src 'self' data: https://fonts.gstatic.com",
-          "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://translate.googleapis.com",
-          "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.youtube.com https://www.youtube-nocookie.com https://youtube.com https://www.google.com https://www.openstreetmap.org https://*.openstreetmap.org",
-          "media-src 'self' https: blob:",
-          "form-action 'self' https://hooks.stripe.com",
-          "upgrade-insecure-requests",
-        ].join("; "),
+        value: cspDirectives.join("; "),
       },
     ];
 

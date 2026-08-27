@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getVenueById } from "@/lib/venues-server";
 import MekanDetailClient from "./MekanDetailClient";
 
-export const revalidate = 1800;
+export const revalidate = 60;
 
 type PageProps = {
   params: Promise<{ id: string }>;

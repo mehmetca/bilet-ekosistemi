@@ -8,7 +8,7 @@ type PageProps = {
   }>;
 };
 
-export const revalidate = 1800;
+export const revalidate = 60;
 
 export default async function SearchPage({ searchParams }: PageProps) {
   const events = await getEventsForCalendar();

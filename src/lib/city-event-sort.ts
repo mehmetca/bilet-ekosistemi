@@ -41,6 +41,14 @@ export function getMatchTerms(
         if (t && arr.indexOf(t) === -1) arr.push(t);
         const norm = normalizeForMatch(t);
         if (norm && arr.indexOf(norm) === -1) arr.push(norm);
+        
+        // Şehir adlarını tire ile ayırarak parçala (örn: "Diyarbakır - Amed" -> ["diyarbakır", "amed"])
+        const parts = t.split(/-+/).map(p => p.trim()).filter(Boolean);
+        parts.forEach((part) => {
+          if (part && arr.indexOf(part) === -1) arr.push(part);
+          const partNorm = normalizeForMatch(part);
+          if (partNorm && arr.indexOf(partNorm) === -1) arr.push(partNorm);
+        });
       }
     });
   }
@@ -82,7 +90,11 @@ function textMatchesCityTerm(text: string, termNorm: string): boolean {
   if (!termNorm) return false;
   const full = normalizeForMatch(text);
   if (full === termNorm) return true;
-  return tokensFromAddress(text).some((t) => t === termNorm);
+  
+  // Kısmi eşleşme: term text içinde geçiyorsa eşleş
+  if (full.includes(termNorm)) return true;
+  
+  return tokensFromAddress(text).some((t) => t === termNorm || t.includes(termNorm));
 }
 
 export type CityNamesForMatch = {
@@ -108,9 +120,25 @@ export function eventMatchesCityRow(
   const loc = ((e.location as string) || "").trim();
   const cityField = ((e.city as string) || "").trim();
   const vc = getVenueCityFromEvent(e);
+  
+  // cityField için özel kısmi eşleşme kontrolü
+  const cityFieldNorm = normalizeForMatch(cityField);
+  
   return matchTerms.some((term) => {
     const termNorm = normalizeForMatch(term);
     if (!termNorm) return false;
+    
+    // Şehir alanı için daha agresif kısmi eşleşme
+    if (cityFieldNorm && termNorm) {
+      // Tam eşleşme
+      if (cityFieldNorm === termNorm) return true;
+      // Kısmi eşleşme (her iki yönde)
+      if (cityFieldNorm.includes(termNorm) || termNorm.includes(cityFieldNorm)) return true;
+      // Tire ile ayrılmış parçaların eşleşmesi
+      const cityParts = cityField.split(/[-–/]/).map(p => normalizeForMatch(p.trim())).filter(Boolean);
+      if (cityParts.some(p => p === termNorm || p.includes(termNorm) || termNorm.includes(p))) return true;
+    }
+    
     return (
       textMatchesCityTerm(loc, termNorm) ||
       textMatchesCityTerm(vc, termNorm) ||

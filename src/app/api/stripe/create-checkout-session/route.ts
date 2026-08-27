@@ -27,6 +27,9 @@ type CreateCheckoutBody = {
   deliveryChoice?: CheckoutPhysicalDelivery | "e_ticket" | "standard" | "express";
   seatHoldSessionId?: string | null;
   items?: CheckoutCartLineInput[];
+  ticketId?: string;
+  quantity?: number;
+  eventId?: string;
 };
 
 function normalizeDeliveryChoice(raw: string | undefined): CheckoutPhysicalDelivery | "e_ticket" {

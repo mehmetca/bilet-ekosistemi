@@ -9,6 +9,7 @@ import Header from "@/components/Header";
 import type { Event } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent, getLocalizedText, type Locale } from "@/lib/i18n-content";
+import { isAmedSporEvent } from "@/lib/amed-spor-utils";
 import { parseEventDescription } from "@/lib/eventMeta";
 import { formatEventVenueAddressCityLine } from "@/lib/event-venue-display";
 import { formatEventLongDateTime } from "@/lib/date-utils";
@@ -127,6 +128,9 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
     return prices.length > 0 ? Math.min(...prices) : 0;
   }, [events]);
 
+  // Amed Spor: fiyat 0/boş iken satır "Yakında" gibi görünmesin.
+  const isAmedSpor = firstEvent?.show_slug ? isAmedSporEvent(firstEvent.show_slug) : false;
+
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
       <Header />
@@ -147,9 +151,11 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                 </p>
               )}
               <div className="mt-5 flex items-center gap-4">
-                <p className="text-2xl font-bold text-primary-700">
-                  {minPrice > 0 ? `${t("from")} ${formatPrice(minPrice, firstEvent.currency)}` : t("comingSoon")}
-                </p>
+                {(!isAmedSpor || minPrice > 0) && (
+                  <p className="text-2xl font-bold text-primary-700">
+                    {minPrice > 0 ? `${t("from")} ${formatPrice(minPrice, firstEvent.currency)}` : t("comingSoon")}
+                  </p>
+                )}
                 <span className="text-sm text-slate-500">
                   {upcomingEvents.length} {tShow("performances")}
                 </span>
@@ -271,7 +277,10 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
           <div className="bg-white rounded-xl border border-slate-200 p-8 mt-10">
             <h2 className="text-2xl font-bold text-slate-900 mb-6">{t("aboutEvent")}</h2>
             <div className="prose prose-slate max-w-none">
-              <p className="text-slate-700 leading-relaxed">{parsedDescription.content}</p>
+              <div
+                className="whitespace-pre-line text-slate-700 leading-relaxed [&_p]:my-1 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-bold [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
+                dangerouslySetInnerHTML={{ __html: parsedDescription.content }}
+              />
             </div>
           </div>
         )}
@@ -356,9 +365,11 @@ function CityEventsSection({
               </div>
               <div className="flex shrink-0 flex-col justify-center gap-3 border-t border-slate-100 pt-4 sm:min-w-[200px] sm:border-t-0 sm:pt-0 sm:pl-2">
                 <div className="text-left sm:text-right">
-                  <p className="text-lg font-bold text-primary-700">
-                    {price > 0 ? `${t("from")} ${formatPrice(price, event.currency)}` : t("comingSoon")}
-                  </p>
+                  {price > 0 || !(event.show_slug && isAmedSporEvent(event.show_slug)) ? (
+                    <p className="text-lg font-bold text-primary-700">
+                      {price > 0 ? `${t("from")} ${formatPrice(price, event.currency)}` : t("comingSoon")}
+                    </p>
+                  ) : null}
                 </div>
                 {isPast || salesBlocked ? (
                   <span className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-200 px-6 py-3 font-semibold text-slate-500 cursor-not-allowed sm:ml-auto">
@@ -366,10 +377,14 @@ function CityEventsSection({
                   </span>
                 ) : (
                   <NextLink
-                    href={`/${locale}/etkinlik/${event.id}`}
+                    href={
+                      event.show_slug && isAmedSporEvent(event.show_slug)
+                        ? `/${locale}/etkinlik/${event.id}/amed-spor-form`
+                        : `/${locale}/etkinlik/${event.id}`
+                    }
                     className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-[#c62828] px-5 text-sm font-bold uppercase tracking-wide text-white shadow hover:bg-[#b71c1c] sm:ml-auto"
                   >
-                    {t("buyTicket")}
+                    {event.show_slug && isAmedSporEvent(event.show_slug) ? "Formu Doldur" : t("buyTicket")}
                     <ChevronRight className="h-4 w-4" />
                   </NextLink>
                 )}

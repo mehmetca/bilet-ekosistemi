@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import { getSiteUrl } from "@/lib/site-url";
 
@@ -47,6 +48,8 @@ export default function RootLayout({
         <SimpleAuthProvider>
           <Providers>{children}</Providers>
         </SimpleAuthProvider>
+        {/* Eski service worker kayıtlarını ve cache'leri temizle (stale fetch engeli) */}
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

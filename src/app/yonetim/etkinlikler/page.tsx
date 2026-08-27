@@ -164,9 +164,15 @@ function EtkinliklerContent() {
   async function handleSetDraft(eventId: string, isDraft: boolean) {
     if (!isAdmin) return;
     try {
+      // Taslak kaldırılıyorsa ve admin ise, otomatik onayla
+      const updateData: { is_draft: boolean; is_approved?: boolean } = { is_draft: isDraft };
+      if (!isDraft && isAdmin) {
+        updateData.is_approved = true;
+      }
+      
       const { error } = await supabase
         .from("events")
-        .update({ is_draft: isDraft })
+        .update(updateData)
         .eq("id", eventId);
       if (error) throw error;
       await fetchEvents();
@@ -486,7 +492,12 @@ function EtkinliklerContent() {
               {event.title}
             </h3>
             <p className="mt-2 text-sm text-slate-600 line-clamp-2">
-              {parseEventDescription(event.description).content}
+              {parseEventDescription(event.description).content
+                .replace(/<[^>]*>/g, " ")
+                .replace(/&nbsp;/g, " ")
+                .replace(/&amp;/g, "&")
+                .replace(/\s+/g, " ")
+                .trim()}
             </p>
             <div className="mt-3 space-y-1 text-sm text-slate-500">
               <div className="flex items-center gap-2">

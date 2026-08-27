@@ -27,6 +27,8 @@ import {
 } from "@/types/database";
 import { buildEventDescription, parseEventDescription } from "@/lib/eventMeta";
 import AdminImageUpload from "@/components/AdminImageUpload";
+import RichTextEditor from "@/components/RichTextEditor";
+import { isAmedSporEvent } from "@/lib/amed-spor-utils";
 import { formatPrice } from "@/lib/formatPrice";
 import { shortenTicketDisplayName } from "@/lib/ticket-seating-match";
 import { revalidatePublicSiteCache } from "@/lib/revalidate-public-site-client";
@@ -743,7 +745,16 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
     tickets.length > 0
       ? Math.min(...tickets.filter((t) => t.quantity > 0).map((t) => t.price), Infinity) || 0
       : 0;
-  const priceFrom = typeof priceFromInput === "number" && priceFromInput > 0 ? priceFromInput : derivedFromTickets;
+  // Amed Spor'da fiyat kaynağı yalnızca "Başlangıç fiyatı"dır (price_from);
+  // bilet fiyatlarından türetme YAPILMAZ, 0/boş kaydedilebilsin (ücretsiz form).
+  // Diğer etkinliklerde mevcut davranış korunur (boş/0 ise bilet fiyatından türet).
+  const priceFrom = isAmedSporEvent(showSlugId)
+    ? typeof priceFromInput === "number"
+      ? priceFromInput
+      : 0
+    : typeof priceFromInput === "number" && priceFromInput > 0
+      ? priceFromInput
+      : derivedFromTickets;
 
   const canProceedStep1 = titleTr.trim().length > 0 && category;
   const canProceedStep2 = date && time && (selectedVenueId || (venueManualName.trim() && eventCity.trim()));
@@ -1250,17 +1261,17 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         <div className="lg:col-span-2 space-y-6">
           {step === 1 && (
             <>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (TR) *</label>
-                <input
-                  type="text"
-                  value={titleTr}
-                  onChange={(e) => setTitleTr(e.target.value)}
-                  placeholder="Örn: Cem Adrian Konseri"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (TR) *</label>
+                  <input
+                    type="text"
+                    value={titleTr}
+                    onChange={(e) => setTitleTr(e.target.value)}
+                    placeholder="Örn: Cem Adrian Konseri"
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (DE)</label>
                   <input type="text" value={titleDe} onChange={(e) => setTitleDe(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
@@ -1269,72 +1280,58 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (EN)</label>
                   <input type="text" value={titleEn} onChange={(e) => setTitleEn(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (KU)</label>
                   <input type="text" value={titleKu} onChange={(e) => setTitleKu(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <label className="block text-sm font-medium text-slate-700">Etkinlik adı (CKB - Sorani)</label>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Etkinlik adı (CKB - Sorani)</label>
+                  <input type="text" value={titleCkb} onChange={(e) => setTitleCkb(e.target.value)} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <p className="text-xs text-slate-500">Çeviri kaynağı: önce KU, boşsa TR.</p>
                     <button
                       type="button"
                       onClick={handleAutoTranslateSorani}
                       disabled={translatingCkb}
-                      className="rounded-md border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
+                      className="shrink-0 rounded-md border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
                     >
                       {translatingCkb ? "Çevriliyor..." : "Sorani'ye otomatik çevir"}
                     </button>
                   </div>
-                  <input
-                    type="text"
-                    value={titleCkb}
-                    onChange={(e) => setTitleCkb(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">Çeviri kaynağı: önce KU, boşsa TR.</p>
                 </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Kısa açıklama (TR)</label>
-                  <textarea value={descriptionTr} onChange={(e) => setDescriptionTr(e.target.value)} rows={2} placeholder="Etkinlik hakkında kısa metin" className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <RichTextEditor value={descriptionTr} onChange={setDescriptionTr} placeholder="Etkinlik hakkında kısa metin" minHeight="100px" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (DE)</label>
-                  <textarea value={descriptionDe} onChange={(e) => setDescriptionDe(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <RichTextEditor value={descriptionDe} onChange={setDescriptionDe} minHeight="100px" />
                 </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (EN)</label>
-                  <textarea value={descriptionEn} onChange={(e) => setDescriptionEn(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                  <RichTextEditor value={descriptionEn} onChange={setDescriptionEn} minHeight="100px" />
                 </div>
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <label className="block text-sm font-medium text-slate-700">Açıklama (CKB - Sorani)</label>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (KU)</label>
+                  <RichTextEditor value={descriptionKu} onChange={setDescriptionKu} minHeight="100px" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (CKB - Sorani)</label>
+                  <RichTextEditor value={descriptionCkb} onChange={setDescriptionCkb} minHeight="100px" />
+                  <div className="mt-1 flex items-center justify-between gap-3">
+                    <p className="text-xs text-slate-500">Çeviri kaynağı: önce KU, boşsa TR.</p>
                     <button
                       type="button"
                       onClick={handleAutoTranslateDescriptionSorani}
                       disabled={translatingDescriptionCkb}
-                      className="rounded-md border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
+                      className="shrink-0 rounded-md border border-primary-200 bg-white px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50 disabled:opacity-60"
                     >
                       {translatingDescriptionCkb ? "Çevriliyor..." : "Sorani'ye otomatik çevir"}
                     </button>
                   </div>
-                  <textarea
-                    value={descriptionCkb}
-                    onChange={(e) => setDescriptionCkb(e.target.value)}
-                    rows={2}
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
-                  />
-                  <p className="mt-1 text-xs text-slate-500">Çeviri kaynağı: önce KU, boşsa TR.</p>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Açıklama (KU)</label>
-                <textarea value={descriptionKu} onChange={(e) => setDescriptionKu(e.target.value)} rows={2} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Kategori *</label>

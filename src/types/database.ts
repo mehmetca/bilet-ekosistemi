@@ -49,6 +49,10 @@ export interface Event {
   seating_plan_id?: string | null;
   /** Ana sayfada öne çıkan etkinlik sırası (1 = sol, 2 = sağ). null = öne çıkan değil. */
   homepage_featured_order?: number | null;
+  /** Toplam bilet kapasitesi (Amed Spor gibi oturma planı olmayan etkinlikler için). NULL = sınırsız (normal etkinlikler) */
+  max_tickets?: number | null;
+  /** Özel form gerektiriyor mu (Amed Spor gibi etkinlikler için) */
+  has_custom_form?: boolean | null;
 }
 
 export interface Venue {
@@ -270,3 +274,23 @@ export const TICKET_TYPE_LABELS: Record<TicketType, string> = {
   normal: "Normal",
   vip: "VIP",
 };
+
+/** Amed Spor özel form cevapları */
+export interface EventFormResponse {
+  id: string;
+  event_id: string;
+  user_id?: string | null;
+  purchase_id?: string | null;
+  full_name: string;
+  email: string;
+  phone: string;
+  organization?: string | null;
+  language_preference: 'kurmanci' | 'türkçe' | 'ingilizce' | 'deutsch';
+  accept_phone_contact: boolean;
+  accommodation_preference?: 'otel' | 'diger' | 'kendi_ayarim' | null;
+  meal_preferences?: 'yok' | 'vejetaryen' | 'vegan' | 'helal' | 'glutensiz' | 'diger' | null;
+  meal_other_text?: string | null;
+  additional_notes?: string | null;
+  created_at: string;
+  updated_at: string;
+}

@@ -11,7 +11,7 @@ interface PageProps {
   params: Promise<{ locale?: string; slug: string }>;
 }
 
-export const revalidate = 1800;
+export const revalidate = 60;
 
 function getYouTubeEmbedUrl(url?: string): string | null {
   if (!url) return null;

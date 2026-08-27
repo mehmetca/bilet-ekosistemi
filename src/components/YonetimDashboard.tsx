@@ -90,6 +90,10 @@ export default function YonetimDashboard() {
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Siparişler / Biletler</h3>
           <p className="text-sm text-slate-500">Satılan biletler ve siparişler</p>
         </Link>
+        <Link href="/yonetim/amed-spor-kayitlar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
+          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Amed Spor Kayıtları</h3>
+          <p className="text-sm text-slate-500">Form listesi ve CSV export</p>
+        </Link>
         <Link href="/yonetim/slider-yonetimi" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
           <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Slider</h3>
           <p className="text-sm text-slate-500">Ana ve haber slider</p>

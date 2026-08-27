@@ -30,6 +30,7 @@ import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
 import { resolvePublicImageUrl } from "@/lib/external-image";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
+import { isAmedSporEvent } from "@/lib/amed-spor-utils";
 
 function eventDateISO(event: Event): string {
   const d = String(event.date ?? "");
@@ -109,6 +110,7 @@ function getLocalISODateString(d: Date): string {
 function getEventCityLabels(event: Event): string[] {
   const e = event as Event & {
     city?: string | null;
+    venues?: Array<{ city?: string }> | { city?: string } | null;
   };
 
   const candidates: string[] = [];
@@ -125,6 +127,18 @@ function getEventCityLabels(event: Event): string[] {
   };
 
   pushCandidate(e.city);
+  
+  // Venue.city de kontrol et
+  if (e.venues) {
+    if (Array.isArray(e.venues)) {
+      e.venues.forEach((venue) => {
+        if (venue?.city) pushCandidate(venue.city);
+      });
+    } else if (typeof e.venues === "object" && e.venues !== null && "city" in e.venues) {
+      pushCandidate((e.venues as { city?: string }).city);
+    }
+  }
+  
   return candidates;
 }
 
@@ -273,7 +287,28 @@ export default function ClientHomePage({
     const eventCityNames = getEventCityLabels(event);
     const matchesCity =
       selectedCity === "all" ||
-      eventCityNames.some((cityName) => getNormalizedCityKey(cityName) === getNormalizedCityKey(selectedCity));
+      eventCityNames.some((cityName) => {
+        const normalizedEventCity = getNormalizedCityKey(cityName);
+        const normalizedSelectedCity = getNormalizedCityKey(selectedCity);
+        
+        // Tam eşleşme
+        if (normalizedEventCity === normalizedSelectedCity) return true;
+        
+        // Kısmi eşleşme: seçilen şehir adı, etkinlik şehir adını içeriyor veya tam tersi
+        // Örn: "Diyarbakır - Amed" seçiliyken, etkinlikte "Diyarbakır" veya "Amed" yazıyorsa eşleş
+        if (normalizedEventCity.includes(normalizedSelectedCity) || normalizedSelectedCity.includes(normalizedEventCity)) {
+          return true;
+        }
+        
+        // Tire ile ayrılmış parçaları kontrol et
+        const selectedParts = selectedCity.toLowerCase().split(/[-–/]/).map(p => p.trim()).filter(Boolean);
+        const eventParts = cityName.toLowerCase().split(/[-–/]/).map(p => p.trim()).filter(Boolean);
+        
+        // Seçilen şehirin herhangi bir parçası, etkinlik şehrinin herhangi bir parçasıyla eşleşiyorsa
+        return selectedParts.some(sp => 
+          eventParts.some(ep => ep.includes(sp) || sp.includes(ep))
+        );
+      });
     const matchesCategory = selectedCategory === "all" || event.category === selectedCategory;
 
     const matchesEventDate = !isDateFilterActive || eventDateISO(event) === eventDate;
@@ -642,9 +677,11 @@ export default function ClientHomePage({
                       <span className={`font-bold text-lg ${
                         eventStatus.isPast ? 'text-slate-500' : 'text-primary-600'
                       }`}>
-                        {Number(event.price_from) > 0
-                          ? `${t("from")} ${formatPrice(Number(event.price_from), event.currency)}`
-                          : t("free")}
+                        {event.show_slug && isAmedSporEvent(event.show_slug)
+                          ? null
+                          : Number(event.price_from) > 0
+                            ? `${t("from")} ${formatPrice(Number(event.price_from), event.currency)}`
+                            : t("free")}
                       </span>
                       <button
                         onClick={() => {

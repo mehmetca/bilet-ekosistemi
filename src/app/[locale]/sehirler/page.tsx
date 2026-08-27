@@ -7,7 +7,7 @@ import { routing } from "@/i18n/routing";
 import type { Locale } from "@/lib/i18n-content";
 import { buildLocalePathMetadata } from "@/lib/seo/locale-path-metadata";
 
-export const revalidate = 1800;
+export const revalidate = 60;
 
 export async function generateMetadata({
   params,

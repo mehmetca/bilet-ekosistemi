@@ -52,6 +52,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       { href: "/yonetim/sanatcilar", label: t("nav.artists"), icon: User, description: t("nav.artistsDesc") },
       { href: "/yonetim/bilet-turleri", label: t("nav.ticketTypes"), icon: Ticket, description: t("nav.ticketTypesDesc") },
       { href: "/yonetim/bilet-listesi", label: t("nav.orders"), icon: CreditCard, description: t("nav.ordersDesc") },
+      { href: "/yonetim/amed-spor-kayitlar", label: "Amed Spor Kayıtları", icon: Users, description: "Form kayıt listesi ve CSV" },
       { href: "/yonetim/bilet-ozeti", label: t("nav.ticketSummary"), icon: PieChart, description: t("nav.ticketSummaryDesc") },
       { href: "/yonetim/muhasebe", label: t("nav.accounting"), icon: BarChart3, description: t("nav.accountingDesc") },
       { href: "/yonetim/kullanicilar", label: t("nav.users"), icon: Users, description: t("nav.usersDesc") },

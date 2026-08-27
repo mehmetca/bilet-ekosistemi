@@ -100,7 +100,12 @@ async function fetchPreviewEventsByShowSlug(showSlugTrimmed: string): Promise<Ev
     if (!error && data && data.length > 0) return data as Event[];
 
     const { data: ciData, error: ciError } = await previewShow().ilike("show_slug", showSlugTrimmed);
-    if (!ciError && ciData && ciData.length > 0) return ciData as Event[];
+    if (!ciError && ciData && ciData.length > 0) {
+      // Ekstra kontrol: tam eşleşme zorunlu
+      return (ciData as Event[]).filter(e => 
+        e.show_slug?.toLowerCase() === showSlugTrimmed.toLowerCase()
+      );
+    }
 
     return [];
   } catch {
@@ -127,11 +132,18 @@ async function fetchEventsByShowSlug(showSlug: string, allowPreview = false): Pr
         .order("time", { ascending: true });
 
     let published: Event[] = [];
+    // Sadece tam eşleşme kullan - show_slug yapılandırılmalı
     const { data, error } = await publishedShow().eq("show_slug", showSlugTrimmed);
     if (!error && data && data.length > 0) published = data as Event[];
     else {
+      // Büyük/küçük harf duyarsız tam eşleşme için fallback
       const { data: ciData, error: ciError } = await publishedShow().ilike("show_slug", showSlugTrimmed);
-      if (!ciError && ciData && ciData.length > 0) published = ciData as Event[];
+      if (!ciError && ciData && ciData.length > 0) {
+        // Ekstra kontrol: tam eşleşme zorunlu
+        published = (ciData as Event[]).filter(e => 
+          e.show_slug?.toLowerCase() === showSlugTrimmed.toLowerCase()
+        );
+      }
     }
 
     if (!allowPreview) return published;
@@ -182,7 +194,7 @@ async function fetchPreviewEventBySlug(slugOrIdTrimmed: string): Promise<EventLo
       () => previewQuery().eq("slug", slugOrIdTrimmed).maybeSingle(),
       () => previewQuery().ilike("slug", slugOrIdTrimmed).maybeSingle(),
       () => previewQuery().eq("show_slug", slugOrIdTrimmed).maybeSingle(),
-      () => previewQuery().ilike("show_slug", slugOrIdTrimmed).maybeSingle(),
+      // show_slug için kısmi eşleşme kaldırıldı - sadece tam eşleşme
       () => previewQuery().eq("id", slugOrIdTrimmed).maybeSingle(),
     ];
 
@@ -254,16 +266,8 @@ async function fetchEventBySlug(slugOrId: string, allowPreview = false): Promise
 
     if (!showError && showData) return { event: showData as Event };
 
-    const { data: showCiData, error: showCiError } = await supabase
-      .from("events")
-      .select("*")
-      .ilike("show_slug", slugOrIdTrimmed)
-      .eq("is_active", true)
-      .eq("is_approved", true)
-      .eq("is_draft", false)
-      .maybeSingle();
 
-    if (!showCiError && showCiData) return { event: showCiData as Event };
+
 
     const { data: idData, error: idError } = await supabase
       .from("events")

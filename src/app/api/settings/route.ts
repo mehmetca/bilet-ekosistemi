@@ -37,7 +37,21 @@ const DEFAULT_SETTINGS = {
   maintenanceMode: false,
   socialLinks: DEFAULT_SOCIAL_LINKS,
   impressum: DEFAULT_IMPRESSUM,
+  amedSporFormNotifyEmails: [] as string[],
 };
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function normalizeNotifyEmails(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string") continue;
+    const email = item.trim().toLowerCase();
+    if (EMAIL_RE.test(email) && !out.includes(email)) out.push(email);
+  }
+  return out;
+}
 
 type SettingsResponse = typeof DEFAULT_SETTINGS;
 
@@ -108,6 +122,7 @@ function normalizeSettings(rows: SiteSettingRow[] | null | undefined): SettingsR
         : DEFAULT_SETTINGS.maintenanceMode,
     socialLinks,
     impressum,
+    amedSporFormNotifyEmails: normalizeNotifyEmails(byKey.get("amed_spor_form_notify_emails")),
   };
 }
 
@@ -126,6 +141,7 @@ async function fetchPublicSettings(): Promise<SettingsResponse> {
       "maintenance_mode",
       "social_links",
       "impressum_settings",
+      "amed_spor_form_notify_emails",
     ]);
 
   if (error) return DEFAULT_SETTINGS;
@@ -228,6 +244,7 @@ export async function POST(request: NextRequest) {
             disputeDesc: String(body.impressum.disputeDesc || "").trim(),
           }
         : undefined;
+    const amedSporFormNotifyEmails = normalizeNotifyEmails(body.amedSporFormNotifyEmails);
 
     if (
       siteName === undefined ||
@@ -237,10 +254,21 @@ export async function POST(request: NextRequest) {
       enableNotifications === undefined ||
       maintenanceMode === undefined ||
       socialLinks === undefined ||
-      impressum === undefined
+      impressum === undefined ||
+      !Array.isArray(body.amedSporFormNotifyEmails)
     ) {
       return NextResponse.json(
         { error: "Ayar alanları geçersiz. Tüm alanları doğru formatta gönderin." },
+        { status: 400 }
+      );
+    }
+
+    if (amedSporFormNotifyEmails.length < 2) {
+      return NextResponse.json(
+        {
+          error:
+            "Amed Spor form bildirimleri için en az 2 geçerli e-posta adresi girin.",
+        },
         { status: 400 }
       );
     }
@@ -254,6 +282,7 @@ export async function POST(request: NextRequest) {
       { key: "maintenance_mode", value: maintenanceMode },
       { key: "social_links", value: socialLinks },
       { key: "impressum_settings", value: impressum },
+      { key: "amed_spor_form_notify_emails", value: amedSporFormNotifyEmails },
     ];
 
     const { error: upsertError } = await supabase
@@ -282,6 +311,7 @@ export async function POST(request: NextRequest) {
         maintenanceMode,
         socialLinks,
         impressum,
+        amedSporFormNotifyEmails,
       },
       user_id: user.id,
       user_email: user.email ?? null,
@@ -300,6 +330,7 @@ export async function POST(request: NextRequest) {
         maintenanceMode,
         socialLinks,
         impressum,
+        amedSporFormNotifyEmails,
       },
     });
     applyMaintenanceCookie(res, maintenanceMode);

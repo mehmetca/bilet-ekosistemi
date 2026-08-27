@@ -44,6 +44,7 @@ export default function AyarlarPage() {
     maxTicketQuantity: 10,
     enableNotifications: true,
     maintenanceMode: false,
+    amedSporFormNotifyEmailsText: "",
     socialLinks: [
       { platform: "instagram", url: "https://instagram.com/kurdeventofficial" },
       { platform: "facebook", url: "https://www.facebook.com/KurdEventOfficial" },
@@ -61,6 +62,18 @@ export default function AyarlarPage() {
       disputeDesc: "AB tüketicileri, çevrimiçi uyuşmazlık çözüm platformunu kullanabilir: https://www.verbraucher-schlichter.de/",
     } as ImpressumSettings,
   });
+
+  function parseEmailsFromText(text: string): string[] {
+    const parts = text
+      .split(/[\n,;]+/)
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+    const out: string[] = [];
+    for (const email of parts) {
+      if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !out.includes(email)) out.push(email);
+    }
+    return out;
+  }
 
   useEffect(() => {
     fetch("/api/settings")
@@ -91,6 +104,9 @@ export default function AyarlarPage() {
               : s.maintenanceMode,
           socialLinks: Array.isArray(data?.socialLinks) ? data.socialLinks : s.socialLinks,
           impressum: data?.impressum && typeof data.impressum === "object" ? { ...s.impressum, ...data.impressum } : s.impressum,
+          amedSporFormNotifyEmailsText: Array.isArray(data?.amedSporFormNotifyEmails)
+            ? data.amedSporFormNotifyEmails.join("\n")
+            : s.amedSporFormNotifyEmailsText,
         }));
       })
       .catch(() => {});
@@ -99,6 +115,12 @@ export default function AyarlarPage() {
   async function handleSave() {
     setLoading(true);
     try {
+      const amedSporFormNotifyEmails = parseEmailsFromText(settings.amedSporFormNotifyEmailsText);
+      if (amedSporFormNotifyEmails.length < 2) {
+        alert("Amed Spor form bildirimleri için en az 2 geçerli e-posta adresi girin (satır veya virgülle ayırın).");
+        return;
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) {
@@ -117,6 +139,7 @@ export default function AyarlarPage() {
           maintenanceMode: settings.maintenanceMode,
           socialLinks: settings.socialLinks,
           impressum: settings.impressum,
+          amedSporFormNotifyEmails,
         }),
       });
       const json = await res.json().catch(() => ({}));
@@ -442,6 +465,24 @@ export default function AyarlarPage() {
                 />
                 <p className="mt-1 text-xs text-slate-500">
                   Sipariş bildirimleri bu adrese gönderilir. Kaydetmeyi unutmayın.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Amed Spor form bildirim e-postaları
+                </label>
+                <textarea
+                  value={settings.amedSporFormNotifyEmailsText}
+                  onChange={(e) =>
+                    setSettings({ ...settings, amedSporFormNotifyEmailsText: e.target.value })
+                  }
+                  rows={3}
+                  placeholder={"kisi1@ornek.com\nkisi2@ornek.com"}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500 font-mono text-sm"
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Doldurulan Amed Spor formları bu adreslere gider. En az 2 e-posta zorunlu; satır veya virgülle ayırın.
                 </p>
               </div>
               

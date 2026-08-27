@@ -17,7 +17,7 @@ import { getLocalizedEvent, type Locale } from "@/lib/i18n-content";
 import { buildEventJsonLd } from "@/lib/event-jsonld";
 import { DateTime } from "luxon";
 
-export const revalidate = 1800;
+export const revalidate = 60;
 
 interface PageProps {
   params: Promise<{ locale?: string; id: string }>;

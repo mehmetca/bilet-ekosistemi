@@ -38,6 +38,7 @@ import { useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import { supabase } from "@/lib/supabase-client";
 import { fetchAllRowsBySectionIds, fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
+import { isAmedSporEvent } from "@/lib/amed-spor-utils";
 import { getPlan } from "@/lib/seating-plans";
 import { musensaal } from "@/lib/seating-plans/musensaal";
 import SalonPlanViewer from "@/components/SalonPlanViewer";
@@ -1205,6 +1206,25 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const [venueFaqOpen, setVenueFaqOpen] = useState(false);
   /** Mekan foto galerisi lightbox (0..n-1) */
   const [venueGalleryIndex, setVenueGalleryIndex] = useState<number | null>(null);
+  const isAmedSpor = event.show_slug ? isAmedSporEvent(event.show_slug) : false;
+  const [amedSporFormSubmitted, setAmedSporFormSubmitted] = useState(false);
+
+  // Check if Amed Spor form was submitted
+  useEffect(() => {
+    if (isAmedSpor) {
+      try {
+        const savedData = localStorage.getItem("amedSporFormData");
+        if (savedData) {
+          const data = JSON.parse(savedData);
+          if (data.eventId === event.id) {
+            setAmedSporFormSubmitted(true);
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [isAmedSpor, event.id]);
   const [reminderEmail, setReminderEmail] = useState("");
   const [reminderPending, setReminderPending] = useState(false);
   const [reminderResult, setReminderResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -2231,67 +2251,61 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
             <div>
               <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{localized.title}</h1>
-              <div className="mt-4 flex flex-wrap gap-4 text-sm text-slate-700">
-                <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
-                  <Calendar className="h-4 w-4" />
-                  {formatEventDateDMY(event.date)}
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
-                  <Clock className="h-4 w-4" />
-                  {event.time}
-                </span>
-                {whereLine ? (
+              <div className="mt-4 flex flex-col gap-2 text-sm text-slate-700">
+                <div className="flex flex-wrap gap-4">
                   <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
-                    <MapPin className="h-4 w-4" />
-                    {whereLine}
+                    <Calendar className="h-4 w-4" />
+                    {formatEventDateDMY(event.date)}
                   </span>
-                ) : null}
-                {organizerDisplayName && (
-                  <span className="inline-flex items-center gap-2 rounded-md bg-primary-50 px-3 py-1.5 text-primary-700">
-                    <Users className="h-4 w-4" />
-                    {t("organizer")}: {organizerDisplayName}
+                  <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
+                    <Clock className="h-4 w-4" />
+                    {event.time}
                   </span>
-                )}
+                </div>
+                <div className="flex flex-wrap gap-4">
+                  {whereLine ? (
+                    <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
+                      <MapPin className="h-4 w-4" />
+                      {whereLine}
+                    </span>
+                  ) : null}
+                  {organizerDisplayName && (
+                    <span className="inline-flex items-center gap-2 rounded-md bg-primary-50 px-3 py-1.5 text-primary-700">
+                      <Users className="h-4 w-4" />
+                      {t("organizer")}: {organizerDisplayName}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="mt-5">
-                <p className="text-sm text-slate-600">{t("tickets")}</p>
-                <p className="text-2xl font-bold text-primary-700">
-                  {purchasableTickets.length > 0
-                    ? `${t("from")} ${formatPrice(Math.min(...purchasableTickets.map((tk) => Number(tk.price || 0))), event.currency)}`
-                    : catalogTickets.length > 0
-                      ? (
-                        <span className="text-lg font-extrabold uppercase tracking-wide text-red-600">
-                          {t("priceCategorySoldOut")}
-                        </span>
-                      )
-                      : isExternalOnlyEvent
-                      ? `${t("from")} ${formatPrice(Number(event.price_from || 0), event.currency)}`
-                      : t("comingSoon")}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-                {event.image_url ? (
-                  <Image
-                    src={event.image_url}
-                    alt={localized.title}
-                    fill
-                    priority
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 360px"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <Ticket className="h-16 w-16 text-slate-400" />
-                  </div>
-                )}
-              </div>
-              <div className="mt-4 flex gap-2">
+              {(!isAmedSpor || Number(event.price_from || 0) > 0) && (
+                <div className="mt-5">
+                  <p className="text-sm text-slate-600">
+                    {isAmedSpor ? "Kapora" : t("tickets")}
+                  </p>
+                  <p className="text-2xl font-bold text-primary-700">
+                    {isAmedSpor
+                      ? formatPrice(Number(event.price_from || 0), event.currency)
+                      : purchasableTickets.length > 0
+                        ? `${t("from")} ${formatPrice(
+                            Math.min(...purchasableTickets.map((tk) => Number(tk.price || 0))),
+                            event.currency
+                          )}`
+                        : catalogTickets.length > 0
+                          ? (
+                            <span className="text-lg font-extrabold uppercase tracking-wide text-red-600">
+                              {t("priceCategorySoldOut")}
+                            </span>
+                          )
+                          : isExternalOnlyEvent
+                          ? `${t("from")} ${formatPrice(Number(event.price_from || 0), event.currency)}`
+                          : t("comingSoon")}
+                  </p>
+                </div>
+              )}
+              <div className="mt-6 flex flex-wrap gap-2">
                 <button
                   onClick={toggleFavorite}
-                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
                   <Heart className="h-4 w-4" />
                   {isFavorite ? t("favorited") : t("favorite")}
@@ -2302,7 +2316,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     onClick={() => setShareMenuOpen((open) => !open)}
                     aria-expanded={shareMenuOpen}
                     aria-haspopup="menu"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                   >
                     <Share2 className="h-4 w-4" />
                     {t("share")}
@@ -2310,7 +2324,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   {shareMenuOpen && (
                     <div
                       role="menu"
-                      className="absolute right-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                      className="absolute left-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
                     >
                       <button
                         type="button"
@@ -2391,6 +2405,26 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               </div>
               {actionMessage && <p className="mt-2 text-xs text-slate-500">{actionMessage}</p>}
+              
+            </div>
+
+            <div>
+              <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+                {event.image_url ? (
+                  <Image
+                    src={event.image_url}
+                    alt={localized.title}
+                    fill
+                    priority
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 360px"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Ticket className="h-16 w-16 text-slate-400" />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -2405,7 +2439,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             className="scroll-mt-24 bg-white rounded-xl border border-slate-200 p-4 sm:p-6 lg:p-8"
           >
               <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 sm:mb-6 border-b border-slate-100 pb-3">
-                {isExternalOnlyEvent ? t("ticketInfo") : t("ticketSelection")}
+                {!isAmedSpor ? (isExternalOnlyEvent ? t("ticketInfo") : t("ticketSelection")) : localized.title}
               </h2>
 
               {isDraft && (
@@ -2423,7 +2457,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               )}
 
               {/* Bestplatzbuchung / Saalplanbuchung – ikonlu seçim */}
-              {!isExternalOnlyEvent && (
+              {!isExternalOnlyEvent && !isAmedSpor && (
                 <div className="mb-8 grid sm:grid-cols-2 gap-4">
                   <button
                     type="button"
@@ -2461,7 +2495,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   </button>
                 </div>
               )}
-              {!isExternalOnlyEvent && bookingMode === null && (
+              {!isExternalOnlyEvent && bookingMode === null && !isAmedSpor && (
                 <p className="mb-8 text-sm text-slate-600">
                   {locale === "de"
                     ? "Bitte wählen Sie eine Buchungsart."
@@ -3003,8 +3037,98 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               )}
 
+              {/* Amed Spor: önce form, sonra ödeme */}
+              {isAmedSpor && !amedSporFormSubmitted && (
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
+                  <p className="text-amber-950 font-medium mb-2">
+                    {locale === "en"
+                      ? "Please fill out the registration form first."
+                      : "Önce kayıt formunu doldurmanız gerekiyor."}
+                  </p>
+                  <p className="text-amber-900/80 text-sm mb-6">
+                    {locale === "en"
+                      ? "After the form, if a ticket price is set you will continue to payment."
+                      : "Formdan sonra bilet fiyatı tanımlıysa ödeme (sepet) adımına geçersiniz."}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.location.href = `/${locale}/etkinlik/${event.id}/amed-spor-form`;
+                    }}
+                    className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700"
+                  >
+                    {locale === "en" ? "Fill Form" : "Formu Doldur"}
+                  </button>
+                </div>
+              )}
+
+              {isAmedSpor && amedSporFormSubmitted && (
+                <div className="rounded-xl border border-green-200 bg-green-50 p-6 mb-6">
+                  <p className="text-green-900 mb-4">
+                    {locale === "en"
+                      ? "✓ Your form was submitted. Continue to the cart for payment if needed."
+                      : "✓ Formunuz gönderildi. Ödeme için sepete gidebilirsiniz."}
+                  </p>
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Yalnızca Amed Spor: formda kaydedilen bilet bilgisi varsa,
+                        // sepete kayıtlı kişi sayısı kadar bilet ekle (rezervasyon
+                        // 9 dk dolup sepet boşalmış olsa bile "Sepete Git" boş değil).
+                        try {
+                          const savedRaw = localStorage.getItem("amedSporFormData");
+                          if (savedRaw) {
+                            const saved = JSON.parse(savedRaw);
+                            const t = saved?.ticket;
+                            if (saved.eventId === event.id && t?.ticketId) {
+                              const quantity = Math.max(1, Number(t.quantity) || 1);
+                              addItemsBatch([
+                                {
+                                  ticketId: t.ticketId,
+                                  eventId: event.id,
+                                  eventTitle: t.eventTitle || event.title,
+                                  eventDate: String(t.eventDate || event.date || ""),
+                                  eventTime: String(t.eventTime || event.time || "00:00"),
+                                  venue: String(t.venue || event.venue || "Amedspor"),
+                                  location: String(t.location || event.location || ""),
+                                  ticketName: t.ticketName || "Amedspor Bileti",
+                                  price: Number(t.price || 0),
+                                  currency: t.currency || (event as any)?.currency || "EUR",
+                                  quantity,
+                                  available: Number(t.available ?? 0) || quantity,
+                                },
+                              ]);
+                            }
+                          }
+                        } catch {
+                          /* ignore */
+                        }
+                        // saveCart efektinin çalışması için küçük gecikme ile git
+                        window.setTimeout(() => {
+                          window.location.href = `/${locale}/sepet`;
+                        }, 600);
+                      }}
+                      className="bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-700"
+                    >
+                      {locale === "en" ? "Go to Cart" : "Sepete Git"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        localStorage.removeItem("amedSporFormData");
+                        setAmedSporFormSubmitted(false);
+                      }}
+                      className="text-sm text-green-700 underline hover:text-green-900"
+                    >
+                      {locale === "en" ? "Reset form status" : "Form durumunu sıfırla"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Bilet Türleri - Fiyat kategorisine göre: yer seçimi ile aynı sağ panel akışı */}
-              {!isExternalOnlyEvent && bookingMode === "price" && (
+              {!isExternalOnlyEvent && !isAmedSpor && bookingMode === "price" && (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
                   <div>
                     {catalogTickets.length === 0 ? (
@@ -3238,9 +3362,16 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   </span>
                 </div>
                 <div className="prose prose-slate max-w-none">
-                  <p className="whitespace-pre-line text-[15px] leading-7 text-slate-700">
-                    {parsedDescription.content || t("aboutPlaceholder")}
-                  </p>
+                  {parsedDescription.content ? (
+                    <div
+                      className="whitespace-pre-line text-[15px] leading-7 text-slate-700 [&_p]:my-1 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-bold [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
+                      dangerouslySetInnerHTML={{ __html: parsedDescription.content }}
+                    />
+                  ) : (
+                    <p className="whitespace-pre-line text-[15px] leading-7 text-slate-700">
+                      {t("aboutPlaceholder")}
+                    </p>
+                  )}
                 </div>
               </section>
 

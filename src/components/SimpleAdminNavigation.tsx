@@ -45,6 +45,12 @@ export default function SimpleAdminNavigation() {
       description: "Tüm siparişler"
     },
     {
+      href: "/yonetim/amed-spor-kayitlar",
+      label: "Amed Spor",
+      icon: Users,
+      description: "Form kayıt listesi"
+    },
+    {
       href: "/yonetim/muhasebe",
       label: "Muhasebe",
       icon: BarChart3,

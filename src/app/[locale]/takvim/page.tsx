@@ -2,7 +2,7 @@ import Header from "@/components/Header";
 import EventCalendar from "@/components/EventCalendar";
 import { getEventsForCalendar } from "@/lib/events-server";
 
-export const revalidate = 1800;
+export const revalidate = 60;
 
 export default async function TakvimPage() {
   try {
