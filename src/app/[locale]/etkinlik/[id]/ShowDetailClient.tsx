@@ -322,6 +322,7 @@ function CityEventsSection({
       <div className="divide-y divide-slate-100">
         {events.map((event) => {
           const eventLocalized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale);
+          const eventTitle = (eventLocalized.title || event.title || "").trim();
           const eventDate = new Date(`${event.date} ${event.time || "00:00"}`);
           const isPast = eventDate < renderNow;
           const price = Number(event.price_from || 0);
@@ -346,7 +347,12 @@ function CityEventsSection({
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-base font-semibold text-slate-900 sm:text-lg">{dateParts.lineLong}</p>
+                  {eventTitle ? (
+                    <p className="text-base font-bold text-slate-900 sm:text-lg">{eventTitle}</p>
+                  ) : null}
+                  <p className={eventTitle ? "text-sm font-medium text-slate-500" : "text-base font-semibold text-slate-900 sm:text-lg"}>
+                    {dateParts.lineLong}
+                  </p>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">
                     <span className="font-semibold text-slate-800">{t("addressLabel")}</span>
                     {addressLine ? ` ${addressLine}` : " —"}
