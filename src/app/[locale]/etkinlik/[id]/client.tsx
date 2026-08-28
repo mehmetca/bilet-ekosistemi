@@ -3354,7 +3354,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
             {/* Etkinlik Hakkında – düzenli içerik + sağ özet panel */}
             <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
+              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
                 <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t("aboutEvent")}</h2>
                   <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
@@ -3364,7 +3364,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 <div className="prose prose-slate max-w-none">
                   {parsedDescription.content ? (
                     <div
-                      className="whitespace-pre-line text-[15px] leading-7 text-slate-700 [&_p]:my-1 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-bold [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
+                      className="break-words [overflow-wrap:anywhere] [&_img]:h-auto [&_iframe]:max-w-full [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_*]:max-w-full whitespace-pre-line text-[15px] leading-7 text-slate-700 [&_p]:my-1 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-bold [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
                       dangerouslySetInnerHTML={{ __html: parsedDescription.content }}
                     />
                   ) : (
