@@ -79,8 +79,6 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
       pickBestLocalizedShowText(events, "description", locale) ||
       getLocalizedEvent(firstEvent as unknown as Record<string, unknown>, locale).description,
   };
-  const parsedDescription = parseEventDescription(localized.description || firstEvent.description);
-
   const hasExternalTickets = useMemo(() => {
     return events.some((e) => {
       const parsed = parseEventDescription(
@@ -272,18 +270,6 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
           </div>
         )}
 
-        {/* Etkinlik Hakkında */}
-        {parsedDescription.content && (
-          <div className="bg-white rounded-xl border border-slate-200 p-8 mt-10">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">{t("aboutEvent")}</h2>
-            <div className="prose prose-slate max-w-none">
-              <div
-                className="whitespace-pre-line text-slate-700 leading-relaxed [&_p]:my-1 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-bold [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
-                dangerouslySetInnerHTML={{ __html: parsedDescription.content }}
-              />
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );
