@@ -330,13 +330,15 @@ export default function ClientHomePage({
     return 0;
   });
 
-  // Aynı gösteri/tur: yalnızca ortak show_slug varsa tek kart; slug yoksa her etkinlik ayrı görünür
+  // Aynı gösteri/tur: yalnızca ortak show_slug varsa tek kart; slug yoksa her etkinlik ayrı görünür.
+  // İstisna: Amed Spor etkinlikleri aynı şehirde farklı tarihlerdir; her biri ayrı kart olarak listelensin.
   const MAX_PER_SHOW = 1;
   const displayEvents = (() => {
     const countBySlug = new Map<string, number>();
     return filteredEvents.filter((event) => {
       const slug = String((event as Event & { show_slug?: string }).show_slug || "").trim();
       if (!slug) return true;
+      if (isAmedSporEvent(slug)) return true;
       const count = countBySlug.get(slug) || 0;
       if (count >= MAX_PER_SHOW) return false;
       countBySlug.set(slug, count + 1);
