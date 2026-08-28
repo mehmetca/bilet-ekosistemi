@@ -4,6 +4,7 @@ import { Link } from "@/i18n/navigation";
 import type { Event } from "@/types/database";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { getLocalizedEvent } from "@/lib/i18n-content";
+import { eventDetailPath } from "@/lib/amed-spor-utils";
 import type { Locale } from "@/lib/i18n-content";
 import { Music2 } from "lucide-react";
 
@@ -51,13 +52,13 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
       <div className="grid gap-6 md:grid-cols-2">
         {featured.map((event) => {
           const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale);
-          const slug = (event as Event & { show_slug?: string }).show_slug || event.id;
+          const href = eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id);
           const dateParts = getStackedDateParts(event.date);
 
           return (
             <Link
               key={event.id}
-              href={`/etkinlik/${slug}`}
+              href={href}
               className="group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200"
             >
               <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-slate-200 to-slate-100">

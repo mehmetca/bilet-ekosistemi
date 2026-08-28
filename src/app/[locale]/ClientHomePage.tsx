@@ -30,7 +30,7 @@ import { getLocalizedEvent } from "@/lib/i18n-content";
 import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
 import { resolvePublicImageUrl } from "@/lib/external-image";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
-import { isAmedSporEvent } from "@/lib/amed-spor-utils";
+import { isAmedSporEvent, eventDetailPath } from "@/lib/amed-spor-utils";
 
 function eventDateISO(event: Event): string {
   const d = String(event.date ?? "");
@@ -593,7 +593,7 @@ export default function ClientHomePage({
                       : 'bg-white border-slate-200'
                   }`}
                 >
-                  <Link href={`/${locale}/etkinlik/${(event as Event & { show_slug?: string }).show_slug || event.id}`}>
+                  <Link href={`/${locale}${eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}`}>
                     <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden cursor-pointer relative">
                       {event.image_url ? (
                         <img
@@ -691,8 +691,7 @@ export default function ClientHomePage({
                             alert(t("eventEndedAlert"));
                             return;
                           }
-                          const slug = (event as Event & { show_slug?: string }).show_slug || event.id;
-                          window.location.href = `/${locale}/etkinlik/${slug}`;
+                          window.location.href = `/${locale}${eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}`;
                         }}
                         className={`text-sm font-medium flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg transition-colors w-full sm:w-auto ${
                           eventStatus.isPast

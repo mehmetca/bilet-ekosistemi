@@ -11,6 +11,7 @@ import { getLocalizedEvent } from "@/lib/i18n-content";
 import { useTranslations, useLocale } from "next-intl";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
 import { parseDateInput, toISODateString, formatEventDateWithMonth, formatEventDateDMYFromDate } from "@/lib/date-utils";
+import { eventDetailPath } from "@/lib/amed-spor-utils";
 
 interface EventCalendarProps {
   events: Event[];
@@ -161,7 +162,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
             {upcomingEvents.map((event) => (
               <Link
                 key={event.id}
-                href={`/etkinlik/${(event as Event & { show_slug?: string | null }).show_slug || event.slug || event.id}`}
+                href={eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug)}
                 className="block overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-shadow"
               >
                 <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
@@ -229,7 +230,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
               {visiblePastEvents.map((event) => (
                 <Link
                   key={`past-${event.id}`}
-                  href={`/etkinlik/${(event as Event & { show_slug?: string | null }).show_slug || event.slug || event.id}`}
+                  href={eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug)}
                   className="block overflow-hidden rounded-2xl bg-slate-50 border border-slate-300 opacity-80 hover:opacity-100 hover:shadow-lg transition-all"
                 >
                   <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden relative">

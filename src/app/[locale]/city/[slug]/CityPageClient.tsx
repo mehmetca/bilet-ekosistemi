@@ -12,6 +12,7 @@ import type { Event } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import { resolvePublicImageUrl } from "@/lib/external-image";
+import { eventDetailPath } from "@/lib/amed-spor-utils";
 
 interface CityPageClientProps {
   city: Record<string, unknown>;
@@ -128,7 +129,7 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
                   key={event.id}
                   className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
                 >
-                  <Link href={`/etkinlik/${(event as Event & { show_slug?: string }).show_slug || event.id}`}>
+                  <Link href={eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}>
                     <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
                       {event.image_url ? (
                         <img
@@ -165,7 +166,7 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
                           : tHome("free")}
                       </span>
                       <Link
-                        href={`/etkinlik/${(event as Event & { show_slug?: string }).show_slug || event.id}`}
+                        href={eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}
                         className="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700"
                       >
                         {tHome("buyTicket")}

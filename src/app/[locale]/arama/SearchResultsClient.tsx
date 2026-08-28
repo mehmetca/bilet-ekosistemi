@@ -9,6 +9,7 @@ import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import type { Event } from "@/types/database";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
+import { eventDetailPath } from "@/lib/amed-spor-utils";
 
 type Props = {
   initialQuery: string;
@@ -191,7 +192,7 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {results.map((event) => {
                 const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
-                const href = `/etkinlik/${(event as Event & { show_slug?: string | null }).show_slug || event.slug || event.id}`;
+                const href = eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug);
                 return (
                   <Link key={event.id} href={href} className="overflow-hidden rounded-xl border border-slate-200 bg-white hover:shadow-md">
                     <div className="aspect-video bg-slate-100">

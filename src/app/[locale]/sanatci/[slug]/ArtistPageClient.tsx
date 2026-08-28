@@ -14,6 +14,7 @@ import Header from "@/components/Header";
 import { Link } from "@/i18n/navigation";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import { supabase } from "@/lib/supabase-client";
+import { eventDetailPath } from "@/lib/amed-spor-utils";
 
 function getYouTubeEmbedUrl(url?: string): string | null {
   if (!url) return null;
@@ -585,7 +586,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                   return (
                     <Link
                       key={event.id}
-                      href={`/etkinlik/${(event as Event & { show_slug?: string }).show_slug || event.id}`}
+                      href={eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}
                     >
                       <div
                         className={`overflow-hidden rounded-xl border shadow-sm hover:shadow-md transition-shadow ${

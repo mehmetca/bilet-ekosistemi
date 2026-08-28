@@ -11,6 +11,7 @@ import { formatEventDateWithMonth, isEventPastByLocalDateTime } from "@/lib/date
 import type { Locale } from "@/lib/i18n-content";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
 import { useTranslations } from "next-intl";
+import { eventDetailPath } from "@/lib/amed-spor-utils";
 
 interface EventSliderProps {
   events: Event[];
@@ -185,7 +186,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
                 </span>
               ) : (
                 <Link
-                  href={`/etkinlik/${(currentEvent as Event & { show_slug?: string }).show_slug || currentEvent.id}`}
+                  href={eventDetailPath((currentEvent as Event & { show_slug?: string }).show_slug, currentEvent.id)}
                   className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors text-center w-full sm:w-auto"
                 >
                   {buyTicketText}
