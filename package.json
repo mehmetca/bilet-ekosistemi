@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "predev": "kill-port 3000",
-    "dev": "next dev -p 3000",
+    "dev": "node scripts/dev.js",
     "dev:3001": "next dev -p 3001",
     "clean": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true});console.log('.next silindi.')}catch(e){if(e.code!=='ENOENT')throw e;}\"",
     "port:free": "kill-port 3000",

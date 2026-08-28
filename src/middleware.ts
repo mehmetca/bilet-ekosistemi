@@ -98,6 +98,24 @@ function hostsAreEquivalentForCanonical(reqHost: string, canonHost: string): boo
   return KURDEVENTS_PROD_HOST_EQUIV.has(reqHost) && KURDEVENTS_PROD_HOST_EQUIV.has(canonHost);
 }
 
+/**
+ * Middleware'in gerçek istek host'unu bulur.
+ * Standalone/Docker'da `HOSTNAME=0.0.0.0` olunca `request.nextUrl.hostname`
+ * gerçek host yerine "0.0.0.0" dönebiliyor; bu da kanonik yönlendirmenin
+ * her isteği www'ye çevirip proxy ile döngüye girmesine yol açıyor.
+ * Bu yüzden önce proxy'nin `x-forwarded-host`, sonra ham `host` başlığını kullan.
+ */
+function getRequestHostname(request: NextRequest): string {
+  const forwarded = request.headers.get("x-forwarded-host");
+  const rawHost = (forwarded ? forwarded.split(",")[0]!.trim() : null) || request.headers.get("host");
+  if (!rawHost) return request.nextUrl.hostname;
+  try {
+    return new URL(`http://${rawHost}`).hostname.toLowerCase();
+  } catch {
+    return rawHost.split(":")[0].toLowerCase();
+  }
+}
+
 /** www ↔ apex: OAuth PKCE doğrulayıcısı origin’e bağlı; kanonik host’a 308 ile hizala. */
 function redirectToCanonicalSiteHost(request: NextRequest): NextResponse | null {
   const raw = process.env.NEXT_PUBLIC_SITE_URL?.trim();
@@ -108,7 +126,7 @@ function redirectToCanonicalSiteHost(request: NextRequest): NextResponse | null 
   } catch {
     return null;
   }
-  const reqHost = request.nextUrl.hostname.toLowerCase();
+  const reqHost = getRequestHostname(request);
   const canonHost = canonical.hostname.toLowerCase();
   if (!canonHost || hostsAreEquivalentForCanonical(reqHost, canonHost)) return null;
   if (reqHost.endsWith(".vercel.app") || canonHost.endsWith(".vercel.app")) return null;
