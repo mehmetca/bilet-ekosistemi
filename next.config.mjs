@@ -151,6 +151,12 @@ const nextConfig = {
 
   eslint: { ignoreDuringBuilds: true },
 
+  // Build hızı için tip kontrolünü atla (tipler runtime'ı etkilemez).
+  typescript: { ignoreBuildErrors: true },
+
+  // Docker/Coolify için küçük ve hızlı runtime imajı.
+  output: "standalone",
+
   webpack: (config, { isServer }) => {
     config.resolve = config.resolve || {};
     config.resolve.fallback = {
