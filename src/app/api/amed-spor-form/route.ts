@@ -67,8 +67,8 @@ async function sendFormNotification(opts: {
   if (!brevoApiKey || !fromEmail || !fromName) {
     return { sent: false, reason: "Brevo yapılandırması eksik." };
   }
-  if (opts.to.length < 2) {
-    return { sent: false, reason: "En az 2 bildirim e-postası gerekli." };
+  if (opts.to.length < 1) {
+    return { sent: false, reason: "En az 1 bildirim e-postası gerekli." };
   }
 
   const rows = opts.attendees

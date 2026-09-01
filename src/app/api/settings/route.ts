@@ -263,11 +263,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (amedSporFormNotifyEmails.length < 2) {
+    if (amedSporFormNotifyEmails.length < 1) {
       return NextResponse.json(
         {
           error:
-            "Amed Spor form bildirimleri için en az 2 geçerli e-posta adresi girin.",
+            "Amed Spor form bildirimleri için en az 1 geçerli e-posta adresi girin.",
         },
         { status: 400 }
       );

@@ -116,8 +116,8 @@ export default function AyarlarPage() {
     setLoading(true);
     try {
       const amedSporFormNotifyEmails = parseEmailsFromText(settings.amedSporFormNotifyEmailsText);
-      if (amedSporFormNotifyEmails.length < 2) {
-        alert("Amed Spor form bildirimleri için en az 2 geçerli e-posta adresi girin (satır veya virgülle ayırın).");
+      if (amedSporFormNotifyEmails.length < 1) {
+        alert("Amed Spor form bildirimleri için en az 1 geçerli e-posta adresi girin (satır veya virgülle ayırın).");
         return;
       }
 
@@ -482,7 +482,7 @@ export default function AyarlarPage() {
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500 font-mono text-sm"
                 />
                 <p className="mt-1 text-xs text-slate-500">
-                  Doldurulan Amed Spor formları bu adreslere gider. En az 2 e-posta zorunlu; satır veya virgülle ayırın.
+                  Doldurulan Amed Spor formları bu adreslere gider. En az 1 e-posta zorunlu; satır veya virgülle ayırın.
                 </p>
               </div>
               

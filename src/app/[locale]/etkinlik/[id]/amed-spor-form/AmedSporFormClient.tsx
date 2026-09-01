@@ -151,6 +151,13 @@ const STRINGS: Record<string, Record<Locale, string>> = {
     ku: "Nav û Paşnav *",
     ckb: "ناو و نازناو *",
   },
+  fullNameWarning: {
+    tr: "Ad ve soyad bilgileriniz uçuş işlemlerinde ve Amedspor Passo biletlerinin alımında kullanılacağı için lütfen kimliğinizde yazıldığı gibi yazınız.",
+    de: "Ihr Vor- und Nachname wird für Flugbuchungen und den Kauf von Amedspor-Passo-Tickets verwendet. Bitte geben Sie ihn genau so ein, wie er in Ihrem Ausweis steht.",
+    en: "Your first and last name will be used for flight procedures and Amedspor Passo ticket purchases. Please write them exactly as shown on your ID.",
+    ku: "Nav û paşnavê we dê di pêvajoyên firînê û kirîna bilêtên Amedspor Passo de were bikaranîn. Ji kerema xwe tam wekî di nasnameya we de hatiye nivîsandin binivîsin.",
+    ckb: "ناو و نازناوی ئێوە لە کاروباری فڕین و کڕینی بلیتی ئامەدسپۆر پاسۆدا بەکار دەهێنرێت. تکایە هەر وەک لە ناسنامەکەتاندا نووسراوە بینووسن.",
+  },
   email: {
     tr: "E-posta *",
     de: "E-Mail *",
@@ -315,12 +322,15 @@ export default function AmedSporFormClient({
   useEffect(() => {
     async function fetchAmedSporEvents() {
       try {
+        // Geçmiş etkinlikleri listeleme: ana sayfa /api/events ile aynı davranış.
+        const today = new Date().toISOString().slice(0, 10);
         const { data, error } = await supabase
           .from("events")
           .select("*")
           .eq("is_active", true)
           .eq("is_approved", true)
           .eq("is_draft", false)
+          .gte("date", today)
           .ilike("title", "%amed%")
           .not("title", "ilike", "%koma%")
           .order("date", { ascending: true })
@@ -692,6 +702,9 @@ export default function AmedSporFormClient({
                         </h3>
 
                         <div>
+                          <div className="mb-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                            {t("fullNameWarning")}
+                          </div>
                           <label className="block text-sm font-medium mb-2">
                             {t("fullName")}
                           </label>
