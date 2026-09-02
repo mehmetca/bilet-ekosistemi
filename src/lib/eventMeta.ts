@@ -6,6 +6,19 @@ export type EventMeta = {
   externalTicketUrl: string;
 };
 
+/**
+ * Yapıştırılan metinlerden gelen "kırılmaz boşluk" karakterlerini (NBSP vb.)
+ * normal boşluğa çevirir. Aksi halde tarayıcı, kelimeler arasını tek bir
+ * bölünmez sözcük sanıp satır sonunda kelimeyi ortadan kesebiliyor.
+ */
+export function normalizeDescriptionHtml(html?: string | null): string {
+  if (!html) return "";
+  return html
+    .replace(/\u00a0/g, " ") // NBSP
+    .replace(/\u202f/g, " ") // dar NBSP
+    .replace(/\u2007/g, " "); // figür boşluğu
+}
+
 export function parseEventDescription(raw?: string | null): EventMeta {
   if (!raw) return { content: "", externalTicketUrl: "" };
 
@@ -24,7 +37,7 @@ export function parseEventDescription(raw?: string | null): EventMeta {
     )}`.trim();
   }
 
-  return { content: working.trim(), externalTicketUrl };
+  return { content: normalizeDescriptionHtml(working.trim()), externalTicketUrl };
 }
 
 export function buildEventDescription(content: string, externalTicketUrl?: string): string {

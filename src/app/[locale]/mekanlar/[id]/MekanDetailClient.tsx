@@ -5,6 +5,7 @@ import { useLocale, useTranslations } from "next-intl";
 import Header from "@/components/Header";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
 import { getLocalizedVenue } from "@/lib/i18n-content";
+import { normalizeDescriptionHtml } from "@/lib/eventMeta";
 import { MapPin, Users, Car, DoorOpen, HelpCircle } from "lucide-react";
 
 const SHARED_VENUE_HERO_URL = "/images/venue-shared-hero.png";
@@ -117,10 +118,10 @@ export default function MekanDetailClient({
   const cityName = localized.city || (venueRaw.city as string | null) || "";
   const capacity = venueRaw.capacity != null ? Number(venueRaw.capacity) : null;
 
-  const seatingDesc = localized.seating_layout_description;
-  const transportInfo = localized.transport_info;
-  const entranceInfo = localized.entrance_info;
-  const rules = localized.rules;
+  const seatingDesc = normalizeDescriptionHtml(localized.seating_layout_description);
+  const transportInfo = normalizeDescriptionHtml(localized.transport_info);
+  const entranceInfo = normalizeDescriptionHtml(localized.entrance_info);
+  const rules = normalizeDescriptionHtml(localized.rules);
 
   const venueFaq = (Array.isArray(venueRaw.faq) ? (venueRaw.faq as VenueFaqItem[]) : []).filter((x) => x?.soru && x?.cevap);
   const venueIdResolved = String(venueRaw.id ?? venueId);

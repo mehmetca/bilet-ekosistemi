@@ -29,7 +29,7 @@ import {
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
-import { parseEventDescription } from "@/lib/eventMeta";
+import { parseEventDescription, normalizeDescriptionHtml } from "@/lib/eventMeta";
 import { formatEventVenueAddressCityLine, stripLegacyVenueReservationAreaNote } from "@/lib/event-venue-display";
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent, type Locale } from "@/lib/i18n-content";
@@ -3364,7 +3364,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 <div className="prose prose-slate max-w-none">
                   {parsedDescription.content ? (
                     <div
-                      className="break-words [overflow-wrap:anywhere] [&_img]:h-auto [&_iframe]:max-w-full [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_*]:max-w-full whitespace-pre-line text-[15px] leading-7 text-slate-700 [&_p]:my-1 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-bold [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
+                      className="break-words [&_img]:h-auto [&_iframe]:max-w-full [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_*]:max-w-full whitespace-pre-line text-[15px] leading-7 text-slate-700 [&_p]:my-1 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-bold [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
                       dangerouslySetInnerHTML={{ __html: parsedDescription.content }}
                     />
                   ) : (
@@ -3516,7 +3516,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         </div>
                         <div
                           className="prose prose-sm max-w-none text-slate-700 [&_p]:my-1 [&_ul]:my-2"
-                          dangerouslySetInnerHTML={{ __html: venue.transport_info }}
+                          dangerouslySetInnerHTML={{ __html: normalizeDescriptionHtml(venue.transport_info) }}
                         />
                       </div>
                     )}

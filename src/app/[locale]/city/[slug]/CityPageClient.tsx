@@ -7,7 +7,7 @@ import Header from "@/components/Header";
 import { Calendar, MapPin, Music2, ChevronRight } from "lucide-react";
 import { getLocalizedCity, getLocalizedEvent } from "@/lib/i18n-content";
 import { formatPrice } from "@/lib/formatPrice";
-import { parseEventDescription } from "@/lib/eventMeta";
+import { parseEventDescription, normalizeDescriptionHtml } from "@/lib/eventMeta";
 import type { Event } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
 import { formatEventDateDMY } from "@/lib/date-utils";
@@ -29,7 +29,7 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
   const [sortBy, setSortBy] = useState<"upcoming" | "popular">("upcoming");
   const localized = getLocalizedCity(city, locale);
   const cityName = localized.name || (city.slug as string) || "";
-  const cityDesc = localized.description || "";
+  const cityDesc = normalizeDescriptionHtml(localized.description) || "";
   const imageUrl = resolvePublicImageUrl((city.image_url as string) || null);
 
   const isEventPast = (event: Event) => {
