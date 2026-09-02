@@ -25,7 +25,7 @@ import {
   CURRENCY_SYMBOLS,
   DISPLAY_CATEGORIES,
 } from "@/types/database";
-import { buildEventDescription, parseEventDescription } from "@/lib/eventMeta";
+import { buildEventDescription, parseEventDescription, eventDescriptionToPlainText } from "@/lib/eventMeta";
 import AdminImageUpload from "@/components/AdminImageUpload";
 import RichTextEditor from "@/components/RichTextEditor";
 import { isAmedSporEvent } from "@/lib/amed-spor-utils";
@@ -1799,7 +1799,9 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 <div className="p-4 space-y-2">
                   <span className="text-xs font-medium text-primary-600">{CATEGORY_LABELS[category]}</span>
                   <h3 className="font-semibold text-slate-900 line-clamp-1">{titleTr || "Etkinlik adı"}</h3>
-                  <p className="text-sm text-slate-600 line-clamp-2">{descriptionTr || "Kısa açıklama burada görünecek."}</p>
+                  <p className="text-sm text-slate-600 line-clamp-2">
+                    {eventDescriptionToPlainText(descriptionTr) || "Kısa açıklama burada görünecek."}
+                  </p>
                   {step === 1 && (
                     <div className="pt-2 border-t border-slate-100">
                       <div className="flex items-center gap-2 text-sm text-slate-500"><Calendar className="h-4 w-4" /> Tarih ve saat</div>

@@ -7,16 +7,36 @@ export type EventMeta = {
 };
 
 /**
- * Yapıştırılan metinlerden gelen "kırılmaz boşluk" karakterlerini (NBSP vb.)
- * normal boşluğa çevirir. Aksi halde tarayıcı, kelimeler arasını tek bir
- * bölünmez sözcük sanıp satır sonunda kelimeyi ortadan kesebiliyor.
+ * Yapıştırılan metinlerden gelen "kırılmaz boşlukları" (NBSP vb.) normal
+ * boşluğa çevirir; hem gerçek karakter hem de HTML entity ("&nbsp;") hali
+ * yakalanır. Aksi halde tarayıcı, kelimeler arasını tek bir bölünmez sözcük
+ * sanıp satır sonunda kelimeyi ortadan kesebiliyor.
  */
 export function normalizeDescriptionHtml(html?: string | null): string {
   if (!html) return "";
   return html
-    .replace(/\u00a0/g, " ") // NBSP
-    .replace(/\u202f/g, " ") // dar NBSP
-    .replace(/\u2007/g, " "); // figür boşluğu
+    .replace(/[\u00a0\u202f\u2007]/g, " ") // gerçek kırılmaz boşluk karakterleri
+    .replace(/&nbsp;/gi, " ") // HTML entity hali
+    .replace(/&#160;/gi, " ")
+    .replace(/&#xa0;/gi, " ");
+}
+
+/**
+ * HTML açıklamayı kart önizlemelerinde gösterilebilecek düz metne çevirir
+ * (etiketleri ayıklar, entity'leri çözer, boşlukları sadeleştirir).
+ */
+export function eventDescriptionToPlainText(html?: string | null): string {
+  if (!html) return "";
+  return normalizeDescriptionHtml(html)
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#0*39;/g, "'")
+    .replace(/&apos;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function parseEventDescription(raw?: string | null): EventMeta {
