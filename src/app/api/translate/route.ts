@@ -9,9 +9,10 @@ type TranslateBody = {
 const GOOGLE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY || "";
 
 /**
- * Google'ın resmi olmayan GTX uç noktası IP/host bazlı hız sınırına (429)
- * takılabilir. Farklı host + client kombinasyonları ve kısa üstel bekleme ile
- * denenir; aynı metin önbelleğe alınır.
+ * Google'ın resmi olmayan GTX uç noktası sunucu IP'sini geçici olarak
+ * bloklayabilir (429/403). Farklı host + client kombinasyonları denenir;
+ * o da olmazsa ücretsiz aracılar (Lingva, MyMemory) ile devam edilir.
+ * Aynı metin önbelleğe alınır.
  */
 const GTX_ENDPOINTS = [
   "https://translate.googleapis.com/translate_a/single?client=gtx&dt=t",
@@ -19,6 +20,23 @@ const GTX_ENDPOINTS = [
   "https://translate.googleapis.com/translate_a/single?client=te&dt=t",
   "https://translate.google.com/translate_a/single?client=webapp&dt=t",
 ];
+
+/** Google çevirisini kendi sunucusu üzerinden sunan ücretsiz aracılar. */
+const LINGVA_INSTANCES = [
+  "https://lingva.ml",
+  "https://translate.plausibility.cloud",
+  "https://lingva.lunar.icu",
+];
+
+const MYMEMORY_URL = "https://api.mymemory.translated.net/get";
+
+const BROWSER_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+  Referer: "https://translate.google.com/",
+  Accept: "application/json, text/plain, */*",
+  "Accept-Language": "en-US,en;q=0.9",
+};
 
 const CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 gün
 const MAX_CACHE_SIZE = 2000;
@@ -51,6 +69,20 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit = {},
+  ms = 8000
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Resmi Google Cloud Translation API (env: GOOGLE_TRANSLATE_API_KEY). */
 async function translateOfficial(
   text: string,
@@ -60,12 +92,16 @@ async function translateOfficial(
   const url =
     `https://translation.googleapis.com/language/translate/v2` +
     `?key=${encodeURIComponent(GOOGLE_API_KEY)}`;
-  const response = await fetch(url, {
-    method: "POST",
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ q: text, source, target, format: "text" }),
-  });
+  const response = await fetchWithTimeout(
+    url,
+    {
+      method: "POST",
+      cache: "no-store",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ q: text, source, target, format: "text" }),
+    },
+    10000
+  );
   if (!response.ok) {
     throw new Error(`Çeviri servisi hatası: ${response.status}`);
   }
@@ -93,12 +129,10 @@ async function translateWithGoogle(
 
     let response: Response;
     try {
-      response = await fetch(url, {
+      response = await fetchWithTimeout(url, {
         method: "GET",
         cache: "no-store",
-        headers: {
-          "User-Agent": "Mozilla/5.0",
-        },
+        headers: BROWSER_HEADERS,
       });
     } catch {
       // Ağ hatası: sonraki host/client'ta dene
@@ -133,6 +167,57 @@ async function translateWithGoogle(
   );
 }
 
+/** Ücretsiz Lingva aracıları (Google çevirisini kendi IP'sinden proxy'ler). */
+async function tryLingva(
+  text: string,
+  source: string,
+  target: string
+): Promise<string | null> {
+  for (const instance of LINGVA_INSTANCES) {
+    try {
+      const url =
+        `${instance}/api/v1/${encodeURIComponent(source)}/${encodeURIComponent(target)}` +
+        `/${encodeURIComponent(text)}`;
+      const response = await fetchWithTimeout(url, {
+        method: "GET",
+        headers: BROWSER_HEADERS,
+      });
+      if (!response.ok) continue;
+      const payload = (await response.json()) as { translation?: string };
+      const translated = payload?.translation?.trim();
+      if (translated) return translated;
+    } catch {
+      // Sonraki aracıyı dene
+    }
+  }
+  return null;
+}
+
+/** Ücretsiz MyMemory (son çare; dil desteği sınırlı olabilir). */
+async function tryMyMemory(
+  text: string,
+  source: string,
+  target: string
+): Promise<string | null> {
+  try {
+    const url =
+      `${MYMEMORY_URL}?q=${encodeURIComponent(text)}` +
+      `&langpair=${encodeURIComponent(`${source}|${target}`)}`;
+    const response = await fetchWithTimeout(url, { method: "GET" });
+    if (!response.ok) return null;
+    const payload = (await response.json()) as {
+      responseStatus?: number;
+      responseData?: { translatedText?: string };
+    };
+    if (payload?.responseStatus !== 200) return null;
+    const translated = payload?.responseData?.translatedText?.trim();
+    if (translated && !translated.includes("MYMEMORY WARNING")) return translated;
+  } catch {
+    // yoksay
+  }
+  return null;
+}
+
 async function translateWithFallback(
   text: string,
   source: string,
@@ -151,7 +236,23 @@ async function translateWithFallback(
   try {
     return await translateWithGoogle(text, source, target);
   } catch (error) {
-    errors.push(error instanceof Error ? error.message : "GTX hatası");
+    errors.push(error instanceof Error ? error.message : "Google GTX hatası");
+  }
+
+  try {
+    const lingva = await tryLingva(text, source, target);
+    if (lingva) return lingva;
+    errors.push("Google erişimi geçici olarak engellenmiş olabilir");
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : "Lingva hatası");
+  }
+
+  try {
+    const myMemory = await tryMyMemory(text, source, target);
+    if (myMemory) return myMemory;
+    errors.push("Ücretsiz alternatifler çeviri döndürmedi");
+  } catch (error) {
+    errors.push(error instanceof Error ? error.message : "MyMemory hatası");
   }
 
   throw new Error(errors.join(" / "));
