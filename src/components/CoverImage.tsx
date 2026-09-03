@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useState, type ReactNode } from "react";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 
 type CoverImageProps = {
   src?: string | null;
@@ -37,13 +38,16 @@ export default function CoverImage({
 }: CoverImageProps) {
   const [failed, setFailed] = useState(false);
 
-  if (!src || failed) {
+  // NEXT_PUBLIC_STORAGE_CDN_URL tanımlıysa Supabase URL'lerini CDN'e çevir.
+  const resolvedSrc = src ? (resolvePublicImageUrl(src) ?? null) : null;
+
+  if (!resolvedSrc || failed) {
     return <>{fallback ?? null}</>;
   }
 
   return (
     <Image
-      src={src}
+      src={resolvedSrc}
       alt={alt}
       fill
       sizes={sizes}

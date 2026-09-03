@@ -183,6 +183,12 @@ const nextConfig = {
         pathname: "/storage/v1/object/public/**",
       },
       {
+        // NEXT_PUBLIC_STORAGE_CDN_URL tanımlıysa görseller cdn.kurdevents.com üzerinden gelir
+        protocol: "https",
+        hostname: "cdn.kurdevents.com",
+        pathname: "/storage/v1/object/public/**",
+      },
+      {
         protocol: "https",
         hostname: "localhost",
         port: "3000",
