@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Upload, X, Image as ImageIcon, Search as SearchIcon, Grid2x2 } from "lucide-react";
 import { getAccessTokenForApi } from "@/lib/supabase-auth-token";
+import { compressImageFile } from "@/lib/image-compress";
 
 interface AdminImageUploadProps {
   value: string;
@@ -75,6 +76,8 @@ export default function AdminImageUploadFixed({
     onUploadingChange?.(true);
     
     try {
+      // Egress/band genişliğini azaltmak için önce tarayıcıda küçült.
+      const compressedFile = await compressImageFile(file);
       const token = await getAccessTokenForApi();
       if (!token) {
         alert("Oturum bulunamadı veya süresi doldu. Lütfen sayfayı yenileyip tekrar giriş yapın.");
@@ -82,7 +85,7 @@ export default function AdminImageUploadFixed({
       }
 
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", compressedFile);
       formData.append("folder", folder);
       formData.append("access_token", token);
 

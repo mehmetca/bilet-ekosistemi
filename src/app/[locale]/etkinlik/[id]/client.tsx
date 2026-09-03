@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
+import CoverImage from "@/components/CoverImage";
 import type { Event, Ticket as EventTicket, Venue } from "@/types/database";
 import { parseEventDescription, normalizeDescriptionHtml } from "@/lib/eventMeta";
 import { formatEventVenueAddressCityLine, stripLegacyVenueReservationAreaNote } from "@/lib/event-venue-display";
@@ -3498,10 +3499,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   : `Fotoğraf ${idx + 1} galeride aç`
                               }
                             >
-                              <img
+                              <CoverImage
                                 src={url}
                                 alt={`${venue.name} – ${idx + 1}`}
-                                className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+                                sizes="112px"
+                                imageClassName="object-cover"
                               />
                             </button>
                           ))}

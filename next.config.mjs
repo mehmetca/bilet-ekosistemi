@@ -190,7 +190,10 @@ const nextConfig = {
       },
     ],
     formats: ["image/avif", "image/webp"],
-    minimumCacheTTL: 60,
+    // Görseller içerik-adreslidir (her yükleme yeni dosya adı üretir) ve değişmez.
+    // 60 sn gibi kısa TTL, optimize edicinin her dakika orijinali Supabase'den
+    // tam boyutta yeniden indirmesine yol açar (egress'i şişirir). Uzun tutuyoruz.
+    minimumCacheTTL: 2592000, // 30 gün
   },
 };
 

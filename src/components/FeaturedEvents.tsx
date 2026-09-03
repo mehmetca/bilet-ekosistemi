@@ -7,9 +7,7 @@ import { getLocalizedEvent } from "@/lib/i18n-content";
 import { eventDetailPath } from "@/lib/amed-spor-utils";
 import type { Locale } from "@/lib/i18n-content";
 import { Music2 } from "lucide-react";
-
-const fallbackImage =
-  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
+import CoverImage from "@/components/CoverImage";
 
 interface FeaturedEventsProps {
   events: Event[];
@@ -62,22 +60,16 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
               className="group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200"
             >
               <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-slate-200 to-slate-100">
-                {event.image_url ? (
-                  <img
-                    src={event.image_url}
-                    alt={localized.title}
-                    className="h-full w-full object-cover object-top"
-                    onError={(e) => {
-                      if (e.currentTarget.dataset.fallbackApplied === "1") return;
-                      e.currentTarget.dataset.fallbackApplied = "1";
-                      e.currentTarget.src = fallbackImage;
-                    }}
-                  />
-                ) : (
-                  <div className="h-full w-full flex items-center justify-center">
-                    <Music2 className="h-24 w-24 text-slate-400" />
-                  </div>
-                )}
+                <CoverImage
+                  src={event.image_url}
+                  alt={localized.title}
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  fallback={
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Music2 className="h-24 w-24 text-slate-400" />
+                    </div>
+                  }
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 {/* Alt satır: sol tarafta başlık + mekan, sağ tarafta tarih (etkinlik başlığı hizasında, şeffaf) */}
                 <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between p-4 sm:p-5 md:p-6">

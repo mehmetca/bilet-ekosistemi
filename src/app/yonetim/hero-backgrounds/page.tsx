@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2, Upload, Image as ImageIcon, Eye, EyeOff, MoveUp, MoveDown } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
+import { compressImageFile } from "@/lib/image-compress";
 
 interface HeroBackground {
   id: string;
@@ -54,10 +55,16 @@ export default function HeroBackgroundManagement() {
 
     setUploading(true);
     try {
-      const fileName = `hero-backgrounds/${Date.now()}-${file.name}`;
+      // Hero arka planları büyük olabiliyor; önce tarayıcıda sıkıştır.
+      const compressedFile = await compressImageFile(file);
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
+      const fileName = `hero-backgrounds/${Date.now()}-${safeName}`;
       const { error: uploadError } = await supabase.storage
         .from("hero-backgrounds")
-        .upload(fileName, file);
+        .upload(fileName, compressedFile, {
+          contentType: compressedFile.type,
+          cacheControl: "31536000",
+        });
 
       if (uploadError) {
         console.error("Upload error details:", uploadError);

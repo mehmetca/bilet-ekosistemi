@@ -15,6 +15,7 @@ import { Link } from "@/i18n/navigation";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import { supabase } from "@/lib/supabase-client";
 import { eventDetailPath } from "@/lib/amed-spor-utils";
+import CoverImage from "@/components/CoverImage";
 
 function getYouTubeEmbedUrl(url?: string): string | null {
   if (!url) return null;
@@ -274,11 +275,12 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
           }}
         >
           <div className="relative w-full max-w-4xl">
-            <div className="w-full h-[80vh] overflow-hidden rounded-xl border border-white/20 bg-transparent">
-              <img
+            <div className="relative w-full h-[80vh] overflow-hidden rounded-xl border border-white/20 bg-transparent">
+              <CoverImage
                 src={allGallery[galleryModalIndex].url}
                 alt={`${localized.name || artist.name} galeri`}
-                className="w-full h-full object-cover object-top"
+                sizes="100vw"
+                imageClassName="object-cover object-top"
               />
             </div>
             <button
@@ -311,10 +313,11 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
       <div className="relative">
         <div className="relative min-h-[320px] md:h-80 bg-black">
           {heroBannerUrl && (
-            <img
+            <CoverImage
               src={heroBannerUrl}
               alt={`${localized.name || artist.name} banner`}
-              className="absolute left-1/2 top-0 h-auto max-h-full w-auto max-w-full -translate-x-1/2 object-top"
+              sizes="100vw"
+              imageClassName="object-contain object-top"
             />
           )}
           {heroBannerUrl && (
@@ -327,18 +330,17 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
           <div className="relative site-container py-6 md:py-0 md:h-full md:flex md:items-end md:pb-8">
             <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:items-end">
               {!heroBannerUrl && (
-                <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-52 md:h-52 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg overflow-hidden flex-shrink-0 shadow-2xl self-start">
-                  {artist.image_url ? (
-                    <img
-                      src={artist.image_url}
-                      alt={artist.name}
-                      className="w-full h-full object-cover object-top"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <Music2 className="h-8 w-8 md:h-12 md:w-12 text-white" />
-                    </div>
-                  )}
+                <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-52 md:h-52 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg overflow-hidden flex-shrink-0 shadow-2xl self-start">
+                  <CoverImage
+                    src={artist.image_url}
+                    alt={artist.name}
+                    sizes="208px"
+                    fallback={
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <Music2 className="h-8 w-8 md:h-12 md:w-12 text-white" />
+                      </div>
+                    }
+                  />
                 </div>
               )}
               <div className="flex-1 text-white min-w-0">
@@ -392,20 +394,20 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                       {topGallery.map((item, index) => (
                         <div
                           key={`${item.url}-${index}`}
-                          className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
+                          className="relative aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
                         >
+                          <CoverImage
+                            src={item.url}
+                            alt={`${localized.name || artist.name} galeri`}
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                            imageClassName="object-cover object-top"
+                          />
                           <button
                             type="button"
                             onClick={() => openGalleryModal(item)}
-                            className="h-full w-full"
+                            className="absolute inset-0 h-full w-full"
                             aria-label="Fotografi buyut"
-                          >
-                            <img
-                              src={item.url}
-                              alt={`${localized.name || artist.name} galeri`}
-                              className="h-full w-full object-cover object-top"
-                            />
-                          </button>
+                          />
                         </div>
                       ))}
                     </div>

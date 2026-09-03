@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import { validateImageFile, getImageHint } from "@/lib/image-standards";
+import { compressImageFile } from "@/lib/image-compress";
 
 interface ImageUploadProps {
   value?: string;
@@ -19,15 +20,19 @@ export default function ImageUpload({ value, onChange, onRemove }: ImageUploadPr
     setUploading(true);
     
     try {
-      
-      const fileExt = file.name.split('.').pop();
+      // Egress/band genişliğini azaltmak için önce tarayıcıda küçült.
+      const compressedFile = await compressImageFile(file);
+      const fileExt = compressedFile.name.split('.').pop();
       const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
       const filePath = `event-images/${fileName}`;
 
-
       const { error: uploadError } = await supabase.storage
         .from('event-images')
-        .upload(filePath, file);
+        .upload(filePath, compressedFile, {
+          contentType: compressedFile.type,
+          // Görseller değişmez; tarayıcı/CDN uzun süre önbelleğine alsın.
+          cacheControl: '31536000',
+        });
 
 
       if (uploadError) {

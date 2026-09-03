@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import { extractMapEmbedUrl } from "@/lib/mapEmbed";
 import { getLocalizedVenue } from "@/lib/i18n-content";
 import { normalizeDescriptionHtml } from "@/lib/eventMeta";
+import CoverImage from "@/components/CoverImage";
 import { MapPin, Users, Car, DoorOpen, HelpCircle } from "lucide-react";
 
 const SHARED_VENUE_HERO_URL = "/images/venue-shared-hero.png";
@@ -145,11 +146,12 @@ export default function MekanDetailClient({
             <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 rounded-full bg-black/50 border border-white/10 px-3 py-1 text-xs font-semibold text-white">
               {galleryModalIndex + 1} / {gallery.length}
             </div>
-            <div className="w-full h-[80vh] overflow-hidden rounded-xl border border-white/20 bg-transparent">
-              <img
+            <div className="relative w-full h-[80vh] overflow-hidden rounded-xl border border-white/20 bg-transparent">
+              <CoverImage
                 src={gallery[galleryModalIndex]}
                 alt={`${localized.name || (venueRaw?.id as string) || "Venue"} ${t("photo")}`}
-                className="w-full h-full object-cover object-top"
+                sizes="100vw"
+                imageClassName="object-cover object-top"
               />
             </div>
 
@@ -309,8 +311,13 @@ export default function MekanDetailClient({
             )}
             {/* Sağ tarafta küçük kapak özeti / görsel */}
             {coverUrl && gallery.length === 1 && (
-              <div className="rounded-xl overflow-hidden border border-slate-200 bg-white">
-                <img src={coverUrl} alt={`${venueName} kapak`} className="w-full h-52 object-cover object-top" />
+              <div className="relative h-52 rounded-xl overflow-hidden border border-slate-200 bg-white">
+                <CoverImage
+                  src={coverUrl}
+                  alt={`${venueName} kapak`}
+                  sizes="(max-width: 1280px) 100vw, 340px"
+                  imageClassName="object-cover object-top"
+                />
               </div>
             )}
           </div>
@@ -328,12 +335,13 @@ export default function MekanDetailClient({
                   key={`${src}-${idx}`}
                   type="button"
                   onClick={() => openGalleryModal(idx)}
-                  className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 hover:shadow-sm transition-shadow text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                  className="relative h-44 sm:h-56 md:h-64 lg:h-72 rounded-2xl overflow-hidden border border-slate-200 bg-slate-100 hover:shadow-sm transition-shadow text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
                 >
-                  <img
+                  <CoverImage
                     src={src}
                     alt={`${localized.name || "Venue"} ${t("photo")} ${idx + 1}`}
-                    className="w-full h-44 sm:h-56 md:h-64 lg:h-72 object-cover object-top"
+                    sizes="(max-width: 640px) 45vw, (max-width: 1024px) 45vw, 30vw"
+                    imageClassName="object-cover object-top"
                   />
                 </button>
               ))}

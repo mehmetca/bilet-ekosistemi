@@ -8,6 +8,7 @@ import { Calendar, MapPin, Music2, ChevronRight } from "lucide-react";
 import { getLocalizedCity, getLocalizedEvent } from "@/lib/i18n-content";
 import { formatPrice } from "@/lib/formatPrice";
 import { parseEventDescription, normalizeDescriptionHtml } from "@/lib/eventMeta";
+import CoverImage from "@/components/CoverImage";
 import type { Event } from "@/types/database";
 import { CATEGORY_LABELS } from "@/types/database";
 import { formatEventDateDMY } from "@/lib/date-utils";
@@ -69,20 +70,13 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
 
       {/* Hero - uzun şehir fotoğrafı */}
       <div className="relative h-64 md:h-80 lg:h-96 w-full overflow-hidden bg-slate-800">
-        {imageUrl ? (
-          <img
-            src={imageUrl}
-            alt={cityName}
-            className="h-full w-full object-cover object-center"
-            onError={(e) => {
-              if (e.currentTarget.dataset.fallbackApplied === "1") return;
-              e.currentTarget.dataset.fallbackApplied = "1";
-              e.currentTarget.src = fallbackImage;
-            }}
-          />
-        ) : (
-          <img src={fallbackImage} alt={cityName} className="h-full w-full object-cover" />
-        )}
+        <CoverImage
+          src={imageUrl}
+          alt={cityName}
+          sizes="100vw"
+          priority
+          fallback={<img src={fallbackImage} alt={cityName} className="h-full w-full object-cover" />}
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
           <h1 className="text-3xl font-bold md:text-4xl">{cityName}</h1>
@@ -130,16 +124,13 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
                   className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
                 >
                   <Link href={eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}>
-                    <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
-                      {event.image_url ? (
-                        <img
-                          src={event.image_url}
-                          alt={localizedEvent.title}
-                          className="h-full w-full object-cover object-top"
-                        />
-                      ) : (
-                        <Music2 className="h-16 w-16 text-primary-400" />
-                      )}
+                    <div className="relative aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                      <CoverImage
+                        src={event.image_url}
+                        alt={localizedEvent.title}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        fallback={<Music2 className="h-16 w-16 text-primary-400" />}
+                      />
                     </div>
                   </Link>
                   <div className="p-4">

@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/formatPrice";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import { useCart } from "@/context/CartContext";
 import { Music2 } from "lucide-react";
+import CoverImage from "@/components/CoverImage";
 
 /**
  * Amed Spor form metinleri — 5 dilde (tr, de, en, ku, ckb).
@@ -571,21 +572,14 @@ export default function AmedSporFormClient({
                 href={`/etkinlik/${amedEvent.id}`}
                 className="block border border-slate-200 rounded-xl overflow-hidden hover:border-primary-500 hover:shadow-md transition-all bg-white group"
               >
-                <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
-                  {amedEvent.image_url ? (
-                    <img
-                      src={amedEvent.image_url}
-                      alt={amedEvent.title}
-                      className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
-                      onError={(e) => {
-                        if (e.currentTarget.dataset.fallbackApplied === "1") return;
-                        e.currentTarget.dataset.fallbackApplied = "1";
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
-                  ) : (
-                    <Music2 className="h-12 w-12 text-primary-400" />
-                  )}
+                <div className="relative aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                  <CoverImage
+                    src={amedEvent.image_url}
+                    alt={amedEvent.title}
+                    sizes="(max-width: 1024px) 100vw, 360px"
+                    zoomOnHover
+                    fallback={<Music2 className="h-12 w-12 text-primary-400" />}
+                  />
                 </div>
                 <div className="p-4">
                   <h4 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary-700">

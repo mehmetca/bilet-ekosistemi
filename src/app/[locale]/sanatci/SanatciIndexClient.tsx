@@ -9,6 +9,7 @@ import { parseArtistBio } from "@/lib/artistProfile";
 import { getLocalizedArtist, type Locale } from "@/lib/i18n-content";
 import type { Artist } from "@/types/database";
 import { Search as SearchIcon } from "lucide-react";
+import CoverImage from "@/components/CoverImage";
 
 const PAGE_SIZE = 21;
 const LETTERS = [
@@ -208,18 +209,18 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                     href={`/sanatci/${artist.slug}`}
                     className="group overflow-hidden rounded-tl-xl rounded-br-xl rounded-tr-none rounded-bl-none border-[2px] border-slate-300 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-400 hover:shadow-lg"
                   >
-                    <div className="aspect-[4/3] bg-slate-100 overflow-hidden">
-                      {artist.image_url ? (
-                        <img
-                          src={artist.image_url}
-                          alt={localized.name || artist.name}
-                          className="h-full w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="h-full w-full flex items-center justify-center text-slate-400 text-xs md:text-sm">
-                          {t("noPhoto")}
-                        </div>
-                      )}
+                    <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
+                      <CoverImage
+                        src={artist.image_url}
+                        alt={localized.name || artist.name}
+                        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 33vw, 33vw"
+                        zoomOnHover
+                        fallback={
+                          <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs md:text-sm">
+                            {t("noPhoto")}
+                          </div>
+                        }
+                      />
                     </div>
                     <div className="px-3 pt-3 pb-3 text-center">
                       <h2 className="card-title text-sm md:text-base line-clamp-1 group-hover:text-primary-700">

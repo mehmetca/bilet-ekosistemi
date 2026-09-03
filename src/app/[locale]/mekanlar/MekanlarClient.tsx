@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import { useTranslations, useLocale } from "next-intl";
 import { getLocalizedVenue } from "@/lib/i18n-content";
 import { MapPin, Search as SearchIcon, Users } from "lucide-react";
+import CoverImage from "@/components/CoverImage";
 
 interface VenueFaqItem {
   soru: string;
@@ -196,29 +197,20 @@ export default function MekanlarClient({ initialVenues }: { initialVenues: Venue
                           href={href}
                           className="w-full flex items-center gap-4 px-4 py-4 sm:px-5 sm:py-4 hover:bg-slate-50 transition-colors hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2 rounded-xl"
                         >
-                          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
-                            {venue.image_url_1 ||
-                            venue.image_url_2 ||
-                            venue.image_url_3 ||
-                            venue.image_url_4 ||
-                            venue.image_url_5 ||
-                            venue.seating_layout_image_url ? (
-                              <img
-                                src={
-                                  venue.image_url_1 ||
-                                  venue.image_url_2 ||
-                                  venue.image_url_3 ||
-                                  venue.image_url_4 ||
-                                  venue.image_url_5 ||
-                                  venue.seating_layout_image_url ||
-                                  ""
-                                }
-                                alt={localized.name || venue.name}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <MapPin className="h-8 w-8 text-slate-400" />
-                            )}
+                          <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-lg bg-slate-100 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                            <CoverImage
+                              src={
+                                venue.image_url_1 ||
+                                venue.image_url_2 ||
+                                venue.image_url_3 ||
+                                venue.image_url_4 ||
+                                venue.image_url_5 ||
+                                venue.seating_layout_image_url
+                              }
+                              alt={localized.name || venue.name}
+                              sizes="96px"
+                              fallback={<MapPin className="h-8 w-8 text-slate-400" />}
+                            />
                           </div>
                           <div className="flex-1 flex flex-col sm:flex-row sm:items-center gap-3">
                             <div className="flex-1 min-w-0">

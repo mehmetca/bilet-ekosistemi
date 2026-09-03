@@ -31,6 +31,7 @@ import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils
 import { resolvePublicImageUrl } from "@/lib/external-image";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { isAmedSporEvent, eventDetailPath } from "@/lib/amed-spor-utils";
+import CoverImage from "@/components/CoverImage";
 
 function eventDateISO(event: Event): string {
   const d = String(event.date ?? "");
@@ -205,8 +206,6 @@ export default function ClientHomePage({
   );
   const [cities, setCities] = useState<City[]>(initialCities);
   const cityScrollRef = useRef<HTMLDivElement>(null);
-  const fallbackImage =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
 
   useEffect(() => {
     // Taslak / onaysız etkinlikler ana sayfada asla listelenmez.
@@ -437,18 +436,18 @@ export default function ClientHomePage({
                       href={`/city/${city.slug}`}
                       className="group flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 snap-center w-[min(88vw,22rem)] max-w-[min(88vw,22rem)] sm:min-w-[230px] sm:max-w-[230px] sm:w-[230px] md:min-w-[250px] md:max-w-[250px] md:w-[250px] xl:min-w-[280px] xl:max-w-[280px] xl:w-[280px]"
                     >
-                      <div className="aspect-[16/9] overflow-hidden bg-slate-100">
-                        {cityImageSrc ? (
-                          <img
-                            src={cityImageSrc}
-                            alt={name}
-                            className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 to-primary-50">
-                            <MapPin className="h-12 w-12 text-primary-400" />
-                          </div>
-                        )}
+                      <div className="relative aspect-[16/9] overflow-hidden bg-slate-100">
+                        <CoverImage
+                          src={cityImageSrc}
+                          alt={name}
+                          sizes="(max-width: 640px) 88vw, 280px"
+                          zoomOnHover
+                          fallback={
+                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 to-primary-50">
+                              <MapPin className="h-12 w-12 text-primary-400" />
+                            </div>
+                          }
+                        />
                       </div>
                       <div className="py-3 text-center">
                         <h3 className="font-semibold text-slate-900 group-hover:text-primary-600">{name}</h3>
@@ -595,20 +594,12 @@ export default function ClientHomePage({
                 >
                   <Link href={`/${locale}${eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}`}>
                     <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden cursor-pointer relative">
-                      {event.image_url ? (
-                        <img
-                          src={event.image_url}
-                          alt={localized.title}
-                          className="h-full w-full object-cover object-top"
-                          onError={(e) => {
-                            if (e.currentTarget.dataset.fallbackApplied === "1") return;
-                            e.currentTarget.dataset.fallbackApplied = "1";
-                            e.currentTarget.src = fallbackImage;
-                          }}
-                        />
-                      ) : (
-                        <Music2 className="h-16 w-16 text-primary-400" />
-                      )}
+                      <CoverImage
+                        src={event.image_url}
+                        alt={localized.title}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                        fallback={<Music2 className="h-16 w-16 text-primary-400" />}
+                      />
                       
                       {/* Durum Göstergesi */}
                       {eventStatus.isPast && (

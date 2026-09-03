@@ -10,6 +10,7 @@ import { getLocalizedEvent } from "@/lib/i18n-content";
 import type { Event } from "@/types/database";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { eventDetailPath } from "@/lib/amed-spor-utils";
+import CoverImage from "@/components/CoverImage";
 
 type Props = {
   initialQuery: string;
@@ -195,17 +196,18 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
                 const href = eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug);
                 return (
                   <Link key={event.id} href={href} className="overflow-hidden rounded-xl border border-slate-200 bg-white hover:shadow-md">
-                    <div className="aspect-video bg-slate-100">
-                      <img
-                        src={event.image_url || fallbackImage}
+                    <div className="relative aspect-video bg-slate-100">
+                      <CoverImage
+                        src={event.image_url}
                         alt={localized.title || event.title || "Event"}
-                        className="h-full w-full object-cover object-top"
-                        onError={(e) => {
-                          const img = e.currentTarget;
-                          if (img.dataset.fallbackApplied === "1") return;
-                          img.dataset.fallbackApplied = "1";
-                          img.src = fallbackImage;
-                        }}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        fallback={
+                          <img
+                            src={fallbackImage}
+                            alt=""
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        }
                       />
                     </div>
                     <div className="p-4">
