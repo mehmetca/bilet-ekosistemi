@@ -29,10 +29,21 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
 
+  // Coolify/Docker'da NEXT_PUBLIC_* build sırasında gömülmeyebilir; CDN adresini
+  // çalışma anında sunucudan okuyup tarayıcıya aktar (storage-image.ts bunu okur).
+  const storageCdnUrl = process.env.NEXT_PUBLIC_STORAGE_CDN_URL?.trim() || "";
+
   return (
-    <ClientIntlBridge locale={locale} messages={messages as Record<string, unknown>}>
-      {children}
-      <Footer />
-    </ClientIntlBridge>
+    <>
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `window.__KURDEVENTS_STORAGE_CDN_URL=${JSON.stringify(storageCdnUrl)};`,
+        }}
+      />
+      <ClientIntlBridge locale={locale} messages={messages as Record<string, unknown>}>
+        {children}
+        <Footer />
+      </ClientIntlBridge>
+    </>
   );
 }
