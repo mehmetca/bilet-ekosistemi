@@ -279,7 +279,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
               <CoverImage
                 src={allGallery[galleryModalIndex].url}
                 alt={`${localized.name || artist.name} galeri`}
-                sizes="100vw"
+                sizes="(max-width: 896px) 92vw, 896px"
                 imageClassName="object-cover object-top"
               />
             </div>

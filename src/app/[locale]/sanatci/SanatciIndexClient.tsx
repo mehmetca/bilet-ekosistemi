@@ -197,7 +197,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
         ) : (
           <>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
-              {pagedArtists.map((artist) => {
+              {pagedArtists.map((artist, index) => {
                 const localized = getLocalizedArtist(artist as unknown as Record<string, unknown>, locale);
                 const parsed = parseArtistBio(localized.bio || artist.bio);
                 const excerpt =
@@ -213,7 +213,8 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                       <CoverImage
                         src={artist.image_url}
                         alt={localized.name || artist.name}
-                        sizes="(max-width: 768px) 100vw, (max-width: 1280px) 33vw, 33vw"
+                        sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
+                        priority={currentPage === 1 && index < 6}
                         zoomOnHover
                         fallback={
                           <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs md:text-sm">
