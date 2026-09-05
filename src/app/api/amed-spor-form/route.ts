@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BrevoClient } from "@getbrevo/brevo";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { requireAdmin } from "@/lib/api-auth";
 
 export const runtime = "nodejs";
 
@@ -337,4 +338,52 @@ export async function POST(request: NextRequest) {
     console.error("Amed form POST error:", e);
     return NextResponse.json({ success: false, message: "Sunucu hatası" }, { status: 500 });
   }
+}
+
+/**
+ * Amed Spor kayıtlarını (event_form_responses) siler.
+ * Sadece admin: satır bazlı (responseIds) veya tüm maç (eventId).
+ * Service-role istemcisiyle yapıldığı için kayıtlar veritabanından kalıcı silinir.
+ */
+export async function DELETE(request: NextRequest) {
+  const auth = await requireAdmin(request);
+  if (auth instanceof NextResponse) return auth;
+  const { supabase } = auth;
+
+  let body: { eventId?: string; responseIds?: string[] };
+  try {
+    body = (await request.json()) as { eventId?: string; responseIds?: string[] };
+  } catch {
+    return NextResponse.json({ error: "Geçersiz istek." }, { status: 400 });
+  }
+
+  const eventId = typeof body?.eventId === "string" ? body.eventId.trim() : "";
+  const responseIds = Array.isArray(body?.responseIds)
+    ? body.responseIds.filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+    : [];
+
+  let query = supabase.from("event_form_responses").delete();
+
+  if (responseIds.length > 0) {
+    query = query.in("id", responseIds);
+  } else if (eventId) {
+    query = query.eq("event_id", eventId);
+  } else {
+    return NextResponse.json(
+      { error: "Silinecek kayıt belirtilmedi (eventId veya responseIds gerekli)." },
+      { status: 400 }
+    );
+  }
+
+  const { data, error } = await query.select();
+
+  if (error) {
+    console.error("Amed form kayıt silme hatası:", error.message);
+    return NextResponse.json(
+      { error: "Kayıtlar silinemedi: " + (error.message || "bilinmeyen hata") },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ success: true, deleted: (data || []).length });
 }

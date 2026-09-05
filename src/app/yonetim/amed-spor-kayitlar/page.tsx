@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Download, Users } from "lucide-react";
+import { Download, Users, Trash2 } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { supabase } from "@/lib/supabase-client";
+import { getAccessTokenForApi } from "@/lib/supabase-auth-token";
 import { isAmedSporEvent } from "@/lib/amed-spor-utils";
 import { formatEventDateDMY } from "@/lib/date-utils";
 
@@ -44,10 +45,30 @@ export default function AmedSporKayitlarPage() {
   const [loadingEvents, setLoadingEvents] = useState(true);
   const [loadingRows, setLoadingRows] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingEvent, setDeletingEvent] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    async function loadEvents() {
-      setLoadingEvents(true);
+  /** Kayıt sayılarını sayfalanmış şekilde toplar (RLS select yeterli). */
+  const fetchEventIdCounts = useCallback(async (): Promise<Map<string, number>> => {
+    const counts = new Map<string, number>();
+    const pageSize = 1000;
+    for (let offset = 0; ; offset += pageSize) {
+      const { data, error: qError } = await supabase
+        .from("event_form_responses")
+        .select("event_id")
+        .range(offset, offset + pageSize - 1);
+      if (qError) break;
+      for (const r of (data || []) as Array<{ event_id: string }>) {
+        counts.set(r.event_id, (counts.get(r.event_id) || 0) + 1);
+      }
+      if (!data || data.length < pageSize) break;
+    }
+    return counts;
+  }, []);
+
+  const loadEvents = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoadingEvents(true);
       setError(null);
       try {
         const { data, error: qError } = await supabase
@@ -55,28 +76,39 @@ export default function AmedSporKayitlarPage() {
           .select("id, title, date, show_slug")
           .order("date", { ascending: false })
           .limit(300);
-
         if (qError) throw qError;
+
+        const counts = await fetchEventIdCounts();
+        const todayIso = new Date().toISOString().slice(0, 10);
 
         const amedEvents = ((data || []) as EventOption[]).filter((e) => {
           const slugMatch = isAmedSporEvent(e.show_slug);
           const titleAmed = (e.title || "").toLowerCase().includes("amed");
           const isKomaAmed = (e.title || "").toLowerCase().includes("koma");
-          return slugMatch || (titleAmed && !isKomaAmed);
+          if (!slugMatch && !(titleAmed && !isKomaAmed)) return false;
+          const hasResponses = (counts.get(e.id) || 0) > 0;
+          const upcoming = String(e.date || "").slice(0, 10) >= todayIso;
+          // Kaydı kalmayan GEÇMİŞ maçlar bu sayfadan kaybolur (silinince otomatik gider).
+          return hasResponses || upcoming;
         });
+
         setEvents(amedEvents);
-        if (amedEvents.length > 0) {
-          setSelectedEventId(amedEvents[0].id);
-        }
+        setSelectedEventId((prev) =>
+          amedEvents.some((e) => e.id === prev) ? prev : amedEvents[0]?.id ?? ""
+        );
       } catch (e) {
         console.error(e);
         setError("Etkinlikler yüklenemedi.");
       } finally {
-        setLoadingEvents(false);
+        if (!silent) setLoadingEvents(false);
       }
-    }
+    },
+    [fetchEventIdCounts]
+  );
+
+  useEffect(() => {
     loadEvents();
-  }, []);
+  }, [loadEvents]);
 
   useEffect(() => {
     if (!selectedEventId) {
@@ -109,6 +141,75 @@ export default function AmedSporKayitlarPage() {
 
     loadRows();
   }, [selectedEventId]);
+
+  function confirmDelete(message: string): boolean {
+    return window.confirm(`${message}\n\nBu işlem geri alınamaz. Devam etmek istiyor musunuz?`);
+  }
+
+  async function deleteFromDb(payload: { eventId?: string; responseIds?: string[] }): Promise<number> {
+    const token = await getAccessTokenForApi();
+    if (!token) {
+      alert("Oturum bulunamadı veya süresi doldu. Lütfen sayfayı yenileyip tekrar giriş yapın.");
+      return 0;
+    }
+    const res = await fetch("/api/amed-spor-form", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const json = (await res.json().catch(() => ({}))) as { error?: string; deleted?: number };
+    if (!res.ok) {
+      throw new Error(json.error || "Silme işlemi başarısız.");
+    }
+    return json.deleted ?? 0;
+  }
+
+  async function handleDeleteRow(r: FormRow) {
+    if (deletingIds.has(r.id) || deletingEvent) return;
+    if (!confirmDelete(`"${r.full_name}" (${r.email}) kaydı silinecek.`)) return;
+    setDeletingIds((prev) => new Set(prev).add(r.id));
+    try {
+      const deleted = await deleteFromDb({ responseIds: [r.id] });
+      if (deleted > 0) {
+        setRows((prev) => prev.filter((x) => x.id !== r.id));
+        await loadEvents(true);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Kayıt silinemedi.");
+    } finally {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(r.id);
+        return next;
+      });
+    }
+  }
+
+  async function handleDeleteAllForEvent() {
+    if (!selectedEventId || !selectedEvent || deletingEvent) return;
+    if (
+      !confirmDelete(
+        `"${selectedEvent.title}" (${formatEventDateDMY(selectedEvent.date)}) maçının TÜM kayıtları silinecek (${rows.length} kayıt).`
+      )
+    ) {
+      return;
+    }
+    setDeletingEvent(true);
+    try {
+      const deleted = await deleteFromDb({ eventId: selectedEventId });
+      if (deleted > 0) {
+        setRows([]);
+        await loadEvents(true);
+      }
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Kayıtlar silinemedi.");
+    } finally {
+      setDeletingEvent(false);
+    }
+  }
 
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === selectedEventId) || null,
@@ -206,6 +307,17 @@ export default function AmedSporKayitlarPage() {
             <Download className="h-4 w-4" />
             CSV indir
           </button>
+          {selectedEvent && rows.length > 0 && (
+            <button
+              type="button"
+              onClick={handleDeleteAllForEvent}
+              disabled={deletingEvent || loadingRows}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 disabled:opacity-40"
+            >
+              <Trash2 className="h-4 w-4" />
+              {deletingEvent ? "Siliniyor..." : `Bu maçın tüm kayıtlarını sil (${rows.length})`}
+            </button>
+          )}
         </div>
 
         {error ? (
@@ -232,12 +344,13 @@ export default function AmedSporKayitlarPage() {
                   <th className="text-left px-3 py-2 font-semibold">Konaklama</th>
                   <th className="text-left px-3 py-2 font-semibold">Not</th>
                   <th className="text-left px-3 py-2 font-semibold">Tarih</th>
+                  <th className="text-left px-3 py-2 font-semibold">Sil</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {!loadingRows && rows.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-3 py-8 text-center text-slate-500">
+                    <td colSpan={9} className="px-3 py-8 text-center text-slate-500">
                       Bu etkinlik için kayıt yok.
                     </td>
                   </tr>
@@ -258,6 +371,17 @@ export default function AmedSporKayitlarPage() {
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         {r.created_at ? new Date(r.created_at).toLocaleString("tr-TR") : "-"}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteRow(r)}
+                          disabled={deletingIds.has(r.id) || deletingEvent}
+                          title="Bu kaydı sil"
+                          className="inline-flex items-center justify-center rounded-md border border-red-200 bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-40"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
                       </td>
                     </tr>
                   ))
