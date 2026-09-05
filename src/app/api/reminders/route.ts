@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabase } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,11 +22,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerSupabase();
+    const supabase = getSupabaseAdmin();
 
+    // Zaten kayıtlıysa tekrar kaydetmeye gerek yok (2. kayıt denemesi hata döndürmesin).
     const { error } = await supabase.from("event_reminders").upsert(
       { event_id: eventId, email },
-      { onConflict: "event_id,email" }
+      { onConflict: "event_id,email", ignoreDuplicates: true }
     );
 
     if (error) {

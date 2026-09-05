@@ -2103,12 +2103,21 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       } catch {
         /* ignore */
       }
-      const { data: { session } } = await supabase.auth.getSession();
+      // Bozuk/eski oturum çerezi getSession'ı çökertmesin; anonim akışa devam et.
+      let accessToken: string | undefined;
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        accessToken = session?.access_token;
+      } catch {
+        /* oturum yenilenemedi — session_id ile anonim devam et */
+      }
       const res = await fetch("/api/event-favorite", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({
           event_id: event.id,
