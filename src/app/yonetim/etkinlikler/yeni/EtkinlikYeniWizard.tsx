@@ -155,6 +155,9 @@ function categoryVariantsForDb(raw: string): string[] {
     return ["diger"];
   if (normalized === "stand-up" || normalized === "standup" || normalized === "stand-up-")
     return ["stand-up", "standup", "diger"];
+  if (normalized === "tur" || normalized === "tour") return ["tur"];
+  if (normalized === "mac-bileti" || normalized === "mac-bilet" || normalized === "mac" || normalized === "maç")
+    return ["mac-bileti"];
 
   // Son çare: DB check'e takılmamak için güvenli kategori
   return ["diger"];
