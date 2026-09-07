@@ -15,7 +15,7 @@ import Header from "@/components/Header";
 import { useHomeSearch } from "@/contexts/HomeSearchContext";
 import type { Event } from "@/types/database";
 import type { HomeSliderAd } from "@/lib/home-slider-ads";
-import { CATEGORY_LABELS, DISPLAY_CATEGORIES } from "@/types/database";
+import { DISPLAY_CATEGORIES } from "@/types/database";
 import dynamic from "next/dynamic";
 import FeaturedEvents from "@/components/FeaturedEvents";
 
@@ -191,6 +191,7 @@ export default function ClientHomePage({
 }: ClientHomePageProps) {
   const t = useTranslations("home");
   const tCalendar = useTranslations("calendar");
+  const tCat = useTranslations("categories");
   const locale = useLocale();
   const { searchTerm, setSearchTerm } = useHomeSearch();
   const [selectedCity, setSelectedCity] = useState("all");
@@ -506,7 +507,7 @@ export default function ClientHomePage({
               <option value="all">{t("filters.allCategories")}</option>
               {DISPLAY_CATEGORIES.map((key) => (
                 <option key={key} value={key}>
-                  {CATEGORY_LABELS[key]}
+                  {tCat(key)}
                 </option>
               ))}
             </select>
@@ -626,7 +627,7 @@ export default function ClientHomePage({
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-medium text-primary-600">
-                          {CATEGORY_LABELS[event.category as keyof typeof CATEGORY_LABELS] ?? event.category ?? "Etkinlik"}
+                          {event.category ? tCat(event.category) : "Etkinlik"}
                         </span>
                         {eventStatus.isPast && (
                           <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">

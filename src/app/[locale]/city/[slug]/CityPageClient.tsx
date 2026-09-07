@@ -10,7 +10,6 @@ import { formatPrice } from "@/lib/formatPrice";
 import { parseEventDescription, normalizeDescriptionHtml } from "@/lib/eventMeta";
 import CoverImage from "@/components/CoverImage";
 import type { Event } from "@/types/database";
-import { CATEGORY_LABELS } from "@/types/database";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import { resolvePublicImageUrl } from "@/lib/external-image";
 import { eventDetailPath } from "@/lib/amed-spor-utils";
@@ -24,6 +23,7 @@ interface CityPageClientProps {
 export default function CityPageClient({ city, initialEvents, nowIso }: CityPageClientProps) {
   const t = useTranslations("city");
   const tHome = useTranslations("home");
+  const tCat = useTranslations("categories");
   const locale = useLocale() as "tr" | "de" | "en";
   const renderNow = useMemo(() => new Date(nowIso), [nowIso]);
 
@@ -135,7 +135,7 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
                   </Link>
                   <div className="p-4">
                     <span className="text-xs font-medium text-primary-600">
-                      {CATEGORY_LABELS[event.category as keyof typeof CATEGORY_LABELS] ?? event.category}
+                      {event.category ? tCat(event.category) : ""}
                     </span>
                     <h3 className="mt-1 font-semibold text-slate-900 line-clamp-1">{localizedEvent.title}</h3>
                     <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">

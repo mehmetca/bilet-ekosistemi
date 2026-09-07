@@ -9,7 +9,6 @@ import "@uiw/react-markdown-preview/markdown.css";
 import { parseArtistBio } from "@/lib/artistProfile";
 import { getLocalizedArtist, getLocalizedEvent } from "@/lib/i18n-content";
 import { formatPrice } from "@/lib/formatPrice";
-import { CATEGORY_LABELS } from "@/types/database";
 import Header from "@/components/Header";
 import { Link } from "@/i18n/navigation";
 import { formatEventDateDMY } from "@/lib/date-utils";
@@ -54,6 +53,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
   const t = useTranslations("artists");
   const tCommon = useTranslations("common");
   const tHome = useTranslations("home");
+  const tCat = useTranslations("categories");
   const [artistEvents, setArtistEvents] = useState<Event[]>([]);
   const [isFollowing, setIsFollowing] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
@@ -627,9 +627,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                         </div>
                         <div className="p-4">
                           <span className="text-xs font-medium text-primary-600">
-                            {CATEGORY_LABELS[event.category as keyof typeof CATEGORY_LABELS] ??
-                              event.category ??
-                              "Etkinlik"}
+                            {event.category ? tCat(event.category) : "Etkinlik"}
                           </span>
                           <h3
                             className={`font-semibold line-clamp-2 mt-1 mb-2 ${

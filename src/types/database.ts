@@ -250,6 +250,8 @@ export type EventCategory =
   | 'tiyatro' 
   | 'stand-up' 
   | 'festival' 
+  | 'tur'
+  | 'mac-bileti'
   | 'diger';
 
 export const CATEGORY_LABELS: Record<EventCategory, string> = {
@@ -257,10 +259,12 @@ export const CATEGORY_LABELS: Record<EventCategory, string> = {
   tiyatro: 'Tiyatro',
   'stand-up': 'Stand-Up',
   festival: 'Festival',
+  tur: 'Tur',
+  'mac-bileti': 'Maç Bileti',
   diger: 'Diğer',
 };
 
-export const DISPLAY_CATEGORIES: EventCategory[] = ['konser', 'tiyatro', 'stand-up', 'festival', 'diger'];
+export const DISPLAY_CATEGORIES: EventCategory[] = ['konser', 'tiyatro', 'stand-up', 'festival', 'tur', 'mac-bileti', 'diger'];
 
 export type EventCurrency = 'EUR' | 'TL' | 'USD';
 
