@@ -206,7 +206,9 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                         ? formatPrice(Number(event.price_from), event.currency)
                         : t("home.free")}
                     </span>
-                    <span className="text-sm font-medium text-primary-600">{t("calendar.buyTicket")} →</span>
+                    <span className="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                      {t("calendar.buyTicket")}
+                    </span>
                   </div>
                 </div>
               </Link>
