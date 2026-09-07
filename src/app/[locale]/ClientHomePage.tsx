@@ -594,7 +594,7 @@ export default function ClientHomePage({
                   }`}
                 >
                   <Link href={`/${locale}${eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}`}>
-                    <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden cursor-pointer relative">
+                    <div className="aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden cursor-pointer relative">
                       <CoverImage
                         src={event.image_url}
                         alt={localized.title}

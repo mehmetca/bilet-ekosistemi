@@ -572,7 +572,7 @@ export default function AmedSporFormClient({
                 href={`/etkinlik/${amedEvent.id}`}
                 className="block border border-slate-200 rounded-xl overflow-hidden hover:border-primary-500 hover:shadow-md transition-all bg-white group"
               >
-                <div className="relative aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
                   <CoverImage
                     src={amedEvent.image_url}
                     alt={amedEvent.title}

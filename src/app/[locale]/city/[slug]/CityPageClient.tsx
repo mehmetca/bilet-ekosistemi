@@ -124,7 +124,7 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
                   className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
                 >
                   <Link href={eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}>
-                    <div className="relative aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                    <div className="relative aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
                       <CoverImage
                         src={event.image_url}
                         alt={localizedEvent.title}

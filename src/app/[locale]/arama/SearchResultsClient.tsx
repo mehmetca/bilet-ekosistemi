@@ -196,7 +196,7 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
                 const href = eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug);
                 return (
                   <Link key={event.id} href={href} className="overflow-hidden rounded-xl border border-slate-200 bg-white hover:shadow-md">
-                    <div className="relative aspect-video bg-slate-100">
+                    <div className="relative aspect-[3/4] bg-slate-100">
                       <CoverImage
                         src={event.image_url}
                         alt={localized.title || event.title || "Event"}

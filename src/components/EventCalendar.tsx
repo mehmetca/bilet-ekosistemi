@@ -163,7 +163,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 href={eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug)}
                 className="flex h-full flex-col overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-shadow"
               >
-                <div className="relative aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
                   <CoverImage
                     src={event.image_url}
                     alt={event.title}
@@ -223,9 +223,9 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 <Link
                   key={`past-${event.id}`}
                   href={eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug)}
-                  className="block overflow-hidden rounded-2xl bg-slate-50 border border-slate-300 opacity-80 hover:opacity-100 hover:shadow-lg transition-all"
+                  className="flex h-full flex-col overflow-hidden rounded-2xl bg-slate-50 border border-slate-300 opacity-80 hover:opacity-100 hover:shadow-lg transition-all"
                 >
-                  <div className="relative aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                  <div className="relative aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
                     <CoverImage
                       src={event.image_url}
                       alt={event.title}
