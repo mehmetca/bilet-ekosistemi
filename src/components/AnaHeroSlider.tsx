@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
@@ -91,6 +91,31 @@ export default function AnaHeroSlider({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const shownAds = ads.slice(0, 10);
+
+  // Slider yüksekliği, aktif görselin KENDİ en/boy oranına göre ayarlanır:
+  // böylece fotoğraf hem tam görünür hem de siyah bant/yan kırpma olmaz.
+  const trackBoxRef = useRef<HTMLDivElement>(null);
+  const ratiosRef = useRef<Record<string, number>>({});
+  const [slideHeightPx, setSlideHeightPx] = useState<number | null>(null);
+
+  const measureHeight = useCallback(() => {
+    const box = trackBoxRef.current;
+    if (!box) return;
+    const ad = shownAds[currentIndex];
+    const ratio = ad ? ratiosRef.current[ad.id] : undefined;
+    if (box.clientWidth > 0 && typeof ratio === "number" && ratio > 0) {
+      setSlideHeightPx(Math.max(1, Math.round(box.clientWidth * ratio)));
+    }
+  }, [shownAds, currentIndex]);
+
+  useEffect(() => {
+    measureHeight();
+  }, [measureHeight]);
+
+  useEffect(() => {
+    window.addEventListener("resize", measureHeight);
+    return () => window.removeEventListener("resize", measureHeight);
+  }, [measureHeight]);
 
   useEffect(() => {
     if (hasInitialAds) return;
@@ -213,9 +238,17 @@ export default function AnaHeroSlider({
           </div>
         )}
 
-        <div className="w-full overflow-hidden">
+        <div
+          ref={trackBoxRef}
+          className="w-full overflow-hidden aspect-[16/10] min-h-[240px] sm:aspect-auto sm:h-[44vw] sm:min-h-0 sm:max-h-[480px] lg:h-[32vw] lg:max-h-[560px] xl:h-[26vw] xl:max-h-[640px]"
+          style={
+            slideHeightPx
+              ? { height: `${slideHeightPx}px`, aspectRatio: "auto" }
+              : undefined
+          }
+        >
           <div
-            className="heroSlider owl-carousel owl-theme flex transition-transform duration-500 ease-in-out"
+            className="heroSlider owl-carousel owl-theme flex h-full transition-transform duration-500 ease-in-out"
             id="slider"
             style={{ transform: `translateX(-${currentIndex * 100}%)` }}
           >
@@ -235,13 +268,23 @@ export default function AnaHeroSlider({
               const showDateBox = Boolean(overlayDay || overlayMonth || overlayYear);
 
               const slide = (
-                <div className="relative w-full aspect-[16/10] min-h-[240px] bg-black sm:aspect-auto sm:h-[48vw] sm:min-h-0 sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px]">
+                <div className="relative h-full w-full bg-black">
                     <picture>
                       <img
                         src={ad.image_url}
                         alt={imgAlt}
-                        className="h-full w-full object-contain object-center sm:object-cover sm:object-center"
+                        className="h-full w-full object-cover object-center"
                         loading={idx === currentIndex ? "eager" : "lazy"}
+                        onLoad={(e) => {
+                          const imgEl = e.currentTarget;
+                          if (imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
+                            const ratio = imgEl.naturalHeight / imgEl.naturalWidth;
+                            if (ratiosRef.current[ad.id] !== ratio) {
+                              ratiosRef.current[ad.id] = ratio;
+                              if (idx === currentIndex) measureHeight();
+                            }
+                          }
+                        }}
                       />
                     </picture>
                     {hasOverlay ? (
