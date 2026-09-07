@@ -14,10 +14,10 @@ export const IMAGE_STANDARDS = {
   ALLOWED_EXTENSIONS: [".jpg", ".jpeg", ".png", ".webp"],
   /** Önerilen boyutlar (genişlik x yükseklik) */
   RECOMMENDED: {
-    /** Etkinlik kartı / liste */
-    EVENT_CARD: { width: 800, height: 450 },
-    /** Etkinlik detay hero */
-    EVENT_DETAIL: { width: 1200, height: 630 },
+    /** Etkinlik kartı / liste (afiş 3:4) */
+    EVENT_CARD: { width: 900, height: 1200 },
+    /** Etkinlik detay/kapak görseli (afiş 3:4) */
+    EVENT_DETAIL: { width: 1200, height: 1600 },
     /** OG/Sosyal paylaşım */
     OG_IMAGE: { width: 1200, height: 630 },
     /** Reklam banner */

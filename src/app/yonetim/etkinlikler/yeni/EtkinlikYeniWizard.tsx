@@ -1796,8 +1796,8 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
             <div className="sticky top-4">
               <p className="text-sm font-medium text-slate-500 mb-2">{step === 1 ? "Etkinlik kartı önizlemesi" : "Önizleme"}</p>
               <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-                <div className="aspect-video bg-slate-100 flex items-center justify-center">
-                  {imageUrl ? <img src={imageUrl} alt={titleTr || "Etkinlik"} className="w-full h-full object-cover" /> : <Music2 className="h-16 w-16 text-slate-300" />}
+                <div className="aspect-[3/4] bg-slate-100 flex items-center justify-center">
+                  {imageUrl ? <img src={imageUrl} alt={titleTr || "Etkinlik"} className="w-full h-full object-cover object-top" /> : <Music2 className="h-16 w-16 text-slate-300" />}
                 </div>
                 <div className="p-4 space-y-2">
                   <span className="text-xs font-medium text-primary-600">{CATEGORY_LABELS[category]}</span>

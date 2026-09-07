@@ -161,7 +161,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
               </div>
             </div>
             <div>
-              <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+              <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
                 {firstEvent.image_url ? (
                   <Image
                     src={resolvePublicImageUrl(firstEvent.image_url) ?? ""}

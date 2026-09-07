@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Upload, X, Image as ImageIcon, Search as SearchIcon, Grid2x2 } from "lucide-react";
+import { Upload, X, Image as ImageIcon, Search as SearchIcon, Grid2x2, Trash2 } from "lucide-react";
 import { getAccessTokenForApi } from "@/lib/supabase-auth-token";
 import { compressImageFile } from "@/lib/image-compress";
 
@@ -70,6 +70,31 @@ export default function AdminImageUploadFixed({
     // folder değişince de liste yenilensin
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [libraryOpen, folder]);
+
+  async function deleteLibraryImage(img: { path: string; name: string }) {
+    if (!window.confirm(`"${img.name}" görseli KALICI olarak silinecek.\nBu işlem geri alınamaz. Devam etmek istiyor musunuz?`)) {
+      return;
+    }
+    try {
+      const token = await getAccessTokenForApi();
+      if (!token) {
+        alert("Oturum bulunamadı veya süresi doldu. Lütfen sayfayı yenileyip tekrar giriş yapın.");
+        return;
+      }
+      const res = await fetch("/api/list-images", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ paths: [img.path] }),
+      });
+      const payload = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        throw new Error(payload.error || "Silinemedi.");
+      }
+      setLibraryImages((prev) => prev.filter((x) => x.path !== img.path));
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Silinemedi.");
+    }
+  }
 
   async function uploadImage(file: File) {
     setUploading(true);
@@ -208,20 +233,32 @@ export default function AdminImageUploadFixed({
                 <div className="max-h-[55vh] overflow-auto">
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {libraryFiltered.map((img, idx) => (
-                      <button
+                      <div
                         key={`${img.path}-${idx}`}
-                        type="button"
-                        onClick={() => {
-                          onChange(img.url);
-                          setLibraryOpen(false);
-                        }}
-                        className={`rounded-xl overflow-hidden border bg-slate-50 hover:border-primary-300 hover:shadow-sm transition-shadow ${
+                        className={`group relative rounded-xl overflow-hidden border bg-slate-50 hover:border-primary-300 hover:shadow-sm transition-shadow ${
                           img.url === value ? "border-primary-500" : "border-slate-200"
                         }`}
-                        title={img.name}
                       >
-                        <img src={img.url} alt={img.name} className="h-24 w-full object-cover object-top" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            onChange(img.url);
+                            setLibraryOpen(false);
+                          }}
+                          className="block w-full"
+                          title={img.name}
+                        >
+                          <img src={img.url} alt={img.name} className="aspect-[3/4] w-full object-cover object-top" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteLibraryImage(img)}
+                          title="Bu görseli kalıcı olarak sil"
+                          className="absolute right-1 top-1 rounded-md bg-red-600/90 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-700"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -236,7 +273,7 @@ export default function AdminImageUploadFixed({
           <img
             src={value}
             alt="Etkinlik görseli"
-            className="w-full h-48 object-cover object-top rounded-lg"
+            className="aspect-[3/4] w-full object-cover object-top rounded-lg"
           />
           <button
             type="button"
