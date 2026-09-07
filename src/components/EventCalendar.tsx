@@ -6,7 +6,6 @@ import type { Event } from "@/types/database";
 import { DISPLAY_CATEGORIES } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 import { Link } from "@/i18n/navigation";
-import { eventDescriptionToPlainText } from "@/lib/eventMeta";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { useTranslations, useLocale } from "next-intl";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
@@ -191,12 +190,6 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     {event.category ? t(`categories.${event.category}`) : t("categories.event")}
                   </span>
                   <h3 className="mt-2 font-semibold text-slate-900 line-clamp-2">{(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").title || event.title) ?? ""}</h3>
-                  <p className="mt-2 text-sm text-slate-600 line-clamp-2">
-                    {eventDescriptionToPlainText(
-                      getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").description ||
-                        event.description
-                    )}
-                  </p>
                     <div className="mt-3 space-y-2 text-sm text-slate-500">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 flex-shrink-0" />
@@ -268,12 +261,6 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     <h3 className="mt-2 font-semibold text-slate-700 line-clamp-2">
                       {(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").title || event.title) ?? ""}
                     </h3>
-                    <p className="mt-2 text-sm text-slate-600 line-clamp-2">
-                      {eventDescriptionToPlainText(
-                        getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").description ||
-                          event.description
-                      )}
-                    </p>
                     <div className="mt-3 space-y-2 text-sm text-slate-500">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 flex-shrink-0" />
