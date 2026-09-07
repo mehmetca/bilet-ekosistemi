@@ -11,6 +11,7 @@ import { useTranslations, useLocale } from "next-intl";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
 import { parseDateInput, toISODateString, formatEventDateWithMonth, formatEventDateDMYFromDate } from "@/lib/date-utils";
 import { eventDetailPath, isAmedSporEvent } from "@/lib/amed-spor-utils";
+import CoverImage from "@/components/CoverImage";
 
 interface EventCalendarProps {
   events: Event[];
@@ -24,8 +25,6 @@ export default function EventCalendar({ events }: EventCalendarProps) {
   const [filteredEvents, setFilteredEvents] = useState<Event[]>(events);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [pastPage, setPastPage] = useState<number>(1);
-  const fallbackImage =
-    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 450'%3E%3Crect width='800' height='450' fill='%23e2e8f0'/%3E%3Cg fill='%2364748b'%3E%3Ccircle cx='330' cy='190' r='36'/%3E%3Cpath d='M220 330l95-95 70 70 55-55 140 140H220z'/%3E%3C/g%3E%3C/svg%3E";
 
   const { isAdmin } = useSimpleAuth(); // isAdmin durumunu al
   // Tarihe göre filtrele
@@ -164,26 +163,18 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 href={eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug)}
                 className="flex h-full flex-col overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-shadow"
               >
-                <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
-                  {event.image_url ? (
-                    <img
-                      src={event.image_url}
-                      alt={event.title}
-                      className="h-full w-full object-cover object-top"
-                      onError={(e) => {
-                        const img = e.currentTarget;
-                        if (!img) return;
-                        if (img.dataset.fallbackApplied === "1") return;
-                        img.dataset.fallbackApplied = "1";
-                        img.src = fallbackImage;
-                      }}
-                    />
-                  ) : (
-                    <div className="flex h-full w-full flex-col items-center justify-center text-primary-500">
-                      <Music2 className="h-12 w-12" />
-                      <span className="mt-2 text-xs font-medium">{t("calendar.noImage")}</span>
-                    </div>
-                  )}
+                <div className="relative aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                  <CoverImage
+                    src={event.image_url}
+                    alt={event.title}
+                    sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 25vw"
+                    fallback={
+                      <div className="flex h-full w-full flex-col items-center justify-center text-primary-500">
+                        <Music2 className="h-12 w-12" />
+                        <span className="mt-2 text-xs font-medium">{t("calendar.noImage")}</span>
+                      </div>
+                    }
+                  />
                 </div>
                 <div className="flex flex-1 flex-col p-5">
                   <span className="text-xs font-medium text-primary-600">
@@ -234,25 +225,18 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                   href={eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug)}
                   className="block overflow-hidden rounded-2xl bg-slate-50 border border-slate-300 opacity-80 hover:opacity-100 hover:shadow-lg transition-all"
                 >
-                  <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden relative">
-                    {event.image_url ? (
-                      <img
-                        src={event.image_url}
-                        alt={event.title}
-                        className="h-full w-full object-cover object-top"
-                        onError={(e) => {
-                          const img = e.currentTarget;
-                          if (img.dataset.fallbackApplied === "1") return;
-                          img.dataset.fallbackApplied = "1";
-                          img.src = fallbackImage;
-                        }}
-                      />
-                    ) : (
-                      <div className="flex h-full w-full flex-col items-center justify-center text-primary-500">
-                        <Music2 className="h-12 w-12" />
-                        <span className="mt-2 text-xs font-medium">{t("calendar.noImage")}</span>
-                      </div>
-                    )}
+                  <div className="relative aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                    <CoverImage
+                      src={event.image_url}
+                      alt={event.title}
+                      sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 25vw"
+                      fallback={
+                        <div className="flex h-full w-full flex-col items-center justify-center text-primary-500">
+                          <Music2 className="h-12 w-12" />
+                          <span className="mt-2 text-xs font-medium">{t("calendar.noImage")}</span>
+                        </div>
+                      }
+                    />
                     <div className="absolute left-2 top-2">
                       <span className="px-2 py-1 text-xs font-bold text-white bg-red-600 rounded">
                         {t("home.eventEnded")}

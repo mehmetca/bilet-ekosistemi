@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase-client";
 import Header from "@/components/Header";
 import { collapseDuplicateAdjacentTicketLabel } from "@/lib/collapse-duplicate-ticket-label";
 import { formatPrice } from "@/lib/formatPrice";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 import { formatEventDateDMY, formatCartEventWhen } from "@/lib/date-utils";
 import {
   ShoppingCart,
@@ -857,14 +858,14 @@ export default function CheckoutPage() {
                     {expiredSnapshot.imageUrl && String(expiredSnapshot.imageUrl).trim() ? (
                       <>
                         <img
-                          src={expiredSnapshot.imageUrl}
+                          src={resolvePublicImageUrl(expiredSnapshot.imageUrl) ?? expiredSnapshot.imageUrl}
                           alt=""
                           className="absolute inset-0 h-full w-full scale-110 object-cover blur-2xl opacity-50"
                           aria-hidden
                         />
                         <div className="relative flex h-full items-center justify-center p-6">
                           <img
-                            src={expiredSnapshot.imageUrl}
+                            src={resolvePublicImageUrl(expiredSnapshot.imageUrl) ?? expiredSnapshot.imageUrl}
                             alt=""
                             className="max-h-40 w-auto max-w-[220px] rounded-lg object-cover shadow-md"
                           />
@@ -950,7 +951,7 @@ export default function CheckoutPage() {
                   >
                     {item.imageUrl && (
                       <div className="relative h-20 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                        <img src={item.imageUrl} alt="" className="h-full w-full object-cover" />
+                        <img src={resolvePublicImageUrl(item.imageUrl) ?? item.imageUrl} alt="" className="h-full w-full object-cover" />
                       </div>
                     )}
                     <div className="min-w-0 flex-1">

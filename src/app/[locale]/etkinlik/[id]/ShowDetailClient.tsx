@@ -11,6 +11,7 @@ import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent, getLocalizedText, type Locale } from "@/lib/i18n-content";
 import { isAmedSporEvent } from "@/lib/amed-spor-utils";
 import { parseEventDescription } from "@/lib/eventMeta";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 import { formatEventVenueAddressCityLine } from "@/lib/event-venue-display";
 import { formatEventLongDateTime } from "@/lib/date-utils";
 
@@ -163,7 +164,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
               <div className="relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
                 {firstEvent.image_url ? (
                   <Image
-                    src={firstEvent.image_url}
+                    src={resolvePublicImageUrl(firstEvent.image_url) ?? ""}
                     alt={localized.title}
                     fill
                     priority

@@ -15,6 +15,7 @@ import { formatEventDateDMY } from "@/lib/date-utils";
 import { supabase } from "@/lib/supabase-client";
 import { eventDetailPath } from "@/lib/amed-spor-utils";
 import CoverImage from "@/components/CoverImage";
+import { resolvePublicImageUrl } from "@/lib/external-image";
 
 function getYouTubeEmbedUrl(url?: string): string | null {
   if (!url) return null;
@@ -113,10 +114,16 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
   const parsedProfile = parseArtistBio(localized.bio || artist?.bio);
   // Admin panelde ayri "turne banner" alani gorunmuyorsa ana fotografi da hero banner olarak kullan.
   const heroBannerUrl = parsedProfile.turneBannerUrl || artist?.image_url || "";
-  const topGallery = parsedProfile.gallery.filter((item) => item.position === "top");
-  const bottomGallery = parsedProfile.gallery.filter((item) => item.position === "bottom");
-  const leftGallery = parsedProfile.gallery.filter((item) => item.position === "left");
-  const rightGallery = parsedProfile.gallery.filter((item) => item.position === "right");
+  // Supabase görselleri CDN üzerinden gelsin (hem cache hem egress).
+  const toCdnGallery = (items: Array<{ url: string; position?: string }>) =>
+    items.map((item) => ({
+      ...item,
+      url: resolvePublicImageUrl(item.url) ?? item.url,
+    }));
+  const topGallery = toCdnGallery(parsedProfile.gallery.filter((item) => item.position === "top"));
+  const bottomGallery = toCdnGallery(parsedProfile.gallery.filter((item) => item.position === "bottom"));
+  const leftGallery = toCdnGallery(parsedProfile.gallery.filter((item) => item.position === "left"));
+  const rightGallery = toCdnGallery(parsedProfile.gallery.filter((item) => item.position === "right"));
   const allGallery = [...topGallery, ...leftGallery, ...rightGallery, ...bottomGallery];
 
   function openGalleryModal(item: (typeof topGallery)[number]) {
@@ -605,7 +612,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                         <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden relative">
                           {event.image_url ? (
                             <img
-                              src={event.image_url}
+                              src={resolvePublicImageUrl(event.image_url) ?? ""}
                               alt={localizedEvent.title}
                               className="h-full w-full object-cover object-top"
                               onError={(e) => {
