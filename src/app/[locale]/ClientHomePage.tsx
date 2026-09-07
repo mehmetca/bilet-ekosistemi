@@ -587,7 +587,7 @@ export default function ClientHomePage({
               return (
                 <div
                   key={event.id}
-                  className={`overflow-hidden rounded-2xl border shadow-sm hover:shadow-lg transition-shadow ${
+                  className={`flex flex-col overflow-hidden rounded-2xl border shadow-sm hover:shadow-lg transition-shadow ${
                     eventStatus.isPast 
                       ? 'bg-slate-50 border-slate-300 opacity-75' 
                       : 'bg-white border-slate-200'
@@ -623,7 +623,7 @@ export default function ClientHomePage({
                     </div>
                   </Link>
                   
-                  <div className="p-5">
+                  <div className="flex-1 p-5">
                     <div>
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-xs font-medium text-primary-600">
