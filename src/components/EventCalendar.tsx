@@ -10,7 +10,7 @@ import { getLocalizedEvent } from "@/lib/i18n-content";
 import { useTranslations, useLocale } from "next-intl";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'ı import et
 import { parseDateInput, toISODateString, formatEventDateWithMonth, formatEventDateDMYFromDate } from "@/lib/date-utils";
-import { eventDetailPath } from "@/lib/amed-spor-utils";
+import { eventDetailPath, isAmedSporEvent } from "@/lib/amed-spor-utils";
 
 interface EventCalendarProps {
   events: Event[];
@@ -202,9 +202,12 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                   </div>
                   <div className="mt-auto pt-4 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                     <span className="font-bold text-lg text-primary-600">
-                      {Number(event.price_from) > 0
-                        ? `${t("home.from")} ${formatPrice(Number(event.price_from), event.currency)}`
-                        : t("home.free")}
+                      {(event as Event & { show_slug?: string | null }).show_slug &&
+                      isAmedSporEvent((event as Event & { show_slug?: string | null }).show_slug)
+                        ? null
+                        : Number(event.price_from) > 0
+                          ? `${t("home.from")} ${formatPrice(Number(event.price_from), event.currency)}`
+                          : t("home.free")}
                     </span>
                     <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100">
                       {t("calendar.buyTicket")}
