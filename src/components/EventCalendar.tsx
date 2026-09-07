@@ -162,7 +162,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
               <Link
                 key={event.id}
                 href={eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug)}
-                className="block overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-shadow"
+                className="flex h-full flex-col overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-shadow"
               >
                 <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
                   {event.image_url ? (
@@ -185,7 +185,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     </div>
                   )}
                 </div>
-                <div className="p-5">
+                <div className="flex flex-1 flex-col p-5">
                   <span className="text-xs font-medium text-primary-600">
                     {event.category ? t(`categories.${event.category}`) : t("categories.event")}
                   </span>
@@ -200,13 +200,13 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                       {(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").venue || event.venue) ?? ""}, {event.location ?? ""}
                     </div>
                   </div>
-                  <div className="mt-4 flex justify-between items-center">
-                    <span className="font-bold text-primary-600">
+                  <div className="mt-auto pt-4 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+                    <span className="font-bold text-lg text-primary-600">
                       {Number(event.price_from) > 0
-                        ? formatPrice(Number(event.price_from), event.currency)
+                        ? `${t("home.from")} ${formatPrice(Number(event.price_from), event.currency)}`
                         : t("home.free")}
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700">
+                    <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100">
                       {t("calendar.buyTicket")}
                     </span>
                   </div>
