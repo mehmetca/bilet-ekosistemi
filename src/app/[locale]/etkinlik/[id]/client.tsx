@@ -2260,7 +2260,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             {tCat((event.category || "diger").toLowerCase())}
           </p>
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch">
-            <div>
+            <div className="flex flex-col">
               <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{localized.title}</h1>
               <div className="mt-4 flex flex-col gap-2 text-sm text-slate-700">
                 <div className="flex flex-col gap-3">
@@ -2313,7 +2313,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   </p>
                 </div>
               )}
-              <div className="mt-6 flex flex-wrap gap-2">
+              <div className="mt-auto pt-6 flex flex-wrap gap-2">
                 <button
                   onClick={toggleFavorite}
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
