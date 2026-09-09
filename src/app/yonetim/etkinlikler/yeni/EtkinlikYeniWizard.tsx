@@ -775,16 +775,25 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setTranslatingCkb(true);
       const res = await fetch("/api/translate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           text: sourceText,
           source: titleKu.trim() ? "ku" : "tr",
           target: "ckb",
         }),
       });
-      const payload = (await res.json()) as { translatedText?: string; error?: string };
+      const raw = await res.text();
+      let payload: { translatedText?: string; error?: string } = {};
+      try {
+        payload = JSON.parse(raw) as { translatedText?: string; error?: string };
+      } catch {
+        // HTML/doctype yanıtı geldi (ör. 404/arayüz sayfası) — sadece status bildir.
+        throw new Error(
+          `Çeviri servisi geçersiz yanıt döndü (HTTP ${res.status}). Sunucu/Cloudflare hatası olabilir.`
+        );
+      }
       if (!res.ok || !payload.translatedText) {
-        throw new Error(payload.error || "Çeviri servisinde hata oluştu.");
+        throw new Error(payload.error || `Çeviri servisinde hata oluştu (HTTP ${res.status}).`);
       }
       setTitleCkb(payload.translatedText);
     } catch (error) {
@@ -805,16 +814,24 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setTranslatingDescriptionCkb(true);
       const res = await fetch("/api/translate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           text: sourceText,
           source: descriptionKu.trim() ? "ku" : "tr",
           target: "ckb",
         }),
       });
-      const payload = (await res.json()) as { translatedText?: string; error?: string };
+      const raw = await res.text();
+      let payload: { translatedText?: string; error?: string } = {};
+      try {
+        payload = JSON.parse(raw) as { translatedText?: string; error?: string };
+      } catch {
+        throw new Error(
+          `Çeviri servisi geçersiz yanıt döndü (HTTP ${res.status}). Sunucu/Cloudflare hatası olabilir.`
+        );
+      }
       if (!res.ok || !payload.translatedText) {
-        throw new Error(payload.error || "Çeviri servisinde hata oluştu.");
+        throw new Error(payload.error || `Çeviri servisinde hata oluştu (HTTP ${res.status}).`);
       }
       setDescriptionCkb(payload.translatedText);
     } catch (error) {

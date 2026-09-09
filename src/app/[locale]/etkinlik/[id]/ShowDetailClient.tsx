@@ -377,7 +377,7 @@ function CityEventsSection({
                     }
                     className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-[#c62828] px-5 text-sm font-bold uppercase tracking-wide text-white shadow hover:bg-[#b71c1c] sm:ml-auto"
                   >
-                    {event.show_slug && isAmedSporEvent(event.show_slug) ? "Formu Doldur" : t("buyTicket")}
+                    {event.show_slug && isAmedSporEvent(event.show_slug) ? t("amedSporFillForm") : t("buyTicket")}
                     <ChevronRight className="h-4 w-4" />
                   </NextLink>
                 )}

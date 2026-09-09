@@ -2259,11 +2259,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
             {tCat((event.category || "diger").toLowerCase())}
           </p>
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch">
             <div>
               <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{localized.title}</h1>
               <div className="mt-4 flex flex-col gap-2 text-sm text-slate-700">
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-col gap-3">
                   <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
                     <Calendar className="h-4 w-4" />
                     {formatEventDateDMY(event.date)}
@@ -2273,7 +2273,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     {event.time}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-4">
+                <div className="flex flex-col gap-3">
                   {whereLine ? (
                     <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
                       <MapPin className="h-4 w-4" />
@@ -3052,14 +3052,10 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               {isAmedSpor && !amedSporFormSubmitted && (
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
                   <p className="text-amber-950 font-medium mb-2">
-                    {locale === "en"
-                      ? "Please fill out the registration form first."
-                      : "Önce kayıt formunu doldurmanız gerekiyor."}
+                    {t("amedSporFormRequired")}
                   </p>
                   <p className="text-amber-900/80 text-sm mb-6">
-                    {locale === "en"
-                      ? "After the form, if a ticket price is set you will continue to payment."
-                      : "Formdan sonra bilet fiyatı tanımlıysa ödeme (sepet) adımına geçersiniz."}
+                    {t("amedSporFormRequiredDesc")}
                   </p>
                   <button
                     type="button"
@@ -3068,7 +3064,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     }}
                     className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700"
                   >
-                    {locale === "en" ? "Fill Form" : "Formu Doldur"}
+                    {t("amedSporFillForm")}
                   </button>
                 </div>
               )}
