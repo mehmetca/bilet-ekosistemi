@@ -37,3 +37,6 @@ yarn-error.log*
 .vercel
 .env*.local
 .aider*
+
+docs/PLAN_SAYFA_SISTEMI.md
+docs/CLOUDFLARE_FREE_PLAN_UYARILARI.md
