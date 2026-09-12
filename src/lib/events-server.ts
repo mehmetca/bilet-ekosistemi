@@ -193,9 +193,9 @@ async function fetchPreviewEventBySlug(slugOrIdTrimmed: string): Promise<EventLo
     const attempts = [
       () => previewQuery().eq("slug", slugOrIdTrimmed).maybeSingle(),
       () => previewQuery().ilike("slug", slugOrIdTrimmed).maybeSingle(),
-      () => previewQuery().eq("show_slug", slugOrIdTrimmed).maybeSingle(),
-      // show_slug için kısmi eşleşme kaldırıldı - sadece tam eşleşme
-      () => previewQuery().eq("id", slugOrIdTrimmed).maybeSingle(),
+      // A show_slug can intentionally belong to multiple events. The public
+      // page resolves that group separately; preview only needs one event here.
+      () => previewQuery().eq("show_slug", slugOrIdTrimmed).limit(1).maybeSingle(),
     ];
 
     for (const run of attempts) {
@@ -269,17 +269,9 @@ async function fetchEventBySlug(slugOrId: string, allowPreview = false): Promise
 
 
 
-    const { data: idData, error: idError } = await supabase
-      .from("events")
-      .select("*")
-      .eq("id", slugOrIdTrimmed)
-      .eq("is_active", true)
-      .eq("is_approved", true)
-      .eq("is_draft", false)
-      .single();
-
-    if (!idError && idData) return { event: idData as Event };
-
+    // Non-UUID route values are slugs (including show_slug values such as
+    // "zelemele" that intentionally group multiple events). Never send them
+    // to the UUID-typed events.id column.
     if (allowPreview) return fetchPreviewEventBySlug(slugOrIdTrimmed);
 
     return null;
@@ -360,7 +352,7 @@ async function fetchOrganizerDisplayName(userId: string | null | undefined): Pro
       .from("organizer_profiles")
       .select("organization_display_name")
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
     return data?.organization_display_name?.trim() || null;
   } catch {
     return null;

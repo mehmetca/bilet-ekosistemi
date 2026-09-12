@@ -102,7 +102,7 @@ async function fetchSitemapDynamicPathsUncached(): Promise<SitemapPathEntry[]> {
     supabase.from("venues").select("id, updated_at").limit(2000),
     supabase
       .from("artists")
-      .select("slug, updated_at")
+      .select("slug")
       .not("slug", "is", null)
       .or("show_on_artist_page.is.null,show_on_artist_page.eq.true")
       .limit(2000),
@@ -127,10 +127,10 @@ async function fetchSitemapDynamicPathsUncached(): Promise<SitemapPathEntry[]> {
   }
 
   if (!artistsRes.error && artistsRes.data?.length) {
-    for (const a of artistsRes.data as { slug: string; updated_at?: string | null }[]) {
+    for (const a of artistsRes.data as { slug: string }[]) {
       const slug = a.slug?.trim();
       if (!slug || !isValidPathTailSegment(slug)) continue;
-      entries.push({ path: `/sanatci/${slug}`, lastModified: parseDate(a.updated_at ?? null) });
+      entries.push({ path: `/sanatci/${slug}`, lastModified: new Date() });
     }
   }
 
