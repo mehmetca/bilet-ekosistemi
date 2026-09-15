@@ -35,6 +35,6 @@ export async function saveLocalUpload(file: File, folder: string): Promise<{ url
 
   return {
     fileName: relativePath,
-    url: `${getPublicBaseUrl()}/${relativePath}`,
+    url: `${getPublicBaseUrl()}/images/${relativePath}`,
   };
 }
