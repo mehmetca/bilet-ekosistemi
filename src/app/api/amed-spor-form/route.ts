@@ -7,8 +7,7 @@ export const runtime = "nodejs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LANG_OK = new Set(["kurmanci", "türkçe", "ingilizce", "deutsch"]);
-const ACCOM_OK = new Set(["otel", "diger", "kendi_ayarim"]);
-const MEAL_OK = new Set(["yok", "vejetaryen", "vegan", "helal", "glutensiz", "diger"]);
+
 
 type Attendee = {
   full_name?: string;
@@ -23,9 +22,6 @@ type FormBody = {
   organization?: string | null;
   language_preference?: string;
   accept_phone_contact?: boolean;
-  accommodation_preference?: string | null;
-  meal_preferences?: string | null;
-  meal_other_text?: string | null;
   additional_notes?: string | null;
 };
 
@@ -55,9 +51,6 @@ async function sendFormNotification(opts: {
   attendees: Array<{ full_name: string; email: string; phone: string }>;
   organization: string | null;
   language_preference: string;
-  accommodation_preference: string | null;
-  meal_preferences: string | null;
-  meal_other_text: string | null;
   additional_notes: string | null;
   requiresPayment: boolean;
 }) {
@@ -92,10 +85,7 @@ async function sendFormNotification(opts: {
       <p style="margin:0 0 8px;"><strong>Ödeme:</strong> ${opts.requiresPayment ? "Gerekli (sepete yönlendirildi)" : "Yok / ücretsiz"}</p>
       <p style="margin:0 0 8px;"><strong>Kuruluş:</strong> ${escapeHtml(opts.organization || "-")}</p>
       <p style="margin:0 0 8px;"><strong>Dil:</strong> ${escapeHtml(opts.language_preference)}</p>
-      <p style="margin:0 0 8px;"><strong>Konaklama:</strong> ${escapeHtml(opts.accommodation_preference || "-")}</p>
-      <p style="margin:0 0 8px;"><strong>Yemek:</strong> ${escapeHtml(opts.meal_preferences || "-")}${
-        opts.meal_other_text ? ` (${escapeHtml(opts.meal_other_text)})` : ""
-      }</p>
+
       <p style="margin:0 0 12px;"><strong>Not:</strong> ${escapeHtml(opts.additional_notes || "-")}</p>
       <table style="border-collapse:collapse;width:100%;font-size:14px;">
         <thead>
@@ -173,21 +163,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Dil tercihi geçersiz." }, { status: 400 });
     }
 
-    const accommodation_preference = String(body.accommodation_preference || "").trim() || null;
-    if (accommodation_preference && !ACCOM_OK.has(accommodation_preference)) {
-      return NextResponse.json(
-        { success: false, message: "Konaklama tercihi geçersiz." },
-        { status: 400 }
-      );
-    }
-
-    const meal_preferences = String(body.meal_preferences || "yok").trim() || "yok";
-    if (!MEAL_OK.has(meal_preferences)) {
-      return NextResponse.json({ success: false, message: "Yemek tercihi geçersiz." }, { status: 400 });
-    }
-
     const organization = String(body.organization || "").trim() || null;
-    const meal_other_text = String(body.meal_other_text || "").trim() || null;
     const additional_notes = String(body.additional_notes || "").trim() || null;
     const accept_phone_contact = body.accept_phone_contact !== false;
 
@@ -249,9 +225,6 @@ export async function POST(request: NextRequest) {
       organization,
       language_preference,
       accept_phone_contact,
-      accommodation_preference,
-      meal_preferences,
-      meal_other_text,
       additional_notes,
     }));
 
@@ -297,9 +270,6 @@ export async function POST(request: NextRequest) {
         attendees,
         organization,
         language_preference,
-        accommodation_preference,
-        meal_preferences,
-        meal_other_text,
         additional_notes,
         requiresPayment,
       });

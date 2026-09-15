@@ -24,9 +24,6 @@ type FormRow = {
   phone: string;
   organization?: string | null;
   language_preference: string;
-  accommodation_preference?: string | null;
-  meal_preferences?: string | null;
-  meal_other_text?: string | null;
   additional_notes?: string | null;
   created_at: string;
 };
@@ -123,7 +120,7 @@ export default function AmedSporKayitlarPage() {
         const { data, error: qError } = await supabase
           .from("event_form_responses")
           .select(
-            "id, event_id, full_name, email, phone, organization, language_preference, accommodation_preference, meal_preferences, meal_other_text, additional_notes, created_at"
+            "id, event_id, full_name, email, phone, organization, language_preference, additional_notes, created_at"
           )
           .eq("event_id", selectedEventId)
           .order("created_at", { ascending: false });
@@ -223,9 +220,6 @@ export default function AmedSporKayitlarPage() {
       "phone",
       "organization",
       "language_preference",
-      "accommodation_preference",
-      "meal_preferences",
-      "meal_other_text",
       "additional_notes",
       "created_at",
     ];
@@ -238,9 +232,6 @@ export default function AmedSporKayitlarPage() {
           r.phone,
           r.organization || "",
           r.language_preference,
-          r.accommodation_preference || "",
-          r.meal_preferences || "",
-          r.meal_other_text || "",
           r.additional_notes || "",
           r.created_at,
         ]
@@ -340,8 +331,6 @@ export default function AmedSporKayitlarPage() {
                   <th className="text-left px-3 py-2 font-semibold">E-posta</th>
                   <th className="text-left px-3 py-2 font-semibold">Telefon</th>
                   <th className="text-left px-3 py-2 font-semibold">Dil</th>
-                  <th className="text-left px-3 py-2 font-semibold">Yemek</th>
-                  <th className="text-left px-3 py-2 font-semibold">Konaklama</th>
                   <th className="text-left px-3 py-2 font-semibold">Not</th>
                   <th className="text-left px-3 py-2 font-semibold">Tarih</th>
                   <th className="text-left px-3 py-2 font-semibold">Sil</th>
@@ -350,7 +339,7 @@ export default function AmedSporKayitlarPage() {
               <tbody className="divide-y divide-slate-100">
                 {!loadingRows && rows.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-3 py-8 text-center text-slate-500">
+                    <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
                       Bu etkinlik için kayıt yok.
                     </td>
                   </tr>
@@ -361,11 +350,6 @@ export default function AmedSporKayitlarPage() {
                       <td className="px-3 py-2">{r.email}</td>
                       <td className="px-3 py-2">{r.phone}</td>
                       <td className="px-3 py-2">{r.language_preference}</td>
-                      <td className="px-3 py-2">
-                        {r.meal_preferences || "-"}
-                        {r.meal_other_text ? ` (${r.meal_other_text})` : ""}
-                      </td>
-                      <td className="px-3 py-2">{r.accommodation_preference || "-"}</td>
                       <td className="px-3 py-2 max-w-[200px] truncate" title={r.additional_notes || ""}>
                         {r.additional_notes || "-"}
                       </td>

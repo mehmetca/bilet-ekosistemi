@@ -22,7 +22,7 @@ import FeaturedEvents from "@/components/FeaturedEvents";
 const AnaHeroSlider = dynamic(() => import("@/components/AnaHeroSlider"), {
   ssr: false,
   loading: () => (
-    <div className="h-[58vw] min-h-[240px] max-h-[28rem] animate-pulse bg-slate-100 sm:max-h-[420px]" />
+    <div className="aspect-[16/10] min-h-[240px] animate-pulse bg-slate-100 sm:aspect-[16/8] sm:min-h-0 sm:max-h-[480px] lg:aspect-[16/7] lg:max-h-[560px] xl:aspect-[16/6] xl:max-h-[640px]" />
   ),
 });
 import { formatPrice } from "@/lib/formatPrice";
@@ -42,10 +42,10 @@ function eventDateISO(event: Event): string {
 /** Şehir carousel okları — kart genişlikleri CSS ile sabit; DOM ölçümü (forced reflow) gerekmez. */
 function getCityCardScrollStep(viewportWidth: number): number {
   const gap = 12;
-  if (viewportWidth >= 1280) return 280 + gap;
-  if (viewportWidth >= 768) return 250 + gap;
-  if (viewportWidth >= 640) return 230 + gap;
-  return Math.min(viewportWidth * 0.88, 352) + gap;
+  if (viewportWidth >= 1280) return 260 + gap;
+  if (viewportWidth >= 768) return 230 + gap;
+  if (viewportWidth >= 640) return 210 + gap;
+  return Math.min(viewportWidth * 0.84, 320) + gap;
 }
 
 function normalizeForSearch(value: string): string {
@@ -375,9 +375,9 @@ export default function ClientHomePage({
       {/* Ana Slider: Slider'lar alanına taşındı */}
 
       {/* Slider'lar */}
-      <section className="site-container py-12">
-        <div className="min-h-[calc(min(62.5vw,28rem)_+_4.75rem)] overflow-hidden rounded-xl border border-slate-200 bg-white sm:min-h-[calc(min(48vw,420px)_+_4.75rem)] lg:min-h-[calc(min(36vw,520px)_+_4.75rem)] xl:min-h-[calc(min(30vw,560px)_+_4.75rem)]">
-          <div className="p-6 pb-4">
+      <section className="site-container py-8 sm:py-10">
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <div className="p-5 pb-3 sm:p-6 sm:pb-4">
             <h2 className="text-xl font-bold text-slate-900">{t("upcomingEvents")}</h2>
           </div>
           <div className="border-t border-slate-200">
@@ -387,8 +387,8 @@ export default function ClientHomePage({
 
         {/* Şehirler - Yaklaşan etkinlikler ve Haberler slider'larının altında */}
         {cities.length > 0 && (
-          <div className="mt-12">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+          <div className="mt-8">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-2xl font-bold text-slate-900">{t("inYourCity")}</h2>
               <Link
                 href="/sehirler"
@@ -435,13 +435,13 @@ export default function ClientHomePage({
                     <Link
                       key={city.id}
                       href={`/city/${city.slug}`}
-                      className="group flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 snap-center w-[min(88vw,22rem)] max-w-[min(88vw,22rem)] sm:min-w-[230px] sm:max-w-[230px] sm:w-[230px] md:min-w-[250px] md:max-w-[250px] md:w-[250px] xl:min-w-[280px] xl:max-w-[280px] xl:w-[280px]"
+                      className="group flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 snap-center w-[min(84vw,20rem)] max-w-[min(84vw,20rem)] sm:min-w-[210px] sm:max-w-[210px] sm:w-[210px] md:min-w-[230px] md:max-w-[230px] md:w-[230px] xl:min-w-[260px] xl:max-w-[260px] xl:w-[260px]"
                     >
                       <div className="relative aspect-[16/9] overflow-hidden bg-slate-100">
                         <CoverImage
                           src={cityImageSrc}
                           alt={name}
-                          sizes="(max-width: 640px) 88vw, 280px"
+                          sizes="(max-width: 640px) 84vw, 260px"
                           zoomOnHover
                           fallback={
                             <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 to-primary-50">
@@ -450,7 +450,7 @@ export default function ClientHomePage({
                           }
                         />
                       </div>
-                      <div className="py-3 text-center">
+                      <div className="py-2.5 text-center">
                         <h3 className="font-semibold text-slate-900 group-hover:text-primary-600">{name}</h3>
                       </div>
                     </Link>
@@ -470,7 +470,7 @@ export default function ClientHomePage({
       />
 
       {/* Events */}
-      <section id="events" className="site-container py-16">
+      <section id="events" className="site-container py-10 sm:py-12">
         <h2 className="text-2xl font-bold text-slate-900 mb-4">{t("upcomingEvents")}</h2>
         <div className="mb-6 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">

@@ -25,7 +25,7 @@ export default async function HomePageHero({ locale, shell }: HomePageHeroProps)
       />
       <div className="relative z-10 site-container text-center">
         <h1 className="mb-6 px-1 text-white break-words hyphens-auto">
-          <span className="block text-3xl font-bold sm:text-4xl md:text-6xl">{t("heroTitle")}</span>
+          <span className="block text-2xl font-bold sm:text-3xl md:text-5xl">{t("heroTitle")}</span>
           <span className="mt-3 block text-lg font-semibold leading-snug text-white/95 sm:text-xl md:text-2xl">
             {t("seoH1")}
           </span>

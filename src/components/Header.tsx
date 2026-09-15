@@ -95,11 +95,11 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
-      <div className="site-container flex h-14 sm:h-16 items-center">
+      <div className="site-container flex h-[60px] sm:h-[68px] items-center">
 
 <NextLink
   href={navHref(locale, "/")}
-  className="flex h-10 w-[128px] shrink-0 items-center gap-2 sm:h-[50px] sm:w-[160px]"
+  className="flex h-11 w-[136px] shrink-0 items-center gap-2 sm:h-[52px] sm:w-[168px]"
 >
   <img
     src="/images/kurdevent-logo.png"
@@ -158,8 +158,8 @@ export default function Header() {
               aria-label="Dil seç"
               aria-expanded={langDropdownOpen}
             >
-              <Globe className="h-4 w-4" />
-              <ChevronDown className={`h-3.5 w-3.5 transition-transform ${langDropdownOpen ? "rotate-180" : ""}`} />
+              <Globe className="h-5 w-5" />
+              <ChevronDown className={`h-4 w-4 transition-transform ${langDropdownOpen ? "rotate-180" : ""}`} />
             </button>
             {langDropdownOpen && (
               <div className="absolute right-0 top-full mt-1 py-1 min-w-[140px] bg-white rounded-lg border border-slate-200 shadow-lg z-50">
@@ -279,9 +279,9 @@ export default function Header() {
                 onClick={() => setLangDropdownOpen((o) => !o)}
                 className="flex items-center gap-2 w-full rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
               >
-                <Globe className="h-4 w-4" />
+                <Globe className="h-5 w-5" />
                 <span>{LOCALE_LABELS[locale] || locale.toUpperCase()}</span>
-                <ChevronDown className={`h-3.5 w-3.5 ml-auto transition-transform ${langDropdownOpen ? "rotate-180" : ""}`} />
+                <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${langDropdownOpen ? "rotate-180" : ""}`} />
               </button>
               {langDropdownOpen && (
                 <div className="mt-1 py-1 bg-white rounded-lg border border-slate-200 shadow-lg">

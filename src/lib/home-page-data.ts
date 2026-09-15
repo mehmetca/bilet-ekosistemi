@@ -42,33 +42,64 @@ export type HomeShellData = {
   sliderAds: Awaited<ReturnType<typeof getHomeSliderAds>>;
 };
 
+/** Şehirler locale'e bağlı değil — tek ortak önbellek; dil başına gereksiz sorgu/bağlantı oluşmasın. */
+async function fetchHomeCities(): Promise<HomeShellData["cities"]> {
+  const supabase = createServerSupabase();
+  const { data, error } = await supabase
+    .from("cities")
+    .select("id, slug, name_tr, name_de, name_en, image_url, sort_order")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true })
+    .limit(24);
+
+  if (error) {
+    console.error("fetchHomeCities error:", error.message, error.code);
+    // Throw: geçici hatayı "boş şehir listesi" olarak cache'lemeyelim.
+    throw new Error(`Home cities query failed: ${error.message}`);
+  }
+
+  return (data || []) as HomeShellData["cities"];
+}
+
+export async function getHomeCities(): Promise<HomeShellData["cities"]> {
+  return unstable_cache(fetchHomeCities, ["home-cities-v2"], {
+    revalidate: DATA_CACHE_REVALIDATE.cities,
+    tags: ["home", "cities"],
+  })();
+}
+
 /** Hero + şehir + slider — ana sayfa LCP için hafif; etkinlik listesi dahil değil. */
 async function fetchHomeShellData(locale: string): Promise<HomeShellData> {
   const supabase = createServerSupabase();
-  const [heroRes, citiesRes, sliderAds] = await Promise.all([
+  const [heroSettled, citiesSettled, sliderSettled] = await Promise.allSettled([
     supabase
       .from("hero_backgrounds")
       .select(HERO_COLUMNS)
       .eq("is_active", true)
       .order("sort_order", { ascending: true })
       .limit(6),
-    supabase
-      .from("cities")
-      .select("id, slug, name_tr, name_de, name_en, image_url, sort_order")
-      .eq("is_active", true)
-      .order("sort_order", { ascending: true })
-      .limit(24),
+    getHomeCities(),
     getHomeSliderAds(locale, "main_slider"),
   ]);
 
-  if (citiesRes.error) {
-    console.error("fetchHomeShellData cities error:", citiesRes.error.message, citiesRes.error.code);
-    throw new Error(`Home cities query failed: ${citiesRes.error.message}`);
+  const heroRes = heroSettled.status === "fulfilled" ? heroSettled.value : null;
+  if (heroRes?.error) {
+    console.error("fetchHomeShellData hero error:", heroRes.error.message, heroRes.error.code);
   }
 
+  let cities: HomeShellData["cities"] = [];
+  if (citiesSettled.status === "fulfilled") {
+    cities = citiesSettled.value;
+  } else {
+    // Şehir sorgusu geçici olarak düştüyse hero/slider'ı bozmadan boş geç; sonraki istek yeniden dener.
+    console.error("fetchHomeShellData cities error:", citiesSettled.reason);
+  }
+
+  const sliderAds = sliderSettled.status === "fulfilled" ? sliderSettled.value : [];
+
   return {
-    heroBackgrounds: (heroRes.data || []) as HomeShellData["heroBackgrounds"],
-    cities: (citiesRes.data || []) as HomeShellData["cities"],
+    heroBackgrounds: (heroRes?.data || []) as HomeShellData["heroBackgrounds"],
+    cities,
     sliderAds,
   };
 }
