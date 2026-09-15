@@ -4,8 +4,12 @@ import { randomUUID } from "node:crypto";
 
 const DEFAULT_UPLOAD_DIR = "/data/kurdevents/uploads";
 
-function getUploadDir(): string {
+export function getLocalUploadDir(): string {
   return process.env.LOCAL_UPLOAD_DIR?.trim() || DEFAULT_UPLOAD_DIR;
+}
+
+export function getLocalUploadPublicUrl(relativePath: string): string {
+  return `${getPublicBaseUrl()}/images/${relativePath}`;
 }
 
 function getPublicBaseUrl(): string {
@@ -28,13 +32,13 @@ export async function saveLocalUpload(file: File, folder: string): Promise<{ url
   const extension = path.extname(file.name).toLowerCase() || ".bin";
   const fileName = `${Date.now()}-${randomUUID()}${extension}`;
   const relativePath = `${safe}/${fileName}`;
-  const absolutePath = path.join(getUploadDir(), relativePath);
+  const absolutePath = path.join(getLocalUploadDir(), relativePath);
 
   await mkdir(path.dirname(absolutePath), { recursive: true });
   await writeFile(absolutePath, Buffer.from(await file.arrayBuffer()));
 
   return {
     fileName: relativePath,
-    url: `${getPublicBaseUrl()}/images/${relativePath}`,
+    url: getLocalUploadPublicUrl(relativePath),
   };
 }
