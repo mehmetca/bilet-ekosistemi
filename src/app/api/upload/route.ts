@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateImageFile } from "@/lib/image-standards";
-import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { saveLocalUpload } from "@/lib/local-upload";
 import { getAuthToken, requireRoleWithAccessToken } from "@/lib/api-auth";
-
-const BUCKET = "uploads";
 
 export async function POST(request: NextRequest) {
   let formData: FormData;
@@ -34,33 +32,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: err }, { status: 400 });
     }
 
-    const ext = file.name.split(".").pop() || "jpg";
-    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).substring(2, 12)}.${ext}`;
-
-    const supabase = getSupabaseAdmin();
-    const { error: uploadError } = await supabase.storage.from(BUCKET).upload(fileName, file, {
-      contentType: file.type,
-      upsert: false,
-      // Görseller değişmez; tarayıcı/CDN uzun süre önbelleğine alsın.
-      cacheControl: "31536000",
-    });
-
-    if (uploadError) {
-      console.error("Supabase upload error:", uploadError);
-      return NextResponse.json(
-        { error: uploadError.message || "Dosya yüklenemedi" },
-        { status: 500 }
-      );
-    }
-
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(BUCKET).getPublicUrl(fileName);
+    const saved = await saveLocalUpload(file, folder);
 
     return NextResponse.json({
       success: true,
-      url: publicUrl,
-      fileName,
+      url: saved.url,
+      fileName: saved.fileName,
       size: file.size,
       type: file.type,
     });

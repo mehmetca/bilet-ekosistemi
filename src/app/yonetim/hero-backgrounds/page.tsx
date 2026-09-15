@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Upload, Image as ImageIcon, Eye, EyeOff, MoveUp, MoveDown } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
+import { getAccessTokenForApi } from "@/lib/supabase-auth-token";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { compressImageFile } from "@/lib/image-compress";
 
@@ -57,25 +58,20 @@ export default function HeroBackgroundManagement() {
     try {
       // Hero arka planları büyük olabiliyor; önce tarayıcıda sıkıştır.
       const compressedFile = await compressImageFile(file);
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "-");
-      const fileName = `hero-backgrounds/${Date.now()}-${safeName}`;
-      const { error: uploadError } = await supabase.storage
-        .from("hero-backgrounds")
-        .upload(fileName, compressedFile, {
-          contentType: compressedFile.type,
-          cacheControl: "31536000",
-        });
+      const token = await getAccessTokenForApi();
+      if (!token) throw new Error("Oturum bulunamadı");
+      const uploadForm = new FormData();
+      uploadForm.append("file", compressedFile);
+      uploadForm.append("folder", "hero-backgrounds");
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: uploadForm,
+      });
+      const payload = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error || "Upload başarısız");
 
-      if (uploadError) {
-        console.error("Upload error details:", uploadError);
-        throw uploadError;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from("hero-backgrounds")
-        .getPublicUrl(fileName);
-
-      setFormData(prev => ({ ...prev, image_url: publicUrl }));
+      setFormData(prev => ({ ...prev, image_url: payload.url as string }));
     } catch (error) {
       console.error("Upload error:", error);
       alert("Resim yüklenirken hata oluştu: " + (error as Error).message);

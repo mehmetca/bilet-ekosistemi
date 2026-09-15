@@ -8,14 +8,25 @@
  * - sunucuda `process.env.NEXT_PUBLIC_STORAGE_CDN_URL`
  */
 
-const SUPABASE_URL =
-  typeof process !== "undefined" ? (process.env.NEXT_PUBLIC_SUPABASE_URL as string) || "" : "";
+function getSupabaseOrigin(): string {
+  if (typeof globalThis === "undefined") return "";
+  const runtimeProcess = (globalThis as typeof globalThis & { process?: RuntimeProcess }).process;
+  const value = runtimeProcess?.env?.NEXT_PUBLIC_SUPABASE_URL || "";
+  try {
+    return new URL(value).origin;
+  } catch {
+    return "";
+  }
+}
 
 const CDN_GLOBAL_KEY = "__KURDEVENTS_STORAGE_CDN_URL";
 
+type RuntimeProcess = { env?: Record<string, string | undefined> };
+
 function getRuntimeEnv(name: string): string {
-  if (typeof process === "undefined") return "";
-  return (process.env[name as keyof typeof process.env] as string) || "";
+  if (typeof globalThis === "undefined") return "";
+  const runtimeProcess = (globalThis as typeof globalThis & { process?: RuntimeProcess }).process;
+  return runtimeProcess?.env?.[name] || "";
 }
 
 function getCdnUrl(): string {
@@ -33,12 +44,20 @@ function getCdnUrl(): string {
 export function getStorageImageUrl(url: string | null | undefined): string | null | undefined {
   if (!url || typeof url !== "string") return url;
   const cdnUrl = getCdnUrl();
-  if (!cdnUrl || !SUPABASE_URL) return url;
+  if (!cdnUrl) return url;
   try {
-    const supabaseOrigin = new URL(SUPABASE_URL).origin;
-    if (url.startsWith(supabaseOrigin)) return url.replace(supabaseOrigin, cdnUrl.replace(/\/$/, ""));
+    const parsed = new URL(url);
+    const supabaseOrigin = getSupabaseOrigin();
+    const isSupabaseStorage =
+      parsed.pathname.startsWith("/storage/v1/object/") &&
+      (!supabaseOrigin || parsed.origin === supabaseOrigin || parsed.hostname.endsWith(".supabase.co"));
+
+    if (isSupabaseStorage) {
+      const cdnOrigin = new URL(cdnUrl).origin;
+      return `${cdnOrigin}${parsed.pathname}${parsed.search}`;
+    }
   } catch {
-    /* ignore */
+    /* Keep non-URL and non-Storage values unchanged. */
   }
   return url;
 }
