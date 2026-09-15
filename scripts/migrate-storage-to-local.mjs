@@ -5,6 +5,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const outputRoot = path.resolve(process.env.LOCAL_UPLOAD_DIR || "/data/kurdevents/uploads");
 const dryRun = process.argv.includes("--dry-run");
+const prefixFilter = (process.env.MIGRATE_STORAGE_PREFIX || "").replace(/^\/+|\/+$/g, "");
 const delayMs = Number.parseInt(process.env.MIGRATE_STORAGE_DELAY_MS || "250", 10);
 const buckets = (process.env.MIGRATE_STORAGE_BUCKETS || "uploads,hero-backgrounds,advertisements,tour-events,artists,event-images")
   .split(",")
@@ -92,7 +93,7 @@ console.log(dryRun ? "DRY-RUN: dosya indirme yapılmayacak" : "Migration başlı
 for (const bucket of buckets) {
   let count = 0;
   let skipped = 0;
-  for await (const objectPath of walk(bucket)) {
+  for await (const objectPath of walk(bucket, prefixFilter)) {
     const result = await download(bucket, objectPath);
     count += 1;
     if (result.skipped) skipped += 1;
