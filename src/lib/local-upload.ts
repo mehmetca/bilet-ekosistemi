@@ -10,14 +10,22 @@ export function getLocalUploadDir(): string {
 
 export function getLocalUploadPublicUrl(relativePath: string): string {
   const normalized = relativePath.replace(/^\/+/, "");
-  if (normalized.startsWith("images/")) {
-    return `${getPublicBaseUrl()}/${normalized}`;
-  }
-  return `${getPublicBaseUrl()}/images/${normalized}`;
+  return `${getPublicBaseUrl()}/api/uploads/${normalized}`;
 }
 
 function getPublicBaseUrl(): string {
-  return (process.env.LOCAL_UPLOAD_PUBLIC_URL?.trim() || "https://cdn.kurdevents.com").replace(/\/$/, "");
+  const raw = (process.env.LOCAL_UPLOAD_PUBLIC_URL?.trim() || "").replace(/\/+$/, "");
+
+  if (!raw) return "https://uploads.kurdevents.com";
+
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+
+  // Keep legacy deployments from generating URLs through the old CDN host.
+  if (withProtocol === "https://cdn.kurdevents.com") {
+    return "https://uploads.kurdevents.com";
+  }
+
+  return withProtocol;
 }
 
 function safeFolder(folder: string): string {
