@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import NextLink from "next/link";
-import { Calendar, ChevronRight, Music2, Building2 } from "lucide-react";
+import { Calendar, ChevronRight, Music2, Building2, Clock, MapPin } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event } from "@/types/database";
@@ -129,27 +129,83 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
 
   // Amed Spor: fiyat 0/boş iken satır "Yakında" gibi görünmesin.
   const isAmedSpor = firstEvent?.show_slug ? isAmedSporEvent(firstEvent.show_slug) : false;
+  const firstEventDate = formatEventLongDateTime(firstEvent.date, firstEvent.time, locale);
+  const firstEventVenue = (getLocalizedText(firstEvent as unknown as Record<string, unknown>, "venue", locale) || firstEvent.venue || "").trim();
+  const firstEventAddress = buildEventAddressLine(firstEvent, firstEventVenue);
 
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
       <Header />
 
-      {/* Hero – etkinlik özeti */}
+      {/* Hero – görsel ve temel etkinlik bilgileri */}
       <div className="border-b border-slate-200 bg-white">
-        <div className="site-container py-8">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
-            {tCat((firstEvent.category || "diger").toLowerCase())}
-          </p>
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
-            <div>
-              <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{localized.title}</h1>
+        <div className="site-container py-6 sm:py-8">
+          <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-stretch lg:gap-8">
+            <div className="relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
+              {firstEvent.image_url ? (
+                <Image
+                  src={resolvePublicImageUrl(firstEvent.image_url) ?? ""}
+                  alt={localized.title}
+                  fill
+                  priority
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 280px"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center">
+                  <Music2 className="h-16 w-16 text-slate-400" />
+                </div>
+              )}
+            </div>
+
+            <div className="flex min-w-0 flex-col justify-center">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                {tCat((firstEvent.category || "diger").toLowerCase())}
+              </p>
+              <h1 className="mt-2 text-3xl font-extrabold leading-tight text-slate-900 lg:text-4xl">{localized.title}</h1>
               {organizerDisplayName && (
-                <p className="mt-3 inline-flex items-center gap-2 rounded-md bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700">
+                <p className="mt-3 inline-flex w-fit items-center gap-2 rounded-md bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700">
                   <Building2 className="h-4 w-4" />
                   {t("organizer")}: {organizerDisplayName}
                 </p>
               )}
-              <div className="mt-5 flex items-center gap-4">
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <Calendar className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("date")}</p>
+                      <p className="mt-1 font-semibold text-slate-900">{firstEventDate.lineLong}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("time")}</p>
+                      <p className="mt-1 font-semibold text-slate-900">{firstEvent.time || "20:00"}</p>
+                    </div>
+                  </div>
+                </div>
+                {firstEventVenue && (
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
+                    <div className="flex items-start gap-3">
+                      <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("venue")}</p>
+                        <p className="mt-1 font-semibold text-slate-900">{firstEventVenue}</p>
+                        {firstEventAddress && firstEventAddress !== firstEventVenue ? (
+                          <p className="mt-1 text-sm text-slate-600">{firstEventAddress}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-4">
                 {(!isAmedSpor || minPrice > 0) && (
                   <p className="text-2xl font-bold text-primary-700">
                     {minPrice > 0 ? `${t("from")} ${formatPrice(minPrice, firstEvent.currency)}` : t("comingSoon")}
@@ -158,24 +214,6 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                 <span className="text-sm text-slate-500">
                   {upcomingEvents.length} {tShow("performances")}
                 </span>
-              </div>
-            </div>
-            <div>
-              <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
-                {firstEvent.image_url ? (
-                  <Image
-                    src={resolvePublicImageUrl(firstEvent.image_url) ?? ""}
-                    alt={localized.title}
-                    fill
-                    priority
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 360px"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center">
-                    <Music2 className="h-16 w-16 text-slate-400" />
-                  </div>
-                )}
               </div>
             </div>
           </div>

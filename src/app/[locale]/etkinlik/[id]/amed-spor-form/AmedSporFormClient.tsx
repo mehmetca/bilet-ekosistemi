@@ -187,6 +187,90 @@ const STRINGS: Record<string, Record<Locale, string>> = {
     ku: "Navê rêxistinê heger hebe",
     ckb: "ناوی ڕێکخراو ئەگەر هەیە",
   },
+  accommodation: {
+    tr: "Konaklama tercihi",
+    de: "Unterkunftswunsch",
+    en: "Accommodation preference",
+    ku: "Hilbijartina cîhê mayînê",
+    ckb: "هەڵبژاردەی جێی مانەوە",
+  },
+  accommodationHotel: {
+    tr: "Otel",
+    de: "Hotel",
+    en: "Hotel",
+    ku: "Otel",
+    ckb: "هۆتێل",
+  },
+  accommodationOther: {
+    tr: "Diğer",
+    de: "Andere",
+    en: "Other",
+    ku: "Yên din",
+    ckb: "هی تر",
+  },
+  accommodationOwn: {
+    tr: "Kendi imkânlarım",
+    de: "Eigene Unterkunft",
+    en: "My own accommodation",
+    ku: "Cîhê xwe",
+    ckb: "جێی مانەوەی خۆم",
+  },
+  meal: {
+    tr: "Yemek tercihi",
+    de: "Essenspräferenz",
+    en: "Meal preference",
+    ku: "Hilbijartina xwarinê",
+    ckb: "هەڵبژاردەی خواردن",
+  },
+  mealNone: {
+    tr: "Yok",
+    de: "Keine",
+    en: "None",
+    ku: "Tune",
+    ckb: "نییە",
+  },
+  mealVegetarian: {
+    tr: "Vejetaryen",
+    de: "Vegetarisch",
+    en: "Vegetarian",
+    ku: "Vegetarî",
+    ckb: "ڕووەکخۆر",
+  },
+  mealVegan: {
+    tr: "Vegan",
+    de: "Vegan",
+    en: "Vegan",
+    ku: "Vegan",
+    ckb: "ڤیگان",
+  },
+  mealHalal: {
+    tr: "Helal",
+    de: "Halal",
+    en: "Halal",
+    ku: "Helal",
+    ckb: "حەلال",
+  },
+  mealGlutenFree: {
+    tr: "Glutensiz",
+    de: "Glutenfrei",
+    en: "Gluten-free",
+    ku: "Bê gluten",
+    ckb: "بێ گلوتین",
+  },
+  mealOther: {
+    tr: "Diğer",
+    de: "Andere",
+    en: "Other",
+    ku: "Yên din",
+    ckb: "هی تر",
+  },
+  mealOtherPlaceholder: {
+    tr: "Yemek tercihinizi yazın",
+    de: "Bitte beschreiben Sie Ihre Präferenz",
+    en: "Describe your meal preference",
+    ku: "Hilbijartina xwe binivîse",
+    ckb: "هەڵبژاردەی خواردنەکەت بنووسە",
+  },
   langContactTitle: {
     tr: "Dil ve İletişim Tercihi",
     de: "Sprach- und Kontaktpräferenz",
@@ -537,19 +621,19 @@ export default function AmedSporFormClient({
 
   const amedBanner = (
     <div className="bg-gradient-to-r from-green-800 via-green-700 to-green-800 text-white">
-      <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-8 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/images/amedspor-logo.png"
             alt="Amed Spor"
-            className="h-20 w-20 object-contain bg-white rounded-full p-2 shrink-0 shadow"
+            className="h-24 w-24 shrink-0 object-contain sm:h-32 sm:w-32"
           />
           <div>
-            <div className="text-xs uppercase tracking-wider font-bold text-yellow-300">
+            <div className="text-xs font-bold uppercase tracking-[0.14em] text-yellow-300 sm:text-sm">
               {t("amedBannerBadge")}
             </div>
-            <div className="text-xl font-bold leading-tight">{localized.title}</div>
+            <div className="mt-1 text-xl font-extrabold leading-tight sm:text-2xl lg:text-3xl">{localized.title}</div>
           </div>
         </div>
         <div className="text-sm text-green-100 sm:max-w-xs">
@@ -696,7 +780,7 @@ export default function AmedSporFormClient({
                         </h3>
 
                         <div>
-                          <div className="mb-2 rounded-md bg-amber-50 border border-amber-200 px-3 py-2 text-xs text-amber-800">
+                          <div className="mb-2 rounded-lg border border-primary-100 bg-primary-50 px-4 py-3 text-sm leading-6 text-primary-800">
                             {t("fullNameWarning")}
                           </div>
                           <label className="block text-sm font-medium mb-2">
@@ -776,6 +860,7 @@ export default function AmedSporFormClient({
                     />
                   </div>
 
+
                   <div className="space-y-4">
                     <h3 className="font-semibold text-lg">{t("langContactTitle")}</h3>
 
@@ -801,18 +886,6 @@ export default function AmedSporFormClient({
                       ) : null}
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id="accept_phone_contact"
-                        checked={formData.accept_phone_contact}
-                        onChange={(e) => handleChange("accept_phone_contact", e.target.checked)}
-                        className="w-4 h-4"
-                      />
-                      <label htmlFor="accept_phone_contact" className="text-sm">
-                        {t("acceptPhoneContact")}
-                      </label>
-                    </div>
                   </div>
 
                   <div>
@@ -828,6 +901,19 @@ export default function AmedSporFormClient({
                     />
                   </div>
 
+                  <div className="flex items-start gap-2">
+                    <input
+                      type="checkbox"
+                      id="accept_phone_contact"
+                      checked={formData.accept_phone_contact}
+                      onChange={(e) => handleChange("accept_phone_contact", e.target.checked)}
+                      className="mt-0.5 h-4 w-4 shrink-0"
+                    />
+                    <label htmlFor="accept_phone_contact" className="text-sm text-slate-700">
+                      {t("acceptPhoneContact")}
+                    </label>
+                  </div>
+
                   {errors.submit ? (
                     <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg">
                       {errors.submit}
@@ -837,7 +923,7 @@ export default function AmedSporFormClient({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[180px]"
                   >
                     {isSubmitting ? t("submitting") : t("submitForm")}
                   </button>

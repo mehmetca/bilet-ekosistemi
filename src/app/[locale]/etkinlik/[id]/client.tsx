@@ -2259,30 +2259,28 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
             {tCat((event.category || "diger").toLowerCase())}
           </p>
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch">
-            <div className="flex flex-col">
+          <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-stretch lg:gap-8">
+            <div className="order-2 flex flex-col lg:order-2">
               <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{localized.title}</h1>
               <div className="mt-4 flex flex-col gap-2 text-sm text-slate-700">
-                <div className="flex flex-col gap-3">
-                  <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
-                    <Calendar className="h-4 w-4" />
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium">
+                    <Calendar className="h-4 w-4 shrink-0 text-primary-600" />
                     {formatEventDateDMY(event.date)}
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
-                    <Clock className="h-4 w-4" />
-                    {event.time}
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium">
+                    <Clock className="h-4 w-4 shrink-0 text-primary-600" />
+                    {event.time || "20:00"}
                   </span>
-                </div>
-                <div className="flex flex-col gap-3">
                   {whereLine ? (
-                    <span className="inline-flex items-center gap-2 rounded-md bg-slate-100 px-3 py-1.5">
-                      <MapPin className="h-4 w-4" />
-                      {whereLine}
+                    <span className="inline-flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium sm:col-span-2">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+                      <span className="min-w-0">{whereLine}</span>
                     </span>
                   ) : null}
                   {organizerDisplayName && (
-                    <span className="inline-flex items-center gap-2 rounded-md bg-primary-50 px-3 py-1.5 text-primary-700">
-                      <Users className="h-4 w-4" />
+                    <span className="inline-flex items-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 sm:col-span-2">
+                      <Users className="h-4 w-4 shrink-0" />
                       {t("organizer")}: {organizerDisplayName}
                     </span>
                   )}
@@ -2419,8 +2417,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               
             </div>
 
-            <div>
-              <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-slate-200 bg-slate-100">
+            <div className="order-1 mx-auto w-full max-w-[280px] lg:order-1">
+              <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
                 {event.image_url ? (
                   <Image
                     src={resolvePublicImageUrl(event.image_url) ?? ""}
@@ -3050,11 +3048,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
               {/* Amed Spor: önce form, sonra ödeme */}
               {isAmedSpor && !amedSporFormSubmitted && (
-                <div className="rounded-xl border border-amber-200 bg-amber-50 p-6">
-                  <p className="text-amber-950 font-medium mb-2">
+                <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-5 shadow-sm">
+                  <p className="mb-2 font-medium text-slate-900">
                     {t("amedSporFormRequired")}
                   </p>
-                  <p className="text-amber-900/80 text-sm mb-6">
+                  <p className="mb-5 text-sm text-slate-600">
                     {t("amedSporFormRequiredDesc")}
                   </p>
                   <button
@@ -3062,7 +3060,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     onClick={() => {
                       window.location.href = `/${locale}/etkinlik/${event.id}/amed-spor-form`;
                     }}
-                    className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700"
+                    className="w-full rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 sm:w-auto sm:min-w-[180px]"
                   >
                     {t("amedSporFillForm")}
                   </button>
@@ -3599,9 +3597,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             {/* Bilet hatırlatıcısı + Güvenli alışveriş */}
             <div className="grid sm:grid-cols-2 gap-4 mt-8">
               {!isPastEvent && (
-                <div className="bg-amber-50 rounded-xl border border-amber-200 p-6">
-                  <h3 className="text-lg font-semibold text-slate-900 mb-2 flex items-center gap-2">
-                    <Bell className="h-5 w-5 text-amber-600" />
+                <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-6 shadow-sm">
+                  <h3 className="mb-2 flex items-center gap-2 text-lg font-semibold text-slate-900">
+                    <Bell className="h-5 w-5 text-primary-600" />
                     {t("ticketReminder")}
                   </h3>
                   <p className="text-sm text-slate-600 mb-4">{t("reminderDesc")}</p>
@@ -3612,12 +3610,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       onChange={(e) => setReminderEmail(e.target.value)}
                       placeholder={t("reminderPlaceholder")}
                       required
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
                     />
                     <button
                       type="submit"
                       disabled={reminderPending}
-                      className="w-full rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+                      className="w-full rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:opacity-50"
                     >
                       {reminderPending ? t("saving") : t("getReminder")}
                     </button>
@@ -3633,20 +3631,20 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 <h3 className="text-lg font-semibold text-slate-900 mb-4">{t("secureShopping")}</h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <Star className="h-4 w-4 text-white" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100">
+                      <Star className="h-4 w-4 text-primary-600" />
                     </div>
                     <span className="text-sm text-slate-700">{t("originalTicket")}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <Star className="h-4 w-4 text-white" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100">
+                      <Star className="h-4 w-4 text-primary-600" />
                     </div>
                     <span className="text-sm text-slate-700">{t("securePayment")}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-                      <Star className="h-4 w-4 text-white" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100">
+                      <Star className="h-4 w-4 text-primary-600" />
                     </div>
                     <span className="text-sm text-slate-700">{t("instantDelivery")}</span>
                   </div>

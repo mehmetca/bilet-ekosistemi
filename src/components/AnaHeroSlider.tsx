@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocale } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
@@ -92,30 +92,6 @@ export default function AnaHeroSlider({
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const shownAds = ads.slice(0, 10);
 
-  // Slider yüksekliği, aktif görselin KENDİ en/boy oranına göre ayarlanır:
-  // böylece fotoğraf hem tam görünür hem de siyah bant/yan kırpma olmaz.
-  const trackBoxRef = useRef<HTMLDivElement>(null);
-  const ratiosRef = useRef<Record<string, number>>({});
-  const [slideHeightPx, setSlideHeightPx] = useState<number | null>(null);
-
-  const measureHeight = useCallback(() => {
-    const box = trackBoxRef.current;
-    if (!box) return;
-    const ad = shownAds[currentIndex];
-    const ratio = ad ? ratiosRef.current[ad.id] : undefined;
-    if (box.clientWidth > 0 && typeof ratio === "number" && ratio > 0) {
-      setSlideHeightPx(Math.max(1, Math.round(box.clientWidth * ratio)));
-    }
-  }, [shownAds, currentIndex]);
-
-  useEffect(() => {
-    measureHeight();
-  }, [measureHeight]);
-
-  useEffect(() => {
-    window.addEventListener("resize", measureHeight);
-    return () => window.removeEventListener("resize", measureHeight);
-  }, [measureHeight]);
 
   useEffect(() => {
     if (hasInitialAds) return;
@@ -238,15 +214,7 @@ export default function AnaHeroSlider({
           </div>
         )}
 
-        <div
-          ref={trackBoxRef}
-          className="w-full overflow-hidden aspect-[16/10] min-h-[240px] sm:aspect-auto sm:h-[44vw] sm:min-h-0 sm:max-h-[480px] lg:h-[32vw] lg:max-h-[560px] xl:h-[26vw] xl:max-h-[640px]"
-          style={
-            slideHeightPx
-              ? { height: `${slideHeightPx}px`, aspectRatio: "auto" }
-              : undefined
-          }
-        >
+        <div className="w-full overflow-hidden aspect-[16/10] min-h-[240px] sm:aspect-[16/8] sm:min-h-0 sm:max-h-[480px] lg:aspect-[16/7] lg:max-h-[560px] xl:aspect-[16/6] xl:max-h-[640px]">
           <div
             className="heroSlider owl-carousel owl-theme flex h-full transition-transform duration-500 ease-in-out"
             id="slider"
@@ -275,16 +243,6 @@ export default function AnaHeroSlider({
                         alt={imgAlt}
                         className="h-full w-full object-cover object-center"
                         loading={idx === currentIndex ? "eager" : "lazy"}
-                        onLoad={(e) => {
-                          const imgEl = e.currentTarget;
-                          if (imgEl.naturalWidth > 0 && imgEl.naturalHeight > 0) {
-                            const ratio = imgEl.naturalHeight / imgEl.naturalWidth;
-                            if (ratiosRef.current[ad.id] !== ratio) {
-                              ratiosRef.current[ad.id] = ratio;
-                              if (idx === currentIndex) measureHeight();
-                            }
-                          }
-                        }}
                       />
                     </picture>
                     {hasOverlay ? (
