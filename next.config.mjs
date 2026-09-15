@@ -189,6 +189,12 @@ const nextConfig = {
         pathname: "/storage/v1/object/public/**",
       },
       {
+        // Local persistent uploads are served from the uploads subdomain.
+        protocol: "https",
+        hostname: "uploads.kurdevents.com",
+        pathname: "/api/uploads/**",
+      },
+      {
         protocol: "https",
         hostname: "localhost",
         port: "3000",
