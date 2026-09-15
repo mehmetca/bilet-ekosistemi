@@ -9,7 +9,11 @@ export function getLocalUploadDir(): string {
 }
 
 export function getLocalUploadPublicUrl(relativePath: string): string {
-  return `${getPublicBaseUrl()}/images/${relativePath}`;
+  const normalized = relativePath.replace(/^\/+/, "");
+  if (normalized.startsWith("images/")) {
+    return `${getPublicBaseUrl()}/${normalized}`;
+  }
+  return `${getPublicBaseUrl()}/images/${normalized}`;
 }
 
 function getPublicBaseUrl(): string {
