@@ -13,7 +13,9 @@ import type { Event, Ticket, Venue } from "@/types/database";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const SAFE_ROUTE_SLUG_REGEX = /^[a-zA-Z0-9.-]+$/;
 const CITY_EVENT_COLUMNS =
-  "id,title,slug,date,time,venue,location,image_url,category,price_from,currency,created_at,is_approved,description,title_tr,title_de,title_en,title_ku,title_ckb,description_tr,description_de,description_en,description_ku,description_ckb,venue_tr,venue_de,venue_en,show_slug,city,venues(city)";
+  "id,title,slug,date,time,venue,location,city,address,image_url,category,price_from,currency,created_at,is_active,is_approved,is_draft,homepage_featured_order,title_tr,title_de,title_en,title_ku,title_ckb,venue_tr,venue_de,venue_en,show_slug,venues(city)";
+const PUBLIC_EVENT_COLUMNS =
+  "id,title,description,date,time,location,city,address,venue,venue_id,price_from,currency,image_url,category,is_active,is_approved,is_draft,slug,show_slug,created_at,updated_at,created_by_user_id,organizer_display_name,title_tr,title_de,title_en,title_ku,title_ckb,description_tr,description_de,description_en,description_ku,description_ckb,venue_tr,venue_de,venue_en,seating_plan_id,max_tickets,has_custom_form";
 const CITY_EVENTS_TARGETED_LIMIT = 96;
 const CITY_EVENTS_FALLBACK_LIMIT = 500;
 
@@ -90,7 +92,7 @@ async function fetchPreviewEventsByShowSlug(showSlugTrimmed: string): Promise<Ev
     const previewShow = () =>
       admin
         .from("events")
-        .select("*")
+        .select(PUBLIC_EVENT_COLUMNS)
         .eq("is_active", true)
         .or("is_draft.eq.true,is_approved.eq.false")
         .order("date", { ascending: true })
@@ -124,7 +126,7 @@ async function fetchEventsByShowSlug(showSlug: string, allowPreview = false): Pr
     const publishedShow = () =>
       supabase
         .from("events")
-        .select("*")
+        .select(PUBLIC_EVENT_COLUMNS)
         .eq("is_active", true)
         .eq("is_approved", true)
         .eq("is_draft", false)
@@ -188,7 +190,7 @@ async function fetchPreviewEventBySlug(slugOrIdTrimmed: string): Promise<EventLo
     }
 
     const previewQuery = () =>
-      admin.from("events").select("*").eq("is_active", true).or("is_draft.eq.true,is_approved.eq.false");
+      admin.from("events").select(PUBLIC_EVENT_COLUMNS).eq("is_active", true).or("is_draft.eq.true,is_approved.eq.false");
 
     const attempts = [
       () => previewQuery().eq("slug", slugOrIdTrimmed).maybeSingle(),
@@ -352,6 +354,7 @@ async function fetchOrganizerDisplayName(userId: string | null | undefined): Pro
       .from("organizer_profiles")
       .select("organization_display_name")
       .eq("user_id", userId)
+      .limit(1)
       .maybeSingle();
     return data?.organization_display_name?.trim() || null;
   } catch {

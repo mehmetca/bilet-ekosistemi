@@ -2,7 +2,7 @@
 
 import { useState, useRef } from "react";
 import { Upload, X, Image as ImageIcon } from "lucide-react";
-import { supabase } from "@/lib/supabase-client";
+import { getAccessTokenForApi } from "@/lib/supabase-auth-token";
 import { validateImageFile, getImageHint } from "@/lib/image-standards";
 import { compressImageFile } from "@/lib/image-compress";
 
@@ -22,30 +22,22 @@ export default function ImageUpload({ value, onChange, onRemove }: ImageUploadPr
     try {
       // Egress/band genişliğini azaltmak için önce tarayıcıda küçült.
       const compressedFile = await compressImageFile(file);
-      const fileExt = compressedFile.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `event-images/${fileName}`;
+      const token = await getAccessTokenForApi();
+      if (!token) throw new Error("Oturum bulunamadı");
 
-      const { error: uploadError } = await supabase.storage
-        .from('event-images')
-        .upload(filePath, compressedFile, {
-          contentType: compressedFile.type,
-          // Görseller değişmez; tarayıcı/CDN uzun süre önbelleğine alsın.
-          cacheControl: '31536000',
-        });
+      const formData = new FormData();
+      formData.append("file", compressedFile);
+      formData.append("folder", "event-images");
 
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const payload = (await response.json()) as { url?: string; error?: string };
+      if (!response.ok || !payload.url) throw new Error(payload.error || "Upload başarısız");
 
-      if (uploadError) {
-        console.error("Upload error:", uploadError);
-        throw uploadError;
-      }
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('event-images')
-        .getPublicUrl(filePath);
-
-      
-      onChange(publicUrl);
+      onChange(payload.url);
     } catch (error) {
       console.error('Resim yüklenemedi:', error);
       alert('Resim yüklenemedi: ' + (error as Error).message);
