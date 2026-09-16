@@ -9,6 +9,7 @@ import {
 import type { CheckoutCartLineInput } from "@/lib/checkout-cart-pricing";
 import { refundCheckoutSessionAndCancelOrders } from "@/lib/order-cancel-refund";
 import { getFulfillmentAuthToken } from "@/lib/fulfillment-auth";
+import { persistAmedSporForm, type AmedSporFormPayload } from "@/lib/amed-spor-form";
 
 export type StoredCheckoutCartLine = CheckoutCartLineInput;
 
@@ -28,6 +29,7 @@ export type CheckoutIntentRecord = {
   currency: string;
   status: string;
   fulfillment_error: string | null;
+  form_json: AmedSporFormPayload | null;
 };
 
 export type FulfillmentOrderSummary = {
@@ -381,6 +383,33 @@ export async function fulfillStripeCheckoutSession(
   }
 
   await updateIntentStatus(intent.id, "fulfilled");
+
+  // Amed Spor özel formu: ödeme başarılı oldu → form verisini siparişe bağlı kaydet.
+  const formPayload = intent.form_json as AmedSporFormPayload | null | undefined;
+  if (
+    formPayload &&
+    typeof formPayload.eventId === "string" &&
+    Array.isArray(formPayload.attendees) &&
+    formPayload.attendees.length > 0
+  ) {
+    try {
+      const { data: formOrderRows } = await supabase
+        .from("orders")
+        .select("id")
+        .eq("stripe_session_id", stripeSessionId)
+        .eq("event_id", formPayload.eventId)
+        .eq("status", "completed")
+        .limit(1);
+      const purchaseId = formOrderRows?.[0]?.id || null;
+      const persisted = await persistAmedSporForm(supabase, formPayload, purchaseId);
+      if (!persisted.ok) {
+        console.error("Amed Spor form persistence failed:", persisted.message);
+      }
+    } catch (formErr) {
+      console.error("Amed Spor form persistence error:", formErr);
+    }
+  }
+
   const orders = await loadOrdersForStripeSession(stripeSessionId);
   return { ok: true, orders };
 }

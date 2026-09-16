@@ -22,6 +22,13 @@ type FormRow = {
   full_name: string;
   email: string;
   phone: string;
+  id_country?: string | null;
+  passo_number?: string | null;
+  seating_preference?: string | null;
+  has_accommodation?: boolean | null;
+  accommodation_fee?: number | null;
+  has_flight?: boolean | null;
+  flight_fee?: number | null;
   organization?: string | null;
   language_preference: string;
   additional_notes?: string | null;
@@ -119,9 +126,7 @@ export default function AmedSporKayitlarPage() {
       try {
         const { data, error: qError } = await supabase
           .from("event_form_responses")
-          .select(
-            "id, event_id, full_name, email, phone, organization, language_preference, additional_notes, created_at"
-          )
+          .select("*")
           .eq("event_id", selectedEventId)
           .order("created_at", { ascending: false });
 
@@ -218,6 +223,13 @@ export default function AmedSporKayitlarPage() {
       "full_name",
       "email",
       "phone",
+      "id_country",
+      "passo_number",
+      "seating_preference",
+      "has_accommodation",
+      "accommodation_fee",
+      "has_flight",
+      "flight_fee",
       "organization",
       "language_preference",
       "additional_notes",
@@ -230,6 +242,13 @@ export default function AmedSporKayitlarPage() {
           r.full_name,
           r.email,
           r.phone,
+          r.id_country || "",
+          r.passo_number || "",
+          r.seating_preference === "loca" ? "Özel Loca" : "VIP Tribünü",
+          r.has_accommodation ? `Evet (+${r.accommodation_fee || 0} EUR)` : "Hayır",
+          r.accommodation_fee || 0,
+          r.has_flight ? `Evet (+${r.flight_fee || 0} EUR)` : "Hayır",
+          r.flight_fee || 0,
           r.organization || "",
           r.language_preference,
           r.additional_notes || "",
@@ -328,10 +347,13 @@ export default function AmedSporKayitlarPage() {
               <thead className="bg-slate-50 text-slate-600">
                 <tr>
                   <th className="text-left px-3 py-2 font-semibold">Ad Soyad</th>
-                  <th className="text-left px-3 py-2 font-semibold">E-posta</th>
-                  <th className="text-left px-3 py-2 font-semibold">Telefon</th>
-                  <th className="text-left px-3 py-2 font-semibold">Dil</th>
-                  <th className="text-left px-3 py-2 font-semibold">Not</th>
+                  <th className="text-left px-3 py-2 font-semibold">İletişim</th>
+                  <th className="text-left px-3 py-2 font-semibold">Kimlik / Ülke</th>
+                  <th className="text-left px-3 py-2 font-semibold">Passo No</th>
+                  <th className="text-left px-3 py-2 font-semibold">Tribün</th>
+                  <th className="text-left px-3 py-2 font-semibold">Konaklama</th>
+                  <th className="text-left px-3 py-2 font-semibold">Uçak</th>
+                  <th className="text-left px-3 py-2 font-semibold">Dil / Not</th>
                   <th className="text-left px-3 py-2 font-semibold">Tarih</th>
                   <th className="text-left px-3 py-2 font-semibold">Sil</th>
                 </tr>
@@ -339,7 +361,7 @@ export default function AmedSporKayitlarPage() {
               <tbody className="divide-y divide-slate-100">
                 {!loadingRows && rows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-3 py-8 text-center text-slate-500">
+                    <td colSpan={10} className="px-3 py-8 text-center text-slate-500">
                       Bu etkinlik için kayıt yok.
                     </td>
                   </tr>
@@ -347,13 +369,50 @@ export default function AmedSporKayitlarPage() {
                   rows.map((r) => (
                     <tr key={r.id} className="hover:bg-slate-50/80">
                       <td className="px-3 py-2 font-medium text-slate-900">{r.full_name}</td>
-                      <td className="px-3 py-2">{r.email}</td>
-                      <td className="px-3 py-2">{r.phone}</td>
-                      <td className="px-3 py-2">{r.language_preference}</td>
-                      <td className="px-3 py-2 max-w-[200px] truncate" title={r.additional_notes || ""}>
-                        {r.additional_notes || "-"}
+                      <td className="px-3 py-2">
+                        <div className="text-slate-900">{r.email}</div>
+                        <div className="text-xs text-slate-500">{r.phone}</div>
+                      </td>
+                      <td className="px-3 py-2 text-slate-800">
+                        {r.id_country || <span className="text-slate-400">-</span>}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs text-slate-800">
+                        {r.passo_number || <span className="text-slate-400">-</span>}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
+                        <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                          r.seating_preference === "loca" ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"
+                        }`}>
+                          {r.seating_preference === "loca" ? "Özel Loca" : "VIP Tribünü"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-xs">
+                        {r.has_accommodation ? (
+                          <span className="text-emerald-700 font-semibold">
+                            Evet (+{r.accommodation_fee || 0} €)
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Hayır</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-xs">
+                        {r.has_flight ? (
+                          <span className="text-emerald-700 font-semibold">
+                            Evet (+{r.flight_fee || 0} €)
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Hayır</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 max-w-[160px] text-xs">
+                        <div className="font-medium text-slate-700">{r.language_preference}</div>
+                        {r.additional_notes ? (
+                          <div className="text-slate-500 truncate" title={r.additional_notes}>
+                            {r.additional_notes}
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap text-xs text-slate-500">
                         {r.created_at ? new Date(r.created_at).toLocaleString("tr-TR") : "-"}
                       </td>
                       <td className="px-3 py-2 text-right">

@@ -30,6 +30,8 @@ type CreateCheckoutBody = {
   ticketId?: string;
   quantity?: number;
   eventId?: string;
+  /** Amed Spor özel formu: ödeme sonrası kaydedilecek form verisi. */
+  formData?: unknown;
 };
 
 function normalizeDeliveryChoice(raw: string | undefined): CheckoutPhysicalDelivery | "e_ticket" {
@@ -51,6 +53,7 @@ export async function POST(request: NextRequest) {
       deliveryRaw === "e_ticket" ? "none" : deliveryRaw;
     const seatHoldSessionId = (body.seatHoldSessionId || "").trim() || null;
     const items = Array.isArray(body.items) ? body.items : [];
+    const formData = body.formData ?? null;
 
     if (!buyerEmail) {
       return NextResponse.json(
@@ -159,6 +162,7 @@ export async function POST(request: NextRequest) {
         delivery_choice: deliveryRaw,
         seat_hold_session_id: seatHoldSessionId,
         cart_json: items,
+        ...(formData ? { form_json: formData } : {}),
         total_amount_cents: priced.grandTotalCents,
         currency: priced.currency,
         status: "pending",

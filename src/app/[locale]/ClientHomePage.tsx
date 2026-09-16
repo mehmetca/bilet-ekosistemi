@@ -671,11 +671,9 @@ export default function ClientHomePage({
                       <span className={`font-bold text-lg ${
                         eventStatus.isPast ? 'text-slate-500' : 'text-primary-600'
                       }`}>
-                        {event.show_slug && isAmedSporEvent(event.show_slug)
-                          ? null
-                          : Number(event.price_from) > 0
-                            ? `${t("from")} ${formatPrice(Number(event.price_from), event.currency)}`
-                            : t("free")}
+                        {Number(event.price_from) > 0
+                          ? `${t("from")} ${formatPrice(Number(event.price_from), event.currency)}`
+                          : t("free")}
                       </span>
                       <button
                         onClick={() => {
