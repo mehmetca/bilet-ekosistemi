@@ -95,6 +95,7 @@ export default function CheckoutPage() {
     totalPrice,
     totalItems,
     reservationExpiresAt,
+    hydrated,
   } = useCart();
   const [buyerName, setBuyerName] = useState("");
   const [buyerEmail, setBuyerEmail] = useState("");
@@ -497,6 +498,21 @@ export default function CheckoutPage() {
         };
       });
 
+      // Amed Spor özel formu: form verisini ödemeye taşı (ödeme sonrası kaydedilir).
+      let amedSporFormPayload: unknown = null;
+      try {
+        const raw = window.localStorage.getItem("amedSporFormData");
+        if (raw) {
+          const parsed = JSON.parse(raw) as { formPayload?: { eventId?: string } };
+          const fp = parsed?.formPayload;
+          if (fp && typeof fp.eventId === "string" && items.some((it) => it.eventId === fp.eventId)) {
+            amedSporFormPayload = fp;
+          }
+        }
+      } catch {
+        /* ignore */
+      }
+
       let token = authAccessToken;
       if (!token) {
         const { data: { session } } = await supabase.auth.getSession();
@@ -518,6 +534,7 @@ export default function CheckoutPage() {
           seatHoldSessionId,
           locale,
           items: checkoutItems,
+          ...(amedSporFormPayload ? { formData: amedSporFormPayload } : {}),
         }),
       });
       const data = (await response.json()) as {
@@ -686,6 +703,7 @@ export default function CheckoutPage() {
     items.length === 0 &&
     (hasSuccessfulCheckout || (results.length > 0 && results.every((r) => r.success)));
   const shouldShowEmptyCart =
+    hydrated &&
     items.length === 0 &&
     results.length === 0 &&
     !allSuccess &&
@@ -832,6 +850,10 @@ export default function CheckoutPage() {
             >
               {t("continueShopping")}
             </SafeNextLink>
+          </div>
+        ) : !hydrated ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
           </div>
         ) : shouldShowEmptyCart ? (
           showExpiredFullPage ? (

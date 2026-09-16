@@ -2289,7 +2289,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               {(!isAmedSpor || Number(event.price_from || 0) > 0) && (
                 <div className="mt-5">
                   <p className="text-sm text-slate-600">
-                    {isAmedSpor ? "Kapora" : t("tickets")}
+                    {t("tickets")}
                   </p>
                   <p className="text-2xl font-bold text-primary-700">
                     {isAmedSpor

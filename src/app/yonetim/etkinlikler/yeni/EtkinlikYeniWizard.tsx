@@ -244,6 +244,13 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   /** Tur/gösteri gruplaması için show_slug (tek gösteri sayfası) */
   const [showSlugId, setShowSlugId] = useState("");
 
+  /** Özel Form (Amedspor vb.) Ayarları */
+  const [hasCustomForm, setHasCustomForm] = useState(false);
+  const [customFormMaxAttendees, setCustomFormMaxAttendees] = useState<number>(3);
+  const [accommodationPriceInput, setAccommodationPriceInput] = useState<number | "">("");
+  const [flightPriceInput, setFlightPriceInput] = useState<number | "">("");
+  const [maxTicketsInput, setMaxTicketsInput] = useState<number | "">("");
+
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [venues, setVenues] = useState<VenueOption[]>([]);
@@ -360,6 +367,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setPriceFromInput(typeof ev.price_from === "number" ? ev.price_from : "");
       const cpf = Number(ev.checkout_processing_fee);
       setCheckoutProcessingFeeInput(Number.isFinite(cpf) && cpf > 0 ? cpf : "");
+      setHasCustomForm(Boolean(ev.has_custom_form));
+      setCustomFormMaxAttendees(typeof ev.custom_form_max_attendees === "number" ? ev.custom_form_max_attendees : 3);
+      setAccommodationPriceInput(typeof ev.accommodation_price === "number" && ev.accommodation_price > 0 ? ev.accommodation_price : "");
+      setFlightPriceInput(typeof ev.flight_price === "number" && ev.flight_price > 0 ? ev.flight_price : "");
+      setMaxTicketsInput(typeof ev.max_tickets === "number" ? ev.max_tickets : "");
       setTicketUrl(
         parsedTr.externalTicketUrl ||
           parsedDe.externalTicketUrl ||
@@ -1027,6 +1039,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         venue_en: null,
         organizer_display_name: organizerName,
         is_active: true,
+        has_custom_form: hasCustomForm,
+        custom_form_max_attendees: customFormMaxAttendees ? Math.max(1, Math.min(10, customFormMaxAttendees)) : 3,
+        accommodation_price: accommodationPriceInput === "" ? null : Number(accommodationPriceInput) || null,
+        flight_price: flightPriceInput === "" ? null : Number(flightPriceInput) || null,
+        max_tickets: maxTicketsInput === "" ? null : Number(maxTicketsInput) || null,
       };
 
       const hasExternalLink = (ticketUrl || "").trim().length > 0;
@@ -1036,10 +1053,19 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         let updateSucceeded = false;
         let lastUpdateError: unknown = null;
         for (const cat of categoryVariantsForDb(String(eventData.category || ""))) {
-          const { error: updateError } = await supabase
+          let { error: updateError } = await supabase
             .from("events")
             .update({ ...eventData, category: cat })
             .eq("id", eventId);
+          if (updateError && updateError.message && updateError.message.includes("column")) {
+            // Kolonlar henüz DB'de yoksa fallback:
+            const fallbackData = { ...eventData };
+            delete fallbackData.custom_form_max_attendees;
+            delete fallbackData.accommodation_price;
+            delete fallbackData.flight_price;
+            const res = await supabase.from("events").update({ ...fallbackData, category: cat }).eq("id", eventId);
+            updateError = res.error;
+          }
           if (!updateError) {
             updateSucceeded = true;
             break;
@@ -1171,11 +1197,25 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       let insertedEventId: string | null = null;
       let lastInsertError: unknown = null;
       for (const cat of categoryVariantsForDb(String(eventData.category || ""))) {
-        const { data: insertedEvent, error: insertError } = await supabase
+        let { data: insertedEvent, error: insertError } = await supabase
           .from("events")
           .insert({ ...eventData, category: cat })
           .select("id")
           .single();
+
+        if (insertError && insertError.message && insertError.message.includes("column")) {
+          const fallbackData = { ...eventData };
+          delete fallbackData.custom_form_max_attendees;
+          delete fallbackData.accommodation_price;
+          delete fallbackData.flight_price;
+          const retryRes = await supabase
+            .from("events")
+            .insert({ ...fallbackData, category: cat })
+            .select("id")
+            .single();
+          insertedEvent = retryRes.data;
+          insertError = retryRes.error;
+        }
 
         if (!insertError && insertedEvent?.id) {
           insertedEventId = insertedEvent.id;
@@ -1421,6 +1461,110 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   folder="images"
                   label=""
                 />
+              </div>
+
+              {/* Özel Başvuru Formu (Amedspor vb.) & Ek Hizmetler */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-sm text-slate-900">Özel Başvuru Formu (Amedspor vb.)</h3>
+                    <p className="text-xs text-slate-500">
+                      Standart bilet satışı yerine form ile başvuru toplanan maç/etkinlikler için kullanın.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hasCustomForm}
+                      onChange={(e) => setHasCustomForm(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
+                  </label>
+                </div>
+
+                {(hasCustomForm || category === "mac-bileti" || isAmedSporEvent(showSlugId)) && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-slate-200/80">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Form Maks. Kişi / Bilet Sayısı (1 - 10)
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={10}
+                        value={customFormMaxAttendees}
+                        onChange={(e) =>
+                          setCustomFormMaxAttendees(Math.max(1, Math.min(10, Number(e.target.value) || 1)))
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white"
+                        placeholder="Varsayılan: 3"
+                      />
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Kullanıcının formda tek seferde seçebileceği maksimum kişi sayısı.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Toplam Kontenjan / Kapasite (Bilet Sayısı)
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        value={maxTicketsInput === "" ? "" : maxTicketsInput}
+                        onChange={(e) =>
+                          setMaxTicketsInput(e.target.value === "" ? "" : Math.max(0, Number(e.target.value) || 0))
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white"
+                        placeholder="Örn. 100 (Boş = sınırsız)"
+                      />
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Etkinlikte kalan bilet sayacı ve stok kontrolü için kullanılır.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Konaklama Ek Ücreti ({currency})
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={accommodationPriceInput === "" ? "" : accommodationPriceInput}
+                        onChange={(e) =>
+                          setAccommodationPriceInput(e.target.value === "" ? "" : Math.max(0, Number(e.target.value) || 0))
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white"
+                        placeholder="Fiyat yazılmazsa formda çıkmaz"
+                      />
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Kişi başı eklenir. Boş veya 0 bırakılırsa formda konaklama sorusu gizlenir.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Uçak Bileti Ek Ücreti ({currency})
+                      </label>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={flightPriceInput === "" ? "" : flightPriceInput}
+                        onChange={(e) =>
+                          setFlightPriceInput(e.target.value === "" ? "" : Math.max(0, Number(e.target.value) || 0))
+                        }
+                        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm bg-white"
+                        placeholder="Fiyat yazılmazsa formda çıkmaz"
+                      />
+                      <p className="mt-1 text-[11px] text-slate-500">
+                        Kişi başı eklenir. Boş veya 0 bırakılırsa formda uçak bileti sorusu gizlenir.
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

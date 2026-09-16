@@ -53,6 +53,12 @@ export interface Event {
   max_tickets?: number | null;
   /** Özel form gerektiriyor mu (Amed Spor gibi etkinlikler için) */
   has_custom_form?: boolean | null;
+  /** Özel formda tek seferde seçilebilecek maksimum kişi sayısı */
+  custom_form_max_attendees?: number | null;
+  /** Kişi başı konaklama ek ücreti (null/0 ise formda görünmez) */
+  accommodation_price?: number | null;
+  /** Kişi başı uçak bileti ek ücreti (null/0 ise formda görünmez) */
+  flight_price?: number | null;
 }
 
 export interface Venue {
@@ -288,6 +294,20 @@ export interface EventFormResponse {
   full_name: string;
   email: string;
   phone: string;
+  /** Katılımcının kimlik/pasaport ülkesi (vatandaşlık) */
+  id_country?: string | null;
+  /** Katılımcının Passo kart / hesap numarası */
+  passo_number?: string | null;
+  /** Tribün tercihi: vip (VIP Tribünü) veya loca (Özel Loca) */
+  seating_preference?: 'vip' | 'loca' | null;
+  /** Konaklama istendi mi? */
+  has_accommodation?: boolean | null;
+  /** Kişi başı konaklama ücreti */
+  accommodation_fee?: number | null;
+  /** Uçak bileti istendi mi? */
+  has_flight?: boolean | null;
+  /** Kişi başı uçak bileti ücreti */
+  flight_fee?: number | null;
   organization?: string | null;
   language_preference: 'kurmanci' | 'türkçe' | 'ingilizce' | 'deutsch';
   accept_phone_contact: boolean;

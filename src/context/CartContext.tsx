@@ -37,6 +37,8 @@ interface CartContextValue {
   items: CartItem[];
   /** Sepet rezervasyonunun bittiği epoch ms; yoksa süre yok. */
   reservationExpiresAt: number | null;
+  /** localStorage'dan ilk yükleme tamamlandı mı? (boş sepet flaşını önler) */
+  hydrated: boolean;
   addItem: (item: CartItemAddPayload) => void;
   /** Birden fazla satırı tek `setItems` güncellemesinde işler (çift tik / çift yüklemede adet yanlış ikiye çıkmasını önler). */
   addItemsBatch: (items: CartItemAddPayload[]) => void;
@@ -568,6 +570,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       value={{
         items,
         reservationExpiresAt,
+        hydrated,
         addItem,
         addItemsBatch,
         removeItem,

@@ -53,6 +53,160 @@ const STRINGS: Record<string, Record<Locale, string>> = {
     ku: "Vebijarka ziman pêdivî ye",
     ckb: "هەڵبژاردەی زمان پێویستە",
   },
+  idCountry: {
+    tr: "Hangi ülkenin kimliğini / pasaportunu taşıyorsunuz? *",
+    de: "Welche Staatsangehörigkeit / welchen Ausweis besitzen Sie? *",
+    en: "Which country's ID / passport do you hold? *",
+    ku: "Hûn nasnameya / pasaporta kîjan welatî hildigirin? *",
+    ckb: "ناسنامەی / پاسپۆرتی کام وڵاتت پێیە؟ *",
+  },
+  idCountryPlaceholder: {
+    tr: "Örn. Türkiye, Almanya, İsviçre...",
+    de: "z. B. Deutschland, Türkei, Schweiz...",
+    en: "e.g. Turkey, Germany, Switzerland...",
+    ku: "B.m. Tirkiye, Almanya, Swîsre...",
+    ckb: "بۆ نموونە تورکیا، ئەڵمانیا، سویسرا...",
+  },
+  idCountryRequired: {
+    tr: "Kimlik / pasaport ülkesi zorunludur",
+    de: "Ausweis- / Passland ist erforderlich",
+    en: "ID / passport country is required",
+    ku: "Welatê nasnameyê / pasaportê pêdivî ye",
+    ckb: "وڵاتی ناسنامە / پاسپۆرت پێویستە",
+  },
+  idCountrySelect: {
+    tr: "Ülke seçiniz",
+    de: "Land wählen",
+    en: "Select country",
+    ku: "Welat hilbijêre",
+    ckb: "وڵات هەڵبژێرە",
+  },
+  idCountryOther: {
+    tr: "Diğer (Listede yok)",
+    de: "Anderes (nicht in der Liste)",
+    en: "Other (not in list)",
+    ku: "Din (di lîsteyê de tune)",
+    ckb: "هیتر (لە لیستەکەدا نییە)",
+  },
+  idCountryOtherPlaceholder: {
+    tr: "Ülke adını yazınız",
+    de: "Ländernamen eingeben",
+    en: "Enter the country name",
+    ku: "Navê welat binivîse",
+    ckb: "ناوی وڵات بنووسە",
+  },
+  passoNumber: {
+    tr: "Passo Numarası *",
+    de: "Passo-Nummer *",
+    en: "Passo Number *",
+    ku: "Hejmara Passo *",
+    ckb: "ژمارەی پاسۆ *",
+  },
+  passoNumberPlaceholder: {
+    tr: "Passo Kart No veya Passo kayıtlı TC / Pasaport No",
+    de: "Passo-Kartennr. oder registrierte Pass-/ID-Nr.",
+    en: "Passo Card No or registered ID / Passport No",
+    ku: "Hejmara qerta Passo an nasnameya qeydkirî",
+    ckb: "ژمارەی کارتی پاسۆ یان ناسنامەی تۆمارکراو",
+  },
+  passoNumberRequired: {
+    tr: "Passo numarası zorunludur",
+    de: "Passo-Nummer ist erforderlich",
+    en: "Passo number is required",
+    ku: "Hejmara Passo pêdivî ye",
+    ckb: "ژمارەی پاسۆ پێویستە",
+  },
+  passoNumberHelp: {
+    tr: "Maç biletinizin Passo hesabınıza aktarılması için lütfen Passo kart numaranızı veya Passo hesabınıza kayıtlı TC / Pasaport numaranızı yazınız.",
+    de: "Bitte geben Sie Ihre Passo-Kartennummer oder die in Ihrem Passo-Konto registrierte Ausweisnummer ein.",
+    en: "Please enter your Passo card number or the ID / Passport number registered to your Passo account.",
+    ku: "Ji bo ku bilêta maçê derbasî hesabê we yê Passo bibe, ji kerema xwe hejmara qerta xwe ya Passo an hejmara nasnameya qeydkirî binivîsin.",
+    ckb: "تکایە ژمارەی کارتی پاسۆکەت یان ئەو ناسنامەیەی لەسەر پاسۆ تۆمارکراوە بنووسە بۆ ئەوەی بلیتەکەت بخرێتە سەری.",
+  },
+  seatingAreaTitle: {
+    tr: "Tribün & Maç İzleme Alanı Tercihi *",
+    de: "Tribünen- & Sitzplatzpräferenz *",
+    en: "Tribune & Seating Preference *",
+    ku: "Vebijarka Cihê Temaşekirinê *",
+    ckb: "هەڵبژاردەی شوێنی بینینی یاری *",
+  },
+  seatingAreaDesc: {
+    tr: "Maçı takip etmek istediğiniz ayrıcalıklı alanı seçiniz.",
+    de: "Wählen Sie Ihren bevorzugten Zuschauerbereich aus.",
+    en: "Please select your preferred exclusive viewing area for the match.",
+    ku: "Ji kerema xwe qada taybet a ku hûn dixwazin lê temaşe bikin hilbijêrin.",
+    ckb: "تکایە ئەو شوێنە تایبەتە هەڵبژێرە کە دەتەوێت یارییەکەی لێوە ببینیت.",
+  },
+  seatingVip: {
+    tr: "VIP Tribünü (Protokol & Özel VIP Alanı)",
+    de: "VIP-Tribüne (Protokoll & VIP-Bereich)",
+    en: "VIP Tribune (Protocol & VIP Area)",
+    ku: "Tribûna VIP (Protokol & Qada Taybet a VIP)",
+    ckb: "تریبۆنی VIP (پڕۆتۆکۆڵ و شوێنی تایبەتی VIP)",
+  },
+  seatingLoca: {
+    tr: "Özel Loca (VIP Lounge / Loca Alanı)",
+    de: "Private Loge (VIP-Lounge & Logenbereich)",
+    en: "Private Box (VIP Lounge & Box Area)",
+    ku: "Loja Taybet (VIP Lounge / Qada Lojê)",
+    ckb: "لۆژی تایبەت (VIP Lounge / شوێنی لۆژ)",
+  },
+  additionalServicesTitle: {
+    tr: "Ek Hizmet Seçenekleri",
+    de: "Zusätzliche Optionen",
+    en: "Additional Options",
+    ku: "Vebijarkên Zêde yên Xizmetê",
+    ckb: "بژاردەی خزمەتگوزارییە زیادەکان",
+  },
+  includeAccommodation: {
+    tr: "Konaklama Dahil Edilsin (+{price} / kişi başı)",
+    de: "Unterkunft hinzufügen (+{price} / pro Person)",
+    en: "Include Accommodation (+{price} / per person)",
+    ku: "Cihê mayînê lê zêde bike (+{price} / ji bo her kesî)",
+    ckb: "شوێنی مانەوە زیاد بکرێت (+{price} / بۆ هەر کەسێک)",
+  },
+  includeFlight: {
+    tr: "Gidiş-Dönüş Uçak Bileti Dahil Edilsin (+{price} / kişi başı)",
+    de: "Flugticket hinzufügen (+{price} / pro Person)",
+    en: "Include Flight Ticket (+{price} / per person)",
+    ku: "Bilêta balafirê lê zêde bike (+{price} / ji bo her kesî)",
+    ckb: "بلیتی فڕۆکە زیاد بکرێت (+{price} / بۆ هەر کەسێک)",
+  },
+  orderSummaryTitle: {
+    tr: "Fiyat & Tutar Özeti",
+    de: "Preis- & Bestellübersicht",
+    en: "Price & Order Summary",
+    ku: "Kurteya Buhayê",
+    ckb: "کورتەی نرخ و داواکاری",
+  },
+  matchTicket: {
+    tr: "Maç Bileti",
+    de: "Spielticket",
+    en: "Match Ticket",
+    ku: "Bilêta Maçê",
+    ckb: "بلیتی یاری",
+  },
+  accommodationService: {
+    tr: "Konaklama",
+    de: "Unterkunft",
+    en: "Accommodation",
+    ku: "Cihê mayînê",
+    ckb: "شوێنی مانەوە",
+  },
+  flightService: {
+    tr: "Uçak Bileti",
+    de: "Flugticket",
+    en: "Flight Ticket",
+    ku: "Bilêta Balafirê",
+    ckb: "بلیتی فڕۆکە",
+  },
+  totalAmount: {
+    tr: "Toplam Tutar",
+    de: "Gesamtbetrag",
+    en: "Total Amount",
+    ku: "Buhayê Giştî",
+    ckb: "کۆی گشتی",
+  },
   submitFailedError: {
     tr: "Form gönderilemedi",
     de: "Das Formular konnte nicht gesendet werden",
@@ -89,11 +243,11 @@ const STRINGS: Record<string, Record<Locale, string>> = {
     ckb: "فۆرم نێردرا",
   },
   redirectingPayment: {
-    tr: "Formunuz kaydedildi. Ödeme için sepete yönlendiriliyorsunuz...",
-    de: "Ihr Formular wurde gespeichert. Sie werden zur Zahlung (Warenkorb) weitergeleitet...",
-    en: "Your form was saved. Redirecting to the cart for payment...",
-    ku: "Forma we hat tomarkirin. Ji bo dayînê tê rêvebirina we ber bi selikê...",
-    ckb: "فۆرمەکەت پاشەکەوت کرا. بۆ پارەدان دەڕوانرێیت بۆ سەبەتەکە...",
+    tr: "Sepete eklendi. Ödemeyi tamamladığınızda formunuz kaydedilecek...",
+    de: "In den Warenkorb gelegt. Nach Abschluss der Zahlung wird Ihr Formular gespeichert...",
+    en: "Added to cart. Your form will be saved after payment is completed...",
+    ku: "Têxe selikê. Piştî temamkirina dayînê forma we dê were tomarkirin...",
+    ckb: "خرا ناو سەبەتە. دوای تەواوکردنی پارەدان فۆرمەکەت پاشەکەوت دەکرێت...",
   },
   completedThankyou: {
     tr: "Formunuz başarıyla tamamlandı. Teşekkürler.",
@@ -320,6 +474,13 @@ const STRINGS: Record<string, Record<Locale, string>> = {
     ku: "Formê Bişîne",
     ckb: "فۆرم بنێرە",
   },
+  addToCart: {
+    tr: "Sepete Ekle",
+    de: "In den Warenkorb",
+    en: "Add to Cart",
+    ku: "Têxe Selikê",
+    ckb: "زیاد بکە بۆ سەبەتە",
+  },
   amedEvents: {
     tr: "Amedspor Etkinlikleri",
     de: "Amedspor Veranstaltungen",
@@ -365,10 +526,27 @@ interface AmedSporFormClientProps {
   tickets: Ticket[];
 }
 
+const COUNTRIES = [
+  "Türkiye",
+  "Almanya (Deutschland)",
+  "İsviçre (Schweiz)",
+  "Avusturya (Österreich)",
+  "Hollanda (Nederland)",
+  "Fransa (France)",
+  "Belçika (België)",
+  "İsveç (Sverige)",
+  "İngiltere (United Kingdom)",
+  "Danimarka (Danmark)",
+  "Norveç (Norge)",
+  "Irak (Iraq)",
+];
+
 interface Attendee {
   full_name: string;
   email: string;
   phone: string;
+  id_country: string;
+  passo_number: string;
 }
 
 export default function AmedSporFormClient({
@@ -376,10 +554,21 @@ export default function AmedSporFormClient({
   locale,
   localized,
 }: AmedSporFormClientProps) {
+  const maxAttendees = Math.max(1, Math.min(10, event.custom_form_max_attendees || 3));
+  const hasAnyPrice =
+    Number(event.price_from) > 0 ||
+    Number(event.accommodation_price) > 0 ||
+    Number(event.flight_price) > 0;
   const [ticketCount, setTicketCount] = useState<number>(1);
   const [attendees, setAttendees] = useState<Attendee[]>([
-    { full_name: "", email: "", phone: "" },
+    { full_name: "", email: "", phone: "", id_country: "", passo_number: "" },
   ]);
+
+  const [seatingPreference, setSeatingPreference] = useState<"vip" | "loca">("vip");
+  const [hasAccommodation, setHasAccommodation] = useState(false);
+  const [hasFlight, setHasFlight] = useState(false);
+  /** "Diğer" seçilen katılımcı indeksleri (kimlik ülkesi listesinde olmayanlar için serbest giriş) */
+  const [countryOther, setCountryOther] = useState<Set<number>>(new Set());
 
   const [formData, setFormData] = useState({
     organization: "",
@@ -452,6 +641,14 @@ export default function AmedSporFormClient({
       if (!attendee.phone.trim()) {
         newErrors[`phone_${index}`] = t("phoneRequired");
       }
+
+      if (!attendee.id_country.trim()) {
+        newErrors[`id_country_${index}`] = t("idCountryRequired");
+      }
+
+      if (!attendee.passo_number.trim()) {
+        newErrors[`passo_number_${index}`] = t("passoNumberRequired");
+      }
     });
 
     if (!formData.language_preference) {
@@ -487,6 +684,9 @@ export default function AmedSporFormClient({
             eventId: event.id,
             ticketCount,
             attendees,
+            seating_preference: seatingPreference,
+            has_accommodation: hasAccommodation,
+            has_flight: hasFlight,
             organization: formData.organization || null,
             language_preference: formData.language_preference,
             accept_phone_contact: formData.accept_phone_contact,
@@ -513,6 +713,7 @@ export default function AmedSporFormClient({
           JSON.stringify({
             eventId: event.id,
             formData: { ...formData, attendees },
+            formPayload: data.formPayload || null,
             submittedAt: new Date().toISOString(),
             requiresPayment: paid,
             // Sepete yeniden ekleme için gerekli bilet + adet bilgisi.
@@ -610,7 +811,7 @@ export default function AmedSporFormClient({
       const next = [...prev];
       if (count > prev.length) {
         for (let i = prev.length; i < count; i++) {
-          next.push({ full_name: "", email: "", phone: "" });
+          next.push({ full_name: "", email: "", phone: "", id_country: "", passo_number: "" });
         }
       } else if (count < prev.length) {
         next.splice(count);
@@ -763,12 +964,59 @@ export default function AmedSporFormClient({
                       onChange={(e) => handleTicketCountChange(Number(e.target.value))}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value={1}>1</option>
-                      <option value={2}>2</option>
-                      <option value={3}>3</option>
+                      {Array.from({ length: maxAttendees }, (_, i) => i + 1).map((num) => (
+                        <option key={num} value={num}>
+                          {num}
+                        </option>
+                      ))}
                     </select>
                   </div>
 
+                  {/* Tribün / İzleme Alanı Seçimi (VIP Tribünü veya Özel Loca) */}
+                  <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-gray-50/50">
+                    <div>
+                      <h3 className="font-semibold text-lg">{t("seatingAreaTitle")}</h3>
+                      <p className="text-xs text-slate-600 mt-0.5">{t("seatingAreaDesc")}</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                      <label
+                        className={`relative flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
+                          seatingPreference === "vip"
+                            ? "border-primary-600 bg-primary-50/50 shadow-sm"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="seatingPreference"
+                          value="vip"
+                          checked={seatingPreference === "vip"}
+                          onChange={() => setSeatingPreference("vip")}
+                          className="h-4 w-4 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="font-semibold text-sm text-slate-900">{t("seatingVip")}</span>
+                      </label>
+                      <label
+                        className={`relative flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
+                          seatingPreference === "loca"
+                            ? "border-primary-600 bg-primary-50/50 shadow-sm"
+                            : "border-gray-200 hover:border-gray-300 bg-white"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="seatingPreference"
+                          value="loca"
+                          checked={seatingPreference === "loca"}
+                          onChange={() => setSeatingPreference("loca")}
+                          className="h-4 w-4 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="font-semibold text-sm text-slate-900">{t("seatingLoca")}</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Katılımcı Bilgileri */}
                   <div className="space-y-6">
                     {attendees.map((attendee, index) => (
                       <div
@@ -843,9 +1091,131 @@ export default function AmedSporFormClient({
                             ) : null}
                           </div>
                         </div>
+
+                        {/* Kimlik / Pasaport Ülkesi & Passo Numarası */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              {t("idCountry")}
+                            </label>
+                            <select
+                              value={
+                                countryOther.has(index)
+                                  ? "other"
+                                  : COUNTRIES.includes(attendee.id_country)
+                                    ? attendee.id_country
+                                    : ""
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+                                setCountryOther((prev) => {
+                                  const next = new Set(prev);
+                                  if (value === "other") next.add(index);
+                                  else next.delete(index);
+                                  return next;
+                                });
+                                handleAttendeeChange(index, "id_country", value === "other" ? "" : value);
+                              }}
+                              className={`w-full px-4 py-2 border rounded-lg bg-white ${
+                                errors[`id_country_${index}`] ? "border-red-500" : "border-gray-300"
+                              }`}
+                              required
+                            >
+                              <option value="" disabled>
+                                {t("idCountrySelect")}
+                              </option>
+                              {COUNTRIES.map((country) => (
+                                <option key={country} value={country}>
+                                  {country}
+                                </option>
+                              ))}
+                              <option value="other">{t("idCountryOther")}</option>
+                            </select>
+                            {countryOther.has(index) && (
+                              <input
+                                type="text"
+                                value={attendee.id_country}
+                                onChange={(e) =>
+                                  handleAttendeeChange(index, "id_country", e.target.value)
+                                }
+                                placeholder={t("idCountryOtherPlaceholder")}
+                                className={`w-full px-4 py-2 border rounded-lg mt-2 ${
+                                  errors[`id_country_${index}`] ? "border-red-500" : "border-gray-300"
+                                }`}
+                                required
+                              />
+                            )}
+                            {errors[`id_country_${index}`] ? (
+                              <p className="text-red-500 text-sm mt-1">{errors[`id_country_${index}`]}</p>
+                            ) : null}
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium mb-2">
+                              {t("passoNumber")}
+                            </label>
+                            <input
+                              type="text"
+                              value={attendee.passo_number}
+                              onChange={(e) =>
+                                handleAttendeeChange(index, "passo_number", e.target.value)
+                              }
+                              placeholder={t("passoNumberPlaceholder")}
+                              className={`w-full px-4 py-2 border rounded-lg ${
+                                errors[`passo_number_${index}`] ? "border-red-500" : "border-gray-300"
+                              }`}
+                              required
+                            />
+                            {errors[`passo_number_${index}`] ? (
+                              <p className="text-red-500 text-sm mt-1">{errors[`passo_number_${index}`]}</p>
+                            ) : null}
+                            <p className="text-xs text-slate-500 mt-1">{t("passoNumberHelp")}</p>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
+
+                  {/* Ek Hizmet Seçenekleri (Konaklama & Uçak Bileti) - Yalnızca fiyat tanımlıysa gösterilir */}
+                  {(Number(event.accommodation_price) > 0 || Number(event.flight_price) > 0) && (
+                    <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-gray-50/50">
+                      <h3 className="font-semibold text-lg">{t("additionalServicesTitle")}</h3>
+                      <div className="space-y-2 pt-1">
+                        {Number(event.accommodation_price) > 0 && (
+                          <label className="flex items-center gap-3 p-3 border rounded-lg bg-white cursor-pointer hover:bg-slate-50 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={hasAccommodation}
+                              onChange={(e) => setHasAccommodation(e.target.checked)}
+                              className="h-4 w-4 text-primary-600 rounded focus:ring-primary-500"
+                            />
+                            <span className="text-sm font-medium text-slate-800">
+                              {t("includeAccommodation").replace(
+                                "{price}",
+                                formatPrice(Number(event.accommodation_price), event.currency)
+                              )}
+                            </span>
+                          </label>
+                        )}
+                        {Number(event.flight_price) > 0 && (
+                          <label className="flex items-center gap-3 p-3 border rounded-lg bg-white cursor-pointer hover:bg-slate-50 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={hasFlight}
+                              onChange={(e) => setHasFlight(e.target.checked)}
+                              className="h-4 w-4 text-primary-600 rounded focus:ring-primary-500"
+                            />
+                            <span className="text-sm font-medium text-slate-800">
+                              {t("includeFlight").replace(
+                                "{price}",
+                                formatPrice(Number(event.flight_price), event.currency)
+                              )}
+                            </span>
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <div>
                     <label className="block text-sm font-medium mb-2">
@@ -859,7 +1229,6 @@ export default function AmedSporFormClient({
                       placeholder={t("organizationPlaceholder")}
                     />
                   </div>
-
 
                   <div className="space-y-4">
                     <h3 className="font-semibold text-lg">{t("langContactTitle")}</h3>
@@ -885,7 +1254,6 @@ export default function AmedSporFormClient({
                         <p className="text-red-500 text-sm mt-1">{errors.language_preference}</p>
                       ) : null}
                     </div>
-
                   </div>
 
                   <div>
@@ -914,6 +1282,64 @@ export default function AmedSporFormClient({
                     </label>
                   </div>
 
+                  {/* Sipariş ve Fiyat Özeti Kutusu */}
+                  {(Number(event.price_from) > 0 ||
+                    (hasAccommodation && Number(event.accommodation_price) > 0) ||
+                    (hasFlight && Number(event.flight_price) > 0)) && (
+                    <div className="p-4 bg-slate-900 text-white rounded-xl space-y-2">
+                      <h4 className="font-semibold text-xs tracking-wider text-slate-300 uppercase">
+                        {t("orderSummaryTitle")}
+                      </h4>
+                      <div className="text-sm space-y-1.5 text-slate-200">
+                        {Number(event.price_from) > 0 && (
+                          <div className="flex justify-between">
+                            <span>
+                              {t("matchTicket")} ({ticketCount} kişi ×{" "}
+                              {formatPrice(Number(event.price_from), event.currency)})
+                            </span>
+                            <span className="font-medium">
+                              {formatPrice(Number(event.price_from) * ticketCount, event.currency)}
+                            </span>
+                          </div>
+                        )}
+                        {hasAccommodation && Number(event.accommodation_price) > 0 && (
+                          <div className="flex justify-between">
+                            <span>
+                              {t("accommodationService")} ({ticketCount} kişi ×{" "}
+                              {formatPrice(Number(event.accommodation_price), event.currency)})
+                            </span>
+                            <span className="font-medium">
+                              {formatPrice(Number(event.accommodation_price) * ticketCount, event.currency)}
+                            </span>
+                          </div>
+                        )}
+                        {hasFlight && Number(event.flight_price) > 0 && (
+                          <div className="flex justify-between">
+                            <span>
+                              {t("flightService")} ({ticketCount} kişi ×{" "}
+                              {formatPrice(Number(event.flight_price), event.currency)})
+                            </span>
+                            <span className="font-medium">
+                              {formatPrice(Number(event.flight_price) * ticketCount, event.currency)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="border-t border-slate-700 pt-2 flex justify-between items-center text-lg font-bold text-yellow-400">
+                        <span>{t("totalAmount")}</span>
+                        <span>
+                          {formatPrice(
+                            ((Number(event.price_from) || 0) +
+                              (hasAccommodation ? Number(event.accommodation_price) || 0 : 0) +
+                              (hasFlight ? Number(event.flight_price) || 0 : 0)) *
+                              ticketCount,
+                            event.currency
+                          )}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {errors.submit ? (
                     <div className="bg-red-50 border border-red-200 text-red-800 p-3 rounded-lg">
                       {errors.submit}
@@ -925,7 +1351,7 @@ export default function AmedSporFormClient({
                     disabled={isSubmitting}
                     className="w-full rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[180px]"
                   >
-                    {isSubmitting ? t("submitting") : t("submitForm")}
+                    {isSubmitting ? t("submitting") : hasAnyPrice ? t("addToCart") : t("submitForm")}
                   </button>
                 </form>
               </div>
