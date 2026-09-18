@@ -197,7 +197,6 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                         ? `${t("home.from")} ${formatPrice(Number(event.price_from), event.currency)}`
                         : t("home.free")}
                     </span>
-                    {/* Auto deploy test 2 */}
                     <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100">
                       {t("calendar.buyTicket")}
                     </span>
