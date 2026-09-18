@@ -304,5 +304,3 @@ export default function EventCalendar({ events }: EventCalendarProps) {
     </div>
   );
 }
-
-
