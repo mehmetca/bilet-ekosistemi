@@ -304,3 +304,4 @@ export default function EventCalendar({ events }: EventCalendarProps) {
     </div>
   );
 }
+// Test auto deploy
