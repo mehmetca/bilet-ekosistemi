@@ -654,6 +654,12 @@ export default function CheckoutPage() {
     }
   }, [checkoutSessionId, finalizePaidOrder, isPending]);
 
+  // Stripe EmbeddedCheckout onComplete: her render'da yeni fonksiyon referansı oluşmasın.
+  // Inline arrow, EmbeddedCheckoutProvider'ın sürekli yeniden mount olmasına neden oluyordu.
+  const handleCheckoutComplete = useCallback(() => {
+    void handleEmbeddedCheckoutComplete();
+  }, [handleEmbeddedCheckoutComplete]);
+
   // Bazı Stripe sürümlerinde embedded teşekkür ekranı gösterilip onComplete her zaman tetiklenmeyebiliyor.
   // Bu yüzden ödeme adımında session durumunu kısa aralıkla doğrulayıp başarılıysa siparişi finalize et.
   useEffect(() => {
@@ -1202,9 +1208,7 @@ export default function CheckoutPage() {
                         stripe={stripePromise}
                         options={{
                           clientSecret: checkoutClientSecret,
-                          onComplete: () => {
-                            void handleEmbeddedCheckoutComplete();
-                          },
+                          onComplete: handleCheckoutComplete,
                         }}
                       >
                         <SafeEmbeddedCheckout />
