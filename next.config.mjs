@@ -130,8 +130,12 @@ const nextConfig = {
           headers: [
             {
               key: "Cache-Control",
-              value: "public, s-maxage=60, stale-while-revalidate=30",
+              value: "public, s-maxage=120, stale-while-revalidate=600",
             },
+            {
+              key: "CDN-Cache-Control",
+              value: "public, s-maxage=300, stale-while-revalidate=900"
+            }
           ],
         },
         {
