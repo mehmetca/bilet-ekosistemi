@@ -39,8 +39,13 @@ CREATE POLICY "Users can create their own orders" ON public.orders
 CREATE POLICY "Users can update their own orders" ON public.orders
   FOR UPDATE USING (auth.uid() = user_id);
 
--- Admin tüm siparişleri yönetebilir (basit versiyon)
+-- Admin tüm siparişleri yönetebilir (güvenli versiyon)
 CREATE POLICY "Admins can manage all orders" ON public.orders
   FOR ALL USING (
-    auth.role() = 'authenticated'
+    EXISTS (
+      SELECT 1
+      FROM user_roles
+      WHERE user_id = auth.uid()
+      AND role = 'admin'
+    )
   );

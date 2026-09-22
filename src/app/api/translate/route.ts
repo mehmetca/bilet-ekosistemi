@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getAuthUser } from "@/lib/api-auth";
 
 type TranslateBody = {
   text?: string;
@@ -259,6 +260,9 @@ async function translateWithFallback(
 }
 
 export async function POST(request: NextRequest) {
+  const authCheck = await getAuthUser();
+  if (authCheck instanceof Response) return authCheck;
+
   try {
     const body = (await request.json()) as TranslateBody;
     const text = String(body.text || "").trim();

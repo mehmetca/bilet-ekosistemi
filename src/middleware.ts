@@ -16,8 +16,8 @@ const APP_LOCALES = routing.locales as readonly string[];
 const AUTH_SESSION_PATH_RE =
   /^\/(?:yonetim|auth|kontrol)(?:\/|$)|^\/(?:(?:tr|de|en|ku|ckb)\/)?(?:giris|sifre-yenile|sepet|bilgilerim|organizator-basvuru|panel)(?:\/|$)/;
 
-// Test paths için auth bypass
-const BYPASS_AUTH_PATHS = [
+// Test paths için auth bypass (sadece development)
+const DEV_BYPASS_AUTH_PATHS = [
   "/test-mail",
   "/api/test-mail",
   "/api/test-simple",
@@ -26,6 +26,10 @@ const BYPASS_AUTH_PATHS = [
   "/api/mail-test",
   "/api/mail-test/"
 ];
+
+const BYPASS_AUTH_PATHS = process.env.NODE_ENV === "production"
+  ? []
+  : DEV_BYPASS_AUTH_PATHS;
 const SUPABASE_SESSION_COOKIE_RE = /^sb-.+-auth-token(?:\.\d+)?$/;
 
 // Maintenance mode cache - CPU yoğunluk azaltmak için

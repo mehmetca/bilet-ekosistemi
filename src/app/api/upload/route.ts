@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Dosya bulunamadı" }, { status: 400 });
     }
 
-    const err = validateImageFile(file, false);
+    const err = await validateImageFile(file, false);
     if (err) {
       return NextResponse.json({ error: err }, { status: 400 });
     }

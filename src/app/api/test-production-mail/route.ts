@@ -1,9 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BrevoClient } from "@getbrevo/brevo";
+import { requireRoleWithAccessToken } from "@/lib/api-auth";
 
 export async function GET() {
-  return NextResponse.json({ 
-    success: true, 
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Test endpoint production'da devre dışı" }, { status: 403 });
+  }
+
+  return NextResponse.json({
+    success: true,
     message: "Production mail test endpoint çalışıyor",
     brevoApiKey: process.env.BREVO_API_KEY ? "Yüklü (ilk 10 karakter: " + process.env.BREVO_API_KEY.substring(0, 10) + "...)" : "YÜKLENMEDİ",
     fromEmail: process.env.BREVO_FROM_EMAIL,
@@ -12,6 +17,13 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  if (process.env.NODE_ENV === "production") {
+    return NextResponse.json({ error: "Test endpoint production'da devre dışı" }, { status: 403 });
+  }
+
+  const authCheck = await requireRoleWithAccessToken(null, ["admin"]);
+  if (authCheck instanceof Response) return authCheck;
+
   try {
     const body = await req.json();
     console.log("Gelen request body:", body);
@@ -19,9 +31,9 @@ export async function POST(req: NextRequest) {
     const { testEmail } = body;
 
     if (!testEmail) {
-      return NextResponse.json({ 
-        success: false, 
-        error: "Test email gerekli" 
+      return NextResponse.json({
+        success: false,
+        error: "Test email gerekli"
       }, { status: 400 });
     }
 
@@ -84,10 +96,10 @@ export async function POST(req: NextRequest) {
 
   } catch (error: any) {
     console.error("Production mail test hatası detaylı:", error);
-    return NextResponse.json({ 
-      success: false, 
+    return NextResponse.json({
+      success: false,
       error: error.message || "Bilinmeyen hata",
-      details: error.stack
+      details: process.env.NODE_ENV !== "production" ? error.stack : undefined
     }, { status: 500 });
   }
 }

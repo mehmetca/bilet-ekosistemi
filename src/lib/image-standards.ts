@@ -29,7 +29,46 @@ export const IMAGE_STANDARDS = {
   },
 } as const;
 
-export function validateImageFile(file: File, strict = false): string | null {
+/** Dosya magic bytes (file signatures) */
+const MAGIC_BYTES = {
+  jpeg: [[0xFF, 0xD8, 0xFF]],
+  png: [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
+  webp: [[0x52, 0x49, 0x46, 0x46]],
+} as const;
+
+function checkMagicBytes(buffer: ArrayBuffer, format: keyof typeof MAGIC_BYTES): boolean {
+  const signatures = MAGIC_BYTES[format];
+  const bytes = new Uint8Array(buffer);
+
+  for (const signature of signatures) {
+    if (signature.every((byte, index) => bytes[index] === byte)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function validateMagicBytes(file: File): Promise<string | null> {
+  const buffer = await file.slice(0, 12).arrayBuffer();
+
+  if (file.type === "image/jpeg" || file.type === "image/jpg") {
+    if (!checkMagicBytes(buffer, "jpeg")) {
+      return "Dosya geçerli bir JPEG değil (magic bytes uyuşmuyor)";
+    }
+  } else if (file.type === "image/png") {
+    if (!checkMagicBytes(buffer, "png")) {
+      return "Dosya geçerli bir PNG değil (magic bytes uyuşmuyor)";
+    }
+  } else if (file.type === "image/webp") {
+    if (!checkMagicBytes(buffer, "webp")) {
+      return "Dosya geçerli bir WebP değil (magic bytes uyuşmuyor)";
+    }
+  }
+
+  return null;
+}
+
+export async function validateImageFile(file: File, strict = false): Promise<string | null> {
   const maxSize = strict ? IMAGE_STANDARDS.MAX_FILE_SIZE : IMAGE_STANDARDS.MAX_FILE_SIZE_FALLBACK;
   if (file.size > maxSize) {
     return strict
@@ -39,6 +78,13 @@ export function validateImageFile(file: File, strict = false): string | null {
   if (!IMAGE_STANDARDS.ALLOWED_TYPES.includes(file.type as (typeof IMAGE_STANDARDS.ALLOWED_TYPES)[number])) {
     return "Sadece JPG, PNG veya WebP formatında resim yüklenebilir";
   }
+
+  // Magic bytes kontrolü
+  const magicBytesError = await validateMagicBytes(file);
+  if (magicBytesError) {
+    return magicBytesError;
+  }
+
   return null;
 }
 

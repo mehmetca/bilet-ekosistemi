@@ -1,11 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { getAuthUser } from "@/lib/api-auth";
 
 /**
  * GET ?event_id=xxx → { seatIds: string[] }
  * Etkinlik için satılmış (dolu) koltuk ID'lerini döndürür. Salon planında bu koltuklar gri / seçilemez gösterilir.
+ * Auth gerektirir.
  */
 export async function GET(request: NextRequest) {
+  const authCheck = await getAuthUser();
+  if (authCheck instanceof Response) return authCheck;
+
   const eventId = request.nextUrl.searchParams.get("event_id");
   if (!eventId) {
     return NextResponse.json({ seatIds: [] });
