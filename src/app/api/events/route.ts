@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { handleApiError } from "@/lib/error-handler";
 
 export const revalidate = 60;
 
@@ -28,22 +29,23 @@ export async function GET() {
       .order("time", { ascending: true })
       .limit(72);
     if (error) {
-      console.error("Events API error:", error);
+      const errorResponse = handleApiError(error, "Events API");
       return NextResponse.json(
-        { error: "Etkinlikler yüklenirken bir hata oluştu." },
-        { status: 500 }
+        { error: errorResponse.error },
+        { status: errorResponse.statusCode }
       );
     }
     return NextResponse.json(data ?? [], {
       headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+        "Cache-Control": "public, s-maxage=120, stale-while-revalidate=600",
+        "CDN-Cache-Control": "public, s-maxage=300, stale-while-revalidate=900",
       },
     });
   } catch (e) {
-    console.error("Events API exception:", e);
+    const errorResponse = handleApiError(e, "Events API exception");
     return NextResponse.json(
-      { error: "Etkinlikler yüklenirken bir hata oluştu." },
-      { status: 500 }
+      { error: errorResponse.error },
+      { status: errorResponse.statusCode }
     );
   }
 }

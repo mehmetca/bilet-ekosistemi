@@ -5,6 +5,7 @@ import Providers from "@/components/Providers";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import { getSiteUrl } from "@/lib/site-url";
+import { validateEnv } from "@/lib/env-validation";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap" });
 
@@ -19,6 +20,15 @@ export const metadata: Metadata = {
   title: { default: "KurdEvents", template: "%s | KurdEvents" },
   description: "Theater- und Event-Ticketing",
 };
+
+// Environment validation at app startup
+if (typeof window === 'undefined') {
+  try {
+    validateEnv();
+  } catch (error) {
+    console.error('Environment validation failed:', error);
+  }
+}
 
 export default function RootLayout({
   children,

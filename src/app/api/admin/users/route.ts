@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireAdmin } from "@/lib/api-auth";
+import { validatePagination, validateEmail } from "@/lib/validation";
 
 type AuthUser = { id: string; email?: string; created_at?: string };
 type ControllerRequest = {
@@ -19,11 +20,17 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
+    // Pagination parametreleri
+    const { page, perPage } = validatePagination(
+      request.nextUrl.searchParams.get("page") || "1",
+      request.nextUrl.searchParams.get("perPage") || "50"
+    );
+
     const [usersRes, requestsRes, controllerRequestsRes, authRes] = await Promise.all([
       supabase.from("user_roles").select("*").order("created_at", { ascending: false }),
       supabase.from("organizer_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("controller_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }),
-      supabase.auth.admin.listUsers({ perPage: 1000 }),
+      supabase.auth.admin.listUsers({ page, perPage }),
     ]);
 
     if (usersRes.error) {
@@ -91,6 +98,9 @@ export async function POST(request: NextRequest) {
       const { email, role } = body as { email?: string; role?: string };
       if (!email || !role) {
         return NextResponse.json({ error: "email ve role gerekli" }, { status: 400 });
+      }
+      if (!validateEmail(email)) {
+        return NextResponse.json({ error: "Geçersiz e-posta formatı" }, { status: 400 });
       }
       const { data: existingUsers } = await supabase.auth.admin.listUsers();
       const userExists = existingUsers?.users?.some((u: { email?: string }) => u.email === email);

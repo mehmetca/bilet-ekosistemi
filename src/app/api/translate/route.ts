@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/api-auth";
+import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limit";
 
 type TranslateBody = {
   text?: string;
@@ -263,6 +264,24 @@ export async function POST(request: NextRequest) {
   const authCheck = await getAuthUser();
   if (authCheck instanceof Response) return authCheck;
 
+  // Rate limiting for authenticated users
+  const identifier = getClientIdentifier(request);
+  const rateLimit = checkRateLimit(identifier, 200, 60000); // 200 requests per minute
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: "Çok fazla istek. Lütfen biraz bekleyin." },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': '200',
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': rateLimit.resetTime.toString()
+        }
+      }
+    );
+  }
+
   try {
     const body = (await request.json()) as TranslateBody;
     const text = String(body.text || "").trim();
@@ -290,7 +309,16 @@ export async function POST(request: NextRequest) {
       if (oldestKey) translationCache.delete(oldestKey);
     }
 
-    return NextResponse.json({ translatedText });
+    return NextResponse.json(
+      { translatedText },
+      {
+        headers: {
+          'X-RateLimit-Limit': '200',
+          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
+          'X-RateLimit-Reset': rateLimit.resetTime.toString()
+        }
+      }
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     const status = message.includes("Çeviri") ? 502 : 500;
