@@ -2,6 +2,7 @@
  * Simple in-memory rate limiting
  * Production için Redis kullanılmalı
  */
+import { NextRequest } from 'next/server';
 
 interface RateLimitEntry {
   count: number;
@@ -64,7 +65,7 @@ export function checkRateLimit(
   };
 }
 
-export function getClientIdentifier(request: Request): string {
+export function getClientIdentifier(request: Request | NextRequest): string {
   // IP adresi veya benzersiz identifier oluştur
   const forwarded = request.headers.get('x-forwarded-for');
   const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
