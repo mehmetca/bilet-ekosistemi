@@ -143,10 +143,10 @@ export default function AdminImageUpload({
     }
   }
 
-  function handleFileSelect(files: FileList | null) {
+  async function handleFileSelect(files: FileList | null) {
     if (!files || files.length === 0) return;
     const file = files[0];
-    const err = validateImageFile(file, false);
+    const err = await validateImageFile(file, false);
     if (err) {
       alert(err);
       return;
