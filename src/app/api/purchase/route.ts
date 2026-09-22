@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { randomBytes } from "crypto";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { fetchAllSeatsByRowIds } from "@/lib/fetch-all-seats-by-row-ids";
@@ -1000,6 +1001,15 @@ async function sendAdminOrderNotification(payload: {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: IP başına dakikada 10 satın alma isteği
+    const ip = getClientIp(request);
+    if (!checkRateLimit(ip, { name: "purchase", windowMs: 60_000, max: 10 })) {
+      return NextResponse.json(
+        { success: false, message: "Çok fazla istek. Lütfen 1 dakika bekleyin." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     const formData = await request.formData();
     const ticketId = formData.get("ticket_id") as string;
     const quantity = parseInt(formData.get("quantity") as string, 10);

@@ -1,8 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: IP başına dakikada 10 kayıt (spam koruması)
+    const ip = getClientIp(request);
+    if (!checkRateLimit(ip, { name: "reminders", windowMs: 60_000, max: 10 })) {
+      return NextResponse.json(
+        { success: false, message: "Çok fazla istek. Lütfen bekleyin." },
+        { status: 429, headers: { "Retry-After": "60" } }
+      );
+    }
+
     const body = await request.json();
     const email = (body.email as string)?.trim().toLowerCase();
     const eventId = body.event_id as string;

@@ -1,77 +1,59 @@
 /**
- * Simple in-memory rate limiting
- * Production için Redis kullanılmalı
+ * In-memory rate limiter utility.
+ * Next.js serverless ortamında instance başına çalışır.
+ * Production'da yüksek trafik için Redis tabanlı çözüme geçilebilir.
  */
-import { NextRequest } from 'next/server';
 
-interface RateLimitEntry {
-  count: number;
-  resetTime: number;
+type RateLimitEntry = { count: number; windowStart: number };
+
+const stores = new Map<string, Map<string, RateLimitEntry>>();
+
+function getStore(name: string): Map<string, RateLimitEntry> {
+  if (!stores.has(name)) {
+    stores.set(name, new Map());
+  }
+  return stores.get(name)!;
 }
 
-const rateLimitStore = new Map<string, RateLimitEntry>();
-
-const CLEANUP_INTERVAL = 60000; // 1 dakika
-const DEFAULT_MAX_REQUESTS = 100;
-const DEFAULT_WINDOW_MS = 60000; // 1 dakika
-
-// Temizlik interval'i başlat
-if (typeof window === 'undefined') {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of rateLimitStore.entries()) {
-      if (entry.resetTime < now) {
-        rateLimitStore.delete(key);
-      }
-    }
-  }, CLEANUP_INTERVAL);
+export interface RateLimitOptions {
+  /** Pencere süresi (ms). Varsayılan: 60_000 (1 dakika) */
+  windowMs?: number;
+  /** Pencere başına maksimum istek. Varsayılan: 20 */
+  max?: number;
+  /** Store adı (farklı endpoint'ler için ayrı sayaç) */
+  name: string;
 }
 
-export function checkRateLimit(
-  identifier: string,
-  maxRequests: number = DEFAULT_MAX_REQUESTS,
-  windowMs: number = DEFAULT_WINDOW_MS
-): { allowed: boolean; remaining: number; resetTime: number } {
+/**
+ * IP başına rate limit kontrolü.
+ * @returns true → istek kabul edilebilir, false → limit aşıldı (429 dön)
+ */
+export function checkRateLimit(ip: string, options: RateLimitOptions): boolean {
+  const windowMs = options.windowMs ?? 60_000;
+  const max = options.max ?? 20;
+  const store = getStore(options.name);
+
   const now = Date.now();
-  const entry = rateLimitStore.get(identifier);
+  const entry = store.get(ip);
 
-  if (!entry || entry.resetTime < now) {
-    // Yeni window veya window süresi geçmiş
-    const newEntry: RateLimitEntry = {
-      count: 1,
-      resetTime: now + windowMs
-    };
-    rateLimitStore.set(identifier, newEntry);
-    return {
-      allowed: true,
-      remaining: maxRequests - 1,
-      resetTime: newEntry.resetTime
-    };
+  if (!entry || now - entry.windowStart > windowMs) {
+    store.set(ip, { count: 1, windowStart: now });
+    return true;
   }
 
-  if (entry.count >= maxRequests) {
-    return {
-      allowed: false,
-      remaining: 0,
-      resetTime: entry.resetTime
-    };
+  if (entry.count >= max) {
+    return false;
   }
 
   entry.count++;
-  return {
-    allowed: true,
-    remaining: maxRequests - entry.count,
-    resetTime: entry.resetTime
-  };
+  return true;
 }
 
-export function getClientIdentifier(request: Request | NextRequest): string {
-  // IP adresi veya benzersiz identifier oluştur
-  const forwarded = request.headers.get('x-forwarded-for');
-  const ip = forwarded ? forwarded.split(',')[0] : request.headers.get('x-real-ip') || 'unknown';
-  return `ip:${ip}`;
-}
-
-export function resetRateLimit(identifier: string): void {
-  rateLimitStore.delete(identifier);
+/**
+ * NextRequest'ten IP adresini çıkarır.
+ */
+export function getClientIp(request: Request): string {
+  const forwarded = (request.headers as Headers).get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0]?.trim() ?? "unknown";
+  return (request.headers as Headers).get("x-real-ip") ?? "unknown";
 }
