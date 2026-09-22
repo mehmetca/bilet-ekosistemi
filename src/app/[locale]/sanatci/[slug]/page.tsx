@@ -88,10 +88,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: canonical,
       type: "profile",
       siteName: "KurdEvents",
-      images: [{ url: ogImage, width: 1200, height: 630, alt: artist.name }],
+      images: [{ url: ogImage, width: 600, height: 600, alt: artist.name }],
     },
     twitter: {
-      card: "summary_large_image",
+      card: "summary",
       title,
       description: description || `${localized.name || artist.name} sanatci profili.`,
       images: [ogImage],

@@ -61,10 +61,10 @@ export function buildHomeMetadata(locale: string): Metadata {
       locale: openGraphLocale,
       type: "website",
       alternateLocale: LOCALES.filter((l) => l !== loc),
-      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
+      images: [{ url: ogImage, width: 600, height: 600, alt: title }],
     },
     twitter: {
-      card: "summary_large_image",
+      card: "summary",
       title,
       description,
       images: [ogImage],

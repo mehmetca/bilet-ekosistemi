@@ -32,10 +32,10 @@ export const metadata: Metadata = {
     siteName: "KurdEvents",
     title: SITE_OG_TITLE,
     description: SITE_OG_DESCRIPTION,
-    images: [{ url: SITE_OG_IMAGE, width: 1200, height: 630, alt: SITE_OG_TITLE }],
+    images: [{ url: SITE_OG_IMAGE, width: 600, height: 600, alt: SITE_OG_TITLE }],
   },
   twitter: {
-    card: "summary_large_image",
+    card: "summary",
     title: SITE_OG_TITLE,
     description: SITE_OG_DESCRIPTION,
     images: [SITE_OG_IMAGE],

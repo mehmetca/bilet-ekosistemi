@@ -27,6 +27,7 @@ async function readSlogan(locale: string): Promise<string> {
 
 /**
  * Sosyal paylaşım kartı: beyaz zemin üzerinde logo + dile göre slogan.
+ * Tek tip ve küçük (kare) tutulur; sayfaya özel kart üretilmez.
  * Diğer URL parametreleri (title/date/venue/image) artık kullanılmaz.
  */
 export async function GET(req: NextRequest) {
@@ -47,8 +48,8 @@ export async function GET(req: NextRequest) {
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
-            gap: "44px",
-            padding: "80px",
+            gap: "30px",
+            padding: "56px",
             boxSizing: "border-box",
             backgroundColor: "#ffffff",
             border: "1px solid #e5e7eb",
@@ -59,15 +60,15 @@ export async function GET(req: NextRequest) {
           <img
             src={logoSrc}
             alt="KurdEvents"
-            style={{ width: "520px", height: "156px", objectFit: "contain" }}
+            style={{ width: "360px", height: "108px", objectFit: "contain" }}
           />
           <div
             style={{
-              fontSize: "40px",
+              fontSize: "30px",
               fontWeight: 600,
               color: "#0f172a",
               textAlign: "center",
-              lineHeight: 1.3,
+              lineHeight: 1.35,
             }}
           >
             {slogan}
@@ -75,8 +76,8 @@ export async function GET(req: NextRequest) {
         </div>
       ),
       {
-        width: 1200,
-        height: 630,
+        width: 600,
+        height: 600,
       }
     );
   } catch (e: unknown) {

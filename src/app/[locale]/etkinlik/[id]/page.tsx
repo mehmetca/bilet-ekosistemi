@@ -87,10 +87,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       siteName: "KurdEvents",
       locale: ogLocale,
       type: "website",
-      images: [{ url: dynamicOgImageUrl, width: 1200, height: 630, alt: eventTitle }],
+      images: [{ url: dynamicOgImageUrl, width: 600, height: 600, alt: eventTitle }],
     },
     twitter: {
-      card: "summary_large_image",
+      card: "summary",
       title,
       description,
       images: [dynamicOgImageUrl],
