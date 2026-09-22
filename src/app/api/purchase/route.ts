@@ -1003,7 +1003,19 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const ticketId = formData.get("ticket_id") as string;
     const quantity = parseInt(formData.get("quantity") as string, 10);
+    if (!Number.isInteger(quantity) || quantity !== quantity) {
+      return NextResponse.json(
+        { success: false, message: "Geçersiz adet değeri." },
+        { status: 400 }
+      );
+    }
     const buyerName = (formData.get("buyer_name") as string)?.trim();
+    if (buyerName && buyerName.length > 200) {
+      return NextResponse.json(
+        { success: false, message: "İsim çok uzun (max 200 karakter)." },
+        { status: 400 }
+      );
+    }
     const buyerEmail = (formData.get("buyer_email") as string)?.trim();
     const buyerAddress = (formData.get("buyer_address") as string)?.trim() || null;
     const buyerPlz = (formData.get("buyer_plz") as string)?.trim() || null;
