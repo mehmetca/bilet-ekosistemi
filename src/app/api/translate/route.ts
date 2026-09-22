@@ -261,12 +261,9 @@ async function translateWithFallback(
 }
 
 export async function POST(request: NextRequest) {
-  const authCheck = await getAuthUser();
-  if (authCheck instanceof Response) return authCheck;
-
-  // Rate limiting for authenticated users
+  // Rate limiting for all users (translate için public yapıldı)
   const identifier = getClientIdentifier(request);
-  const rateLimit = checkRateLimit(identifier, 200, 60000); // 200 requests per minute
+  const rateLimit = checkRateLimit(identifier, 50, 60000); // 50 requests per minute (daha sıkı limit)
 
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -287,6 +284,8 @@ export async function POST(request: NextRequest) {
     const text = String(body.text || "").trim();
     const source = String(body.source || "auto").trim();
     const target = String(body.target || "").trim();
+
+    console.log("Translate request:", { text, source, target });
 
     if (!text) {
       return NextResponse.json({ error: "Metin boş olamaz." }, { status: 400 });
