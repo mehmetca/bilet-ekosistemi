@@ -60,59 +60,6 @@ if (typeof window === 'undefined') {
   }
 }
 
-const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap" });
-
-/** Next 14.2+: viewport metadata'dan ayrı olmalı; aksi halde RSC/metadata uyarıları ve istikrarsız prefetch görülebilir. */
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-};
-
-export const metadata: Metadata = {
-  metadataBase: new URL(getSiteUrl()),
-  title: { default: "KurdEvents - Tiyatro ve Etkinlik Biletleri", template: "%s | KurdEvents" },
-  description: "KurdEvents ile tiyatro, konser ve etkinlik biletlerini güvenle satın. Çoklu dil desteği ve kolay ödeme.",
-  openGraph: {
-    type: "website",
-    locale: "tr_TR",
-    url: getSiteUrl(),
-    siteName: "KurdEvents",
-    title: "KurdEvents - Tiyatro ve Etkinlik Biletleri",
-    description: "KurdEvents ile tiyatro, konser ve etkinlik biletlerini güvenle satın. Çoklu dil desteği ve kolay ödeme.",
-    images: [
-      {
-        url: "/images/kurdevents-og.png",
-        width: 1200,
-        height: 630,
-        alt: "KurdEvents - Tiyatro ve Etkinlik Biletleri"
-      }
-    ]
-  },
-  twitter: {
-    card: "summary_large_image",
-    title: "KurdEvents - Tiyatro ve Etkinlik Biletleri",
-    description: "KurdEvents ile tiyatro, konser ve etkinlik biletlerini güvenle satın. Çoklu dil desteği ve kolay ödeme.",
-    images: ["/images/kurdevents-og.png"]
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
-      index: true,
-      follow: true
-    }
-  }
-};
-
-// Environment validation at app startup
-if (typeof window === 'undefined') {
-  try {
-    validateEnv();
-  } catch (error) {
-    console.error('Environment validation failed:', error);
-  }
-}
-
 export default function RootLayout({
   children,
 }: {
