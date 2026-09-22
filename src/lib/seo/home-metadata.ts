@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { routing } from "@/i18n/routing";
 import { getSiteUrl } from "@/lib/site-url";
-import { buildCanonicalAlternates } from "@/lib/seo/locale-path-metadata";
+import { buildCanonicalAlternates, buildOgImageUrl } from "@/lib/seo/locale-path-metadata";
 
 const LOCALES = routing.locales;
 type AppLocale = (typeof LOCALES)[number];
@@ -47,6 +47,7 @@ export function buildHomeMetadata(locale: string): Metadata {
   const { title, description, openGraphLocale } = HOME_SEO[loc];
   const pathSuffix = "";
   const canonical = `${base}/${loc}${pathSuffix}`;
+  const ogImage = buildOgImageUrl({ title });
 
   return {
     title,
@@ -60,11 +61,13 @@ export function buildHomeMetadata(locale: string): Metadata {
       locale: openGraphLocale,
       type: "website",
       alternateLocale: LOCALES.filter((l) => l !== loc),
+      images: [{ url: ogImage, width: 1200, height: 630, alt: title }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
+      images: [ogImage],
     },
     robots: { index: true, follow: true },
   };

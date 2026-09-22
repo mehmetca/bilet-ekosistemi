@@ -5,6 +5,7 @@ import Providers from "@/components/Providers";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import { getSiteUrl } from "@/lib/site-url";
+import { buildOgImageUrl } from "@/lib/seo/locale-path-metadata";
 import { validateEnv } from "@/lib/env-validation";
 
 const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap" });
@@ -15,31 +16,29 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+const SITE_OG_TITLE = "KurdEvents - Tiyatro ve Etkinlik Biletleri";
+const SITE_OG_DESCRIPTION =
+  "KurdEvents ile tiyatro, konser ve etkinlik biletlerini güvenle satın. Çoklu dil desteği ve kolay ödeme.";
+const SITE_OG_IMAGE = buildOgImageUrl({ title: SITE_OG_TITLE });
+
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
-  title: { default: "KurdEvents - Tiyatro ve Etkinlik Biletleri", template: "%s | KurdEvents" },
-  description: "KurdEvents ile tiyatro, konser ve etkinlik biletlerini güvenle satın. Çoklu dil desteği ve kolay ödeme.",
+  title: { default: SITE_OG_TITLE, template: "%s | KurdEvents" },
+  description: SITE_OG_DESCRIPTION,
   openGraph: {
     type: "website",
     locale: "tr_TR",
     url: getSiteUrl(),
     siteName: "KurdEvents",
-    title: "KurdEvents - Tiyatro ve Etkinlik Biletleri",
-    description: "KurdEvents ile tiyatro, konser ve etkinlik biletlerini güvenle satın. Çoklu dil desteği ve kolay ödeme.",
-    images: [
-      {
-        url: "/images/kurdevents-og.png",
-        width: 1200,
-        height: 630,
-        alt: "KurdEvents - Tiyatro ve Etkinlik Biletleri"
-      }
-    ]
+    title: SITE_OG_TITLE,
+    description: SITE_OG_DESCRIPTION,
+    images: [{ url: SITE_OG_IMAGE, width: 1200, height: 630, alt: SITE_OG_TITLE }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "KurdEvents - Tiyatro ve Etkinlik Biletleri",
-    description: "KurdEvents ile tiyatro, konser ve etkinlik biletlerini güvenle satın. Çoklu dil desteği ve kolay ödeme.",
-    images: ["/images/kurdevents-og.png"]
+    title: SITE_OG_TITLE,
+    description: SITE_OG_DESCRIPTION,
+    images: [SITE_OG_IMAGE],
   },
   robots: {
     index: true,

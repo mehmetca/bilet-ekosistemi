@@ -4,6 +4,7 @@ import { getArtistBySlug } from "@/lib/artists-server";
 import { parseArtistBio } from "@/lib/artistProfile";
 import { getLocalizedArtist, type Locale } from "@/lib/i18n-content";
 import { getSiteUrl } from "@/lib/site-url";
+import { buildOgImageUrl } from "@/lib/seo/locale-path-metadata";
 import { routing } from "@/i18n/routing";
 import ArtistPageClient from "./ArtistPageClient";
 
@@ -75,6 +76,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     languages[l] = `${base}/${l}${path}`;
   }
   languages["x-default"] = `${base}/${routing.defaultLocale}${path}`;
+  const ogImage = buildOgImageUrl({ title: localized.name || artist.name, image: artist.image_url });
 
   return {
     title,
@@ -86,13 +88,13 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       url: canonical,
       type: "profile",
       siteName: "KurdEvents",
-      images: artist.image_url ? [{ url: artist.image_url, width: 1200, height: 630, alt: artist.name }] : undefined,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: artist.name }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description: description || `${localized.name || artist.name} sanatci profili.`,
-      images: artist.image_url ? [artist.image_url] : undefined,
+      images: [ogImage],
     },
   };
 }

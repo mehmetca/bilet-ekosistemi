@@ -3,6 +3,27 @@ import { routing } from "@/i18n/routing";
 import { getSiteUrl } from "@/lib/site-url";
 import type { Locale } from "@/lib/i18n-content";
 
+/**
+ * Tüm sayfalar için tek tip 1200×630 sosyal paylaşım kartı.
+ * Görseli `src/app/api/og/route.tsx` üretir; böylece WhatsApp/Facebook/X
+ * önizlemeleri her sayfada aynı formatta görünür.
+ */
+export function buildOgImageUrl(opts: {
+  title: string;
+  category?: string;
+  date?: string;
+  venue?: string;
+  image?: string | null;
+}): string {
+  const params = new URLSearchParams();
+  params.set("title", opts.title);
+  if (opts.category) params.set("category", opts.category);
+  if (opts.date) params.set("date", opts.date);
+  if (opts.venue) params.set("venue", opts.venue);
+  if (opts.image) params.set("image", opts.image);
+  return `${getSiteUrl()}/api/og?${params.toString()}`;
+}
+
 /** pathSuffix: "" veya "/mekanlar" gibi locale öneki olmadan yol. */
 export function buildLanguageAlternates(base: string, pathSuffix: string): Record<string, string> {
   const languages: Record<string, string> = {};
@@ -31,6 +52,7 @@ export function buildLocalePathMetadata(
   const base = getSiteUrl();
   const loc = (routing.locales.includes(locale as Locale) ? locale : routing.defaultLocale) as string;
   const canonical = `${base}/${loc}${pathSuffix}`;
+  const ogImage = buildOgImageUrl({ title: opts.title });
 
   return {
     title: opts.title,
@@ -42,11 +64,13 @@ export function buildLocalePathMetadata(
       url: canonical,
       siteName: "KurdEvents",
       type: "website",
+      images: [{ url: ogImage, width: 1200, height: 630, alt: opts.title }],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: opts.title,
       description: opts.description,
+      images: [ogImage],
     },
     robots: { index: true, follow: true },
   };
