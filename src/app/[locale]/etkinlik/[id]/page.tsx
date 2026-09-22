@@ -60,6 +60,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (event.date) ogParams.set("date", `${event.date} ${event.time || ""}`.trim());
   if (localized.venue || event.venue) ogParams.set("venue", localized.venue || event.venue || "");
   if (event.image_url) ogParams.set("image", event.image_url);
+  ogParams.set("locale", locale);
 
   const dynamicOgImageUrl = `${base}/api/og?${ogParams.toString()}`;
   const path = eventPathFromId(id, showEvents, event);

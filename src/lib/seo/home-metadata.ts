@@ -47,7 +47,7 @@ export function buildHomeMetadata(locale: string): Metadata {
   const { title, description, openGraphLocale } = HOME_SEO[loc];
   const pathSuffix = "";
   const canonical = `${base}/${loc}${pathSuffix}`;
-  const ogImage = buildOgImageUrl({ title });
+  const ogImage = buildOgImageUrl({ title, locale: loc });
 
   return {
     title,

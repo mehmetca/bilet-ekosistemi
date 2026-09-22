@@ -19,7 +19,7 @@ export const viewport: Viewport = {
 const SITE_OG_TITLE = "KurdEvents - Tiyatro ve Etkinlik Biletleri";
 const SITE_OG_DESCRIPTION =
   "KurdEvents ile tiyatro, konser ve etkinlik biletlerini güvenle satın. Çoklu dil desteği ve kolay ödeme.";
-const SITE_OG_IMAGE = buildOgImageUrl({ title: SITE_OG_TITLE });
+const SITE_OG_IMAGE = buildOgImageUrl({ title: SITE_OG_TITLE, locale: "tr" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),

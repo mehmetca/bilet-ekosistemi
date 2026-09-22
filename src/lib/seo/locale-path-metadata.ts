@@ -10,14 +10,14 @@ import type { Locale } from "@/lib/i18n-content";
  */
 export function buildOgImageUrl(opts: {
   title: string;
-  category?: string;
+  locale?: string;
   date?: string;
   venue?: string;
   image?: string | null;
 }): string {
   const params = new URLSearchParams();
   params.set("title", opts.title);
-  if (opts.category) params.set("category", opts.category);
+  params.set("locale", opts.locale || routing.defaultLocale);
   if (opts.date) params.set("date", opts.date);
   if (opts.venue) params.set("venue", opts.venue);
   if (opts.image) params.set("image", opts.image);
@@ -52,7 +52,7 @@ export function buildLocalePathMetadata(
   const base = getSiteUrl();
   const loc = (routing.locales.includes(locale as Locale) ? locale : routing.defaultLocale) as string;
   const canonical = `${base}/${loc}${pathSuffix}`;
-  const ogImage = buildOgImageUrl({ title: opts.title });
+  const ogImage = buildOgImageUrl({ title: opts.title, locale: loc });
 
   return {
     title: opts.title,

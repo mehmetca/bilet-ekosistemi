@@ -76,7 +76,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     languages[l] = `${base}/${l}${path}`;
   }
   languages["x-default"] = `${base}/${routing.defaultLocale}${path}`;
-  const ogImage = buildOgImageUrl({ title: localized.name || artist.name, image: artist.image_url });
+  const ogImage = buildOgImageUrl({ title: localized.name || artist.name, image: artist.image_url, locale });
 
   return {
     title,

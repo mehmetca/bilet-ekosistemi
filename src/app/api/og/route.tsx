@@ -1,18 +1,41 @@
 import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { getSiteUrl } from "@/lib/site-url";
+import { loadMessagesWithEnFallback } from "@/i18n/load-messages";
 
 export const runtime = "nodejs";
 
+/** Marka logosu (300×90 oranında). */
+const BRAND_LOGO = "/images/kurdevent-logo.png";
+/** Çeviri bulunamazsa kullanılacak varsayılan slogan. */
+const FALLBACK_SLOGAN = "Tüm etkinlikler için bilet platformu";
+
+/** Slogan, sitedeki `home.seoH1` çevirisinden okunur; böylece her dilde kendi metni görünür. */
+async function readSlogan(locale: string): Promise<string> {
+  try {
+    const messages = await loadMessagesWithEnFallback(locale);
+    const home = messages["home"];
+    if (home && typeof home === "object" && !Array.isArray(home)) {
+      const value = (home as Record<string, unknown>)["seoH1"];
+      if (typeof value === "string" && value.trim()) return value.trim();
+    }
+  } catch {
+    /* çeviri yüklenemezse varsayılan slogana düş */
+  }
+  return FALLBACK_SLOGAN;
+}
+
+/**
+ * Sosyal paylaşım kartı: beyaz zemin üzerinde logo + dile göre slogan.
+ * Diğer URL parametreleri (title/date/venue/image) artık kullanılmaz.
+ */
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const locale = searchParams.get("locale") || "tr";
 
-    // Parametreleri al
-    const title = searchParams.get("title") || "KurdEvents | Bilet Ekosistemi";
-    const date = searchParams.get("date") || "";
-    const venue = searchParams.get("venue") || "";
-    const category = searchParams.get("category") || "Etkinlik & Konser";
-    const image = searchParams.get("image");
+    const logoSrc = `${getSiteUrl()}${BRAND_LOGO}`;
+    const slogan = await readSlogan(locale);
 
     return new ImageResponse(
       (
@@ -21,156 +44,34 @@ export async function GET(req: NextRequest) {
             height: "100%",
             width: "100%",
             display: "flex",
-            flexDirection: "row",
-            alignItems: "stretch",
-            justifyContent: "space-between",
-            backgroundColor: "#0f172a",
-            backgroundImage:
-              "radial-gradient(circle at 25px 25px, rgba(255, 255, 255, 0.05) 2%, transparent 0%), radial-gradient(circle at 75px 75px, rgba(255, 255, 255, 0.05) 2%, transparent 0%)",
-            backgroundSize: "100px 100px",
-            color: "#ffffff",
-            fontFamily: "sans-serif",
-            padding: "48px",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "44px",
+            padding: "80px",
             boxSizing: "border-box",
-            position: "relative",
+            backgroundColor: "#ffffff",
+            border: "1px solid #e5e7eb",
+            fontFamily: "sans-serif",
           }}
         >
-          {/* Sol Kolon: Etkinlik Bilgileri */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={logoSrc}
+            alt="KurdEvents"
+            style={{ width: "520px", height: "156px", objectFit: "contain" }}
+          />
           <div
             style={{
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "space-between",
-              width: image ? "60%" : "100%",
-              paddingRight: image ? "32px" : "0px",
-              zIndex: 10,
+              fontSize: "40px",
+              fontWeight: 600,
+              color: "#0f172a",
+              textAlign: "center",
+              lineHeight: 1.3,
             }}
           >
-            {/* Üst Kısım: Logo ve Kategori Badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: "#e11d48",
-                  color: "#ffffff",
-                  padding: "8px 18px",
-                  borderRadius: "9999px",
-                  fontWeight: "bold",
-                  fontSize: "18px",
-                  letterSpacing: "0.5px",
-                  boxShadow: "0 4px 14px rgba(225, 29, 72, 0.4)",
-                }}
-              >
-                KurdEvents
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
-                  color: "#cbd5e1",
-                  padding: "6px 14px",
-                  borderRadius: "8px",
-                  fontSize: "16px",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                }}
-              >
-                {category}
-              </div>
-            </div>
-
-            {/* Orta Kısım: Etkinlik Başlığı */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px", margin: "24px 0" }}>
-              <div
-                style={{
-                  fontSize: title.length > 40 ? "40px" : "52px",
-                  fontWeight: 800,
-                  lineHeight: 1.15,
-                  color: "#ffffff",
-                  letterSpacing: "-0.5px",
-                  display: "-webkit-box",
-                  WebkitLineClamp: 3,
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {title}
-              </div>
-
-              {/* Tarih ve Mekan Bilgileri */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginTop: "8px" }}>
-                {date && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#f43f5e", fontSize: "22px", fontWeight: 600 }}>
-                    <span>📅</span>
-                    <span>{date}</span>
-                  </div>
-                )}
-                {venue && (
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px", color: "#94a3b8", fontSize: "20px" }}>
-                    <span>📍</span>
-                    <span>{venue}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Alt Kısım: Call to Action Bar */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                paddingTop: "20px",
-                borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-              }}
-            >
-              <span style={{ fontSize: "18px", color: "#94a3b8", fontWeight: 500 }}>
-                Hemen biletinizi güvenle alın
-              </span>
-              <div
-                style={{
-                  backgroundColor: "#ffffff",
-                  color: "#0f172a",
-                  padding: "10px 20px",
-                  borderRadius: "10px",
-                  fontWeight: "bold",
-                  fontSize: "16px",
-                }}
-              >
-                Bilet Satın Al →
-              </div>
-            </div>
+            {slogan}
           </div>
-
-          {/* Sağ Kolon: Etkinlik Görseli / Afişi (Eğer Varsa) */}
-          {image && (
-            <div
-              style={{
-                width: "40%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "relative",
-                borderRadius: "20px",
-                overflow: "hidden",
-                boxShadow: "0 20px 40px rgba(0, 0, 0, 0.5)",
-                border: "2px solid rgba(255, 255, 255, 0.1)",
-              }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={image}
-                alt={title}
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                }}
-              />
-            </div>
-          )}
         </div>
       ),
       {
