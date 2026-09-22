@@ -8,7 +8,7 @@ import { getAuthUser } from "@/lib/api-auth";
  * Auth gerektirir.
  */
 export async function GET(request: NextRequest) {
-  const authCheck = await getAuthUser();
+  const authCheck = await getAuthUser(request);
   if (authCheck instanceof Response) return authCheck;
 
   const eventId = request.nextUrl.searchParams.get("event_id");
