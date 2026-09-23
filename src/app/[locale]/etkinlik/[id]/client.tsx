@@ -2294,20 +2294,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   <p className="text-2xl font-bold text-primary-700">
                     {isAmedSpor
                       ? formatPrice(Number(event.price_from || 0), event.currency)
-                      : purchasableTickets.length > 0
-                        ? `${t("from")} ${formatPrice(
-                            Math.min(...purchasableTickets.map((tk) => Number(tk.price || 0))),
-                            event.currency
-                          )}`
-                        : catalogTickets.length > 0
-                          ? (
-                            <span className="text-lg font-extrabold uppercase tracking-wide text-red-600">
-                              {t("priceCategorySoldOut")}
-                            </span>
-                          )
-                          : isExternalOnlyEvent
-                          ? `${t("from")} ${formatPrice(Number(event.price_from || 0), event.currency)}`
-                          : t("comingSoon")}
+                      : Number(event.price_from || 0) > 0
+                        ? `${t("from")} ${formatPrice(Number(event.price_from || 0), event.currency)}`
+                        : t("comingSoon")}
                   </p>
                 </div>
               )}
