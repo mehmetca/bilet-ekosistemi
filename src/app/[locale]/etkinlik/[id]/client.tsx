@@ -1133,6 +1133,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     () => catalogTickets.filter((t) => Number(t.available || 0) > 0),
     [catalogTickets]
   );
+  /** Bilet tanımlı ama hiçbiri satılabilir değilse (hepsi tükendi) satış kapalıdır. */
+  const isSoldOut = catalogTickets.length > 0 && purchasableTickets.length === 0;
   const priceModeTickets = catalogTickets;
   const hasSeatingPlan = !!(event as Event & { seating_plan_id?: string }).seating_plan_id;
   const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
@@ -2297,6 +2299,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       : Number(event.price_from || 0) > 0
                         ? `${t("from")} ${formatPrice(Number(event.price_from || 0), event.currency)}`
                         : t("comingSoon")}
+                    {!isAmedSpor && isSoldOut && (
+                      <span className="ml-3 align-middle text-lg font-extrabold uppercase tracking-wide text-red-600">
+                        {t("priceCategorySoldOut")}
+                      </span>
+                    )}
                   </p>
                 </div>
               )}
