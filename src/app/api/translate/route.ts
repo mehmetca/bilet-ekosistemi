@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/api-auth";
-import { checkRateLimit, getClientIdentifier } from "@/lib/rate-limit";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 type TranslateBody = {
   text?: string;
@@ -262,20 +262,13 @@ async function translateWithFallback(
 
 export async function POST(request: NextRequest) {
   // Rate limiting for all users (translate için public yapıldı)
-  const identifier = getClientIdentifier(request);
-  const rateLimit = checkRateLimit(identifier, 50, 60000); // 50 requests per minute (daha sıkı limit)
+  const ip = getClientIp(request);
+  const isAllowed = checkRateLimit(ip, { name: "translate-api", max: 50, windowMs: 60000 });
 
-  if (!rateLimit.allowed) {
+  if (!isAllowed) {
     return NextResponse.json(
       { error: "Çok fazla istek. Lütfen biraz bekleyin." },
-      {
-        status: 429,
-        headers: {
-          'X-RateLimit-Limit': '200',
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset': rateLimit.resetTime.toString()
-        }
-      }
+      { status: 429 }
     );
   }
 
@@ -308,16 +301,7 @@ export async function POST(request: NextRequest) {
       if (oldestKey) translationCache.delete(oldestKey);
     }
 
-    return NextResponse.json(
-      { translatedText },
-      {
-        headers: {
-          'X-RateLimit-Limit': '200',
-          'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-          'X-RateLimit-Reset': rateLimit.resetTime.toString()
-        }
-      }
-    );
+    return NextResponse.json({ translatedText });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     const status = message.includes("Çeviri") ? 502 : 500;
