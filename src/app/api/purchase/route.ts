@@ -335,12 +335,7 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrCodeDataUrl: string,
   `;
   }
 
-  // Single ticket - main layout
-  const leftVerticalTicketCodeHtml = ticketCode
-    .split("")
-    .map((ch) => `<span style="display:block;line-height:9px;">${ch}</span>`)
-    .join("");
-  const ticketType = escapeHtml(payload.ticketType);
+  // Single ticket - sadece metin, HTML bilet görseli yok (ekte PDF var)
   const seatLine =
     payload.seatDetails && payload.seatDetails.length > 0
       ? payload.seatDetails
@@ -353,69 +348,34 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrCodeDataUrl: string,
 
   return `
     <div style="font-family:Arial,sans-serif;background:#eef2f7;padding:24px;">
-      <div style="max-width:900px;margin:0 auto;">
+      <div style="max-width:600px;margin:0 auto;">
         <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${buyerName},</h2>
         <p style="margin:0 0 6px;color:#334155;">Siparişiniz tamamlandı. Biletiniz ektedir.</p>
-        <p style="margin:0 0 14px;color:#334155;">Ekteki PDF dosyasını indirip yazdırabilirsiniz. İyi seyirler dileriz.</p>
-        <div style="position:relative;background:#fff;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;">
-          <div style="position:absolute;top:0;bottom:0;left:73%;border-left:2px dashed #94a3b8;"></div>
-          <div style="background:#003f8c;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;letter-spacing:.4px;">
-            KURDEVENTS E-TICKET
-          </div>
-          <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-            <tr>
-              <td style="width:73%;padding:14px 16px;vertical-align:top;">
-                <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-                  <tr>
-                    <td style="width:74px;vertical-align:top;padding-right:12px;">
-                      <div style="display:flex;gap:6px;align-items:flex-start;">
-                        <img src="${barcodeDataUrl}" alt="Bilet Barkod" width="42" height="250" style="display:block;border:1px solid #cbd5e1;background:#fff;" />
-                        <div style="margin-top:0;font-size:9px;color:#000;letter-spacing:.7px;font-family:monospace;display:inline-block;">${leftVerticalTicketCodeHtml}</div>
-                      </div>
-                    </td>
-                    <td style="vertical-align:top;">
-                      <p style="margin:0;color:#000;font-size:10px;font-weight:700;letter-spacing:.4px;">MUSTERI/ETKINLIK BILETI</p>
-                      <p style="margin:6px 0 0;font-size:52px;line-height:50px;font-weight:900;color:#000;">${eventTitle}</p>
-                      <p style="margin:12px 0 0;font-size:18px;line-height:22px;font-weight:800;color:#000;">${eventDateText}, ${timeText}</p>
-                      <p style="margin:4px 0 0;font-size:13px;color:#000;">${venueText}</p>
-                      <p style="margin:2px 0 0;font-size:13px;color:#000;">${locationText}</p>
-                      <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;border-collapse:collapse;">
-                        <tr>
-                          <td style="padding:2px 0;font-size:12px;color:#000;">Bilet Turu</td>
-                          <td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${ticketType}</td>
-                        </tr>
-                        ${seatLine ? `<tr><td style="padding:2px 0;font-size:12px;color:#000;">Platz / Koltuk</td><td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${seatLine}</td></tr>` : ""}
-                        <tr>
-                          <td style="padding:2px 0;font-size:12px;color:#000;">Kisi/Adet</td>
-                          <td style="padding:2px 0;font-size:12px;color:#000;font-weight:700;text-align:right;">${buyerName} / ${payload.quantity}</td>
-                        </tr>
-                        <tr>
-                          <td style="padding:2px 0;font-size:12px;color:#000;">Toplam</td>
-                          <td style="padding:2px 0;font-size:12px;color:#000;font-weight:800;text-align:right;">EUR ${priceText}</td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-                </table>
-              </td>
-              <td style="width:27%;padding:14px 16px;vertical-align:top;">
-                <p style="margin:0;font-size:10px;color:#000;font-weight:700;letter-spacing:.6px;">KOPARILABILIR BOLUM</p>
-                <p style="margin:8px 0 0;font-size:12px;color:#000;font-weight:700;">Bilet Kodu</p>
-                <p style="margin:2px 0 0;font-size:18px;color:#000;font-weight:800;letter-spacing:1px;font-family:monospace;">${ticketCode}</p>
-                <p style="margin:10px 0 0;font-size:11px;color:#000;">Giris Noktasi</p>
-                <p style="margin:2px 0 0;font-size:13px;color:#000;font-weight:700;">EINGANG X</p>
-                <div style="margin-top:10px;text-align:center;">
-                  <img src="${qrCodeDataUrl}" alt="Bilet QR Kodu" width="130" height="130" style="border:1px solid #cbd5e1;padding:6px;background:#fff;" />
-                </div>
-                <p style="margin:6px 0 0;font-size:10px;color:#000;text-align:center;">QR kodu giriste okutunuz</p>
-              </td>
-            </tr>
-          </table>
-        </div>
-        <p style="margin:16px 0 0;font-size:14px;color:#0f172a;font-weight:600;">Ekteki PDF sayfasında biletiniz gönderilmiştir. Yazdırabilirsiniz. İyi seyirler dileriz.</p>
-        <div style="font-size:11px;color:#64748b;margin-top:16px;">
-          Bu e-posta otomatik olusturulmustur.
-        </div>
+        <p style="margin:0 0 16px;color:#334155;">Ekteki PDF dosyasını indirip yazdırabilirsiniz. İyi seyirler dileriz.</p>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #cbd5e1;border-radius:8px;">
+          <tr>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;width:40%;">Etkinlik</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f172a;font-weight:600;">${eventTitle}</td>
+          </tr>
+          <tr>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;">Tarih / Saat</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f172a;">${eventDateText}, ${timeText}</td>
+          </tr>
+          <tr>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;">Mekan</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f172a;">${venueText}, ${locationText}</td>
+          </tr>
+          <tr>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;">Bilet Kodu</td>
+            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f172a;font-family:monospace;font-weight:700;letter-spacing:1px;">${ticketCode}</td>
+          </tr>
+          ${seatLine ? `<tr><td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;">Koltuk</td><td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f172a;font-weight:600;">${seatLine}</td></tr>` : ""}
+          <tr>
+            <td style="padding:12px 16px;font-size:13px;color:#64748b;">Toplam</td>
+            <td style="padding:12px 16px;font-size:13px;color:#0f172a;font-weight:700;">EUR ${priceText}</td>
+          </tr>
+        </table>
+        <div style="font-size:11px;color:#64748b;margin-top:20px;">Bu e-posta otomatik oluşturulmuştur.</div>
       </div>
     </div>
   `;

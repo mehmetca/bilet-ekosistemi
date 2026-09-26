@@ -57,18 +57,36 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: tErr.message }, { status: 500 });
     }
 
-    let ordersQuery = supabase
+    let ordersBaseQuery = supabase
       .from("orders")
       .select("event_id, quantity, total_price, shipping_fee, status")
       .in("status", PAID_STATUSES);
 
     if (eventIdFilter) {
-      ordersQuery = ordersQuery.in("event_id", eventIdFilter);
+      ordersBaseQuery = ordersBaseQuery.in("event_id", eventIdFilter);
     }
 
-    const { data: orderRows, error: oErr } = await ordersQuery;
+    let { data: orderRows, error: oErr } = await ordersBaseQuery;
+
+    // shipping_fee kolonu DB'de yoksa (eski migration) shipping=0 kabul ederek tekrar dene
     if (oErr) {
-      return NextResponse.json({ error: oErr.message }, { status: 500 });
+      const errText = String(oErr.message || "");
+      const missingCol = /shipping_fee|PGRST204|Could not find/i.test(errText) || (oErr as { code?: string }).code === "PGRST204";
+      if (missingCol) {
+        let fallbackQuery = supabase
+          .from("orders")
+          .select("event_id, quantity, total_price, status")
+          .in("status", PAID_STATUSES);
+        if (eventIdFilter) fallbackQuery = fallbackQuery.in("event_id", eventIdFilter);
+        const fallback = await fallbackQuery;
+        if (fallback.error) {
+          return NextResponse.json({ error: fallback.error.message }, { status: 500 });
+        }
+        orderRows = (fallback.data || []).map((o) => ({ ...o, shipping_fee: 0 })) as typeof orderRows;
+        oErr = null;
+      } else {
+        return NextResponse.json({ error: oErr.message }, { status: 500 });
+      }
     }
 
     const eventIdsFromTickets = [...new Set((ticketRows || []).map((t) => t.event_id).filter(Boolean))] as string[];
