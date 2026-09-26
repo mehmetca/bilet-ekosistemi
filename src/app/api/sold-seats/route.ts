@@ -1,24 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { getAuthUser } from "@/lib/api-auth";
+
+export const dynamic = "force-dynamic";
 
 /**
  * GET ?event_id=xxx → { seatIds: string[] }
  * Etkinlik için satılmış (dolu) koltuk ID'lerini döndürür. Salon planında bu koltuklar gri / seçilemez gösterilir.
- * Auth gerektirir.
+ * Auth gerektirmez — service role ile sorgu yapılır, satılan koltuklar kamuya açık bilgidir.
  */
 export async function GET(request: NextRequest) {
-  const authCheck = await getAuthUser(request);
-  if (authCheck instanceof Response) return authCheck;
-
   const eventId = request.nextUrl.searchParams.get("event_id");
   if (!eventId) {
-    return NextResponse.json({ seatIds: [] });
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!supabaseUrl || !key) {
     return NextResponse.json({ seatIds: [] });
   }
 

@@ -463,6 +463,8 @@
     "bestplatzbuchungDesc": "Hûn bihayê hilbijêrin, em ê kursiyên çêtirîn berdest destnîşan bikin",
     "saalplanbuchung": "Bi bijartina cîhek bilêtan bikirin",
     "saalplanbuchungDesc": "Ji plana salonê kursiyên xwe hilbijêrin",
+    "noSeatingPlanMessage": "Ji bo vê bûyerê hilbijartina kursiyê nehatiye destnîşan kirin.",
+    "noSeatingPlanHint": "Ji bo kirîna bilêtê, vebijarka \"Li gorî kategoriya bihayê bilêtan bikirin\" bikar bînin.",
     "deinePlatze": "Cihên hatine hilbijartin",
     "ticketsAndPricesTitle": "{title} Bilêt û Biha",
     "cityFilterAll": "Gişt",

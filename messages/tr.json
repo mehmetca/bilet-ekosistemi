@@ -324,6 +324,8 @@
     "bestplatzbuchungDesc": "Fiyatı sen seç, en iyi müsait koltukları biz atayalım",
     "saalplanbuchung": "Yer seçerek bilet al",
     "saalplanbuchungDesc": "Koltuklarını salon planından kendin seç",
+    "noSeatingPlanMessage": "Bu etkinlik için koltuk seçimi tanımlanmamış.",
+    "noSeatingPlanHint": "Bilet almak için \"Fiyat kategorisine göre bilet al\" seçeneğini kullanabilirsiniz.",
     "deinePlatze": "Seçilen koltuklar",
     "ticketsAndPricesTitle": "{title} Biletleri ve Fiyatları",
     "cityFilterAll": "Tümü",

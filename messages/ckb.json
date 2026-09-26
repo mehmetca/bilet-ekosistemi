@@ -463,6 +463,8 @@
     "bestplatzbuchungDesc": "تۆ نرخەکەت هەڵدەبژێریت، ئێمە باشترین کورسی بەردەست دیاری دەکەین",
     "saalplanbuchung": "بلیت بکڕە بە هەڵبژاردنی شوێنێک",
     "saalplanbuchungDesc": "لە پلانی هۆڵەکەدا کورسییەکانی خۆت هەڵبژێرە",
+    "noSeatingPlanMessage": "هیچ هەڵبژاردنی کورسییەک بۆ ئەم ڕووداوە دیاری نەکراوە.",
+    "noSeatingPlanHint": "بۆ کڕینی بلیت، بژاردەی «بلیتەکان بەپێی پۆلی نرخ بکڕە» بەکاربهێنە.",
     "deinePlatze": "کورسییە هەڵبژێردراوەکان",
     "ticketsAndPricesTitle": "{title} بلیت و نرخەکان",
     "cityFilterAll": "گشت",

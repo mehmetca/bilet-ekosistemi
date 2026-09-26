@@ -324,6 +324,8 @@
     "bestplatzbuchungDesc": "Du wählst den Preis – wir die besten verfügbaren Plätze",
     "saalplanbuchung": "Saalplanbuchung",
     "saalplanbuchungDesc": "Such dir deinen Platz selbst aus",
+    "noSeatingPlanMessage": "Für diese Veranstaltung ist keine Sitzplatzwahl definiert.",
+    "noSeatingPlanHint": "Verwende die Option \"Bestplatzbuchung\", um Tickets zu kaufen.",
     "deinePlatze": "Deine Plätze",
     "ticketsAndPricesTitle": "{title} — Tickets & Preise",
     "cityFilterAll": "Alle",

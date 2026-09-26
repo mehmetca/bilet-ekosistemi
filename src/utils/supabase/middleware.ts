@@ -33,7 +33,12 @@ export async function withSupabaseAuth(request: NextRequest, response: NextRespo
     }
   );
 
-  await supabase.auth.getUser();
+  try {
+    await supabase.auth.getUser();
+  } catch {
+    // Süresi dolmuş veya geçersiz refresh token — sessizce yut.
+    // Tarayıcı çerezleri bir sonraki istekte silinir; kullanıcı yeniden giriş yapar.
+  }
   return response;
 }
 
