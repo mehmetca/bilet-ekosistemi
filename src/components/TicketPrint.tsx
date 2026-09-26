@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import QRCode from "qrcode";
 import { Printer, Download } from "lucide-react";
-import AddWalletButtons from "./AddWalletButtons";
+
 import type { EventCurrency, TicketType } from "@/types/database";
 import { formatPrice } from "@/lib/formatPrice";
 import { formatEventDateDMY } from "@/lib/date-utils";
@@ -619,16 +619,7 @@ export default function TicketPrint({
           {downloading ? tUi("downloading") : tUi("download")}
         </button>
 
-        {/* Apple Wallet & Google Wallet Butonları */}
-        <AddWalletButtons
-          ticketCode={ticketCode}
-          eventTitle={displayEventTitle}
-          eventDate={eventDateText}
-          eventTime={timeText}
-          venue={venue}
-          seatInfo={singleSeatDetail ? formatSeatLine(singleSeatDetail) : String(ticketTier || "Genel")}
-          buyerName={buyerName}
-        />
+
       </div>
       <p className="text-center text-xs text-slate-500 print:hidden">
         {tUi("printDownloadHint")}

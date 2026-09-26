@@ -52,7 +52,7 @@ type TicketMailPayload = {
   ticketCodes?: string[];
 };
 
-const PDF_TICKET_HEADER_TEXT = "EVENTSEAT E-TICKET";
+const PDF_TICKET_HEADER_TEXT = "KURDEVENTS E-TICKET";
 const PDF_CUSTOMER_TICKET_TEXT = "MUSTERI/ETKINLIK BILETI";
 
 async function getEventSummary(
@@ -355,11 +355,12 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrCodeDataUrl: string,
     <div style="font-family:Arial,sans-serif;background:#eef2f7;padding:24px;">
       <div style="max-width:900px;margin:0 auto;">
         <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${buyerName},</h2>
-        <p style="margin:0 0 14px;color:#334155;">Siparişiniz tamamlandı. Biletiniz aşağıdadır.</p>
+        <p style="margin:0 0 6px;color:#334155;">Siparişiniz tamamlandı. Biletiniz ektedir.</p>
+        <p style="margin:0 0 14px;color:#334155;">Ekteki PDF dosyasını indirip yazdırabilirsiniz. İyi seyirler dileriz.</p>
         <div style="position:relative;background:#fff;border:1px solid #cbd5e1;border-radius:12px;overflow:hidden;">
           <div style="position:absolute;top:0;bottom:0;left:73%;border-left:2px dashed #94a3b8;"></div>
           <div style="background:#003f8c;color:#fff;padding:10px 18px;font-size:14px;font-weight:700;letter-spacing:.4px;">
-            EVENTSEAT E-TICKET
+            KURDEVENTS E-TICKET
           </div>
           <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
             <tr>
