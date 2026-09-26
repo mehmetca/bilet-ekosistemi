@@ -53,6 +53,7 @@ interface CartContextValue {
 }
 
 const CART_STORAGE_KEY = "bilet_ekosistemi_cart";
+const CART_OWNER_KEY = "bilet_ekosistemi_cart_owner";
 const SEAT_HOLD_LS_KEY = "seatHoldSessionId";
 
 /** seatIds sırasıyla aynı uzunlukta açıklama (birleştirme sonrası kaybolmasın). */
@@ -292,6 +293,58 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setHydrated(true);
   }, []);
 
+  // Kullanıcı çıkış yaptığında veya farklı biri giriş yaptığında sepeti temizle.
+  // Böylece A kullanıcısının sepeti B kullanıcısına görünmez ve
+  // koltuk hold sahipliği uyuşmazlığından kaynaklanan refund'lar önlenir.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let mounted = true;
+    let unsub: (() => void) | undefined;
+
+    (async () => {
+      try {
+        const { supabase } = await import("@/lib/supabase-client");
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (!mounted) return;
+          const incomingUserId = session?.user?.id ?? null;
+          const storedOwner = (() => {
+            try { return localStorage.getItem(CART_OWNER_KEY); } catch { return null; }
+          })();
+
+          if (event === "SIGNED_OUT") {
+            // Çıkış: sepeti ve sahibi temizle
+            try { localStorage.removeItem(CART_OWNER_KEY); } catch { /* ignore */ }
+            setItems([]);
+            setReservationExpiresAt(null);
+            try { localStorage.removeItem(CART_STORAGE_KEY); } catch { /* ignore */ }
+            try { localStorage.removeItem(CART_EXPIRY_KEY); } catch { /* ignore */ }
+            return;
+          }
+
+          if (event === "SIGNED_IN" && incomingUserId) {
+            if (storedOwner && storedOwner !== incomingUserId) {
+              // Farklı kullanıcı giriş yaptı: eski sepeti temizle
+              setItems([]);
+              setReservationExpiresAt(null);
+              try { localStorage.removeItem(CART_STORAGE_KEY); } catch { /* ignore */ }
+              try { localStorage.removeItem(CART_EXPIRY_KEY); } catch { /* ignore */ }
+            }
+            // Yeni sahibi kaydet
+            try { localStorage.setItem(CART_OWNER_KEY, incomingUserId); } catch { /* ignore */ }
+          }
+        });
+        unsub = () => subscription.unsubscribe();
+      } catch {
+        /* supabase yüklenemedi, sessizce geç */
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      unsub?.();
+    };
+  }, []);
+
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem(SETTINGS_CACHE_KEY);
@@ -385,6 +438,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setReservationExpiresAt(null);
     if (typeof window !== "undefined") {
       localStorage.removeItem(CART_EXPIRY_KEY);
+      localStorage.removeItem(CART_OWNER_KEY);
     }
     if (snapshot.length > 0) {
       void releaseSeatHoldsForItems(snapshot);
@@ -408,8 +462,25 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Sepete ilk öğe eklenirken, eğer henüz kayıtlı sahip yoksa oturumu al ve kaydet.
+  const stampCartOwnerIfNeeded = useCallback(() => {
+    if (typeof window === "undefined") return;
+    try {
+      if (localStorage.getItem(CART_OWNER_KEY)) return; // Zaten kayıtlı
+    } catch { return; }
+    // Async: mevcut kullanıcıyı çek ve kaydet
+    import("@/lib/supabase-client").then(({ supabase }) => {
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session?.user?.id) {
+          try { localStorage.setItem(CART_OWNER_KEY, session.user.id); } catch { /* ignore */ }
+        }
+      }).catch(() => { /* ignore */ });
+    }).catch(() => { /* ignore */ });
+  }, []);
+
   const addItem = useCallback((item: CartItemAddPayload) => {
     const now = Date.now();
+    stampCartOwnerIfNeeded();
     bumpReservation();
     try {
       if (typeof window !== "undefined") {
@@ -419,11 +490,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       /* ignore */
     }
     setItems((prev) => upsertCartItem(prev, item, maxTicketQuantity, now));
-  }, [maxTicketQuantity, bumpReservation]);
+  }, [maxTicketQuantity, bumpReservation, stampCartOwnerIfNeeded]);
 
   const addItemsBatch = useCallback((batch: CartItemAddPayload[]) => {
     if (batch.length === 0) return;
     const now = Date.now();
+    stampCartOwnerIfNeeded();
     bumpReservation();
     try {
       if (typeof window !== "undefined") {
@@ -434,7 +506,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
     const capUsed = Math.max(1, maxTicketQuantity);
     setItems((prev) => batch.reduce((acc, payload) => upsertCartItem(acc, payload, capUsed, now), prev));
-  }, [maxTicketQuantity, bumpReservation]);
+  }, [maxTicketQuantity, bumpReservation, stampCartOwnerIfNeeded]);
 
   const removeItem = useCallback((ticketId: string) => {
     let removed: CartItem[] = [];
