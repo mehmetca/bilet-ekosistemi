@@ -128,7 +128,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
             <img
               src={currentEvent.image_url}
               alt={localized.title}
-              className="w-full h-full object-cover object-top"
+              className="w-full h-full object-cover object-center"
               onError={(e) => {
                 if (e.currentTarget.dataset.fallbackApplied === "1") return;
                 e.currentTarget.dataset.fallbackApplied = "1";
@@ -218,7 +218,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
 
       {/* Slider Indikatörleri */}
       {sliderEvents.length > 1 && (
-        <div className="flex justify-center gap-2 p-4">
+        <div className="flex justify-start gap-2 px-4 py-3">
           {sliderEvents.map((_, index) => (
             <button
               key={index}

@@ -194,7 +194,7 @@ export default function AnaHeroSlider({
         onMouseLeave={() => setIsAutoPlay(true)}
       >
         {shownAds.length > 1 && (
-          <div className="absolute bottom-3 left-1/2 z-[2000] -translate-x-1/2 flex flex-row gap-1.5 pointer-events-auto sm:bottom-4 sm:gap-2">
+          <div className="absolute bottom-3 left-3 z-[2000] flex flex-row gap-1.5 pointer-events-auto sm:bottom-4 sm:left-4 sm:gap-2">
             {shownAds.map((ad, idx) => (
               <button
                 key={ad.id || idx}
