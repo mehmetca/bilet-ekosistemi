@@ -179,7 +179,7 @@ export default function AnaHeroSlider({
   if (loading) {
     return (
       <div className="w-full">
-        <div className="aspect-[16/10] min-h-[240px] w-full animate-pulse bg-slate-100 sm:aspect-auto sm:h-[48vw] sm:min-h-0 sm:max-h-[420px] lg:h-[36vw] lg:max-h-[520px] xl:h-[30vw] xl:max-h-[560px]" />
+        <div className="aspect-video w-full animate-pulse bg-slate-100 sm:aspect-[16/7] sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]" />
       </div>
     );
   }
@@ -194,7 +194,7 @@ export default function AnaHeroSlider({
         onMouseLeave={() => setIsAutoPlay(true)}
       >
         {shownAds.length > 1 && (
-          <div className="absolute right-3 top-1/2 z-[2000] -translate-y-1/2 flex flex-col gap-2 pointer-events-auto sm:right-4 md:right-auto md:left-4 md:gap-3">
+          <div className="absolute bottom-3 left-1/2 z-[2000] -translate-x-1/2 flex flex-row gap-1.5 pointer-events-auto sm:bottom-4 sm:gap-2">
             {shownAds.map((ad, idx) => (
               <button
                 key={ad.id || idx}
@@ -202,11 +202,13 @@ export default function AnaHeroSlider({
                 onClick={() => goToIndex(idx)}
                 aria-label={`Slide ${idx + 1}`}
                 aria-current={idx === currentIndex ? "true" : undefined}
-                className="flex h-11 w-11 items-center justify-center rounded-full"
+                className="flex h-6 w-6 items-center justify-center"
               >
                 <span
-                  className={`block rounded-full shadow-md transition-all h-2.5 w-2.5 sm:h-3 sm:w-3 ${
-                    idx === currentIndex ? "bg-primary-600 scale-110" : "bg-white"
+                  className={`block rounded-full shadow-md transition-all ${
+                    idx === currentIndex
+                      ? "bg-primary-500 h-3 w-3 sm:h-3.5 sm:w-3.5"
+                      : "bg-white/80 h-2 w-2 sm:h-2.5 sm:w-2.5"
                   }`}
                 />
               </button>
@@ -214,7 +216,7 @@ export default function AnaHeroSlider({
           </div>
         )}
 
-        <div className="w-full overflow-hidden aspect-[16/10] min-h-[240px] sm:aspect-[16/8] sm:min-h-0 sm:max-h-[480px] lg:aspect-[16/7] lg:max-h-[560px] xl:aspect-[16/6] xl:max-h-[640px]">
+        <div className="w-full overflow-hidden aspect-video sm:aspect-[16/7] sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]">
           <div
             className="heroSlider owl-carousel owl-theme flex h-full transition-transform duration-500 ease-in-out"
             id="slider"

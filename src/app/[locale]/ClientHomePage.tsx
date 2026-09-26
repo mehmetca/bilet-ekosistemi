@@ -22,7 +22,7 @@ import FeaturedEvents from "@/components/FeaturedEvents";
 const AnaHeroSlider = dynamic(() => import("@/components/AnaHeroSlider"), {
   ssr: false,
   loading: () => (
-    <div className="aspect-[16/10] min-h-[240px] animate-pulse bg-slate-100 sm:aspect-[16/8] sm:min-h-0 sm:max-h-[480px] lg:aspect-[16/7] lg:max-h-[560px] xl:aspect-[16/6] xl:max-h-[640px]" />
+    <div className="aspect-video w-full animate-pulse bg-slate-100 sm:aspect-[16/7] sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]" />
   ),
 });
 import { formatPrice } from "@/lib/formatPrice";
