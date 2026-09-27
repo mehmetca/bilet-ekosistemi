@@ -1,4 +1,12 @@
 {
+  "welcomeEmail": {
+    "subject": "KurdEvents'e Hoş Geldiniz!",
+    "greeting": "Merhaba {name},",
+    "intro": "KurdEvents'e katıldığınız için teşekkür ederiz! Artık etkinliklere göz atabilir, bilet satın alabilir ve topluluğumuzun bir parçası olabilirsiniz.",
+    "accountCreated": "Hesabınız başarıyla oluşturuldu. Herhangi bir sorunuz olursa bize istediğiniz zaman ulaşabilirsiniz.",
+    "closing": "Keyifli etkinlikler dileriz!",
+    "team": "KurdEvents Ekibi"
+  },
   "common": {
     "backToHome": "Ana Sayfaya Dön",
     "home": "Ana Sayfa",

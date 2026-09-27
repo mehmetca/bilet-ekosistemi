@@ -191,6 +191,7 @@ export default function LoginPage() {
               email: regEmail.trim(),
               firstName: firstName.trim(),
               lastName: lastName.trim(),
+              locale,
             }),
           });
         } catch (_) {
