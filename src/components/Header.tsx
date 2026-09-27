@@ -95,11 +95,11 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
-      <div className="site-container flex h-[60px] sm:h-[68px] items-center">
+      <div className="site-container flex h-[60px] sm:h-[68px] items-center justify-between">
 
 <NextLink
   href={navHref(locale, "/")}
-  className="flex h-11 w-[136px] shrink-0 items-center gap-2 sm:h-[52px] sm:w-[168px]"
+  className="flex h-11 shrink-0 items-center gap-2 sm:h-[52px] w-[160px] sm:w-[180px] md:w-[168px]"
 >
   <img
     src="/images/kurdevent-logo.png"
@@ -223,7 +223,7 @@ export default function Header() {
         </div>
 
         {/* Mobil: hamburger + açılır menü */}
-        <div className="flex md:hidden items-center gap-2">
+        <div className="flex md:hidden items-center gap-2 ml-auto">
           {user && hasManagementRole && (
             <NextLink href="/yonetim" className="text-sm text-slate-500 hover:text-primary-600">
               {t("nav.admin")}
