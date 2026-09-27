@@ -197,12 +197,15 @@ export async function POST(request: NextRequest) {
           },
         },
       ],
-      customer_email: buyerEmail,
+      // customer_email verilirse Stripe, Link'e kayıtlı e-postaları tanıyıp
+      // "Link ile öde" promosyonunu tetikliyor. Link'i tamamen kaldırmak için
+      // e-postayı yalnızca metadata'da tutuyoruz (e-posta gönderimi intent.buyer_email üzerinden yapılır).
       payment_method_types: ["card"],
       metadata: {
         checkout_intent_id: intentId,
         user_id: userId,
         locale,
+        buyer_email: buyerEmail,
       },
     } as never);
 
