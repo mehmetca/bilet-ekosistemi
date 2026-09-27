@@ -123,12 +123,12 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
       {/* Slider */}
       <div className="relative">
         {/* Ana Etkinlik Kartı */}
-        <div className="relative min-h-[22rem] h-[min(24rem,70vw)] sm:h-96 bg-gradient-to-br from-primary-100 to-primary-50">
+        <div className="relative min-h-[22rem] h-[min(24rem,70vw)] sm:h-96 bg-black">
           {currentEvent.image_url ? (
             <img
               src={currentEvent.image_url}
               alt={localized.title}
-              className="w-full h-full object-cover object-center"
+              className="w-full h-full object-contain"
               onError={(e) => {
                 if (e.currentTarget.dataset.fallbackApplied === "1") return;
                 e.currentTarget.dataset.fallbackApplied = "1";
@@ -251,7 +251,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
                   <img
                     src={event.image_url}
                     alt={getLocalizedEvent(event as unknown as Record<string, unknown>, locale).title}
-                    className="w-full h-full object-cover object-top"
+                    className="w-full h-full object-contain bg-black"
                     onError={(e) => {
                       if (e.currentTarget.dataset.fallbackApplied === "1") return;
                       e.currentTarget.dataset.fallbackApplied = "1";
