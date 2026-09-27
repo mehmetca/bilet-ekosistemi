@@ -2,6 +2,12 @@
 /**
  * messages/*.json içindeki anahtarları karşılaştırır.
  * Eksik veya fazla anahtarları raporlar (tr referans alınır).
+ *
+ * Aşağıdakiler bilinçli olarak karşılaştırmaya dahil edilmez:
+ *  - adminPanel: yönetim paneli yalnızca Türkçe (admin dışında görülmez)
+ *  - ticketPrint.printBannerTitle / barcodeLoadingPlaceholder: e-bilet kartı
+ *    sabit metinleri her zaman Almanca (TicketPrint.tsx içinde de.json'dan okunur)
+ *
  * Kullanım: node scripts/check-i18n-keys.js
  */
 const fs = require("fs");
@@ -14,9 +20,18 @@ const locales = fs
   .map((file) => path.basename(file, ".json"))
   .sort();
 
+/** Karşılaştırmaya hiç dahil edilmeyen üst seviye namespace'ler. */
+const IGNORED_NAMESPACES = new Set(["adminPanel"]);
+/** Tekil anahtar bazında atlananlar (belli bir dile özel sabitler). */
+const IGNORED_KEYS = new Set([
+  "ticketPrint.printBannerTitle",
+  "ticketPrint.barcodeLoadingPlaceholder",
+]);
+
 function getAllKeys(obj, prefix = "") {
   const keys = new Set();
   for (const key of Object.keys(obj)) {
+    if (prefix === "" && IGNORED_NAMESPACES.has(key)) continue;
     const fullKey = prefix ? `${prefix}.${key}` : key;
     const value = obj[key];
     if (value !== null && typeof value === "object" && !Array.isArray(value)) {
@@ -26,6 +41,12 @@ function getAllKeys(obj, prefix = "") {
     }
   }
   return keys;
+}
+
+function withoutIgnored(keys) {
+  const out = new Set(keys);
+  for (const k of IGNORED_KEYS) out.delete(k);
+  return out;
 }
 
 function loadJson(locale) {
@@ -46,8 +67,8 @@ const refLocale = "tr";
 const refData = loadJson(refLocale);
 if (!refData) process.exit(1);
 
-const refKeys = getAllKeys(refData);
-console.log(`\nReferans: ${refLocale}.json → ${refKeys.size} anahtar.\n`);
+const refKeys = withoutIgnored(getAllKeys(refData));
+console.log(`\nReferans: ${refLocale}.json → ${refKeys.size} anahtar (karşılaştırılan).\n`);
 
 let hasError = false;
 for (const locale of locales) {
@@ -57,7 +78,7 @@ for (const locale of locales) {
     hasError = true;
     continue;
   }
-  const keys = getAllKeys(data);
+  const keys = withoutIgnored(getAllKeys(data));
   const missing = [...refKeys].filter((k) => !keys.has(k));
   const extra = [...keys].filter((k) => !refKeys.has(k));
   if (missing.length > 0) {
