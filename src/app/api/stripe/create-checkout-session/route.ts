@@ -39,6 +39,20 @@ function normalizeDeliveryChoice(raw: string | undefined): CheckoutPhysicalDeliv
   return "e_ticket";
 }
 
+/** Stripe Checkout'un desteklediği diller; ku/ckb gibi desteklenmeyenler İngilizce'ye düşer. */
+const STRIPE_CHECKOUT_LOCALES = new Set(["de", "en", "tr"]);
+
+function resolveStripeLocale(locale: string): string {
+  return STRIPE_CHECKOUT_LOCALES.has(locale) ? locale : "en";
+}
+
+/** Stripe ödeme ekranındaki satır kalemi adı (dil bazlı). */
+const LINE_ITEM_NAMES: Record<string, string> = {
+  de: "Ticketbestellung",
+  en: "Ticket Order",
+  tr: "Bilet Siparişi",
+};
+
 export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as CreateCheckoutBody;
@@ -179,6 +193,8 @@ export async function POST(request: NextRequest) {
     }
 
     const intentId = intentRow.id as string;
+    const stripeLocale = resolveStripeLocale(locale);
+    const lineItemName = LINE_ITEM_NAMES[stripeLocale] ?? LINE_ITEM_NAMES.en;
     const stripe = getStripe();
     const session = await stripe.checkout.sessions.create({
       ui_mode: "embedded_page",
@@ -191,13 +207,13 @@ export async function POST(request: NextRequest) {
             currency: priced.currency,
             unit_amount: priced.grandTotalCents,
             product_data: {
-              name: "Bilet Siparişi",
-              description: `${items.length} kalem — KurdEvents`,
+              name: lineItemName,
             },
           },
         },
       ],
       customer_email: buyerEmail,
+      locale: stripeLocale,
       payment_method_types: ["card"],
       metadata: {
         checkout_intent_id: intentId,
