@@ -179,7 +179,7 @@ export default function AnaHeroSlider({
   if (loading) {
     return (
       <div className="w-full">
-        <div className="aspect-video w-full animate-pulse bg-slate-100 sm:aspect-[16/7] sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]" />
+        <div className="aspect-[16/7] w-full animate-pulse bg-slate-100 sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]" />
       </div>
     );
   }
@@ -216,7 +216,7 @@ export default function AnaHeroSlider({
           </div>
         )}
 
-        <div className="w-full overflow-hidden aspect-video sm:aspect-[16/7] sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]">
+        <div className="w-full overflow-hidden aspect-[16/7] sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]">
           <div
             className="heroSlider owl-carousel owl-theme flex h-full transition-transform duration-500 ease-in-out"
             id="slider"
