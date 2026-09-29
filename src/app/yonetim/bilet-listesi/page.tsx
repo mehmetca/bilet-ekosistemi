@@ -19,6 +19,7 @@ export default function BiletListesiPage() {
     events?: { title?: string; date?: string; time?: string; venue?: string };
     tickets?: { name?: string; type?: string; price?: number };
     order_seats?: { id?: string; seat_id?: string; section_name?: string; row_label?: string; seat_label?: string; ticket_code?: string }[];
+    order_ticket_units?: { ticket_code?: string }[];
   };
 
   const router = useRouter();
@@ -204,11 +205,19 @@ export default function BiletListesiPage() {
     }
   }
 
+  // Siparişin tüm bilet kodlarını birleştir (koltuklu: order_seats, koltuksuz: order_ticket_units)
+  function getOrderCodes(order: AdminOrder) {
+    const seatCodes = (order?.order_seats || []).map((s) => ({ ...s }));
+    if (seatCodes.length > 0) return seatCodes;
+    const unitCodes = (order?.order_ticket_units || []).map((u) => ({ ticket_code: u.ticket_code }));
+    if (unitCodes.length > 0) return unitCodes;
+    return order?.ticket_code ? [{ ticket_code: order.ticket_code }] : [];
+  }
+
   const filteredTickets = tickets.filter(ticket => {
     const searchLower = searchTerm.toLowerCase();
     // Tüm bilet kodlarını topla
-    const seatCodes = ticket.order_seats?.map(s => s.ticket_code).filter(Boolean) || [];
-    const allCodes = [ticket.ticket_code, ...seatCodes].filter(Boolean);
+    const allCodes = getOrderCodes(ticket).map(c => c.ticket_code).filter(Boolean);
     
     return (
       // Sipariş No
@@ -257,12 +266,7 @@ export default function BiletListesiPage() {
   }
 
   const menuOrder = expandedOrder ? tickets.find((t) => t.id === expandedOrder) : undefined;
-  const menuSeatCodes =
-    menuOrder && menuOrder.order_seats && menuOrder.order_seats.length > 0
-      ? menuOrder.order_seats
-      : menuOrder
-        ? [{ ticket_code: menuOrder.ticket_code }]
-        : [];
+  const menuSeatCodes = menuOrder ? getOrderCodes(menuOrder) : [];
 
   return (
     <AdminOnlyGuard>
@@ -316,9 +320,7 @@ export default function BiletListesiPage() {
               <tbody>
                 {filteredTickets.map((ticket) => {
                   // Her bilet için ayrı kodları hazırla
-                  const seatCodes = ticket.order_seats && ticket.order_seats.length > 0 
-                    ? ticket.order_seats 
-                    : [{ ticket_code: ticket.ticket_code }];
+                  const seatCodes = getOrderCodes(ticket);
                   
                   return (
                   <tr key={ticket.id} className="border-b border-slate-100">

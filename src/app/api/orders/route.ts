@@ -60,6 +60,9 @@ export async function GET(request: NextRequest) {
             row_label,
             seat_label,
             ticket_code
+          ),
+          order_ticket_units(
+            ticket_code
           )
         `
       )
