@@ -25,7 +25,6 @@ const DEFAULT_IMPRESSUM = {
   emails: "hallo@kurdevents.org, eventseat21@gmail.com, whitedesoul@gmail.com",
   phoneValue: "+49 1724 395 385",
   responsibleValue: "Herr Özgül Adsiz",
-  disputeDesc: "AB tüketicileri, çevrimiçi uyuşmazlık çözüm platformunu kullanabilir: https://www.verbraucher-schlichter.de/",
 };
 
 const DEFAULT_SETTINGS = {
@@ -97,7 +96,6 @@ function normalizeSettings(rows: SiteSettingRow[] | null | undefined): SettingsR
       emails: typeof imp.emails === "string" ? imp.emails : DEFAULT_IMPRESSUM.emails,
       phoneValue: typeof imp.phoneValue === "string" ? imp.phoneValue : DEFAULT_IMPRESSUM.phoneValue,
       responsibleValue: typeof imp.responsibleValue === "string" ? imp.responsibleValue : DEFAULT_IMPRESSUM.responsibleValue,
-      disputeDesc: typeof imp.disputeDesc === "string" ? imp.disputeDesc : DEFAULT_IMPRESSUM.disputeDesc,
     };
   }
 
@@ -241,7 +239,6 @@ export async function POST(request: NextRequest) {
             emails: String(body.impressum.emails || "").trim(),
             phoneValue: String(body.impressum.phoneValue || "").trim(),
             responsibleValue: String(body.impressum.responsibleValue || "").trim(),
-            disputeDesc: String(body.impressum.disputeDesc || "").trim(),
           }
         : undefined;
     const amedSporFormNotifyEmails = normalizeNotifyEmails(body.amedSporFormNotifyEmails);

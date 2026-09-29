@@ -18,7 +18,6 @@ export interface ImpressumSettings {
   emails: string;
   phoneValue: string;
   responsibleValue: string;
-  disputeDesc: string;
 }
 
 const PLATFORM_OPTIONS = [
@@ -59,7 +58,6 @@ export default function AyarlarPage() {
       emails: "hallo@kurdevents.org, eventseat21@gmail.com, whitedesoul@gmail.com",
       phoneValue: "+49 1724 395 385",
       responsibleValue: "Herr Özgül Adsiz",
-      disputeDesc: "AB tüketicileri, çevrimiçi uyuşmazlık çözüm platformunu kullanabilir: https://www.verbraucher-schlichter.de/",
     } as ImpressumSettings,
   });
 
@@ -340,18 +338,7 @@ export default function AyarlarPage() {
                 />
               </div>
 
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Uyuşmazlık Çözümü Metni & Linki
-                </label>
-                <textarea
-                  value={settings.impressum.disputeDesc}
-                  onChange={(e) => setSettings({...settings, impressum: {...settings.impressum, disputeDesc: e.target.value}})}
-                  rows={2}
-                  placeholder="AB tüketicileri, çevrimiçi uyuşmazlık çözüm platformunu kullanabilir: https://www.verbraucher-schlichter.de/"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
-                />
-              </div>
+
             </div>
           </div>
 

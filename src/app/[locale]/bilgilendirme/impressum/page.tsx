@@ -11,7 +11,6 @@ interface ImpressumData {
   emails: string;
   phoneValue: string;
   responsibleValue: string;
-  disputeDesc: string;
 }
 
 export default function ImpressumPage() {
@@ -27,7 +26,6 @@ export default function ImpressumPage() {
     emails: `hallo@kurdevents.org, eventseat21@gmail.com, ${t("emailValue")}`,
     phoneValue: t("phoneValue"),
     responsibleValue: t("responsibleValue"),
-    disputeDesc: t("disputeDesc"),
   });
 
   useEffect(() => {
@@ -44,7 +42,6 @@ export default function ImpressumPage() {
             emails: data.impressum.emails || prev.emails,
             phoneValue: data.impressum.phoneValue || prev.phoneValue,
             responsibleValue: data.impressum.responsibleValue || prev.responsibleValue,
-            disputeDesc: data.impressum.disputeDesc || prev.disputeDesc,
           }));
         }
       })
@@ -105,8 +102,13 @@ export default function ImpressumPage() {
         </div>
 
         <section className="rounded-lg border border-slate-200 bg-white p-4">
+          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">{t("platformRole")}</h3>
+          <p className="text-slate-700 text-sm whitespace-pre-line">{t("platformRoleDesc")}</p>
+        </section>
+
+        <section className="rounded-lg border border-slate-200 bg-white p-4">
           <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-2">{t("dispute")}</h3>
-          <p className="text-slate-700 text-sm whitespace-pre-line">{impressum.disputeDesc}</p>
+          <p className="text-slate-700 text-sm whitespace-pre-line">{t("disputeDesc")}</p>
         </section>
       </div>
     </div>

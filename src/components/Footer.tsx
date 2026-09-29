@@ -31,6 +31,7 @@ const infoMenuLinks = [
 
 const legalMenuLinks = [
   { href: "/bilgilendirme/impressum", labelKey: "footer.impressum" },
+  { href: "/bilgilendirme/veri-bilgisi", labelKey: "footer.privacy" },
   { href: "/bilgilendirme/cerez-politikasi", labelKey: "footer.cookiePolicy" },
   { href: "/bilgilendirme/mesafeli-satis-sozlesmesi", labelKey: "footer.distanceSales" },
   { href: "/bilgilendirme/kullanim-kosullari", labelKey: "footer.terms" },
@@ -203,6 +204,12 @@ export default function Footer() {
                   {t("footer.liveStock")}:
                 </strong>{" "}
                 {t("footer.liveStockDesc")}
+              </section>
+              <section id="mesafeli-satis-on-bilgilendirme">
+                <strong className="text-slate-700">
+                  {t("footer.preContractInfo")}:
+                </strong>{" "}
+                {t("footer.preContractInfoDesc")}
               </section>
             </div>
             <div className="space-y-4">
