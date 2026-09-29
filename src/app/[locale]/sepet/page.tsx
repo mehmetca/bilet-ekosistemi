@@ -29,6 +29,7 @@ import {
   Clock,
   ArrowLeft,
   ArrowUp,
+  Building2,
 } from "lucide-react";
 import {
   shippingFeeForPhysicalDelivery,
@@ -984,15 +985,27 @@ export default function CheckoutPage() {
                     )}
                     <div className="min-w-0 flex-1">
                       <h3 className="font-semibold text-slate-900">{item.eventTitle}</h3>
-                      <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {formatEventDateDMY(item.eventDate)} • {item.eventTime}
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="h-4 w-4 shrink-0" />
+                          {formatEventDateDMY(item.eventDate)}
                         </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {item.venue}, {item.location}
+                        <span className="flex items-center gap-1.5">
+                          <Clock className="h-4 w-4 shrink-0" />
+                          {item.eventTime}
                         </span>
+                        {item.venue ? (
+                          <span className="flex items-center gap-1.5">
+                            <Building2 className="h-4 w-4 shrink-0" />
+                            {item.venue}
+                          </span>
+                        ) : null}
+                        {item.location ? (
+                          <span className="flex items-center gap-1.5">
+                            <MapPin className="h-4 w-4 shrink-0" />
+                            {item.location.replace(/,\s*/g, " · ")}
+                          </span>
+                        ) : null}
                       </div>
                       <div className="mt-2 flex items-center gap-2">
                         <Ticket className="h-4 w-4 text-primary-600" />
@@ -1254,12 +1267,28 @@ export default function CheckoutPage() {
                           )}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {item.venue}, {item.location}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {formatCartEventWhen(locale, item.eventDate, item.eventTime)}
-                      </p>
+                      <div className="mt-1 space-y-0.5 text-xs text-slate-600">
+                        <p className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 shrink-0" />
+                          {formatEventDateDMY(item.eventDate)}
+                        </p>
+                        <p className="flex items-center gap-1.5">
+                          <Clock className="h-3.5 w-3.5 shrink-0" />
+                          {item.eventTime}
+                        </p>
+                        {item.venue ? (
+                          <p className="flex items-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5 shrink-0" />
+                            {item.venue}
+                          </p>
+                        ) : null}
+                        {item.location ? (
+                          <p className="flex items-center gap-1.5">
+                            <MapPin className="h-3.5 w-3.5 shrink-0" />
+                            {item.location.replace(/,\s*/g, " · ")}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
                   ))}
                 </div>
