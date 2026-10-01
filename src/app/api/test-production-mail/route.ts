@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: false,
       error: error.message || "Bilinmeyen hata",
-      details: process.env.NODE_ENV !== "production" ? error.stack : undefined
+      details: process.env.NODE_ENV === "development" ? error.stack : undefined
     }, { status: 500 });
   }
 }

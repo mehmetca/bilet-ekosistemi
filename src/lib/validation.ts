@@ -15,7 +15,7 @@ export function validateUUID(uuid: string): boolean {
 export function validatePhoneNumber(phone: string): boolean {
   // Basit telefon numarası validasyonu
   const phoneRegex = /^\+?[\d\s\-\(\)]+$/;
-  return phoneRegex.length >= 10 && phoneRegex.test(phone);
+  return phone.length >= 10 && phoneRegex.test(phone);
 }
 
 export function sanitizeString(input: string, maxLength: number = 255): string {
