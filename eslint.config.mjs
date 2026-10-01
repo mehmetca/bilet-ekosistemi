@@ -1,9 +1,17 @@
 import js from "@eslint/js";
 import globals from "globals";
 import pluginReact from "eslint-plugin-react";
-import { defineConfig } from "eslint/config";
 
-export default defineConfig([
-  { files: ["**/*.{js,mjs,cjs,jsx}"], plugins: { js }, extends: ["js/recommended"], languageOptions: { globals: globals.browser } },
+export default [
+  {
+    files: ["**/*.{js,mjs,cjs,jsx}"],
+    plugins: { js },
+    rules: js.configs.recommended.rules,
+    languageOptions: { globals: globals.browser },
+  },
+  {
+    files: ["src/app/api/**/*.{js,mjs,cjs}"],
+    languageOptions: { globals: globals.node },
+  },
   pluginReact.configs.flat.recommended,
-]);
+];

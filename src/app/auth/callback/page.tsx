@@ -80,7 +80,7 @@ function AuthCallbackInner() {
             const hasManagementRole =
               role === "admin" || role === "controller" || role === "organizer";
             if (hasManagementRole && adminFromHome) {
-              finalPath = "/yonetim";
+              finalPath = role === "controller" ? "/kontrol" : "/yonetim";
             }
           }
           router.replace(finalPath);

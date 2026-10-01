@@ -39,7 +39,12 @@ export default function YonetimClientLayout({
 
     if (isController) {
       if (!isPathAllowedForControllerOnly(path)) {
-        router.replace("/yonetim/bilet-kontrol");
+        const code = new URLSearchParams(window.location.search).get("code")?.trim();
+        router.replace(code ? `/kontrol?code=${encodeURIComponent(code)}` : "/kontrol");
+      }
+      if (isPathAllowedForControllerOnly(path) && !path.includes("/kullanim-klavuzu")) {
+        const code = new URLSearchParams(window.location.search).get("code")?.trim();
+        router.replace(code ? `/kontrol?code=${encodeURIComponent(code)}` : "/kontrol");
       }
     }
   }, [loading, isAdmin, isOrganizer, isController, pathname, router]);

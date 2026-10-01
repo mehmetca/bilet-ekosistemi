@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle, XCircle, Calendar, MapPin, User, LogOut, ShieldCheck, Lock, Save } from "lucide-react";
+import { CheckCircle, XCircle, Calendar, MapPin, User, LogOut, ShieldCheck, Lock, Save, Camera, LogIn, BookOpen } from "lucide-react";
 import { checkTicket, type CheckResult } from "@/app/kontrol/actions";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
+import QRScanner from "@/components/QRScanner";
 import {
   fetchUserProfile,
   updateUserPassword,
@@ -31,6 +32,10 @@ export default function KontrolPage() {
   const [manualCode, setManualCode] = useState(codeParam || "");
   const [result, setResult] = useState<CheckResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [checkinLoading, setCheckinLoading] = useState(false);
+  const [checkinDone, setCheckinDone] = useState(false);
+  const autoCheckedCodeRef = useRef<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState<string | null>(null);
@@ -48,15 +53,17 @@ export default function KontrolPage() {
   });
 
   const canShowDashboard =
-    !codeParam && !!user && !authLoading && (isStaff || userRole === "controller" || userRole === "admin");
+    !!user && !authLoading && (isStaff || userRole === "controller" || userRole === "admin");
 
-  // QR kodu ile gelen personeli yönetim paneline yönlendir (public lookup yok)
+  // Ticket QR links open this standalone staff page; lookup still requires staff auth.
   useEffect(() => {
-    if (authLoading || !codeParam?.trim()) return;
-    if (!user) return;
-    if (isStaff || userRole === "controller" || userRole === "admin") {
-      window.location.replace(`/yonetim/bilet-kontrol?code=${encodeURIComponent(codeParam.trim())}`);
-    }
+    const code = codeParam?.trim();
+    if (authLoading || !user || !code || (!isStaff && userRole !== "controller" && userRole !== "admin")) return;
+    if (autoCheckedCodeRef.current === code) return;
+    autoCheckedCodeRef.current = code;
+    setManualCode(code);
+    setLoading(true);
+    void checkTicket(code).then(setResult).finally(() => setLoading(false));
   }, [authLoading, codeParam, user, isStaff, userRole]);
 
   useEffect(() => {
@@ -143,9 +150,37 @@ export default function KontrolPage() {
     const clean = code.trim();
     if (!clean) return;
     setLoading(true);
-    const res = await checkTicket(clean);
-    setResult(res);
-    setLoading(false);
+    setCheckinDone(false);
+    try {
+      const res = await checkTicket(clean);
+      setResult(res);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleCheckin() {
+    if (!manualCode.trim() || !result?.valid || checkinLoading) return;
+    setCheckinLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.access_token) throw new Error("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+      const response = await fetch("/api/checkin-ticket", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ ticket_code: manualCode.trim().toUpperCase() }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data?.message || "Giriş işaretlenemedi.");
+      setCheckinDone(true);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Giriş işaretlenemedi.");
+    } finally {
+      setCheckinLoading(false);
+    }
   }
 
   async function handleSaveProfile(e: React.FormEvent) {
@@ -220,6 +255,13 @@ export default function KontrolPage() {
               >
                 Bilet Kontrol
               </button>
+              <Link
+                href="/kontrol/kullanim-klavuzu"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+              >
+                <BookOpen className="h-4 w-4" />
+                Kullanım kılavuzu
+              </Link>
               <button
                 onClick={() => setActiveTab("profile")}
                 className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
@@ -270,11 +312,46 @@ export default function KontrolPage() {
                     Kontrol Et
                   </button>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setShowQRScanner(true)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  <Camera className="h-4 w-4" />
+                  QR kodu tara
+                </button>
+                {showQRScanner && (
+                  <QRScanner
+                    onScan={(code) => {
+                      setShowQRScanner(false);
+                      setManualCode(code);
+                      void runTicketCheck(code);
+                    }}
+                    onClose={() => setShowQRScanner(false)}
+                  />
+                )}
                 {loading ? (
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
                     Kontrol ediliyor...
                   </div>
                 ) : resultPanel}
+                {result?.valid && (
+                  checkinDone ? (
+                    <div className="flex items-center gap-2 rounded-lg bg-green-50 p-3 text-sm font-medium text-green-800">
+                      <CheckCircle className="h-5 w-5" /> Giriş işaretlendi.
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void handleCheckin()}
+                      disabled={checkinLoading}
+                      className="inline-flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2 font-semibold text-white hover:bg-green-800 disabled:opacity-50"
+                    >
+                      <LogIn className="h-4 w-4" />
+                      {checkinLoading ? "İşleniyor..." : "Girişi işaretle"}
+                    </button>
+                  )
+                )}
               </div>
             )}
 
@@ -393,7 +470,7 @@ export default function KontrolPage() {
               Kontrol için personel hesabınızla giriş yapın.
             </p>
             <Link
-              href={`/giris?redirect=${encodeURIComponent(`/yonetim/bilet-kontrol?code=${codeParam}`)}`}
+              href={`/giris?redirect=${encodeURIComponent(`/kontrol?code=${codeParam}`)}`}
               className="inline-block rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
             >
               Giriş Yap
@@ -419,8 +496,8 @@ export default function KontrolPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
             <p className="mb-4">Bilet kodu bulunamadı.</p>
             <p className="text-sm">
-              Manuel kontrol için{" "}
-              <Link href="/giris" className="text-primary-600 underline">giriş yapıp</Link> yönetim panelinden Bilet Kontrol kullanın.
+              Bilet kontrolü için {" "}
+              <Link href="/giris?redirect=%2Fkontrol" className="text-primary-600 underline">yetkili hesabınızla giriş yapın</Link>.
             </p>
           </div>
         )}

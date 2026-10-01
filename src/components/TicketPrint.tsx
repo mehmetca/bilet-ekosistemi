@@ -134,7 +134,7 @@ export default function TicketPrint({
           // orders.ticket_code (ana sipariş kodu) ile ayrı olabilir; yanlış QR "tekil kod okutun" hatası verir.
           const codeForQr = codesToGenerate[0]!;
           const qrData = origin
-            ? `${origin}/yonetim/bilet-kontrol?code=${encodeURIComponent(codeForQr)}`
+            ? `${origin}/kontrol?code=${encodeURIComponent(codeForQr)}`
             : codeForQr;
           const url = await QRCode.toDataURL(qrData, {
             width: 130,
@@ -147,7 +147,7 @@ export default function TicketPrint({
           const map: Record<string, string> = {};
           for (const code of codesToGenerate) {
             const qrData = origin
-              ? `${origin}/yonetim/bilet-kontrol?code=${encodeURIComponent(code)}`
+              ? `${origin}/kontrol?code=${encodeURIComponent(code)}`
               : code;
             map[code] = await QRCode.toDataURL(qrData, {
               width: 130,

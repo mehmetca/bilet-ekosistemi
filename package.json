@@ -6,7 +6,7 @@
     "predev": "kill-port 3000",
     "dev": "node scripts/dev.js",
     "dev:3001": "next dev -p 3001",
-    "clean": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true});console.log('.next silindi.')}catch(e){if(e.code!=='ENOENT')throw e;}\"",
+    "clean": "node -e \"for (const dir of ['.next', '.next-dev']) { require('fs').rmSync(dir, { recursive: true, force: true }); console.log(dir + ' silindi.'); }\"",
     "port:free": "kill-port 3000",
     "dev:fresh": "npm run clean && npm run port:free && next dev -p 3000",
     "dev:turbo": "kill-port 3000 && next dev -p 3000 --turbo",
@@ -14,7 +14,7 @@
     "dev:reset": "npm run clean && npm run port:free && next dev -p 3000",
     "build": "next build",
     "start": "node scripts/chunk-compat.js && next start",
-    "lint": "next lint",
+    "lint": "node scripts/lint.mjs",
     "i18n-check": "node scripts/check-i18n-keys.js",
     "check": "npm run lint && npm run build",
     "seatplan:tag-duisburg": "node scripts/tag-duisburg-svg-seats.js",
@@ -50,6 +50,7 @@
     "swr": "^2.2.5"
   },
   "devDependencies": {
+    "@eslint/js": "^8.57.1",
     "@types/bwip-js": "^3.2.3",
     "@types/luxon": "^3.7.1",
     "@types/node": "^20",

@@ -17,10 +17,12 @@ export default function AdminGuard({ children }: AdminGuardProps) {
 
   useEffect(() => {
     if (loading || user) return;
-    void router.replace(`/${routing.defaultLocale}/giris`);
+    const currentPathWithSearch = `${window.location.pathname}${window.location.search || ""}`;
+    const loginPath = `/${routing.defaultLocale}/giris?redirect=${encodeURIComponent(currentPathWithSearch)}`;
+    void router.replace(loginPath);
     const id = window.setTimeout(() => {
       if (!window.location.pathname.startsWith("/giris")) {
-        window.location.assign(`${window.location.origin}/${routing.defaultLocale}/giris`);
+        window.location.assign(`${window.location.origin}${loginPath}`);
       }
     }, 2000);
     return () => window.clearTimeout(id);

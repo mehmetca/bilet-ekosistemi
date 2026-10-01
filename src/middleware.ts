@@ -302,7 +302,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  if (pathname.startsWith("/yonetim") || pathname.startsWith("/giris") || pathname.startsWith("/auth")) {
+  if (
+    pathname.startsWith("/yonetim") ||
+    pathname.startsWith("/giris") ||
+    pathname.startsWith("/auth") ||
+    pathname === "/kontrol" ||
+    pathname.startsWith("/kontrol/")
+  ) {
     const cookieLocale = request.cookies.get("NEXT_LOCALE")?.value;
     const panelLocale = isAppLocale(cookieLocale) ? cookieLocale : resolveUnprefixedPathLocale(request);
     const requestHeaders = new Headers(request.headers);

@@ -8,6 +8,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
   transpilePackages: ["lucide-react", "next-intl", "use-intl", "konva"],
 
   experimental: {
@@ -163,6 +164,10 @@ const nextConfig = {
 
   webpack: (config, { isServer }) => {
     config.resolve = config.resolve || {};
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@": path.resolve(__dirname, "src"),
+    };
     config.resolve.fallback = {
       ...config.resolve.fallback,
       canvas: false,

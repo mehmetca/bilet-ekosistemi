@@ -324,7 +324,11 @@ export default function LoginPage() {
       const afterLogin =
         redirectTo && redirectTo.startsWith("/") ? redirectTo : `/${locale}/panel`;
       const managementTarget =
-        redirectTo && redirectTo.startsWith("/") ? redirectTo : "/yonetim";
+        redirectTo && redirectTo.startsWith("/")
+          ? redirectTo
+          : role === "controller"
+            ? "/kontrol"
+            : "/yonetim";
       window.location.href = hasManagementRole ? managementTarget : afterLogin;
       return;
     } catch (err: unknown) {

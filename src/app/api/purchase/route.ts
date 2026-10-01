@@ -396,7 +396,7 @@ async function buildQrCodeDataUrl(payload: TicketMailPayload) {
     ticketOrigin = "https://kurdevents.com";
   }
 
-  const qrData = `${ticketOrigin}/yonetim/bilet-kontrol?code=${encodeURIComponent(payload.ticketCode)}`;
+  const qrData = `${ticketOrigin}/kontrol?code=${encodeURIComponent(payload.ticketCode)}`;
 
   return QRCode.toDataURL(qrData, {
     width: 220,
