@@ -26,14 +26,11 @@
   },
   "dependencies": {
     "@getbrevo/brevo": "^6.0.3",
-    "@mumulhl/duckduckgo-ai-chat": "npm:@jsr/mumulhl__duckduckgo-ai-chat@^3.3.0",
     "@sentry/nextjs": "^10.42.0",
     "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.3.1",
     "@supabase/ssr": "^0.5.0",
     "@supabase/supabase-js": "^2.45.4",
-    "@swc/helpers": "^0.5.23",
-    "@types/qrcode": "^1.5.6",
     "@uiw/react-markdown-preview": "^5.1.5",
     "@uiw/react-md-editor": "^4.0.11",
     "bwip-js": "^4.10.1",
@@ -53,7 +50,6 @@
     "swr": "^2.2.5"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
     "@types/bwip-js": "^3.2.3",
     "@types/luxon": "^3.7.1",
     "@types/node": "^20",
