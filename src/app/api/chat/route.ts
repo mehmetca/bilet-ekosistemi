@@ -3,11 +3,16 @@ import Groq from "groq-sdk";
 import fs from "fs";
 import path from "path";
 
-// Çevre değişkeninden API anahtarını güvenli bir şekilde çekiyoruz
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
 export async function POST(request: Request) {
   try {
+    const apiKey = process.env.GROQ_API_KEY?.trim();
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "Chat hizmeti şu anda yapılandırılmamış." },
+        { status: 503 }
+      );
+    }
+    const groq = new Groq({ apiKey });
     const { messages, currentMessage } = await request.json();
 
     let finalPrompt = currentMessage;
