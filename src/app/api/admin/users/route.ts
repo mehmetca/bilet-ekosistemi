@@ -26,11 +26,14 @@ export async function GET(request: NextRequest) {
       request.nextUrl.searchParams.get("perPage") || "50"
     );
 
-    const [usersRes, requestsRes, controllerRequestsRes, authRes] = await Promise.all([
+    const [usersRes, requestsRes, controllerRequestsRes, authRes, profilesRes, eventsRes, assignmentsRes] = await Promise.all([
       supabase.from("user_roles").select("*").order("created_at", { ascending: false }),
       supabase.from("organizer_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("controller_requests").select("*").eq("status", "pending").order("created_at", { ascending: false }),
       supabase.auth.admin.listUsers({ page, perPage }),
+      supabase.from("user_profiles").select("user_id, first_name, last_name, telefon, handynummer"),
+      supabase.from("events").select("id, title, date, time, location").order("date", { ascending: true }),
+      supabase.from("controller_event_assignments").select("controller_user_id, event_id"),
     ]);
 
     if (usersRes.error) {
@@ -49,6 +52,14 @@ export async function GET(request: NextRequest) {
       console.error("auth listUsers error:", authRes.error);
       return NextResponse.json({ error: authRes.error.message }, { status: 500 });
     }
+    const assignmentTableMissing =
+      assignmentsRes.error?.code === "42P01" ||
+      assignmentsRes.error?.code === "PGRST205";
+    if (profilesRes.error || eventsRes.error || (assignmentsRes.error && !assignmentTableMissing)) {
+      const error = profilesRes.error || eventsRes.error || assignmentsRes.error;
+      console.error("controller management data error:", error);
+      return NextResponse.json({ error: "Kontrolör yönetim bilgileri yüklenemedi." }, { status: 500 });
+    }
 
     const userRoles = usersRes.data || [];
     const roleMap = new Map<string, string[]>();
@@ -61,13 +72,22 @@ export async function GET(request: NextRequest) {
     }
 
     const authUsers = (authRes.data?.users || []) as AuthUser[];
+    const profileMap = new Map((profilesRes.data || []).map((profile) => [profile.user_id, profile]));
     const allUsers = authUsers
-      .map((u) => ({
-        user_id: u.id,
-        email: u.email || null,
-        created_at: u.created_at,
-        roles: roleMap.get(u.id) || [],
-      }))
+      .map((u) => {
+        const profile = profileMap.get(u.id);
+        const metadata = (u as AuthUser & { user_metadata?: Record<string, unknown> }).user_metadata || {};
+        const firstName = profile?.first_name || String(metadata.first_name || "");
+        const lastName = profile?.last_name || String(metadata.last_name || "");
+        return {
+          user_id: u.id,
+          email: u.email || null,
+          created_at: u.created_at,
+          roles: roleMap.get(u.id) || [],
+          full_name: [firstName, lastName].filter(Boolean).join(" ") || String(metadata.full_name || ""),
+          phone: profile?.telefon || profile?.handynummer || String(metadata.phone || ""),
+        };
+      })
       .sort((a, b) => {
         const aT = a.created_at ? new Date(a.created_at).getTime() : 0;
         const bT = b.created_at ? new Date(b.created_at).getTime() : 0;
@@ -79,6 +99,9 @@ export async function GET(request: NextRequest) {
       userRoles,
       organizerRequests: requestsRes.data || [],
       controllerRequests: (controllerRequestsRes.data || []) as ControllerRequest[],
+      events: eventsRes.data || [],
+      controllerAssignments: assignmentsRes.data || [],
+      controllerAssignmentTableReady: !assignmentsRes.error,
     });
   } catch (err) {
     console.error("admin users API error:", err);
@@ -94,10 +117,173 @@ export async function POST(request: NextRequest) {
     const { action } = body as { action?: string };
     const supabase = getSupabaseAdmin();
 
+    if (action === "createController") {
+      const {
+        email,
+        password,
+        firstName,
+        lastName,
+        phone,
+        eventIds: rawEventIds,
+      } = body as {
+        email?: string;
+        password?: string;
+        firstName?: string;
+        lastName?: string;
+        phone?: string;
+        eventIds?: unknown;
+      };
+      const cleanEmail = String(email || "").trim().toLowerCase();
+      const cleanFirstName = String(firstName || "").trim().slice(0, 100);
+      const cleanLastName = String(lastName || "").trim().slice(0, 100);
+      const cleanPhone = String(phone || "").trim().slice(0, 40);
+      const cleanPassword = String(password || "");
+      const eventIds = Array.isArray(rawEventIds)
+        ? [...new Set(rawEventIds.filter((id): id is string => typeof id === "string" && id.length > 0))]
+        : [];
+
+      if (!validateEmail(cleanEmail) || !cleanFirstName || !cleanLastName || !cleanPhone) {
+        return NextResponse.json({ error: "Ad, soyad, telefon ve geçerli e-posta zorunludur." }, { status: 400 });
+      }
+      if (cleanPassword.length < 8 || cleanPassword.length > 72) {
+        return NextResponse.json({ error: "Şifre 8-72 karakter arasında olmalıdır." }, { status: 400 });
+      }
+      if (cleanPhone.replace(/\D/g, "").length < 7) {
+        return NextResponse.json({ error: "Geçerli bir telefon numarası giriniz." }, { status: 400 });
+      }
+
+      if (eventIds.length > 0) {
+        const { data: matchedEvents, error: eventError } = await supabase
+          .from("events")
+          .select("id")
+          .in("id", eventIds);
+        if (eventError || matchedEvents?.length !== eventIds.length) {
+          return NextResponse.json({ error: "Seçilen etkinliklerden biri bulunamadı." }, { status: 400 });
+        }
+      }
+
+      const { data: created, error: createError } = await supabase.auth.admin.createUser({
+        email: cleanEmail,
+        password: cleanPassword,
+        email_confirm: true,
+        user_metadata: {
+          role: "controller",
+          created_by: "admin",
+          first_name: cleanFirstName,
+          last_name: cleanLastName,
+          full_name: `${cleanFirstName} ${cleanLastName}`,
+          phone: cleanPhone,
+        },
+      });
+      if (createError || !created.user?.id) {
+        const alreadyExists = /already|registered|exists/i.test(createError?.message || "");
+        return NextResponse.json(
+          { error: alreadyExists ? "Bu e-posta adresi zaten kayıtlı." : createError?.message || "Kontrolör oluşturulamadı." },
+          { status: alreadyExists ? 409 : 500 }
+        );
+      }
+
+      const userId = created.user.id;
+      const rollbackUser = async (message: string) => {
+        await supabase.auth.admin.deleteUser(userId);
+        return NextResponse.json({ error: message }, { status: 500 });
+      };
+
+      const { error: roleError } = await supabase.from("user_roles").upsert(
+        { user_id: userId, role: "controller" },
+        { onConflict: "user_id,role" }
+      );
+      if (roleError) return rollbackUser(`Kontrolör rolü atanamadı: ${roleError.message}`);
+
+      const { error: profileError } = await supabase.from("user_profiles").upsert(
+        {
+          user_id: userId,
+          first_name: cleanFirstName,
+          last_name: cleanLastName,
+          email: cleanEmail,
+          telefon: cleanPhone,
+          handynummer: cleanPhone,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
+      if (profileError) return rollbackUser(`Kontrolör profili kaydedilemedi: ${profileError.message}`);
+
+      if (eventIds.length > 0) {
+        const { error: assignmentError } = await supabase
+          .from("controller_event_assignments")
+          .insert(eventIds.map((eventId) => ({ controller_user_id: userId, event_id: eventId })));
+        if (assignmentError) return rollbackUser(`Etkinlik atamaları kaydedilemedi: ${assignmentError.message}`);
+      }
+
+      return NextResponse.json({ success: true, userId });
+    }
+
+    if (action === "assignControllerEvents") {
+      const { userId, eventIds: rawEventIds } = body as { userId?: string; eventIds?: unknown };
+      if (!userId || !Array.isArray(rawEventIds)) {
+        return NextResponse.json({ error: "Kontrolör ve etkinlik listesi zorunludur." }, { status: 400 });
+      }
+      const eventIds = [...new Set(rawEventIds.filter((id): id is string => typeof id === "string" && id.length > 0))];
+      const { data: controllerRole, error: roleLookupError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("user_id", userId)
+        .eq("role", "controller")
+        .maybeSingle();
+      if (roleLookupError || !controllerRole) {
+        return NextResponse.json({ error: "Kontrolör hesabı bulunamadı." }, { status: 404 });
+      }
+
+      if (eventIds.length > 0) {
+        const { data: matchedEvents, error: eventError } = await supabase
+          .from("events")
+          .select("id")
+          .in("id", eventIds);
+        if (eventError || matchedEvents?.length !== eventIds.length) {
+          return NextResponse.json({ error: "Seçilen etkinliklerden biri bulunamadı." }, { status: 400 });
+        }
+      }
+
+      const { data: existing, error: existingError } = await supabase
+        .from("controller_event_assignments")
+        .select("event_id")
+        .eq("controller_user_id", userId);
+      if (existingError) return NextResponse.json({ error: existingError.message }, { status: 500 });
+
+      const existingIds = new Set((existing || []).map((row) => row.event_id as string));
+      const desiredIds = new Set(eventIds);
+      const additions = eventIds.filter((eventId) => !existingIds.has(eventId));
+      if (additions.length > 0) {
+        const { error: addError } = await supabase.from("controller_event_assignments").insert(
+          additions.map((eventId) => ({ controller_user_id: userId, event_id: eventId }))
+        );
+        if (addError) return NextResponse.json({ error: addError.message }, { status: 500 });
+      }
+
+      const removals = [...existingIds].filter((eventId) => !desiredIds.has(eventId));
+      if (removals.length > 0) {
+        const { error: removeError } = await supabase
+          .from("controller_event_assignments")
+          .delete()
+          .eq("controller_user_id", userId)
+          .in("event_id", removals);
+        if (removeError) return NextResponse.json({ error: removeError.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
     if (action === "add") {
       const { email, role } = body as { email?: string; role?: string };
       if (!email || !role) {
         return NextResponse.json({ error: "email ve role gerekli" }, { status: 400 });
+      }
+      if (role !== "admin") {
+        return NextResponse.json(
+          { error: "Kontrolörler ad, telefon, şifre ve etkinlik atamasıyla oluşturulmalıdır." },
+          { status: 400 }
+        );
       }
       if (!validateEmail(email)) {
         return NextResponse.json({ error: "Geçersiz e-posta formatı" }, { status: 400 });
@@ -184,7 +370,7 @@ export async function POST(request: NextRequest) {
 
       const { data: req } = await supabase
         .from("controller_requests")
-        .select("id,user_id")
+        .select("id,user_id,email,full_name,phone")
         .eq("id", requestId)
         .single();
       if (!req) return NextResponse.json({ error: "Başvuru bulunamadı" }, { status: 404 });
@@ -193,6 +379,21 @@ export async function POST(request: NextRequest) {
         .from("user_roles")
         .upsert({ user_id: req.user_id, role: "controller" }, { onConflict: "user_id,role" });
       if (roleErr) return NextResponse.json({ error: roleErr.message }, { status: 500 });
+
+      const [firstName, ...lastNameParts] = String(req.full_name || "").trim().split(/\s+/);
+      const { error: profileError } = await supabase.from("user_profiles").upsert(
+        {
+          user_id: req.user_id,
+          first_name: firstName || null,
+          last_name: lastNameParts.join(" ") || null,
+          email: req.email,
+          telefon: req.phone,
+          handynummer: req.phone,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
+      if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
 
       const { error: updErr } = await supabase
         .from("controller_requests")
@@ -218,6 +419,13 @@ export async function POST(request: NextRequest) {
       const { userId, role } = body as { userId?: string; role?: string };
       if (!userId || !role) {
         return NextResponse.json({ error: "userId ve role gerekli" }, { status: 400 });
+      }
+      if (role === "controller") {
+        const { error: assignmentError } = await supabase
+          .from("controller_event_assignments")
+          .delete()
+          .eq("controller_user_id", userId);
+        if (assignmentError) return NextResponse.json({ error: assignmentError.message }, { status: 500 });
       }
       const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role);
       if (delErr) {

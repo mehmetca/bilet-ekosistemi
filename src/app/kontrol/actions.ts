@@ -3,10 +3,12 @@
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { extractTicketCode } from "@/lib/ticket-code";
 import { assertStaffFromCookies } from "@/lib/server-staff-auth";
+import { checkControllerEventAccess } from "@/lib/controller-event-access";
 
 export type CheckResult =
   | {
       valid: true;
+      eventId: string;
       eventTitle: string;
       eventDate: string;
       eventTime: string;
@@ -19,6 +21,7 @@ export type CheckResult =
       valid: false;
       reason: "not_found" | "used" | "invalid" | "error";
       message?: string;
+      eventId?: string;
       eventTitle?: string;
       eventDate?: string;
       eventTime?: string;
@@ -51,14 +54,15 @@ export async function checkTicketCore(input: string | FormData): Promise<CheckRe
       if (ticketUnit.checked_at) {
         const { data: orderRow } = await supabase
           .from("orders")
-          .select("buyer_name, buyer_email, events(title, date, time, location)")
+          .select("event_id, buyer_name, buyer_email, events(title, date, time, location)")
           .eq("id", ticketUnit.order_id)
           .single();
-        const o = orderRow as { buyer_name?: string; buyer_email?: string; events?: { title?: string; date?: string; time?: string; location?: string } } | null;
+        const o = orderRow as { event_id?: string; buyer_name?: string; buyer_email?: string; events?: { title?: string; date?: string; time?: string; location?: string } } | null;
         return {
           valid: false,
           reason: "used",
           message: "Bu bilet daha önce kullanılmıştır.",
+          eventId: o?.event_id,
           eventTitle: o?.events?.title,
           eventDate: o?.events?.date,
           eventTime: o?.events?.time,
@@ -71,22 +75,23 @@ export async function checkTicketCore(input: string | FormData): Promise<CheckRe
 
       const { data: orderWithEvent } = await supabase
         .from("orders")
-        .select("status, buyer_name, buyer_email, events(*)")
+        .select("event_id, status, buyer_name, buyer_email, events(*)")
         .eq("id", ticketUnit.order_id)
         .single();
       const ord = orderWithEvent as Record<string, unknown> | null;
       if (!ord) return { valid: false, reason: "not_found" };
       const status = ord.status as string;
       if (status !== "confirmed" && status !== "completed") {
-        return { valid: false, reason: "invalid", message: "Bilet onaylanmamış" };
+        return { valid: false, reason: "invalid", message: "Bilet onaylanmamış", eventId: ord.event_id as string };
       }
       const ev = ord.events as { date?: string; time?: string; title?: string; location?: string } | null;
       const eventDate = new Date(`${ev?.date ?? ""} ${ev?.time || "23:59"}`);
       if (eventDate.getTime() && eventDate < new Date()) {
-        return { valid: false, reason: "invalid", message: "Etkinlik tarihi geçmiş" };
+        return { valid: false, reason: "invalid", message: "Etkinlik tarihi geçmiş", eventId: ord.event_id as string };
       }
       return {
         valid: true,
+        eventId: ord.event_id as string,
         eventTitle: ev?.title,
         eventDate: ev?.date,
         eventTime: ev?.time,
@@ -108,14 +113,15 @@ export async function checkTicketCore(input: string | FormData): Promise<CheckRe
       if (orderSeat.checked_at) {
         const { data: orderRow } = await supabase
           .from("orders")
-          .select("buyer_name, buyer_email, events(title, date, time, location)")
+          .select("event_id, buyer_name, buyer_email, events(title, date, time, location)")
           .eq("id", orderSeat.order_id)
           .single();
-        const o = orderRow as { buyer_name?: string; buyer_email?: string; events?: { title?: string; date?: string; time?: string; location?: string } } | null;
+        const o = orderRow as { event_id?: string; buyer_name?: string; buyer_email?: string; events?: { title?: string; date?: string; time?: string; location?: string } } | null;
         return {
           valid: false,
           reason: "used",
           message: "Bu bilet daha önce kullanılmıştır.",
+          eventId: o?.event_id,
           eventTitle: o?.events?.title,
           eventDate: o?.events?.date,
           eventTime: o?.events?.time,
@@ -127,22 +133,23 @@ export async function checkTicketCore(input: string | FormData): Promise<CheckRe
       }
       const { data: orderWithEvent } = await supabase
         .from("orders")
-        .select("status, buyer_name, buyer_email, events(*)")
+        .select("event_id, status, buyer_name, buyer_email, events(*)")
         .eq("id", orderSeat.order_id)
         .single();
       const ord = orderWithEvent as Record<string, unknown> | null;
       if (!ord) return { valid: false, reason: "not_found" };
       const status = ord.status as string;
       if (status !== "confirmed" && status !== "completed") {
-        return { valid: false, reason: "invalid", message: "Bilet onaylanmamış" };
+        return { valid: false, reason: "invalid", message: "Bilet onaylanmamış", eventId: ord.event_id as string };
       }
       const ev = ord.events as { date?: string; time?: string; title?: string; location?: string } | null;
       const eventDate = new Date(`${ev?.date ?? ""} ${ev?.time || "23:59"}`);
       if (eventDate.getTime() && eventDate < new Date()) {
-        return { valid: false, reason: "invalid", message: "Etkinlik tarihi geçmiş" };
+        return { valid: false, reason: "invalid", message: "Etkinlik tarihi geçmiş", eventId: ord.event_id as string };
       }
       return {
         valid: true,
+        eventId: ord.event_id as string,
         eventTitle: ev?.title,
         eventDate: ev?.date,
         eventTime: ev?.time,
@@ -181,6 +188,7 @@ export async function checkTicketCore(input: string | FormData): Promise<CheckRe
         valid: false,
         reason: "invalid",
         message: "Bu siparişte her bilet için ayrı kod var. Lütfen tekil bilet kodunu okutun.",
+        eventId: ticket.event_id,
       };
     }
 
@@ -190,6 +198,7 @@ export async function checkTicketCore(input: string | FormData): Promise<CheckRe
         valid: false,
         reason: "used",
         message: "Bu bilet daha önce kullanılmıştır.",
+        eventId: ticket.event_id,
         eventTitle: ticket.events?.title,
         eventDate: ticket.events?.date,
         eventTime: ticket.events?.time,
@@ -201,7 +210,7 @@ export async function checkTicketCore(input: string | FormData): Promise<CheckRe
     }
 
     if (ticket.status !== "confirmed" && ticket.status !== "completed") {
-      return { valid: false, reason: "invalid", message: "Bilet onaylanmamış" };
+      return { valid: false, reason: "invalid", message: "Bilet onaylanmamış", eventId: ticket.event_id };
     }
 
     // Some schemas do not include payment_status; only enforce when present.
@@ -210,7 +219,7 @@ export async function checkTicketCore(input: string | FormData): Promise<CheckRe
       ticket.payment_status &&
       ticket.payment_status !== "paid"
     ) {
-      return { valid: false, reason: "invalid", message: "Ödeme yapılmamış" };
+      return { valid: false, reason: "invalid", message: "Ödeme yapılmamış", eventId: ticket.event_id };
     }
 
     // Etkinlik tarih/saatini kontrol et (saat yoksa gün sonu varsayılır)
@@ -220,11 +229,12 @@ export async function checkTicketCore(input: string | FormData): Promise<CheckRe
     const now = new Date();
     
     if (eventDate < now) {
-      return { valid: false, reason: "invalid", message: "Etkinlik tarihi geçmiş" };
+      return { valid: false, reason: "invalid", message: "Etkinlik tarihi geçmiş", eventId: ticket.event_id };
     }
 
     return {
       valid: true,
+      eventId: ticket.event_id,
       eventTitle: ticket.events.title,
       eventDate: ticket.events.date,
       eventTime: ticket.events.time,
@@ -252,5 +262,32 @@ export async function checkTicket(input: string | FormData): Promise<CheckResult
           : "Bu işlem için yetkiniz yok.",
     };
   }
-  return checkTicketCore(input);
+  const result = await checkTicketCore(input);
+  if (auth.roles.includes("controller") && !auth.roles.includes("admin")) {
+    if (!result.eventId && (result.valid || ("reason" in result && result.reason === "used"))) {
+      return {
+        valid: false,
+        reason: "error",
+        message: "Etkinlik yetkisi doğrulanamadı.",
+      };
+    }
+    if (result.eventId) {
+      const access = await checkControllerEventAccess(
+        getSupabaseAdmin(),
+        auth.user.id,
+        result.eventId
+      );
+      if ("reason" in access) {
+        return {
+          valid: false,
+          reason: "error",
+          message:
+            access.reason === "unassigned"
+              ? "Bu etkinlik için kontrolör olarak görevlendirilmemişsiniz."
+              : "Etkinlik yetkiniz doğrulanamadı.",
+        };
+      }
+    }
+  }
+  return result;
 }

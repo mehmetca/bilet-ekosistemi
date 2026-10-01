@@ -33,6 +33,18 @@ type DisplayUser = {
   email: string | null;
   created_at?: string;
   roles: string[];
+  full_name?: string;
+  phone?: string;
+};
+type ControlEvent = {
+  id: string;
+  title: string;
+  date: string;
+  time?: string | null;
+};
+type ControllerAssignment = {
+  controller_user_id: string;
+  event_id: string;
 };
 type ControllerRequest = {
   id: string;
@@ -47,13 +59,29 @@ type ControllerRequest = {
 function KullanicilarContent() {
   const { accessToken, loading: authLoading } = useSimpleAuth();
   const [users, setUsers] = useState<DisplayUser[]>([]);
+  const [events, setEvents] = useState<ControlEvent[]>([]);
+  const [controllerAssignments, setControllerAssignments] = useState<ControllerAssignment[]>([]);
+  const [controllerAssignmentTableReady, setControllerAssignmentTableReady] = useState(true);
   const [organizerRequests, setOrganizerRequests] = useState<OrganizerRequest[]>([]);
   const [controllerRequests, setControllerRequests] = useState<ControllerRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [viewingRequest, setViewingRequest] = useState<OrganizerRequest | null>(null);
   const [newUserEmail, setNewUserEmail] = useState("");
-  const [newUserRole, setNewUserRole] = useState<"admin" | "controller">("controller");
+  const [newUserRole, setNewUserRole] = useState<"admin">("admin");
+  const [showControllerForm, setShowControllerForm] = useState(false);
+  const [creatingController, setCreatingController] = useState(false);
+  const [controllerForm, setControllerForm] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
+  const [controllerEventIds, setControllerEventIds] = useState<string[]>([]);
+  const [editingControllerId, setEditingControllerId] = useState<string | null>(null);
+  const [assignmentDraft, setAssignmentDraft] = useState<string[]>([]);
+  const [savingAssignment, setSavingAssignment] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!accessToken) return;
@@ -66,8 +94,18 @@ function KullanicilarContent() {
         const err = await res.json().catch(() => ({}));
         throw new Error((err as { error?: string }).error || "Veriler yüklenemedi");
       }
-      const data = (await res.json()) as { users?: DisplayUser[]; organizerRequests?: OrganizerRequest[]; controllerRequests?: ControllerRequest[] };
+      const data = (await res.json()) as {
+        users?: DisplayUser[];
+        events?: ControlEvent[];
+        controllerAssignments?: ControllerAssignment[];
+        controllerAssignmentTableReady?: boolean;
+        organizerRequests?: OrganizerRequest[];
+        controllerRequests?: ControllerRequest[];
+      };
       setUsers(data.users || []);
+      setEvents(data.events || []);
+      setControllerAssignments(data.controllerAssignments || []);
+      setControllerAssignmentTableReady(data.controllerAssignmentTableReady !== false);
       setOrganizerRequests((data.organizerRequests as OrganizerRequest[]) || []);
       setControllerRequests((data.controllerRequests as ControllerRequest[]) || []);
     } catch (error) {
@@ -77,6 +115,82 @@ function KullanicilarContent() {
       setLoading(false);
     }
   }, [accessToken]);
+
+  const controllerUsers = users.filter((user) => user.roles.includes("controller"));
+  const controllerCountForEvent = (eventId: string) =>
+    new Set(
+      controllerAssignments
+        .filter((assignment) => assignment.event_id === eventId)
+        .map((assignment) => assignment.controller_user_id)
+    ).size;
+
+  async function handleCreateController(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!accessToken || creatingController) return;
+    setCreatingController(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: authHeaders(accessToken, true),
+        body: JSON.stringify({
+          action: "createController",
+          ...controllerForm,
+          eventIds: controllerEventIds,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        alert(data.error || "Kontrolör oluşturulamadı.");
+        return;
+      }
+      setControllerForm({ firstName: "", lastName: "", email: "", phone: "", password: "" });
+      setControllerEventIds([]);
+      setShowControllerForm(false);
+      await fetchData();
+      alert("Kontrolör hesabı oluşturuldu.");
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Kontrolör oluşturulamadı.");
+    } finally {
+      setCreatingController(false);
+    }
+  }
+
+  function beginControllerAssignment(user: DisplayUser) {
+    setEditingControllerId(user.user_id);
+    setAssignmentDraft(
+      controllerAssignments
+        .filter((assignment) => assignment.controller_user_id === user.user_id)
+        .map((assignment) => assignment.event_id)
+    );
+  }
+
+  async function handleSaveControllerEvents(userId: string) {
+    if (!accessToken || savingAssignment) return;
+    setSavingAssignment(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: authHeaders(accessToken, true),
+        body: JSON.stringify({
+          action: "assignControllerEvents",
+          userId,
+          eventIds: assignmentDraft,
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        alert(data.error || "Etkinlik atamaları kaydedilemedi.");
+        return;
+      }
+      await fetchData();
+      setEditingControllerId(null);
+      setAssignmentDraft([]);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "Etkinlik atamaları kaydedilemedi.");
+    } finally {
+      setSavingAssignment(false);
+    }
+  }
 
   useEffect(() => {
     if (authLoading) return;
@@ -111,7 +225,7 @@ function KullanicilarContent() {
       }
       alert("Kullanıcı başarıyla oluşturuldu!");
       setNewUserEmail("");
-      setNewUserRole("controller");
+      setNewUserRole("admin");
       setShowAddForm(false);
       fetchData();
     } catch (error) {
@@ -285,18 +399,129 @@ function KullanicilarContent() {
   return (
     <div className="p-8">
       <div className="max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-slate-900">
             Kullanıcı Yönetimi
           </h1>
-          <button
-            onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700"
-          >
-            <Plus className="h-4 w-4" />
-            Rol Ekle
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowControllerForm((open) => !open)}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-700 px-4 py-2 font-semibold text-white hover:bg-primary-800"
+            >
+              <Plus className="h-4 w-4" />
+              Kontrolör oluştur
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(true)}
+              className="rounded-lg border border-slate-300 bg-white px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
+            >
+              Rol ekle
+            </button>
+          </div>
         </div>
+
+        {showControllerForm && (
+          <form onSubmit={handleCreateController} className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+            <div className="mb-4">
+              <h2 className="text-lg font-semibold text-slate-900">Yeni kontrolör hesabı</h2>
+              <p className="mt-1 text-sm text-slate-600">Hesap bu formdan oluşturulur. Etkinlik seçmezsen kontrolör giriş yapabilir ama bilet kontrol edemez.</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <label className="text-sm font-medium text-slate-700">
+                Ad
+                <input
+                  required
+                  value={controllerForm.firstName}
+                  onChange={(e) => setControllerForm((form) => ({ ...form, firstName: e.target.value }))}
+                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal"
+                  autoComplete="given-name"
+                />
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Soyad
+                <input
+                  required
+                  value={controllerForm.lastName}
+                  onChange={(e) => setControllerForm((form) => ({ ...form, lastName: e.target.value }))}
+                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal"
+                  autoComplete="family-name"
+                />
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                E-posta
+                <input
+                  required
+                  type="email"
+                  value={controllerForm.email}
+                  onChange={(e) => setControllerForm((form) => ({ ...form, email: e.target.value }))}
+                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal"
+                  autoComplete="email"
+                />
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                Telefon
+                <input
+                  required
+                  type="tel"
+                  value={controllerForm.phone}
+                  onChange={(e) => setControllerForm((form) => ({ ...form, phone: e.target.value }))}
+                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal"
+                  autoComplete="tel"
+                />
+              </label>
+              <label className="text-sm font-medium text-slate-700">
+                İlk şifre
+                <input
+                  required
+                  type="password"
+                  minLength={8}
+                  value={controllerForm.password}
+                  onChange={(e) => setControllerForm((form) => ({ ...form, password: e.target.value }))}
+                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal"
+                  autoComplete="new-password"
+                />
+              </label>
+            </div>
+
+            <fieldset className="mt-5">
+              <legend className="mb-2 text-sm font-semibold text-slate-800">Görevli olacağı etkinlikler</legend>
+              {events.length === 0 ? (
+                <p className="text-sm text-slate-500">Atanabilecek etkinlik bulunamadı.</p>
+              ) : (
+                <div className="grid max-h-56 gap-2 overflow-y-auto rounded-lg border border-slate-200 p-3 sm:grid-cols-2">
+                  {events.map((event) => (
+                    <label key={event.id} className="flex items-start gap-2 rounded-md p-2 text-sm text-slate-700 hover:bg-slate-50">
+                      <input
+                        type="checkbox"
+                        checked={controllerEventIds.includes(event.id)}
+                        onChange={(e) => setControllerEventIds((ids) => e.target.checked ? [...ids, event.id] : ids.filter((id) => id !== event.id))}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        <span className="block font-medium">{event.title || "Adsız etkinlik"}</span>
+                        <span className="text-xs text-slate-500">
+                          {event.date ? new Date(event.date).toLocaleDateString("tr-TR") : "Tarih yok"}
+                          {" · "}{controllerCountForEvent(event.id)} kontrolör atandı
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </fieldset>
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button type="button" onClick={() => setShowControllerForm(false)} className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+                İptal
+              </button>
+              <button type="submit" disabled={creatingController} className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-50">
+                {creatingController ? "Oluşturuluyor..." : "Kontrolör hesabını oluştur"}
+              </button>
+            </div>
+          </form>
+        )}
 
         {/* Rol Ekle Formu */}
         {showAddForm && (
@@ -323,10 +548,9 @@ function KullanicilarContent() {
                 </label>
                 <select
                   value={newUserRole}
-                  onChange={(e) => setNewUserRole(e.target.value as "admin" | "controller")}
+                  onChange={(e) => setNewUserRole(e.target.value as "admin")}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
                 >
-                  <option value="controller">Kontrolör</option>
                   <option value="admin">Yönetici</option>
                 </select>
               </div>
@@ -347,6 +571,108 @@ function KullanicilarContent() {
             </div>
           </div>
         )}
+
+        <section className="mb-6 rounded-xl border border-slate-200 bg-white">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-5 py-4">
+            <div>
+              <h2 className="font-semibold text-slate-900">Kontrolör hesapları ({controllerUsers.length})</h2>
+              <p className="mt-1 text-sm text-slate-600">Her kontrolör yalnızca burada atandığı etkinliklerde bilet sorgulayabilir ve giriş işaretleyebilir.</p>
+            </div>
+          </div>
+          {!controllerAssignmentTableReady && (
+            <div className="border-b border-amber-200 bg-amber-50 px-5 py-3 text-sm text-amber-900">
+              Etkinlik atama tablosu henüz kurulmamış. Supabase SQL Editor’da <code>supabase/migrations/120_controller_event_assignments.sql</code> migration’ını çalıştırın; etkinlik atamaları ve bilet kontrolü migration tamamlanana kadar kapalıdır.
+            </div>
+          )}
+          {controllerUsers.length === 0 ? (
+            <p className="p-5 text-sm text-slate-500">Henüz kontrolör hesabı yok.</p>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {controllerUsers.map((controller) => {
+                const assignedEvents = controllerAssignments
+                  .filter((assignment) => assignment.controller_user_id === controller.user_id)
+                  .map((assignment) => events.find((event) => event.id === assignment.event_id))
+                  .filter((event): event is ControlEvent => Boolean(event));
+                const isEditing = editingControllerId === controller.user_id;
+                return (
+                  <article key={controller.user_id} className="p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-slate-900">
+                          {controller.full_name || "İsim bilgisi yok"}
+                        </h3>
+                        <p className="text-sm text-slate-600">{controller.email || "E-posta yok"}</p>
+                        <p className="text-sm text-slate-600">{controller.phone || "Telefon yok"}</p>
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {assignedEvents.length > 0 ? assignedEvents.map((event) => (
+                            <span key={event.id} className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700">
+                              {event.title}
+                            </span>
+                          )) : (
+                            <span className="text-xs font-medium text-amber-700">Etkinlik atanmamış</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => isEditing ? setEditingControllerId(null) : beginControllerAssignment(controller)}
+                          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        >
+                          {isEditing ? "Kapat" : "Etkinlikleri düzenle"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteUser(controller)}
+                          className="rounded-lg border border-red-200 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                        >
+                          Kontrolörü sil
+                        </button>
+                      </div>
+                    </div>
+
+                    {isEditing && (
+                      <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                        <fieldset>
+                          <legend className="mb-2 text-sm font-semibold text-slate-800">Atanmış etkinlikler</legend>
+                          <div className="grid max-h-56 gap-2 overflow-y-auto sm:grid-cols-2">
+                            {events.map((event) => (
+                              <label key={event.id} className="flex items-start gap-2 rounded-md bg-white p-2 text-sm text-slate-700">
+                                <input
+                                  type="checkbox"
+                                  checked={assignmentDraft.includes(event.id)}
+                                  onChange={(e) => setAssignmentDraft((ids) => e.target.checked ? [...ids, event.id] : ids.filter((id) => id !== event.id))}
+                                  className="mt-0.5"
+                                />
+                                <span>
+                                  <span className="block font-medium">{event.title || "Adsız etkinlik"}</span>
+                                  <span className="text-xs text-slate-500">
+                                    {event.date ? new Date(event.date).toLocaleDateString("tr-TR") : "Tarih yok"}
+                                    {" · "}{controllerCountForEvent(event.id)} kontrolör atandı
+                                  </span>
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </fieldset>
+                        <div className="mt-3 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => void handleSaveControllerEvents(controller.user_id)}
+                            disabled={savingAssignment}
+                            className="rounded-lg bg-primary-700 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-800 disabled:opacity-50"
+                          >
+                            {savingAssignment ? "Kaydediliyor..." : "Atamaları kaydet"}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         {controllerRequests.length > 0 && (
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-6">

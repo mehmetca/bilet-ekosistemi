@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkTicketCore } from "@/app/kontrol/actions";
 import { requireRole } from "@/lib/api-auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkControllerEventAccess } from "@/lib/controller-event-access";
 
 /**
  * Bilet kontrol API - MultiTicketScanner ve diğer istemciler için.
@@ -24,6 +25,38 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const result = await checkTicketCore(formData);
+    if (auth.roles.includes("controller") && !auth.roles.includes("admin")) {
+      if (!result.eventId && (result.valid || ("reason" in result && result.reason === "used"))) {
+        return NextResponse.json(
+          {
+            valid: false,
+            reason: "error",
+            message: "Etkinlik yetkisi doğrulanamadı.",
+          },
+          { status: 403 }
+        );
+      }
+      if (result.eventId) {
+        const access = await checkControllerEventAccess(
+          auth.supabase,
+          auth.user.id,
+          result.eventId
+        );
+        if ("reason" in access) {
+          return NextResponse.json(
+            {
+              valid: false,
+              reason: "error",
+              message:
+                access.reason === "unassigned"
+                  ? "Bu etkinlik için kontrolör olarak görevlendirilmemişsiniz."
+                  : "Etkinlik yetkiniz doğrulanamadı.",
+            },
+            { status: access.reason === "unassigned" ? 403 : 500 }
+          );
+        }
+      }
+    }
     return NextResponse.json(result);
   } catch (error) {
     console.error("check-ticket API error:", error);

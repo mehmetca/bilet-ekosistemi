@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { SupabaseClient, User } from "@supabase/supabase-js";
 import { requireRole } from "@/lib/api-auth";
 import { extractTicketCode } from "@/lib/ticket-code";
+import { checkControllerEventAccess } from "@/lib/controller-event-access";
 
 type CheckinAuth = {
   user: User;
@@ -12,44 +13,20 @@ type CheckinAuth = {
 async function requireCheckinScope(
   supabase: SupabaseClient,
   auth: CheckinAuth,
+  eventId: string | null,
   eventCreatorId: string | null
 ): Promise<NextResponse | null> {
   if (auth.roles.includes("admin")) return null;
 
   if (auth.roles.includes("controller")) {
-    const { data: assignments, error } = await supabase
-      .from("organizer_controllers")
-      .select("organizer_user_id")
-      .eq("controller_user_id", auth.user.id);
-
-    if (error) {
-      console.error("checkin-ticket controller assignment error:", {
-        message: error.message,
-        code: error.code,
-        details: error.details,
-        hint: error.hint,
-      });
+    const access = await checkControllerEventAccess(supabase, auth.user.id, eventId);
+    if ("reason" in access && access.reason === "error") {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Yetki kapsamı doğrulanamadı.",
-        },
+        { success: false, message: "Etkinlik yetkisi doğrulanamadı." },
         { status: 500 }
       );
     }
-
-    const allowedOrganizerIds = new Set(
-      (assignments || [])
-        .map((assignment) => assignment.organizer_user_id as string | null)
-        .filter((id): id is string => Boolean(id))
-    );
-
-    // Migration 067: atanmamış kontrolör (tabloda satır yok) tüm etkinliklerde check-in yapabilir.
-    if (allowedOrganizerIds.size === 0) {
-      return null;
-    }
-
-    if (!eventCreatorId || !allowedOrganizerIds.has(eventCreatorId)) {
+    if ("reason" in access) {
       return NextResponse.json(
         { success: false, message: "Bu etkinliğe check-in yetkiniz yok." },
         { status: 403 }
@@ -156,6 +133,7 @@ export async function POST(request: NextRequest) {
       const scopeError = await requireCheckinScope(
         supabase,
         auth,
+        parentOrder.event_id as string | null,
         parentEvent?.created_by_user_id ?? null
       );
       if (scopeError) return scopeError;
@@ -231,6 +209,7 @@ export async function POST(request: NextRequest) {
       const scopeError = await requireCheckinScope(
         supabase,
         auth,
+        parentOrder.event_id as string | null,
         parentEvent?.created_by_user_id ?? null
       );
       if (scopeError) return scopeError;
@@ -310,7 +289,12 @@ export async function POST(request: NextRequest) {
 
     const event = order.events as { created_by_user_id?: string } | null;
     const eventCreatorId = event?.created_by_user_id ?? null;
-    const scopeError = await requireCheckinScope(supabase, auth, eventCreatorId);
+    const scopeError = await requireCheckinScope(
+      supabase,
+      auth,
+      order.event_id as string | null,
+      eventCreatorId
+    );
     if (scopeError) return scopeError;
 
     const { data: updatedOrders, error: updateError } = await supabase
