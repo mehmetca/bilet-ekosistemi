@@ -36,9 +36,9 @@ export async function checkTicketCore(input: string | FormData): Promise<CheckRe
   const rawCode =
     typeof input === "string" ? input : String(input.get("ticket_code") || "");
   const ticketCode = extractTicketCode(rawCode);
-  const supabase = getSupabaseAdmin();
-  
+
   try {
+    const supabase = getSupabaseAdmin();
     if (!ticketCode) {
       return { valid: false, reason: "invalid", message: "Bilet kodu zorunludur." };
     }

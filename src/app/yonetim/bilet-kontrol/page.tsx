@@ -21,7 +21,7 @@ export default function BiletKontrolPage() {
 
   const checkTicketViaApi = useCallback(async (code: string): Promise<CheckResult> => {
     const { data: { session } } = await supabase.auth.getSession();
-    const token = session?.access_token;
+    let token = session?.access_token;
     if (!token) {
       return {
         valid: false,
@@ -29,14 +29,35 @@ export default function BiletKontrolPage() {
         message: "Oturum bulunamadı. Lütfen tekrar giriş yapın.",
       };
     }
-    const formData = new FormData();
-    formData.append("ticket_code", code);
-    const res = await fetch("/api/check-ticket", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
-      body: formData,
-    });
-    return (await res.json()) as CheckResult;
+
+    const doCheck = (accessToken: string) => {
+      const formData = new FormData();
+      formData.append("ticket_code", code);
+      return fetch("/api/check-ticket", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${accessToken}` },
+        body: formData,
+      });
+    };
+
+    let res = await doCheck(token);
+    // Access token süresi dolmuş olabilir; oturumu yenileyip bir kez daha dene.
+    if (res.status === 401) {
+      try {
+        const { data: refreshed } = await supabase.auth.refreshSession();
+        if (refreshed.session?.access_token) {
+          token = refreshed.session.access_token;
+          res = await doCheck(token);
+        }
+      } catch {
+        /* yenileme başarısız olursa mevcut sonucu döndür */
+      }
+    }
+    const data = (await res.json().catch(() => ({}))) as CheckResult;
+    if (!res.ok) {
+      console.error("[bilet-kontrol] check-ticket API yanıtı:", res.status, data);
+    }
+    return data;
   }, []);
 
   // URL'dan kod — yalnızca oturum + yetki doğrulandıktan sonra otomatik kontrol
@@ -302,7 +323,7 @@ export default function BiletKontrolPage() {
                       ? "Bu bilet daha önce kullanılmıştır."
                       : "reason" in result && result.reason === "invalid"
                         ? result.message || "Bilet geçersiz."
-                        : "Bir hata oluştu. Lütfen tekrar deneyin."}
+                        : (result as { message?: string; error?: string }).message || (result as { error?: string }).error || "Bir hata oluştu. Lütfen tekrar deneyin."}
                 </div>
 
                 {"reason" in result && result.reason === "used" && result.eventTitle && (

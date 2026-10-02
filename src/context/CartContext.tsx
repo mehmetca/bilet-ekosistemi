@@ -312,12 +312,18 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           })();
 
           if (event === "SIGNED_OUT") {
-            // Çıkış: sepeti ve sahibi temizle
+            // Yalnızca gerçek bir kullanıcının sepetini temizle; misafir sepetini koru
+            // (oturum süresi dolsa da sepetteki biletler kaybolmasın).
+            const hadOwner = (() => {
+              try { return !!localStorage.getItem(CART_OWNER_KEY); } catch { return false; }
+            })();
             try { localStorage.removeItem(CART_OWNER_KEY); } catch { /* ignore */ }
-            setItems([]);
-            setReservationExpiresAt(null);
-            try { localStorage.removeItem(CART_STORAGE_KEY); } catch { /* ignore */ }
-            try { localStorage.removeItem(CART_EXPIRY_KEY); } catch { /* ignore */ }
+            if (hadOwner) {
+              setItems([]);
+              setReservationExpiresAt(null);
+              try { localStorage.removeItem(CART_STORAGE_KEY); } catch { /* ignore */ }
+              try { localStorage.removeItem(CART_EXPIRY_KEY); } catch { /* ignore */ }
+            }
             return;
           }
 
@@ -465,15 +471,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Sepete ilk öğe eklenirken, eğer henüz kayıtlı sahip yoksa oturumu al ve kaydet.
   const stampCartOwnerIfNeeded = useCallback(() => {
     if (typeof window === "undefined") return;
-    try {
-      if (localStorage.getItem(CART_OWNER_KEY)) return; // Zaten kayıtlı
-    } catch { return; }
-    // Async: mevcut kullanıcıyı çek ve kaydet
+    // Async: mevcut kullanıcıyı çek. Oturum varsa sahibini kaydet; yoksa (misafir)
+    // bayat sahip anahtarını temizle ki girişte sepet yanlışlıkla silinmesin.
     import("@/lib/supabase-client").then(({ supabase }) => {
       supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session?.user?.id) {
-          try { localStorage.setItem(CART_OWNER_KEY, session.user.id); } catch { /* ignore */ }
-        }
+        try {
+          if (session?.user?.id) {
+            localStorage.setItem(CART_OWNER_KEY, session.user.id);
+          } else {
+            localStorage.removeItem(CART_OWNER_KEY);
+          }
+        } catch { /* ignore */ }
       }).catch(() => { /* ignore */ });
     }).catch(() => { /* ignore */ });
   }, []);

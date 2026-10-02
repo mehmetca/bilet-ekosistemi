@@ -139,7 +139,7 @@ export default function KontrolPage() {
                 ? "Bu bilet daha önce kullanılmıştır."
                 : "reason" in result && result.reason === "invalid"
                   ? result.message || "Bilet geçersiz."
-                  : "Bir hata oluştu. Lütfen tekrar deneyin."}
+                  : (result as { message?: string; error?: string }).message || (result as { error?: string }).error || "Bir hata oluştu. Lütfen tekrar deneyin."}
           </div>
         )}
       </div>
