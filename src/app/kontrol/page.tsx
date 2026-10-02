@@ -66,6 +66,14 @@ export default function KontrolPage() {
     void checkTicket(code).then(setResult).finally(() => setLoading(false));
   }, [authLoading, codeParam, user, isStaff, userRole]);
 
+  // Oturum sona erdiyse (unauthenticated) hata ekranı yerine ana sayfaya yönlendir
+  useEffect(() => {
+    if (!result || result.valid) return;
+    if ("message" in result && /giriş yapmanız gerekiyor/.test(String(result.message || ""))) {
+      window.location.replace("/");
+    }
+  }, [result]);
+
   useEffect(() => {
     if (!canShowDashboard) return;
     let cancelled = false;

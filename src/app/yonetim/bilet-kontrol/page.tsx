@@ -23,11 +23,9 @@ export default function BiletKontrolPage() {
     const { data: { session } } = await supabase.auth.getSession();
     let token = session?.access_token;
     if (!token) {
-      return {
-        valid: false,
-        reason: "error",
-        message: "Oturum bulunamadı. Lütfen tekrar giriş yapın.",
-      };
+      // Oturum yok → ana sayfaya yönlendir
+      window.location.replace("/");
+      return { valid: false, reason: "error", message: "Oturumunuz sona erdi." };
     }
 
     const doCheck = (accessToken: string) => {
@@ -56,6 +54,10 @@ export default function BiletKontrolPage() {
     const data = (await res.json().catch(() => ({}))) as CheckResult;
     if (!res.ok) {
       console.error("[bilet-kontrol] check-ticket API yanıtı:", res.status, data);
+    }
+    if (res.status === 401) {
+      // Oturum sona erdi → hata ekranı yerine ana sayfaya yönlendir
+      window.location.replace("/");
     }
     return data;
   }, []);
