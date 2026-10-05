@@ -2,8 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, FileCode, Bot, User, Loader2 } from "lucide-react";
-// Projenizde zaten ekli olan markdown önizleme bileşenini içe aktarıyoruz
 import MarkdownPreview from "@uiw/react-markdown-preview";
+import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
 interface Message {
   role: "user" | "assistant";
@@ -11,6 +11,7 @@ interface Message {
 }
 
 export default function AIChatPage() {
+  const { accessToken } = useSimpleAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -33,10 +34,13 @@ export default function AIChatPage() {
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({
-          messages: messages, // Geçmiş hafıza
-          currentMessage: messageContent // Yeni soru
+          messages: messages,
+          currentMessage: messageContent,
         }),
       });
 
