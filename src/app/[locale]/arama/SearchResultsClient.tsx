@@ -155,39 +155,39 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-ink-50">
       <main className="site-container py-8">
-        <div className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
-          <h1 className="mb-4 text-2xl font-bold text-slate-900">{pageTitle}</h1>
+        <div className="rounded-lg border border-ink-200 bg-white p-4 sm:p-6">
+          <h1 className="mb-4 text-2xl font-bold text-ink-900">{pageTitle}</h1>
           <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-400" />
               <input
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder={t("searchPlaceholder")}
-                className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-10 pr-3 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="h-11 w-full rounded-lg border border-ink-300 bg-white pl-10 pr-3 text-sm text-ink-900 focus:border-gold-500 focus:outline-none focus:ring-1 focus:ring-gold-500"
               />
             </div>
             <button
               type="submit"
-              className="h-11 rounded-lg bg-primary-600 px-5 font-semibold text-white hover:bg-primary-700"
+              className="h-11 rounded-lg bg-gold-500 px-5 font-semibold text-ink-950 hover:bg-gold-400"
             >
               {t("search")}
             </button>
           </form>
         </div>
 
-        <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4 sm:p-6">
-          <h2 className="mb-4 text-xl font-bold text-slate-900">
+        <div className="mt-6 rounded-lg border border-ink-200 bg-white p-4 sm:p-6">
+          <h2 className="mb-4 text-xl font-bold text-ink-900">
             {t("upcomingEvents")}
-            <span className="ml-2 text-sm font-normal text-slate-500">({results.length})</span>
+            <span className="ml-2 text-sm font-normal text-ink-500">({results.length})</span>
           </h2>
 
           {results.length === 0 ? (
-            <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <p className="font-medium text-slate-800">{t("noEventsForFilter")}</p>
+            <div className="rounded-lg border border-ink-200 bg-ink-50 p-4">
+              <p className="font-medium text-ink-800">{t("noEventsForFilter")}</p>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -195,8 +195,8 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
                 const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
                 const href = eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug);
                 return (
-                  <Link key={event.id} href={href} className="overflow-hidden rounded-xl border border-slate-200 bg-white hover:shadow-md">
-                    <div className="relative aspect-[3/4] bg-slate-100">
+                  <Link key={event.id} href={href} className="overflow-hidden rounded-lg border border-ink-200 bg-white hover:shadow-card">
+                    <div className="relative aspect-[3/4] bg-ink-100">
                       <CoverImage
                         src={event.image_url}
                         alt={localized.title || event.title || "Event"}
@@ -211,8 +211,8 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
                       />
                     </div>
                     <div className="p-4">
-                      <h3 className="line-clamp-2 font-semibold text-slate-900">{localized.title || event.title}</h3>
-                      <div className="mt-3 space-y-2 text-sm text-slate-600">
+                      <h3 className="line-clamp-2 font-semibold text-ink-900">{localized.title || event.title}</h3>
+                      <div className="mt-3 space-y-2 text-sm text-ink-600">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 flex-shrink-0" />
                         {event.date ? formatEventDateWithMonth(event.date, locale as "tr" | "de" | "en" | "ku" | "ckb") : ""} • {event.time ?? ""}
@@ -223,10 +223,10 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
                       </div>
                     </div>
                       <div className="mt-3 flex items-center justify-between">
-                        <span className="font-bold text-primary-600">
+                        <span className="font-bold text-gold-700">
                           {Number(event.price_from) > 0 ? formatPrice(Number(event.price_from), event.currency) : t("free")}
                         </span>
-                        <span className="text-sm font-medium text-primary-600">{t("buyTicket")} →</span>
+                        <span className="text-sm font-medium text-gold-700">{t("buyTicket")} →</span>
                       </div>
                       {isEventPastByLocalDateTime(event.date, event.time) && (
                         <p className="mt-2 text-xs font-medium text-red-600">{t("eventEndedBanner")}</p>

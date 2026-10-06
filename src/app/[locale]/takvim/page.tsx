@@ -9,7 +9,7 @@ export default async function TakvimPage() {
     const events = await getEventsForCalendar();
 
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen bg-ink-50">
         <Header />
         
         <main className="site-container py-8">
@@ -17,8 +17,8 @@ export default async function TakvimPage() {
         </main>
 
         {/* Footer */}
-        <footer className="border-t border-slate-200 bg-white py-8 mt-16">
-          <div className="site-container py-0 text-center text-sm text-slate-500">
+        <footer className="border-t border-ink-200 bg-white py-8 mt-16">
+          <div className="site-container py-0 text-center text-sm text-ink-500">
             {new Date().getFullYear()} KurdEvents
           </div>
         </footer>
@@ -27,10 +27,10 @@ export default async function TakvimPage() {
   } catch (error) {
     console.error("TakvimPage error:", error);
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-ink-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-slate-900 mb-4">Hata Oluştu</h1>
-          <p className="text-slate-600">Takvim sayfası yüklenirken bir hata oluştu.</p>
+          <h1 className="text-2xl font-bold text-ink-900 mb-4">Hata Oluştu</h1>
+          <p className="text-ink-600">Takvim sayfası yüklenirken bir hata oluştu.</p>
         </div>
       </div>
     );

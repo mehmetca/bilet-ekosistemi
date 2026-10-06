@@ -32,12 +32,12 @@ export default function BilgilendirmeLayout({
   const isB2BPage = pathname?.includes("/b2b");
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-ink-50">
       <Header />
       <div className="site-container py-6">
         <Link
           href={isB2BPage ? "/bilgilendirme" : "/"}
-          className="inline-flex items-center gap-2 text-slate-600 hover:text-primary-600 mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-ink-600 hover:text-gold-800 mb-6 transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
           {isB2BPage ? t("infoMenu.backToInfo") : t("common.backToHome")}
@@ -50,8 +50,8 @@ export default function BilgilendirmeLayout({
           <div className="flex flex-col md:flex-row gap-8">
             {/* Sol menü - Bilgilendirme & Sözleşmeler */}
             <aside className="w-full md:w-[260px] shrink-0">
-              <nav className="sticky top-24 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3 px-2">
+              <nav className="sticky top-24 rounded-lg border border-ink-200 bg-white p-4 shadow-card">
+                <h2 className="text-sm font-semibold text-ink-500 uppercase tracking-wider mb-3 px-2">
                   {t("infoMenu.title")}
                 </h2>
                 <ul className="space-y-1">
@@ -64,8 +64,8 @@ export default function BilgilendirmeLayout({
                           href={href}
                           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                             isActive
-                              ? "bg-primary-50 text-primary-700"
-                              : "text-slate-700 hover:bg-slate-100"
+                              ? "bg-gold-50 text-gold-700"
+                              : "text-ink-700 hover:bg-ink-100"
                           }`}
                         >
                           <Icon className="h-4 w-4 shrink-0" />
@@ -74,13 +74,13 @@ export default function BilgilendirmeLayout({
                       </li>
                     );
                   })}
-                  <li className="pt-2 mt-2 border-t border-slate-200">
+                  <li className="pt-2 mt-2 border-t border-ink-200">
                     <Link
                       href={ORGANIZATOR_DESTEK_ITEM.href}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         pathname === ORGANIZATOR_DESTEK_ITEM.href || pathname?.endsWith("/organizator-destek")
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-slate-700 hover:bg-slate-100"
+                          ? "bg-gold-50 text-gold-700"
+                          : "text-ink-700 hover:bg-ink-100"
                       }`}
                     >
                       <OrganizatorDestekIcon className="h-4 w-4 shrink-0" />
@@ -92,8 +92,8 @@ export default function BilgilendirmeLayout({
                       href={B2B_MENU_ITEM.href}
                       className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                         pathname === B2B_MENU_ITEM.href || pathname?.endsWith("/b2b")
-                          ? "bg-primary-50 text-primary-700"
-                          : "text-slate-700 hover:bg-slate-100"
+                          ? "bg-gold-50 text-gold-700"
+                          : "text-ink-700 hover:bg-ink-100"
                       }`}
                     >
                       <B2BMenuIcon className="h-4 w-4 shrink-0" />

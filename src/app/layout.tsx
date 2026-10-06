@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
@@ -8,7 +8,13 @@ import { getSiteUrl } from "@/lib/site-url";
 import { buildOgImageUrl } from "@/lib/seo/locale-path-metadata";
 import { validateEnv } from "@/lib/env-validation";
 
-const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap" });
+const inter = Inter({ subsets: ["latin", "latin-ext"], display: "swap", variable: "--font-sans" });
+/** Kültür-sanat yönü: afiş geleneğinden gelen yüksek kontrastlı serif başlık yüzü. */
+const playfair = Playfair_Display({
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  variable: "--font-display",
+});
 
 /** Next 14.2+: viewport metadata'dan ayrı olmalı; aksi halde RSC/metadata uyarıları ve istikrarsız prefetch görülebilir. */
 export const viewport: Viewport = {
@@ -83,7 +89,7 @@ export default function RootLayout({
           </>
         ) : null}
       </head>
-      <body className={`${inter.className} notranslate`} translate="no">
+      <body className={`${inter.className} ${inter.variable} ${playfair.variable} notranslate`} translate="no">
         <SimpleAuthProvider>
           <Providers>{children}</Providers>
         </SimpleAuthProvider>

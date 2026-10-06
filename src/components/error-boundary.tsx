@@ -49,8 +49,8 @@ function DefaultErrorFallback({ error, retry }: { error?: Error; retry: () => vo
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8 max-w-md w-full text-center">
+    <div className="min-h-screen bg-ink-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg border border-ink-200 shadow-card p-8 max-w-md w-full text-center">
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg
             className="w-8 h-8 text-red-600"
@@ -66,25 +66,25 @@ function DefaultErrorFallback({ error, retry }: { error?: Error; retry: () => vo
             />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-slate-900 mb-2">
+        <h2 className="text-xl font-semibold text-ink-900 mb-2">
           Bir Hata Oluştu
         </h2>
-        <p className="text-slate-600 mb-6">
+        <p className="text-ink-600 mb-6">
           Sayfa yüklenirken bir sorun oluştu. Lütfen tekrar deneyin.
         </p>
         {error && (
           <details className="mb-4 text-left">
-            <summary className="text-sm text-slate-500 cursor-pointer">
+            <summary className="text-sm text-ink-500 cursor-pointer">
               Hata detayları
             </summary>
-            <pre className="mt-2 text-xs text-slate-400 bg-slate-50 p-2 rounded overflow-auto">
+            <pre className="mt-2 text-xs text-ink-400 bg-ink-50 p-2 rounded overflow-auto">
               {error.message}
             </pre>
           </details>
         )}
         <button
           onClick={handleRetry}
-          className="w-full bg-primary-600 text-white py-2 px-4 rounded-lg font-semibold hover:bg-primary-700 transition-colors"
+          className="w-full bg-gold-500 text-ink-950 py-2 px-4 rounded-lg font-semibold hover:bg-gold-400 transition-colors"
         >
           Tekrar Dene
         </button>

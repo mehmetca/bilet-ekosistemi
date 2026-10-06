@@ -1,11 +1,47 @@
 import type { Config } from "tailwindcss";
 
+/**
+ * KurdEvents marka paleti — logo'dan ölçüldü (public/images/kurdevent-logo.png):
+ * altın #D8A858 (%51) ve mürekkep #181818 (%32).
+ * primary = mürekkep ölçeği (aksiyon, link, odak) — açık zeminde yüksek kontrast.
+ * gold = marka vurgusu (ayraç, rozet, hover, koyu yüzey).
+ */
+const ink = {
+  50: "#F6F6F5",
+  100: "#E8E8E6",
+  200: "#D2D2CF",
+  300: "#B0B0AC",
+  400: "#878783",
+  500: "#6B6B67",
+  600: "#555552",
+  700: "#444442",
+  800: "#2A2A28",
+  900: "#181818",
+  950: "#0E0E0D",
+};
+
+const gold = {
+  50: "#FBF6EC",
+  100: "#F6EAD0",
+  200: "#EED6A4",
+  300: "#E4C079",
+  400: "#DCB066",
+  500: "#D8A858",
+  600: "#C08F3F",
+  700: "#9C7231",
+  800: "#7C5A29",
+  900: "#654A24",
+};
+
 const config: Config = {
   content: [
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/context/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/contexts/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/hooks/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/lib/**/*.{js,ts,jsx,tsx,mdx}",
+    "./src/utils/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
     /** Geniş monitörlerde içerik 1536px’e kadar uzamasın; yerel dar pencere ile benzer okuma genişliği (≈max-w-7xl). */
@@ -24,49 +60,21 @@ const config: Config = {
     },
     extend: {
       colors: {
-        border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
-        background: "hsl(var(--background))",
-        foreground: "hsl(var(--foreground))",
-        primary: {
-          50: "#eff6ff",
-          100: "#dbeafe",
-          200: "#bfdbfe",
-          300: "#93c5fd",
-          400: "#60a5fa",
-          500: "#3b82f6",
-          600: "#2563eb",
-          700: "#1d4ed8",
-          800: "#1e40af",
-          900: "#1e3a8a",
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
-        },
-        secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
-        },
-        destructive: {
-          DEFAULT: "hsl(var(--destructive))",
-          foreground: "hsl(var(--destructive-foreground))",
-        },
-        muted: {
-          DEFAULT: "hsl(var(--muted))",
-          foreground: "hsl(var(--muted-foreground))",
-        },
-        accent: {
-          DEFAULT: "hsl(var(--accent))",
-          foreground: "hsl(var(--accent-foreground))",
-        },
-        popover: {
-          DEFAULT: "hsl(var(--popover))",
-          foreground: "hsl(var(--popover-foreground))",
-        },
-        card: {
-          DEFAULT: "hsl(var(--card))",
-          foreground: "hsl(var(--card-foreground))",
-        },
+        primary: { ...ink, DEFAULT: ink[900] },
+        gold: { ...gold, DEFAULT: gold[500] },
+        ink,
+        paper: "#FAF8F4",
+      },
+      fontFamily: {
+        display: ["var(--font-display)", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "system-ui", "sans-serif"],
+      },
+      letterSpacing: {
+        widest2: "0.22em",
+      },
+      boxShadow: {
+        card: "0 1px 2px rgba(24,24,24,0.05), 0 8px 24px -12px rgba(24,24,24,0.12)",
+        lift: "0 2px 4px rgba(24,24,24,0.06), 0 16px 40px -16px rgba(24,24,24,0.18)",
       },
       keyframes: {
         "pulse-slow": {

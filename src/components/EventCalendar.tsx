@@ -84,18 +84,18 @@ export default function EventCalendar({ events }: EventCalendarProps) {
   return (
     <div className="space-y-6">
       {/* Başlık ve Filtreler */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6 text-center">{t("calendar.title")}</h1>
+      <div className="bg-white rounded-lg border border-ink-200 p-6">
+        <h1 className="text-4xl md:text-5xl font-bold text-ink-900 mb-6 text-center">{t("calendar.title")}</h1>
         
         {/* Filtreler */}
         <div className="flex flex-col md:flex-row gap-4">
           {/* Kategori Filtresi */}
           <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4 text-slate-500" />
+            <Filter className="h-4 w-4 text-ink-500" />
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:ring-primary-500"
+              className="rounded-lg border border-ink-300 px-3 py-2 text-sm focus:border-gold-500 focus:ring-gold-500"
             >
               <option value="all">{t("calendar.allCategories")}</option>
               {DISPLAY_CATEGORIES.map((key) => (
@@ -108,17 +108,17 @@ export default function EventCalendar({ events }: EventCalendarProps) {
 
           {/* Tarih Seçimi (tarayıcı takvimi; değer her zaman görünür) */}
           <div className="flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-slate-500 flex-shrink-0" />
+            <Calendar className="h-4 w-4 text-ink-500 flex-shrink-0" />
             <input
               type="date"
               value={selectedDate || new Date().toISOString().split('T')[0]}
               onChange={(e) => setSelectedDate(e.target.value || "")}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm text-slate-900 bg-white focus:border-primary-500 focus:ring-primary-500 min-w-[140px]"
+              className="rounded-lg border border-ink-300 px-3 py-2 text-sm text-ink-900 bg-white focus:border-gold-500 focus:ring-gold-500 min-w-[140px]"
             />
             {selectedDate && (
               <button
                 onClick={() => setSelectedDate("")}
-                className="text-sm text-primary-600 hover:text-primary-700"
+                className="text-sm text-gold-700 hover:text-gold-700"
               >
                 {t("calendar.clear")}
               </button>
@@ -128,7 +128,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
       </div>
 
       {/* Etkinlik Listesi */}
-      <div className="bg-white rounded-xl border border-slate-200 p-6">
+      <div className="bg-white rounded-lg border border-ink-200 p-6">
         <h2 className="card-title mb-4">
           {(() => {
             const parsed = selectedDate.trim() ? parseDateInput(selectedDate) : null;
@@ -138,15 +138,15 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 ? `${t(`categories.${selectedCategory}`)} ${t("calendar.eventsOfCategory")}`
                 : t("home.upcomingEvents");
           })()}
-          <span className="ml-2 text-sm font-normal text-slate-500">
+          <span className="ml-2 text-sm font-normal text-ink-500">
             ({upcomingEvents.length} {t("calendar.eventsCount")})
           </span>
         </h2>
 
         {upcomingEvents.length === 0 ? (
           <div className="text-center py-12">
-            <Calendar className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-            <p className="text-slate-500">
+            <Calendar className="h-16 w-16 mx-auto text-ink-300 mb-4" />
+            <p className="text-ink-500">
               {events.length === 0
                 ? t("calendar.noEventsYet")
                 : selectedDate
@@ -161,15 +161,15 @@ export default function EventCalendar({ events }: EventCalendarProps) {
               <Link
                 key={event.id}
                 href={eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug)}
-                className="flex h-full flex-col overflow-hidden rounded-2xl bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-shadow"
+                className="flex h-full flex-col overflow-hidden rounded-lg bg-white border border-ink-200 shadow-card hover:shadow-lift transition-shadow"
               >
-                <div className="relative aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-[3/4] bg-gradient-to-br from-gold-100 to-paper flex items-center justify-center overflow-hidden">
                   <CoverImage
                     src={event.image_url}
                     alt={event.title}
                     sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 25vw"
                     fallback={
-                      <div className="flex h-full w-full flex-col items-center justify-center text-primary-500">
+                      <div className="flex h-full w-full flex-col items-center justify-center text-gold-600">
                         <Music2 className="h-12 w-12" />
                         <span className="mt-2 text-xs font-medium">{t("calendar.noImage")}</span>
                       </div>
@@ -177,11 +177,11 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                   />
                 </div>
                 <div className="flex flex-1 flex-col p-5">
-                  <span className="text-xs font-medium text-primary-600">
+                  <span className="text-xs font-medium text-gold-700">
                     {event.category ? t(`categories.${event.category}`) : t("categories.event")}
                   </span>
-                  <h3 className="mt-2 font-semibold text-slate-900 line-clamp-2">{(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").title || event.title) ?? ""}</h3>
-                    <div className="mt-3 space-y-2 text-sm text-slate-500">
+                  <h3 className="mt-2 font-semibold text-ink-900 line-clamp-2">{(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").title || event.title) ?? ""}</h3>
+                    <div className="mt-3 space-y-2 text-sm text-ink-500">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 flex-shrink-0" />
                       {event.date ? formatEventDateWithMonth(event.date, locale as "tr" | "de" | "en" | "ku" | "ckb") : ""} • {event.time ?? ""}
@@ -192,12 +192,12 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     </div>
                   </div>
                   <div className="mt-auto pt-4 flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-                    <span className="font-bold text-lg text-primary-600">
+                    <span className="font-bold text-lg text-gold-700">
                       {Number(event.price_from) > 0
                         ? `${t("home.from")} ${formatPrice(Number(event.price_from), event.currency)}`
                         : t("home.free")}
                     </span>
-                    <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg text-sm font-medium text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100">
+                    <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg text-sm font-medium bg-gold-500 text-ink-950 hover:bg-gold-400">
                       {t("calendar.buyTicket")}
                     </span>
                   </div>
@@ -211,7 +211,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
           <div className="mt-12">
             <h3 className="card-title mb-4">
               {t("home.pastEvents")}
-              <span className="ml-2 text-sm font-normal text-slate-500">
+              <span className="ml-2 text-sm font-normal text-ink-500">
                 ({pastEvents.length} {t("calendar.eventsCount")})
               </span>
             </h3>
@@ -220,15 +220,15 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 <Link
                   key={`past-${event.id}`}
                   href={eventDetailPath((event as Event & { show_slug?: string | null }).show_slug, event.id, event.slug)}
-                  className="flex h-full flex-col overflow-hidden rounded-2xl bg-slate-50 border border-slate-300 opacity-80 hover:opacity-100 hover:shadow-lg transition-all"
+                  className="flex h-full flex-col overflow-hidden rounded-lg bg-ink-50 border border-ink-300 opacity-80 hover:opacity-100 hover:shadow-lift transition-all"
                 >
-                  <div className="relative aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                  <div className="relative aspect-[3/4] bg-gradient-to-br from-gold-100 to-paper flex items-center justify-center overflow-hidden">
                     <CoverImage
                       src={event.image_url}
                       alt={event.title}
                       sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 25vw"
                       fallback={
-                        <div className="flex h-full w-full flex-col items-center justify-center text-primary-500">
+                        <div className="flex h-full w-full flex-col items-center justify-center text-gold-600">
                           <Music2 className="h-12 w-12" />
                           <span className="mt-2 text-xs font-medium">{t("calendar.noImage")}</span>
                         </div>
@@ -241,13 +241,13 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     </div>
                   </div>
                   <div className="p-5">
-                    <span className="text-xs font-medium text-slate-600">
+                    <span className="text-xs font-medium text-ink-600">
                       {event.category ? t(`categories.${event.category}`) : t("categories.event")}
                     </span>
-                    <h3 className="mt-2 font-semibold text-slate-700 line-clamp-2">
+                    <h3 className="mt-2 font-semibold text-ink-700 line-clamp-2">
                       {(getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en").title || event.title) ?? ""}
                     </h3>
-                    <div className="mt-3 space-y-2 text-sm text-slate-500">
+                    <div className="mt-3 space-y-2 text-sm text-ink-500">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 flex-shrink-0" />
                         {event.date ? formatEventDateWithMonth(event.date, locale as "tr" | "de" | "en" | "ku" | "ckb") : ""} • {event.time ?? ""}
@@ -270,7 +270,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                   type="button"
                   onClick={() => setPastPage((p) => Math.max(1, p - 1))}
                   disabled={safePastPage <= 1}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-md border border-ink-300 px-3 py-1.5 text-sm text-ink-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   ←
                 </button>
@@ -281,8 +281,8 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     onClick={() => setPastPage(pageNum)}
                     className={`rounded-md px-3 py-1.5 text-sm ${
                       pageNum === safePastPage
-                        ? "bg-primary-600 text-white"
-                        : "border border-slate-300 text-slate-700 hover:bg-slate-50"
+                        ? "bg-gold-500 text-ink-950"
+                        : "border border-ink-300 text-ink-700 hover:bg-ink-50"
                     }`}
                   >
                     {pageNum}
@@ -292,7 +292,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                   type="button"
                   onClick={() => setPastPage((p) => Math.min(pastTotalPages, p + 1))}
                   disabled={safePastPage >= pastTotalPages}
-                  className="rounded-md border border-slate-300 px-3 py-1.5 text-sm text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-md border border-ink-300 px-3 py-1.5 text-sm text-ink-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   →
                 </button>

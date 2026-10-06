@@ -65,11 +65,11 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
     "%3C/text%3E%3C/svg%3E";
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8]">
+    <div className="min-h-screen bg-paper">
       <Header />
 
       {/* Hero - uzun şehir fotoğrafı */}
-      <div className="relative h-64 md:h-80 lg:h-96 w-full overflow-hidden bg-slate-800">
+      <div className="relative h-64 md:h-80 lg:h-96 w-full overflow-hidden bg-ink-800">
         <CoverImage
           src={imageUrl}
           alt={cityName}
@@ -89,11 +89,11 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
       <div className="site-container py-8">
         {/* Sıralama */}
         <div className="mb-6 flex flex-wrap items-center gap-3">
-          <span className="text-sm font-medium text-slate-600">{t("sortBy")}:</span>
+          <span className="text-sm font-medium text-ink-600">{t("sortBy")}:</span>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as "upcoming" | "popular")}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
+            className="rounded-lg border border-ink-300 px-4 py-2 text-sm"
           >
             <option value="upcoming">{tHome("sortBy.upcoming")}</option>
             <option value="popular">{tHome("sortBy.popular")}</option>
@@ -102,12 +102,12 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
 
         {/* Etkinlik listesi */}
         {sortedEvents.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center">
-            <Music2 className="mx-auto h-16 w-16 text-slate-300" />
-            <p className="mt-4 text-lg font-medium text-slate-600">{t("noEvents")}</p>
+          <div className="rounded-lg border border-ink-200 bg-white p-12 text-center">
+            <Music2 className="mx-auto h-16 w-16 text-ink-300" />
+            <p className="mt-4 text-lg font-medium text-ink-600">{t("noEvents")}</p>
             <Link
               href="/"
-              className="mt-4 inline-flex items-center gap-2 text-primary-600 hover:text-primary-700"
+              className="mt-4 inline-flex items-center gap-2 text-gold-700 hover:text-gold-700"
             >
               {t("viewAllEvents")}
               <ChevronRight className="h-4 w-4" />
@@ -121,44 +121,44 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
               return (
                 <div
                   key={event.id}
-                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-lg"
+                  className="overflow-hidden rounded-lg border border-ink-200 bg-white shadow-card transition-shadow hover:shadow-lift"
                 >
                   <Link href={eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}>
-                    <div className="relative aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                    <div className="relative aspect-[3/4] bg-gradient-to-br from-gold-100 to-paper flex items-center justify-center overflow-hidden">
                       <CoverImage
                         src={event.image_url}
                         alt={localizedEvent.title}
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        fallback={<Music2 className="h-16 w-16 text-primary-400" />}
+                        fallback={<Music2 className="h-16 w-16 text-ink-300" />}
                       />
                     </div>
                   </Link>
                   <div className="p-4">
-                    <span className="text-xs font-medium text-primary-600">
+                    <span className="text-xs font-medium text-gold-700">
                       {event.category ? tCat(event.category) : ""}
                     </span>
-                    <h3 className="mt-1 font-semibold text-slate-900 line-clamp-1">{localizedEvent.title}</h3>
-                    <div className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+                    <h3 className="mt-1 font-semibold text-ink-900 line-clamp-1">{localizedEvent.title}</h3>
+                    <div className="mt-2 flex items-center gap-2 text-sm text-ink-600">
                       <Calendar className="h-4 w-4 flex-shrink-0" />
                       <span>
                         {formatEventDateDMY(event.date)} • {event.time}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <div className="flex items-center gap-2 text-sm text-ink-600">
                       <MapPin className="h-4 w-4 flex-shrink-0" />
                       <span className="line-clamp-1">{localizedEvent.venue || event.venue}, {event.location}</span>
                     </div>
                   </div>
-                  <div className="border-t border-slate-100 px-4 pb-4 pt-3">
+                  <div className="border-t border-ink-100 px-4 pb-4 pt-3">
                     <div className="flex items-center justify-between">
-                      <span className="font-bold text-primary-600">
+                      <span className="font-bold text-gold-700">
                         {Number(event.price_from) > 0
                           ? `${tHome("from")} ${formatPrice(Number(event.price_from), event.currency)}`
                           : tHome("free")}
                       </span>
                       <Link
                         href={eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-medium text-white hover:bg-primary-700"
+                        className="inline-flex items-center gap-1 rounded-lg bg-gold-500 px-3 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400"
                       >
                         {tHome("buyTicket")}
                         <ChevronRight className="h-4 w-4" />
@@ -173,10 +173,10 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
 
         {/* Şehir hakkında bilgi */}
         {cityDesc && (
-          <section className="mt-16 rounded-2xl border border-slate-200 bg-white p-8">
-            <h2 className="mb-4 text-xl font-bold text-slate-900">{t("aboutCity", { city: cityName })}</h2>
+          <section className="mt-16 rounded-lg border border-ink-200 bg-white p-8">
+            <h2 className="mb-4 text-xl font-bold text-ink-900">{t("aboutCity", { city: cityName })}</h2>
             <div
-              className="prose prose-slate max-w-none text-slate-600"
+              className="prose prose-slate max-w-none text-ink-600"
               dangerouslySetInnerHTML={{ __html: cityDesc }}
             />
           </section>

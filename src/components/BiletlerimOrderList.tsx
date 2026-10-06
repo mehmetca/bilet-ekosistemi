@@ -44,12 +44,12 @@ export default function BiletlerimOrderList({
       {orders.map((order) => (
         <div
           key={order.id}
-          className="rounded-lg border border-slate-100 overflow-hidden hover:bg-slate-50"
+          className="rounded-lg border border-ink-100 overflow-hidden hover:bg-ink-50"
         >
           <div className="grid grid-cols-1 md:grid-cols-[minmax(280px,1fr)_auto] gap-4 p-4 items-center">
             <div className="min-w-0">
-              <p className="font-medium text-slate-900">{order.events?.title || "—"}</p>
-              <p className="text-sm text-slate-500 mt-0.5">
+              <p className="font-medium text-ink-900">{order.events?.title || "—"}</p>
+              <p className="text-sm text-ink-500 mt-0.5">
                 {order.events?.date && order.events?.time
                   ? `${order.events.date} ${order.events.time}`
                   : order.events?.date || "—"}
@@ -57,10 +57,10 @@ export default function BiletlerimOrderList({
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm">
-              <span className="text-slate-600">
+              <span className="text-ink-600">
                 {order.tickets?.name || order.tickets?.type || t("ticket")} × {order.quantity}
               </span>
-              <span className="font-medium text-slate-900">
+              <span className="font-medium text-ink-900">
                 €{Number(order.total_price).toFixed(2)}
               </span>
               <span
@@ -82,7 +82,7 @@ export default function BiletlerimOrderList({
                 <button
                   type="button"
                   onClick={() => onTogglePrint(order.id)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gold-700 hover:text-gold-700 hover:bg-gold-50 rounded-lg transition-colors"
                 >
                   <Printer className="h-4 w-4" aria-hidden />
                   {t("printTicket")}
@@ -101,7 +101,7 @@ export default function BiletlerimOrderList({
             </div>
           </div>
           {printOrderId === order.id && (order.ticket_code || (order.ticketCodes && order.ticketCodes.length > 0)) && order.status === "completed" && (
-            <div className="border-t border-slate-100 bg-slate-50 p-4">
+            <div className="border-t border-ink-100 bg-ink-50 p-4">
               <TicketPrint
                 ticketCode={order.ticket_code || order.ticketCodes?.[0] || ""}
                 eventTitle={order.events?.title || "—"}

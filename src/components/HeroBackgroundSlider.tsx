@@ -82,10 +82,10 @@ export default function HeroBackgroundSlider({
 
   if (loading || backgrounds.length === 0) {
     return lcpImageRendered ? (
-      <div className="absolute inset-0 z-0 bg-black/20" aria-hidden />
+      <div className="absolute inset-0 z-0 bg-ink-950/40" aria-hidden />
     ) : (
-      <div className="absolute inset-0 z-0 bg-slate-950">
-        <div className="absolute inset-0 bg-black/20" aria-hidden />
+      <div className="absolute inset-0 z-0 bg-ink-950">
+        <div className="absolute inset-0 bg-ink-950/40" aria-hidden />
       </div>
     );
   }
@@ -130,8 +130,9 @@ export default function HeroBackgroundSlider({
         );
       })}
       
-      {/* Dark Overlay for text readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/60"></div>
+      {/* Afiş okunurluğu: mürekkep degrade + genel ince mürekkep katmanı */}
+      <div className="poster-scrim absolute inset-0" aria-hidden />
+      <div className="absolute inset-0 bg-ink-950/70" aria-hidden />
     </div>
   );
 }

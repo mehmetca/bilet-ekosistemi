@@ -550,7 +550,7 @@ function SeatMapSvg({
   return (
     <svg
       viewBox={`0 0 ${mapW + pad * 2} ${mapH + stageH + stageGap + pad * 2}`}
-      className="w-full max-w-full rounded-lg border border-slate-200 bg-white block h-auto"
+      className="w-full max-w-full rounded-lg border border-ink-200 bg-white block h-auto"
       preserveAspectRatio="xMidYMid meet"
     >
       {/* Blok kartları: aynı bloka ait tüm kategori bölümleri tek rect + tek başlık olarak gösterilir. */}
@@ -896,19 +896,19 @@ function SeatMapWithZoom({
           <button
             type="button"
             onClick={() => setCategoryOpen((o) => !o)}
-            className="inline-flex w-[320px] max-w-[86vw] items-center justify-between rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex w-[320px] max-w-[86vw] items-center justify-between rounded-lg border border-ink-300 bg-white px-4 py-2.5 text-sm font-medium text-ink-700 hover:bg-ink-50"
           >
             <span className="truncate text-left">
               {categoryButtonLabel}
             </span>
             {categoryOpen ? (
-              <ChevronUp className="h-4 w-4 shrink-0 text-slate-500" />
+              <ChevronUp className="h-4 w-4 shrink-0 text-ink-500" />
             ) : (
-              <ChevronDown className="h-4 w-4 shrink-0 text-slate-500" />
+              <ChevronDown className="h-4 w-4 shrink-0 text-ink-500" />
             )}
           </button>
           {categoryOpen && (
-            <div className="absolute left-0 top-full z-20 mt-1 w-[320px] max-w-[86vw] overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+            <div className="absolute left-0 top-full z-20 mt-1 w-[320px] max-w-[86vw] overflow-hidden rounded-lg border border-ink-200 bg-white shadow-lift">
               <button
                 type="button"
                 onClick={() => {
@@ -916,7 +916,7 @@ function SeatMapWithZoom({
                   setCategoryOpen(false);
                 }}
                 className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm ${
-                  selectedSeatCategory === "all" ? "bg-primary-50" : "hover:bg-slate-50"
+                  selectedSeatCategory === "all" ? "bg-gold-50" : "hover:bg-ink-50"
                 }`}
               >
                 <span className="inline-flex items-center gap-1">
@@ -942,15 +942,15 @@ function SeatMapWithZoom({
                       setCategoryOpen(false);
                     }}
                       className={`flex w-full items-center justify-between gap-2 px-4 py-3 text-left text-sm ${
-                      active ? "bg-primary-50" : "hover:bg-slate-50"
+                      active ? "bg-gold-50" : "hover:bg-ink-50"
                     }`}
                   >
                     <span
                       className="h-3.5 w-3.5 rounded-[4px] shrink-0"
                       style={{ backgroundColor: getTicketCategoryColorHex(display) }}
                     />
-                    <span className="min-w-0 flex-1 truncate text-slate-800">{display}</span>
-                    <span className="shrink-0 font-semibold text-slate-700">
+                    <span className="min-w-0 flex-1 truncate text-ink-800">{display}</span>
+                    <span className="shrink-0 font-semibold text-ink-700">
                       {soldOut ? (
                         <span className="text-xs font-bold uppercase tracking-wide text-red-600">
                           {t("priceCategorySoldOut")}
@@ -969,7 +969,7 @@ function SeatMapWithZoom({
         <button
           type="button"
           onClick={zoomIn}
-          className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center justify-center rounded-lg border border-ink-300 bg-white px-2 py-1.5 text-sm font-medium text-ink-700 hover:bg-ink-50"
           aria-label={t("mapZoomIn")}
           title={t("mapZoomIn")}
         >
@@ -978,7 +978,7 @@ function SeatMapWithZoom({
         <button
           type="button"
           onClick={zoomOut}
-          className="inline-flex items-center justify-center rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+          className="inline-flex items-center justify-center rounded-lg border border-ink-300 bg-white px-2 py-1.5 text-sm font-medium text-ink-700 hover:bg-ink-50"
           aria-label={t("mapZoomOut")}
           title={t("mapZoomOut")}
         >
@@ -987,7 +987,7 @@ function SeatMapWithZoom({
         <button
           type="button"
           onClick={resetView}
-          className="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+          className="rounded-lg border border-ink-300 bg-white px-2.5 py-1.5 text-xs font-medium text-ink-700 hover:bg-ink-50"
         >
           {t("mapResetView")}
         </button>
@@ -995,7 +995,7 @@ function SeatMapWithZoom({
       </div>
       <div
         ref={containerRef}
-        className="overflow-hidden rounded-lg border border-slate-200 bg-white touch-none"
+        className="overflow-hidden rounded-lg border border-ink-200 bg-white touch-none"
         style={{
           minHeight: dynamicFrameMinHeight,
           maxHeight: "min(82vh, 860px)",
@@ -1118,7 +1118,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const renderNow = useMemo(() => new Date(nowIso), [nowIso]);
   const searchParams = useSearchParams();
   const showSeatGridDebug = searchParams.get("seatDebug") === "1";
-  const { addItem, addItemsBatch, removeSeatItem, removeItem, totalItems, items: cartItems } = useCart();
+  const { addItem, addItemsBatch, removeSeatItem, totalItems, items: cartItems } = useCart();
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const sortedTicketState = useMemo(() => {
@@ -1133,8 +1133,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     () => catalogTickets.filter((t) => Number(t.available || 0) > 0),
     [catalogTickets]
   );
-  /** Bilet tanımlı ama hiçbiri satılabilir değilse (hepsi tükendi) satış kapalıdır. */
-  const isSoldOut = catalogTickets.length > 0 && purchasableTickets.length === 0;
   const priceModeTickets = catalogTickets;
   const hasSeatingPlan = !!(event as Event & { seating_plan_id?: string }).seating_plan_id;
   const localized = useMemo(() => getLocalizedEvent(event as unknown as Record<string, unknown>, locale), [event, locale]);
@@ -2256,33 +2254,36 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
     <div className="min-h-screen bg-[#f5f6f8]">
       <Header />
       
-      <div className="border-b border-slate-200 bg-white">
+      <div className="border-b border-ink-200 bg-white">
         <div className="site-container py-8">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-3">
+          <span className="eyebrow mb-3 block">
             {tCat((event.category || "diger").toLowerCase())}
-          </p>
-          <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-stretch lg:gap-8">
-            <div className="order-2 flex flex-col lg:order-2">
-              <h1 className="text-3xl lg:text-4xl font-extrabold text-slate-900">{localized.title}</h1>
-              <div className="mt-4 flex flex-col gap-2 text-sm text-slate-700">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium">
-                    <Calendar className="h-4 w-4 shrink-0 text-primary-600" />
+          </span>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch">
+            <div className="flex flex-col">
+              <h1 className="font-display text-3xl font-semibold tracking-tight text-ink-900 lg:text-4xl">{localized.title}</h1>
+              <span className="rule-gold mt-4" />
+              <div className="mt-4 flex flex-col gap-2 text-sm text-ink-700">
+                <div className="flex flex-col gap-3">
+                  <span className="inline-flex items-center gap-2 rounded-md bg-ink-100 px-3 py-1.5">
+                    <Calendar className="h-4 w-4" />
                     {formatEventDateDMY(event.date)}
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium">
-                    <Clock className="h-4 w-4 shrink-0 text-primary-600" />
-                    {event.time || "20:00"}
+                  <span className="inline-flex items-center gap-2 rounded-md bg-ink-100 px-3 py-1.5">
+                    <Clock className="h-4 w-4" />
+                    {event.time}
                   </span>
+                </div>
+                <div className="flex flex-col gap-3">
                   {whereLine ? (
-                    <span className="inline-flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium sm:col-span-2">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
-                      <span className="min-w-0">{whereLine}</span>
+                    <span className="inline-flex items-center gap-2 rounded-md bg-ink-100 px-3 py-1.5">
+                      <MapPin className="h-4 w-4" />
+                      {whereLine}
                     </span>
                   ) : null}
                   {organizerDisplayName && (
-                    <span className="inline-flex items-center gap-2 rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-700 sm:col-span-2">
-                      <Users className="h-4 w-4 shrink-0" />
+                    <span className="inline-flex items-center gap-2 rounded-md bg-gold-50 px-3 py-1.5 text-gold-700">
+                      <Users className="h-4 w-4" />
                       {t("organizer")}: {organizerDisplayName}
                     </span>
                   )}
@@ -2290,27 +2291,33 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               </div>
               {(!isAmedSpor || Number(event.price_from || 0) > 0) && (
                 <div className="mt-5">
-                  <p className="text-sm text-slate-600">
-                    {t("tickets")}
+                  <p className="text-sm text-ink-600">
+                    {isAmedSpor ? "Kapora" : t("tickets")}
                   </p>
-                  <p className="text-2xl font-bold text-primary-700">
+                  <p className="text-2xl font-bold text-gold-700">
                     {isAmedSpor
                       ? formatPrice(Number(event.price_from || 0), event.currency)
-                      : Number(event.price_from || 0) > 0
-                        ? `${t("from")} ${formatPrice(Number(event.price_from || 0), event.currency)}`
-                        : t("comingSoon")}
-                    {!isAmedSpor && isSoldOut && (
-                      <span className="ml-3 align-middle text-lg font-extrabold uppercase tracking-wide text-red-600">
-                        {t("priceCategorySoldOut")}
-                      </span>
-                    )}
+                      : purchasableTickets.length > 0
+                        ? `${t("from")} ${formatPrice(
+                            Math.min(...purchasableTickets.map((tk) => Number(tk.price || 0))),
+                            event.currency
+                          )}`
+                        : catalogTickets.length > 0
+                          ? (
+                            <span className="text-lg font-extrabold uppercase tracking-wide text-red-600">
+                              {t("priceCategorySoldOut")}
+                            </span>
+                          )
+                          : isExternalOnlyEvent
+                          ? `${t("from")} ${formatPrice(Number(event.price_from || 0), event.currency)}`
+                          : t("comingSoon")}
                   </p>
                 </div>
               )}
               <div className="mt-auto pt-6 flex flex-wrap gap-2">
                 <button
                   onClick={toggleFavorite}
-                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-ink-300 bg-white px-3 py-2 text-sm font-semibold text-ink-700 hover:bg-ink-50"
                 >
                   <Heart className="h-4 w-4" />
                   {isFavorite ? t("favorited") : t("favorite")}
@@ -2321,7 +2328,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     onClick={() => setShareMenuOpen((open) => !open)}
                     aria-expanded={shareMenuOpen}
                     aria-haspopup="menu"
-                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="inline-flex items-center justify-center gap-2 rounded-lg border border-ink-300 bg-white px-3 py-2 text-sm font-semibold text-ink-700 hover:bg-ink-50"
                   >
                     <Share2 className="h-4 w-4" />
                     {t("share")}
@@ -2329,15 +2336,15 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   {shareMenuOpen && (
                     <div
                       role="menu"
-                      className="absolute left-0 z-30 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                      className="absolute left-0 z-30 mt-2 w-56 overflow-hidden rounded-lg border border-ink-200 bg-white py-1 shadow-lift"
                     >
                       <button
                         type="button"
                         role="menuitem"
                         onClick={shareToFacebook}
-                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:bg-ink-50"
                       >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#1877F2] text-xs font-bold text-white">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gold-500 text-xs font-bold text-ink-950">
                           f
                         </span>
                         Facebook
@@ -2346,7 +2353,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         type="button"
                         role="menuitem"
                         onClick={() => void shareToInstagram()}
-                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:bg-ink-50"
                       >
                         <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-[#f58529] via-[#dd2a7b] to-[#8134af] text-[10px] font-bold text-white">
                           IG
@@ -2357,9 +2364,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         type="button"
                         role="menuitem"
                         onClick={shareToWhatsApp}
-                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:bg-ink-50"
                       >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#25D366] text-[10px] font-bold text-white">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gold-500 text-[10px] font-bold text-ink-950">
                           WA
                         </span>
                         WhatsApp
@@ -2368,7 +2375,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         type="button"
                         role="menuitem"
                         onClick={shareToX}
-                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:bg-ink-50"
                       >
                         <span className="flex h-7 w-7 items-center justify-center rounded-md bg-black text-xs font-bold text-white">
                           𝕏
@@ -2379,42 +2386,42 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         type="button"
                         role="menuitem"
                         onClick={shareToLinkedIn}
-                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:bg-ink-50"
                       >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[#0A66C2] text-[10px] font-bold text-white">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gold-500 text-[10px] font-bold text-ink-950">
                           in
                         </span>
                         LinkedIn
                       </button>
-                      <div className="my-1 border-t border-slate-100" />
+                      <div className="my-1 border-t border-ink-100" />
                       <button
                         type="button"
                         role="menuitem"
                         onClick={() => void copyShareLink()}
-                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:bg-ink-50"
                       >
-                        <Link2 className="h-4 w-4 text-slate-500" />
+                        <Link2 className="h-4 w-4 text-ink-500" />
                         {t("copyLink")}
                       </button>
                       <button
                         type="button"
                         role="menuitem"
                         onClick={() => void shareViaSystem()}
-                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-slate-700 hover:bg-slate-50"
+                        className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:bg-ink-50"
                       >
-                        <MoreHorizontal className="h-4 w-4 text-slate-500" />
+                        <MoreHorizontal className="h-4 w-4 text-ink-500" />
                         {t("shareMore")}
                       </button>
                     </div>
                   )}
                 </div>
               </div>
-              {actionMessage && <p className="mt-2 text-xs text-slate-500">{actionMessage}</p>}
+              {actionMessage && <p className="mt-2 text-xs text-ink-500">{actionMessage}</p>}
               
             </div>
 
-            <div className="order-1 mx-auto w-full max-w-[280px] lg:order-1">
-              <div className="relative aspect-[3/4] overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
+            <div>
+              <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-ink-200 bg-ink-100">
                 {event.image_url ? (
                   <Image
                     src={resolvePublicImageUrl(event.image_url) ?? ""}
@@ -2426,7 +2433,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
-                    <Ticket className="h-16 w-16 text-slate-400" />
+                    <Ticket className="h-16 w-16 text-ink-400" />
                   </div>
                 )}
               </div>
@@ -2441,14 +2448,67 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           {/* Bilet Seçimi - geniş alan */}
           <div
             id="event-ticket-booking"
-            className="scroll-mt-24 bg-white rounded-xl border border-slate-200 p-4 sm:p-6 lg:p-8"
+            className="scroll-mt-24 bg-white rounded-lg border border-ink-200 p-4 sm:p-6 lg:p-8"
           >
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900 mb-4 sm:mb-6 border-b border-slate-100 pb-3">
+              <h2 className="font-display text-lg sm:text-xl font-semibold text-ink-900 mb-4 sm:mb-6 border-b border-ink-100 pb-3">
                 {!isAmedSpor ? (isExternalOnlyEvent ? t("ticketInfo") : t("ticketSelection")) : localized.title}
               </h2>
 
+              {isDraft && (
+                <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                  <p className="font-medium">Bu etkinlik taslak olarak işaretlendi</p>
+                  <p className="mt-1 text-sm">Taslak etkinlikler ana sayfada görünmez ve bilet satışı kapalıdır. Bu sayfa yalnızca önizleme içindir.</p>
+                </div>
+              )}
+
+              {isUnapproved && !isDraft && (
+                <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
+                  <p className="font-medium">Bu etkinlik onay bekliyor</p>
+                  <p className="mt-1 text-sm">Yönetici onayından sonra sitede yayına alınacak ve bilet satışı açılacaktır. Bu sayfa sadece önizleme içindir.</p>
+                </div>
+              )}
+
+              {/* Bestplatzbuchung / Saalplanbuchung – ikonlu seçim */}
+              {!isExternalOnlyEvent && !isAmedSpor && (
+                <div className="mb-8 grid sm:grid-cols-2 gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setBookingMode("price")}
+                    className={`rounded-lg border-2 p-6 text-left transition-all flex gap-4 items-start ${
+                      bookingMode === "price"
+                        ? "border-gold-500 bg-gold-50/80 text-ink-900 shadow-card shadow-gold-200/40"
+                        : "border-ink-200 bg-ink-50/50 text-ink-600 hover:border-ink-300 hover:bg-ink-100"
+                    }`}
+                  >
+                    <span className={`flex-shrink-0 rounded-lg p-3 ${bookingMode === "price" ? "bg-gold-100 text-gold-700" : "bg-ink-200 text-ink-500"}`}>
+                      <Ticket className="h-10 w-10" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="block font-bold text-lg">{t("bestplatzbuchung")}</span>
+                      <span className="mt-1 block text-sm opacity-90">{t("bestplatzbuchungDesc")}</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBookingMode("seat")}
+                    className={`rounded-lg border-2 p-6 text-left transition-all flex gap-4 items-start ${
+                      bookingMode === "seat"
+                        ? "border-gold-500 bg-gold-50/80 text-ink-900 shadow-card shadow-gold-200/40"
+                        : "border-ink-200 bg-ink-50/50 text-ink-600 hover:border-ink-300 hover:bg-ink-100"
+                    }`}
+                  >
+                    <span className={`flex-shrink-0 rounded-lg p-3 ${bookingMode === "seat" ? "bg-gold-100 text-gold-700" : "bg-ink-200 text-ink-500"}`}>
+                      <DoorOpen className="h-10 w-10" />
+                    </span>
+                    <div className="min-w-0">
+                      <span className="block font-bold text-lg">{t("saalplanbuchung")}</span>
+                      <span className="mt-1 block text-sm opacity-90">{t("saalplanbuchungDesc")}</span>
+                    </div>
+                  </button>
+                </div>
+              )}
               {!isExternalOnlyEvent && bookingMode === null && !isAmedSpor && (
-                <p className="mb-4 text-sm text-slate-600">
+                <p className="mb-8 text-sm text-ink-600">
                   {locale === "de"
                     ? "Bitte wählen Sie eine Buchungsart."
                     : locale === "en"
@@ -2457,81 +2517,23 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </p>
               )}
 
-              {isDraft && (
-                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
-                  <p className="font-medium">Bu etkinlik taslak olarak işaretlendi</p>
-                  <p className="mt-1 text-sm">Taslak etkinlikler ana sayfada görünmez ve bilet satışı kapalıdır. Bu sayfa yalnızca önizleme içindir.</p>
-                </div>
-              )}
-
-              {isUnapproved && !isDraft && (
-                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
-                  <p className="font-medium">Bu etkinlik onay bekliyor</p>
-                  <p className="mt-1 text-sm">Yönetici onayından sonra sitede yayına alınacak ve bilet satışı açılacaktır. Bu sayfa sadece önizleme içindir.</p>
-                </div>
-              )}
-
-              {/* Bestplatzbuchung / Saalplanbuchung – ikonlu seçim */}
-              {/* Koltuk planı (seating_plan_id) olan etkinliklerde her iki seçenek gösterilir.
-                  Planı olmayan etkinliklerde yalnızca "Fiyat kategorisine göre" gösterilir. */}
-              {!isExternalOnlyEvent && !isAmedSpor && (
-                <div className={`mb-8 grid gap-4 ${hasSeatingPlan ? "sm:grid-cols-2" : "sm:grid-cols-1 max-w-md"}`}>
-                  <button
-                    type="button"
-                    onClick={() => setBookingMode("price")}
-                    className={`rounded-2xl border-2 p-6 text-left transition-all flex gap-4 items-start ${
-                      bookingMode === "price"
-                        ? "border-primary-500 bg-primary-50/80 text-primary-900 shadow-md shadow-primary-200/50"
-                        : "border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
-                    }`}
-                  >
-                    <span className={`flex-shrink-0 rounded-xl p-3 ${bookingMode === "price" ? "bg-primary-100 text-primary-600" : "bg-slate-200 text-slate-500"}`}>
-                      <Ticket className="h-10 w-10" />
-                    </span>
-                    <div className="min-w-0">
-                      <span className="block font-bold text-lg">{t("bestplatzbuchung")}</span>
-                      <span className="mt-1 block text-sm opacity-90">{t("bestplatzbuchungDesc")}</span>
-                    </div>
-                  </button>
-                  {hasSeatingPlan && (
-                    <button
-                      type="button"
-                      onClick={() => setBookingMode("seat")}
-                      className={`rounded-2xl border-2 p-6 text-left transition-all flex gap-4 items-start ${
-                        bookingMode === "seat"
-                          ? "border-primary-500 bg-primary-50/80 text-primary-900 shadow-md shadow-primary-200/50"
-                          : "border-slate-200 bg-slate-50/50 text-slate-600 hover:border-slate-300 hover:bg-slate-100"
-                      }`}
-                    >
-                      <span className={`flex-shrink-0 rounded-xl p-3 ${bookingMode === "seat" ? "bg-primary-100 text-primary-600" : "bg-slate-200 text-slate-500"}`}>
-                        <DoorOpen className="h-10 w-10" />
-                      </span>
-                      <div className="min-w-0">
-                        <span className="block font-bold text-lg">{t("saalplanbuchung")}</span>
-                        <span className="mt-1 block text-sm opacity-90">{t("saalplanbuchungDesc")}</span>
-                      </div>
-                    </button>
-                  )}
-                </div>
-              )}
-
               {isExternalOnlyEvent && (
-                <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
-                  <p className="text-sm text-blue-900 mb-4">
+                <div className="mb-8 rounded-lg border border-gold-300 bg-gold-50 p-5">
+                  <p className="text-sm text-gold-700 mb-4">
                     {t("externalTicketInfo")}{" "}
                     {t("priceFrom")}: <strong>{formatPrice(Number(event.price_from || 0), event.currency)}</strong>
                   </p>
-                  <p className="text-sm text-blue-800 mb-3">
+                  <p className="text-sm text-gold-700 mb-3">
                     {t("externalTicketDisclaimer")}
                   </p>
-                  <p className="text-sm text-blue-800 mb-4">
+                  <p className="text-sm text-gold-700 mb-4">
                     {t("externalTicketDisclaimer2")} {t("externalTicketSupport")}
                   </p>
                   <a
                     href={externalTicketUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+                    className="inline-flex items-center gap-2 rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-ink-950 hover:bg-gold-400"
                   >
                     {t("buyExternal")}
                     <ChevronRight className="h-4 w-4" />
@@ -2539,19 +2541,20 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               )}
 
-              {/* Yer seçerek: oturum planı varsa koltuk listesi — plan yoksa bu blok artık görünmez
-                  (seat butonu yalnızca hasSeatingPlan durumunda render edildiğinden bu şart asla doğru olmaz;
-                  güvenlik katmanı olarak burada bırakıldı) */}
+              {/* Yer seçerek: oturum planı varsa koltuk listesi, yoksa bilgi mesajı */}
               {!isExternalOnlyEvent && bookingMode === "seat" && !hasSeatingPlan && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-6 text-center text-slate-600">
-                  <p className="font-medium">{t("noSeatingPlanMessage")}</p>
-                  <p className="mt-2 text-sm">{t("noSeatingPlanHint")}</p>
+                <div className="rounded-lg border border-ink-200 bg-ink-50 p-6 text-center text-ink-600">
+                  <p className="font-medium">Bu etkinlik için koltuk seçimi tanımlanmamış.</p>
+                  <p className="mt-2 text-sm">Bilet almak için &quot;Fiyat kategorisine göre bilet al&quot; seçeneğini kullanabilirsiniz.</p>
+                  <p className="mt-3 text-xs text-ink-500">
+                    Koltuk seçimini açmak için: Yönetim → Etkinlikler → bu etkinliği düzenle → Mekan seçin, &quot;Oturum planı&quot; alanından bir plan seçip kaydedin.
+                  </p>
                 </div>
               )}
               {!isExternalOnlyEvent && bookingMode === "seat" && hasSeatingPlan && (
-                <div className="rounded-xl border border-slate-200 bg-white p-6">
+                <div className="rounded-lg border border-ink-200 bg-white p-6">
                   {seatingPlanLoading && (!seatingPlanData || seatingPlanData.length === 0) ? (
-                    <p className="text-slate-500">{t("seatingPlanLoadingText")}</p>
+                    <p className="text-ink-500">{t("seatingPlanLoadingText")}</p>
                   ) : seatingPlanData && seatingPlanData.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
                       {/* Sol: Plan + harita/liste */}
@@ -2561,21 +2564,21 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             <strong>Bilet stoku yok.</strong> Koltukları işaretleyebilirsiniz; sepete eklemek için yönetimde bu etkinlik için en az bir bilet türü tanımlayıp adedi 0&apos;dan büyük yapın.
                           </div>
                         )}
-                        <p className="text-sm text-slate-600 mb-3">
+                        <p className="text-sm text-ink-600 mb-3">
                           {t("seatMapColorHint")}
                         </p>
                         <div className="flex gap-2 mb-4">
                           <button
                             type="button"
                             onClick={() => setSeatMapView("map")}
-                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "map" ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "map" ? "bg-gold-500 text-ink-950" : "bg-ink-100 text-ink-700 hover:bg-ink-200"}`}
                           >
                             {t("floorPlanViewTab")}
                           </button>
                           <button
                             type="button"
                             onClick={() => setSeatMapView("list")}
-                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "list" ? "bg-primary-600 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}
+                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "list" ? "bg-gold-500 text-ink-950" : "bg-ink-100 text-ink-700 hover:bg-ink-200"}`}
                           >
                             {t("listViewTab")}
                           </button>
@@ -2583,7 +2586,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             <button
                               type="button"
                               onClick={() => setSelectedSeatCategory("all")}
-                              className="ml-auto rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                              className="ml-auto rounded-lg border border-ink-300 bg-white px-3 py-2 text-xs font-medium text-ink-700 hover:bg-ink-50"
                             >
                               {t("resetSeatFilter")}
                             </button>
@@ -2593,8 +2596,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           <p
                             className={`mb-4 rounded-lg px-3 py-2 text-sm ${
                               /another customer|anderen kunden|başka bir kullanıcı/i.test(actionMessage)
-                                ? "border border-slate-900 bg-slate-900 font-semibold text-white"
-                                : "border border-slate-300 bg-white font-semibold text-slate-900"
+                                ? "border border-ink-900 bg-ink-900 font-semibold text-white"
+                                : "border border-ink-300 bg-white font-semibold text-ink-900"
                             }`}
                           >
                             {actionMessage}
@@ -2673,12 +2676,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             {seatingPlanData.map((section, sectionIdx) => {
                               const { ticket: sectionTicket, matchedBy } = getTicketForSection(section, sectionIdx, catalogTickets);
                               return (
-                                <div key={section.id} className="border border-slate-200 rounded-lg p-4">
-                                  <h4 className="font-semibold text-slate-900 mb-1">{section.name}</h4>
-                                  <p className="text-sm text-primary-600 mb-2">
+                                <div key={section.id} className="border border-ink-200 rounded-lg p-4">
+                                  <h4 className="font-display font-semibold text-ink-900 mb-1">{section.name}</h4>
+                                  <p className="text-sm text-gold-700 mb-2">
                                     {formatPrice(Number(sectionTicket.price || 0), event.currency)} {t("pricePerSeatSuffix")}
                                     {matchedBy === "index" && section.ticket_type_label && (
-                                      <span className="ml-2 text-xs text-slate-500">({section.ticket_type_label} → {sectionTicket.name || "—"})</span>
+                                      <span className="ml-2 text-xs text-ink-500">({section.ticket_type_label} → {sectionTicket.name || "—"})</span>
                                     )}
                                   </p>
                                   {section.rows.map((row) => {
@@ -2686,9 +2689,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                     return (
                                     <div key={row.id} className="mb-3">
                                       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 mb-1.5">
-                                        <span className="text-sm font-medium text-slate-600 w-16 shrink-0">{rowLabelWord} {row.row_label}</span>
-                                        <span className="text-xs font-semibold text-primary-800">{rowTk.name || "—"}</span>
-                                        <span className="text-xs text-slate-500">
+                                        <span className="text-sm font-medium text-ink-600 w-16 shrink-0">{rowLabelWord} {row.row_label}</span>
+                                        <span className="text-xs font-semibold text-gold-700">{rowTk.name || "—"}</span>
+                                        <span className="text-xs text-ink-500">
                                           {formatPrice(Number(rowTk.price || 0), event.currency)} / {seatLabelWord}
                                         </span>
                                       </div>
@@ -2717,12 +2720,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                               onClick={handleClick}
                                               className={`w-9 h-9 rounded-full text-sm font-medium transition-colors outline-none focus-visible:outline-none border-0 ring-0 shadow-none ${
                                                 isSold || isBlocked
-                                                  ? "bg-slate-300 text-slate-700 cursor-not-allowed"
+                                                  ? "bg-ink-300 text-ink-700 cursor-not-allowed"
                                                   : selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seat.id)
-                                                    ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                                                    ? "bg-ink-300 text-ink-500 cursor-not-allowed"
                                                   : isHeld
-                                                    ? "text-slate-900 cursor-pointer"
-                                                    : "text-slate-900 hover:bg-[#39ff14] hover:text-slate-900"
+                                                    ? "text-ink-900 cursor-pointer"
+                                                    : "text-ink-900 hover:bg-[#39ff14] hover:text-ink-900"
                                               } ${!isHeld && !isSold && !isBlocked && cartTotalTicketsCount >= maxTicketsPerOrder ? "opacity-50 cursor-not-allowed" : ""}`}
                                               style={
                                                 isSold || isBlocked || (selectableSeatIdsByCategory && !selectableSeatIdsByCategory.has(seat.id))
@@ -2761,9 +2764,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         )}
                       </div>
                       {/* Sağ: Deine Platze sidebar */}
-                      <aside className="lg:sticky lg:top-6 self-start rounded-xl border border-slate-200 bg-slate-50/80 p-4 h-fit">
-                        <p className="text-sm text-slate-600 mb-3">{t("ticketDeliveryNote")}</p>
-                        <h3 className="text-sm font-bold text-slate-800 mb-3">{t("deinePlatze")}</h3>
+                      <aside className="lg:sticky lg:top-6 self-start rounded-lg border border-ink-200 bg-ink-50/80 p-4 h-fit">
+                        <h3 className="font-display text-sm font-semibold text-ink-800 mb-3">{t("deinePlatze")}</h3>
                         {selectedSeatIds.size > 0 && seatingPlanData ? (
                           catalogTickets.length > 0 ? (() => {
                           const seatToSection = new Map<string, SeatPlanSection>();
@@ -2824,17 +2826,17 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             <>
                               <ul className="mb-4 space-y-2">
                                 {selectedSeatsList.map((item) => (
-                                  <li key={item.seatId} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-slate-100 px-3 py-2 text-sm shadow-sm">
-                                    <span className="text-slate-700 truncate" title={item.venueLine}>
+                                  <li key={item.seatId} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-ink-100 px-3 py-2 text-sm shadow-card">
+                                    <span className="text-ink-700 truncate" title={item.venueLine}>
                                       {item.venueLine}
                                     </span>
-                                    <span className="font-semibold text-primary-600 flex-shrink-0">{formatPrice(item.price, event.currency)}</span>
+                                    <span className="font-semibold text-gold-700 flex-shrink-0">{formatPrice(item.price, event.currency)}</span>
                                     <button
                                       type="button"
                                       onClick={() => {
                                         void handleSeatToggle(item.seatId);
                                       }}
-                                      className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
+                                      className="text-ink-400 hover:text-red-600 p-1 flex-shrink-0"
                                       aria-label={tCheckout("remove")}
                                     >
                                       ×
@@ -2847,32 +2849,28 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   {t("maxTicketsPerOrderSeatHint", { max: maxTicketsPerOrder })}
                                 </p>
                               )}
-                              <div className="mb-3 space-y-1 text-sm text-slate-700">
+                              <div className="mb-3 space-y-1 text-sm text-ink-700">
                                 <p>
                                   {t("seatsSelectedWithTotal", {
                                     count: selectedSeatIds.size,
+                                    total: formatPrice(totalPrice, event.currency),
                                   })}
                                 </p>
-                                <p className="flex items-center justify-between">
-                                  <strong>{tCheckout("total")}:</strong>
-                                  <span>{formatPrice(totalPrice, event.currency)}</span>
-                                </p>
-                                <p className="flex items-center justify-between">
-                                  <strong>{tCheckout("fees")}:</strong>
+                                <p>
+                                  {tCheckout("fees")}{" "}
                                   {processingFeePerTicket > 0 && seatCountForFee > 0 ? (
-                                    <span className="text-right">
-                                      <span className="text-slate-600">
+                                    <>
+                                      <span className="text-ink-600">
                                         ({formatPrice(processingFeePerTicket, event.currency)} × {seatCountForFee}){" "}
                                       </span>
-                                      {formatPrice(processingFeeTotal, event.currency)}
-                                    </span>
+                                      <strong>{formatPrice(processingFeeTotal, event.currency)}</strong>
+                                    </>
                                   ) : (
-                                    <span>{formatPrice(0, event.currency)}</span>
+                                    <strong>{formatPrice(0, event.currency)}</strong>
                                   )}
                                 </p>
-                                <p className="flex items-center justify-between">
-                                  <strong>{t("grandTotalLabel")}:</strong>
-                                  <span>{formatPrice(grandTotal, event.currency)}</span>
+                                <p className="font-semibold text-ink-900">
+                                  {t("grandTotalLabel")} {formatPrice(grandTotal, event.currency)}
                                 </p>
                               </div>
                               {(() => {
@@ -2886,7 +2884,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   <NextLink
                                     href={`/${locale}/sepet`}
                                     prefetch={false}
-                                    className="inline-flex w-full items-center justify-center rounded-xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                                    className="inline-flex w-full items-center justify-center rounded-lg bg-gold-500 px-4 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-400"
                                   >
                                     {tCheckout("goToCheckout")}
                                   </NextLink>
@@ -2939,7 +2937,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       setHasSeatSelectionAddedToCart(true);
                                     }}
                                     disabled={blockSeatSale || atCartTicketCap}
-                                    className="w-full rounded-xl bg-primary-600 px-4 py-3 text-white font-semibold hover:bg-primary-700 disabled:opacity-50"
+                                    className="w-full rounded-lg bg-gold-500 px-4 py-3 text-ink-950 font-semibold hover:bg-gold-400 disabled:opacity-50"
                                   >
                                     {tCheckout("addToCart")} ({selectedSeatIds.size})
                                   </button>
@@ -2978,8 +2976,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               </p>
                               <ul className="space-y-2">
                                 {selectedSeatsList.map((item) => (
-                                  <li key={item.seatId} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-slate-100 px-3 py-2 text-sm shadow-sm">
-                                    <span className="text-slate-700 truncate" title={item.venueLine}>
+                                  <li key={item.seatId} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-ink-100 px-3 py-2 text-sm shadow-card">
+                                    <span className="text-ink-700 truncate" title={item.venueLine}>
                                       {item.venueLine}
                                     </span>
                                     <button
@@ -2987,7 +2985,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       onClick={() => {
                                         void handleSeatToggle(item.seatId);
                                       }}
-                                      className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
+                                      className="text-ink-400 hover:text-red-600 p-1 flex-shrink-0"
                                       aria-label={tCheckout("remove")}
                                     >
                                       ×
@@ -3001,7 +2999,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         ) : (
                           hasSeatSelectionAddedToCart || cartSeatIdsForEvent.size > 0 ? (
                             <div className="space-y-3 py-4">
-                              <p className="text-sm text-slate-700">
+                              <p className="text-sm text-ink-700">
                                 {hasSeatSelectionAddedToCart
                                   ? locale === "de"
                                     ? "Ihre ausgewählten Plätze wurden in den Warenkorb gelegt."
@@ -3014,7 +3012,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       ? "You already have seats for this event in your shopping cart."
                                       : "Bu etkinlik için sepetinizde koltuklar bulunmaktadır."}
                               </p>
-                              <p className="text-sm text-slate-600">
+                              <p className="text-xs text-ink-500">
                                 {hasSeatSelectionAddedToCart
                                   ? locale === "de"
                                     ? "Bitte gehen Sie zum Warenkorb, um Ihre Buchung abzuschließen."
@@ -3031,14 +3029,14 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 <NextLink
                                   href={`/${locale}/sepet`}
                                   prefetch={false}
-                                  className="inline-flex items-center justify-center rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+                                  className="inline-flex items-center justify-center rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-ink-950 hover:bg-gold-400"
                                 >
                                   {tCheckout("goToCheckout")}
                                 </NextLink>
                               </div>
                             </div>
                           ) : (
-                            <p className="text-sm text-slate-500 py-4">
+                            <p className="text-sm text-ink-500 py-4">
                               {t("selectSeatsFromPlan")}
                             </p>
                           )
@@ -3046,18 +3044,18 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       </aside>
                     </div>
                   ) : (
-                    <p className="text-slate-500">Bu plan için henüz bölüm/sıra/koltuk tanımlanmamış.</p>
+                    <p className="text-ink-500">Bu plan için henüz bölüm/sıra/koltuk tanımlanmamış.</p>
                   )}
                 </div>
               )}
 
               {/* Amed Spor: önce form, sonra ödeme */}
               {isAmedSpor && !amedSporFormSubmitted && (
-                <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-5 shadow-sm">
-                  <p className="mb-2 font-medium text-slate-900">
+                <div className="rounded-lg border border-gold-100 bg-gold-50/60 p-5 shadow-card">
+                  <p className="mb-2 font-medium text-ink-900">
                     {t("amedSporFormRequired")}
                   </p>
-                  <p className="mb-5 text-sm text-slate-600">
+                  <p className="mb-5 text-sm text-ink-600">
                     {t("amedSporFormRequiredDesc")}
                   </p>
                   <button
@@ -3065,7 +3063,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     onClick={() => {
                       window.location.href = `/${locale}/etkinlik/${event.id}/amed-spor-form`;
                     }}
-                    className="w-full rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 sm:w-auto sm:min-w-[180px]"
+                    className="w-full bg-gold-500 text-ink-950 py-3 rounded-lg font-semibold hover:bg-gold-400"
                   >
                     {t("amedSporFillForm")}
                   </button>
@@ -3073,7 +3071,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               )}
 
               {isAmedSpor && amedSporFormSubmitted && (
-                <div className="rounded-xl border border-green-200 bg-green-50 p-6 mb-6">
+                <div className="rounded-lg border border-green-200 bg-green-50 p-6 mb-6">
                   <p className="text-green-900 mb-4">
                     {locale === "en"
                       ? "✓ Your form was submitted. Continue to the cart for payment if needed."
@@ -3119,7 +3117,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           window.location.href = `/${locale}/sepet`;
                         }, 600);
                       }}
-                      className="bg-primary-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-primary-700"
+                      className="bg-gold-500 text-ink-950 px-4 py-2 rounded-lg font-semibold hover:bg-gold-400"
                     >
                       {locale === "en" ? "Go to Cart" : "Sepete Git"}
                     </button>
@@ -3142,17 +3140,17 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
                   <div>
                     {catalogTickets.length === 0 ? (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
+                      <div className="rounded-lg border border-ink-200 bg-ink-50 p-4 text-ink-600">
                         {t("noTicketsAvailable")}
                       </div>
                     ) : (
-                      <div className="mb-8 overflow-hidden rounded-xl border border-slate-200">
-                        <div className="hidden bg-slate-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600 md:grid md:grid-cols-[minmax(0,1fr)_120px_170px]">
+                      <div className="mb-8 overflow-hidden rounded-lg border border-ink-200">
+                        <div className="hidden bg-ink-100 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-ink-600 md:grid md:grid-cols-[minmax(0,1fr)_120px_170px]">
                           <span>{t("ticketType")}</span>
                           <span>{t("price")}</span>
                           <span className="text-right">{t("quantity")}</span>
                         </div>
-                        <div className="divide-y divide-slate-200">
+                        <div className="divide-y divide-ink-200">
                           {catalogTickets.map((ticketType) => {
                             const availableAmount = effectiveAvailabilityForTicket(ticketType);
                             const isSoldOutRow = availableAmount <= 0;
@@ -3167,7 +3165,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               <div
                                 key={ticketType.id}
                                 className={`cursor-pointer px-5 py-4 transition-colors ${
-                                  rowSelected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
+                                  rowSelected ? "bg-gold-50" : "bg-white hover:bg-ink-50"
                                 }`}
                                 onClick={() => {
                                   setSelectedTicketType(ticketType.id);
@@ -3175,10 +3173,10 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               >
                                 <div className="grid items-center gap-4 md:grid-cols-[minmax(0,1fr)_120px_170px]">
                                   <div>
-                                    <p className="text-sm font-semibold text-slate-900">
+                                    <p className="text-sm font-semibold text-ink-900">
                                       {shortenTicketDisplayName(ticketType.name || ticketType.ticket_type || "Standart")}
                                     </p>
-                                    <p className="text-xs text-slate-500">
+                                    <p className="text-xs text-ink-500">
                                       {isSoldOutRow ? (
                                         <span className="font-extrabold uppercase tracking-wide text-red-600">
                                           {t("priceCategorySoldOut")}
@@ -3187,13 +3185,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                         <>
                                           {t("remaining")}: {availableAmount}
                                           {minSelectable > 1 && (
-                                            <span className="ml-1 text-primary-600"> · Min. {minSelectable} adet</span>
+                                            <span className="ml-1 text-gold-700"> · Min. {minSelectable} adet</span>
                                           )}
                                         </>
                                       )}
                                     </p>
                                   </div>
-                                  <p className="text-lg font-bold text-primary-700">{formatPrice(ticketType.price, event.currency)}</p>
+                                  <p className="text-lg font-bold text-gold-700">{formatPrice(ticketType.price, event.currency)}</p>
                                   <div className="flex items-center justify-end gap-2">
                                     {isSoldOutRow ? (
                                       <span className="text-right text-xs font-extrabold uppercase tracking-wide text-red-600">
@@ -3217,11 +3215,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                         });
                                       }}
                                       disabled={availableAmount <= 0 || isPastEvent || rowCount <= 0}
-                                      className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="h-9 w-9 rounded-md border border-ink-300 bg-white text-ink-700 hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       -
                                     </button>
-                                    <span className="w-8 text-center text-sm font-semibold text-slate-900">{rowCount}</span>
+                                    <span className="w-8 text-center text-sm font-semibold text-ink-900">{rowCount}</span>
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -3250,7 +3248,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                         });
                                       }}
                                       disabled={availableAmount <= 0 || isPastEvent || rowCount >= maxSelectable}
-                                      className="h-9 w-9 rounded-md border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                      className="h-9 w-9 rounded-md border border-ink-300 bg-white text-ink-700 hover:bg-ink-50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                       +
                                     </button>
@@ -3267,8 +3265,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
                     <div className="border-t pt-6">
                       <div className="mb-6 flex items-center justify-between">
-                        <span className="text-lg font-semibold text-slate-900">{t("totalPrice")}</span>
-                        <span className="text-3xl font-bold text-primary-700">
+                        <span className="text-lg font-semibold text-ink-900">{t("totalPrice")}</span>
+                        <span className="text-3xl font-bold text-gold-700">
                           {formatPrice(totalPrice, event.currency)}
                         </span>
                       </div>
@@ -3313,93 +3311,33 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           isPastEvent ||
                           selectedPriceTicketEntries.length === 0
                         }
-                        className="w-full rounded-lg bg-primary-600 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-primary-700 disabled:bg-slate-300 disabled:text-slate-500"
+                        className="w-full rounded-lg bg-gold-500 px-8 py-4 text-lg font-semibold text-ink-950 transition-colors hover:bg-gold-400 disabled:bg-ink-300 disabled:text-ink-500"
                       >
                         {tCheckout("addToCart")} ({selectedPriceTicketTotalCount})
                       </button>
                     </div>
                   </div>
 
-                  <aside className="rounded-2xl border border-slate-200 bg-white p-5 h-fit">
-                    <p className="text-sm text-slate-600 mb-3">{t("ticketDeliveryNote")}</p>
-                    <h3 className="mb-4 text-lg font-bold text-slate-900">{t("deinePlatze")}</h3>
+                  <aside className="rounded-lg border border-ink-200 bg-white p-5 h-fit">
+                    <h3 className="font-display mb-4 text-lg font-semibold text-ink-900">{t("deinePlatze")}</h3>
                     {priceCategorySidebarMergedRows.length > 0 ? (
                       <div>
-                        <ul className="mb-4 space-y-2">
-                          {priceCategorySidebarMergedRows.map((row) => (
-                            <li key={`price-cat-merged-${row.ticketId}`} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-slate-100 px-3 py-2 text-sm shadow-sm">
-                              <span className="text-slate-700 truncate" title={shortenTicketDisplayName(row.ticket.name || row.ticket.ticket_type || "Standart")}>
-                                {shortenTicketDisplayName(row.ticket.name || row.ticket.ticket_type || "Standart")}
-                                {row.displayQty > 1 ? <span className="text-slate-500"> × {row.displayQty}</span> : null}
-                              </span>
-                              <span className="font-semibold text-primary-600 flex-shrink-0">{formatPrice(Number(row.ticket.price || 0), event.currency)}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setTicketCountsByType((prev) => {
-                                    const next = { ...prev };
-                                    delete next[row.ticketId];
-                                    return next;
-                                  });
-                                  removeItem(row.ticketId);
-                                }}
-                                className="text-slate-400 hover:text-red-600 p-1 flex-shrink-0"
-                                aria-label={tCheckout("remove")}
-                              >
-                                ×
-                              </button>
+                        <ul className="space-y-1 text-sm text-ink-700">
+                          {priceCategorySidebarMergedRows.map((row, idx) => (
+                            <li key={`price-cat-merged-${row.ticketId}`}>
+                              {idx + 1}. {formatDeinePlatzPriceCategoryLine(row.ticket, event.currency, locale)} ×{" "}
+                              {row.displayQty}
                             </li>
                           ))}
                         </ul>
                         {showPriceSidebarBasketMixedHint ? (
-                          <p className="mt-3 text-xs leading-relaxed text-slate-600">
+                          <p className="mt-3 text-xs leading-relaxed text-ink-600">
                             {t("priceSidebarBasketMixedHint")}
                           </p>
                         ) : null}
-
-                        {(() => {
-                          const sidebarCount = priceCategorySidebarMergedRows.reduce((sum, row) => sum + row.displayQty, 0);
-                          const sidebarTotal = priceCategorySidebarMergedRows.reduce((sum, row) => sum + Number(row.ticket.price || 0) * row.displayQty, 0);
-                          const processingFeePerTicket =
-                            typeof event.checkout_processing_fee === "number" && event.checkout_processing_fee > 0
-                              ? Number(event.checkout_processing_fee)
-                              : 0;
-                          const processingFeeTotal = processingFeePerTicket * sidebarCount;
-                          const grandTotal = sidebarTotal + processingFeeTotal;
-                          return (
-                            <div className="mb-3 space-y-1 text-sm text-slate-700">
-                              <p>
-                                {t("seatsSelectedWithTotal", {
-                                  count: sidebarCount,
-                                })}
-                              </p>
-                              <p className="flex items-center justify-between">
-                                <strong>{tCheckout("total")}:</strong>
-                                <span>{formatPrice(sidebarTotal, event.currency)}</span>
-                              </p>
-                              <p className="flex items-center justify-between">
-                                <strong>{tCheckout("fees")}:</strong>
-                                {processingFeePerTicket > 0 && sidebarCount > 0 ? (
-                                  <span className="text-right">
-                                    <span className="text-slate-600">
-                                      ({formatPrice(processingFeePerTicket, event.currency)} × {sidebarCount}){" "}
-                                    </span>
-                                    {formatPrice(processingFeeTotal, event.currency)}
-                                  </span>
-                                ) : (
-                                  <span>{formatPrice(0, event.currency)}</span>
-                                )}
-                              </p>
-                              <p className="flex items-center justify-between">
-                                <strong>{t("grandTotalLabel")}:</strong>
-                                <span>{formatPrice(grandTotal, event.currency)}</span>
-                              </p>
-                            </div>
-                          );
-                        })()}
                       </div>
                     ) : (
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-ink-500">
                         {locale === "de"
                           ? "Wählen Sie eine Ticketkategorie und Menge."
                           : locale === "en"
@@ -3412,7 +3350,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <NextLink
                         href={`/${locale}/sepet`}
                         prefetch={false}
-                        className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700"
+                        className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-gold-500 px-4 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-400"
                       >
                         {tCheckout("goToCheckout")}
                       </NextLink>
@@ -3424,102 +3362,103 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
             {/* Etkinlik Hakkında – düzenli içerik + sağ özet panel */}
             <div className="mt-8 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-                <div className="mb-5 flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
-                  <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t("aboutEvent")}</h2>
-                  <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <section className="overflow-hidden rounded-lg border border-ink-200 bg-white p-6 sm:p-8">
+                <div className="mb-5 flex items-center justify-between gap-3 border-b border-ink-100 pb-4">
+                  <h2 className="font-display text-2xl font-semibold tracking-tight text-ink-900">{t("aboutEvent")}</h2>
+                  <span className="rule-gold mt-2" />
+                  <span className="rounded-full border border-ink-200 bg-ink-50 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-ink-600">
                     {t("informationBadge")}
                   </span>
                 </div>
                 <div className="prose prose-slate max-w-none">
                   {parsedDescription.content ? (
                     <div
-                      className="break-words [&_img]:h-auto [&_iframe]:max-w-full [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_*]:max-w-full whitespace-pre-line text-[15px] leading-7 text-slate-700 [&_p]:my-1 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-bold [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
+                      className="break-words [&_img]:h-auto [&_iframe]:max-w-full [&_table]:block [&_table]:w-full [&_table]:overflow-x-auto [&_pre]:whitespace-pre-wrap [&_pre]:break-words [&_*]:max-w-full whitespace-pre-line text-[15px] leading-7 text-ink-700 [&_p]:my-1 [&_h1]:mt-4 [&_h1]:mb-2 [&_h2]:mt-4 [&_h2]:mb-2 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-lg [&_h3]:font-bold [&_strong]:font-semibold [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5"
                       dangerouslySetInnerHTML={{ __html: parsedDescription.content }}
                     />
                   ) : (
-                    <p className="whitespace-pre-line text-[15px] leading-7 text-slate-700">
+                    <p className="whitespace-pre-line text-[15px] leading-7 text-ink-700">
                       {t("aboutPlaceholder")}
                     </p>
                   )}
                 </div>
               </section>
 
-              <aside className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 h-fit">
-                <h3 className="mb-4 text-base font-bold text-slate-900">
+              <aside className="rounded-lg border border-ink-200 bg-white p-5 sm:p-6 h-fit">
+                <h3 className="font-display mb-4 text-base font-semibold text-ink-900">
                   {t("atAGlance")}
                 </h3>
                 <div className="space-y-3">
-                  <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                    <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                  <div className="flex items-start gap-3 rounded-lg border border-ink-200 bg-ink-50 px-3 py-2.5">
+                    <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-ink-600" />
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
                         {t("date")}
                       </p>
-                      <p className="text-sm font-medium text-slate-800">{formatEventDateDMY(event.date)}</p>
+                      <p className="text-sm font-medium text-ink-800">{formatEventDateDMY(event.date)}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                  <div className="flex items-start gap-3 rounded-lg border border-ink-200 bg-ink-50 px-3 py-2.5">
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0 text-ink-600" />
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
                         {t("time")}
                       </p>
-                      <p className="text-sm font-medium text-slate-800">{event.time || "20:00"}</p>
+                      <p className="text-sm font-medium text-ink-800">{event.time || "20:00"}</p>
                     </div>
                   </div>
-                  <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                  <div className="flex items-start gap-3 rounded-lg border border-ink-200 bg-ink-50 px-3 py-2.5">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-600" />
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
                         {t("venue")}
                       </p>
-                      <p className="text-sm font-medium text-slate-800">{localized.venue || event.venue}</p>
+                      <p className="text-sm font-medium text-ink-800">{localized.venue || event.venue}</p>
                     </div>
                   </div>
                   {(event.address ?? "").trim() !== "" && (
-                    <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                    <div className="flex items-start gap-3 rounded-lg border border-ink-200 bg-ink-50 px-3 py-2.5">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-600" />
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
                           {t("addressLabel")}
                         </p>
-                        <p className="text-sm font-medium text-slate-800">{(event.address ?? "").trim()}</p>
+                        <p className="text-sm font-medium text-ink-800">{(event.address ?? "").trim()}</p>
                       </div>
                     </div>
                   )}
                   {(event.city ?? "").trim() !== "" && (
-                    <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                    <div className="flex items-start gap-3 rounded-lg border border-ink-200 bg-ink-50 px-3 py-2.5">
+                      <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-600" />
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
                           {t("city")}
                         </p>
-                        <p className="text-sm font-medium text-slate-800">{(event.city ?? "").trim()}</p>
+                        <p className="text-sm font-medium text-ink-800">{(event.city ?? "").trim()}</p>
                       </div>
                     </div>
                   )}
                   {(event.address ?? "").trim() === "" &&
                     (event.city ?? "").trim() === "" &&
                     (event.location ?? "").trim() !== "" && (
-                      <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                      <div className="flex items-start gap-3 rounded-lg border border-ink-200 bg-ink-50 px-3 py-2.5">
+                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-600" />
                         <div className="min-w-0">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
                             {t("location")}
                           </p>
-                          <p className="text-sm font-medium text-slate-800">{(event.location ?? "").trim()}</p>
+                          <p className="text-sm font-medium text-ink-800">{(event.location ?? "").trim()}</p>
                         </div>
                       </div>
                     )}
                   {organizerDisplayName && (
-                    <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
-                      <Users className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+                    <div className="flex items-start gap-3 rounded-lg border border-ink-200 bg-ink-50 px-3 py-2.5">
+                      <Users className="mt-0.5 h-4 w-4 shrink-0 text-ink-600" />
                       <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-ink-500">
                           {t("organizer")}
                         </p>
-                        <p className="text-sm font-medium text-slate-800">{organizerDisplayName}</p>
+                        <p className="text-sm font-medium text-ink-800">{organizerDisplayName}</p>
                       </div>
                     </div>
                   )}
@@ -3529,9 +3468,10 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
 
             {/* Mekan Bilgisi – tek blokta düzen */}
             {venue && (
-              <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-                <div className="mb-6 border-b border-slate-100 pb-4">
-                  <h2 className="text-2xl font-bold tracking-tight text-slate-900">{t("venueInfo")}</h2>
+              <section className="mt-8 rounded-lg border border-ink-200 bg-white p-6 sm:p-8">
+                <div className="mb-6 border-b border-ink-100 pb-4">
+                  <h2 className="font-display text-2xl font-semibold tracking-tight text-ink-900">{t("venueInfo")}</h2>
+                  <span className="rule-gold mt-2" />
                 </div>
                 <div
                   className={`grid gap-6 ${
@@ -3542,11 +3482,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 >
                   <div className="space-y-5">
                     {venuePhotoUrls.length > 0 && (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
-                        <h3 className="mb-2 text-base font-bold text-slate-900">
+                      <div className="rounded-lg border border-ink-200 bg-ink-50/60 p-4 sm:p-5">
+                        <h3 className="font-display mb-2 text-base font-semibold text-ink-900">
                           {locale === "de" ? "Fotos" : locale === "en" ? "Photos" : "Fotoğraflar"}
                         </h3>
-                        <p className="mb-3 text-sm text-slate-500">
+                        <p className="mb-3 text-sm text-ink-500">
                           {locale === "de"
                             ? "Tippen zum Vergrößern · Pfeiltasten in der Galerie"
                             : locale === "en"
@@ -3559,7 +3499,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                               key={`${url}-${idx}`}
                               type="button"
                               onClick={() => setVenueGalleryIndex(idx)}
-                              className="group relative h-16 w-24 overflow-hidden rounded-md border border-slate-200 bg-slate-100 text-left outline-none focus-visible:ring-2 focus-visible:ring-primary-500 sm:h-20 sm:w-28"
+                              className="group relative h-16 w-24 overflow-hidden rounded-md border border-ink-200 bg-ink-100 text-left outline-none focus-visible:ring-2 focus-visible:ring-gold-500 sm:h-20 sm:w-28"
                               aria-label={
                                 locale === "en"
                                   ? `Open photo ${idx + 1} in gallery`
@@ -3580,13 +3520,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       </div>
                     )}
                     {venue.transport_info && (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+                      <div className="rounded-lg border border-ink-200 bg-ink-50/60 p-4 sm:p-5">
                         <div className="mb-1 flex items-center gap-2">
-                          <Car className="h-4 w-4 text-primary-600" />
-                          <h3 className="text-base font-bold text-slate-900">{t("transport")}</h3>
+                          <Car className="h-4 w-4 text-gold-700" />
+                          <h3 className="font-display text-base font-semibold text-ink-900">{t("transport")}</h3>
                         </div>
                         <div
-                          className="prose prose-sm max-w-none text-slate-700 [&_p]:my-1 [&_ul]:my-2"
+                          className="prose prose-sm max-w-none text-ink-700 [&_p]:my-1 [&_ul]:my-2"
                           dangerouslySetInnerHTML={{ __html: normalizeDescriptionHtml(venue.transport_info) }}
                         />
                       </div>
@@ -3594,9 +3534,9 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     {(() => {
                       const mapUrl = extractMapEmbedUrl(venue.map_embed_url);
                       return mapUrl ? (
-                        <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
-                          <h3 className="mb-2 text-base font-bold text-slate-900">{t("map")}</h3>
-                          <div className="h-40 w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100 sm:h-52">
+                        <div className="rounded-lg border border-ink-200 bg-ink-50/60 p-4 sm:p-5">
+                          <h3 className="font-display mb-2 text-base font-semibold text-ink-900">{t("map")}</h3>
+                          <div className="h-40 w-full overflow-hidden rounded-lg border border-ink-200 bg-ink-100 sm:h-52">
                             <iframe
                               src={mapUrl}
                               width="100%"
@@ -3613,21 +3553,21 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       ) : null;
                     })()}
                     {venue.faq.length > 0 && (
-                      <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+                      <div className="rounded-lg border border-ink-200 bg-ink-50/60 p-4 sm:p-5">
                         <button
                           onClick={() => setVenueFaqOpen((o) => !o)}
-                          className="flex items-center gap-2 text-slate-900 font-semibold hover:text-primary-600"
+                          className="flex items-center gap-2 text-ink-900 font-semibold hover:text-gold-800"
                         >
                           <HelpCircle className="h-5 w-5" />
                           {t("faq")}
                           {venueFaqOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                         </button>
                         {venueFaqOpen && (
-                          <div className="mt-4 space-y-4 border-l-2 border-primary-200 pl-4">
+                          <div className="mt-4 space-y-4 border-l-2 border-gold-200 pl-4">
                             {venue.faq.map((item, i) => (
                               <div key={i}>
-                                <p className="font-medium text-slate-800">{item.soru}</p>
-                                <p className="mt-1 text-slate-600">{item.cevap}</p>
+                                <p className="font-medium text-ink-800">{item.soru}</p>
+                                <p className="mt-1 text-ink-600">{item.cevap}</p>
                               </div>
                             ))}
                           </div>
@@ -3639,18 +3579,18 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   {(venueEntranceRulesDisplay.entranceInfo !== "" || venueEntranceRulesDisplay.rules !== "") && (
                   <aside className="space-y-4">
                     {venueEntranceRulesDisplay.entranceInfo && (
-                      <div className="rounded-xl border border-slate-200 bg-white p-4">
+                      <div className="rounded-lg border border-ink-200 bg-white p-4">
                         <div className="mb-1 flex items-center gap-2">
-                          <DoorOpen className="h-4 w-4 text-primary-600" />
-                          <h3 className="text-sm font-bold uppercase tracking-wide text-slate-800">{t("entranceInfo")}</h3>
+                          <DoorOpen className="h-4 w-4 text-gold-700" />
+                          <h3 className="font-display text-sm font-semibold uppercase tracking-wide text-ink-800">{t("entranceInfo")}</h3>
                         </div>
-                        <p className="text-sm leading-6 text-slate-700">{venueEntranceRulesDisplay.entranceInfo}</p>
+                        <p className="text-sm leading-6 text-ink-700">{venueEntranceRulesDisplay.entranceInfo}</p>
                       </div>
                     )}
                     {venueEntranceRulesDisplay.rules && (
-                      <div className="rounded-xl border border-slate-200 bg-white p-4">
-                        <h3 className="mb-1 text-sm font-bold uppercase tracking-wide text-slate-800">{t("entranceRules")}</h3>
-                        <p className="text-sm leading-6 text-slate-700">{venueEntranceRulesDisplay.rules}</p>
+                      <div className="rounded-lg border border-ink-200 bg-white p-4">
+                        <h3 className="font-display mb-1 text-sm font-semibold uppercase tracking-wide text-ink-800">{t("entranceRules")}</h3>
+                        <p className="text-sm leading-6 text-ink-700">{venueEntranceRulesDisplay.rules}</p>
                       </div>
                     )}
                   </aside>
@@ -3662,12 +3602,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             {/* Bilet hatırlatıcısı + Güvenli alışveriş */}
             <div className="grid sm:grid-cols-2 gap-4 mt-8">
               {!isPastEvent && (
-                <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-6 shadow-sm">
-                  <h3 className="mb-2 flex items-center gap-2 text-lg font-semibold text-slate-900">
-                    <Bell className="h-5 w-5 text-primary-600" />
+                <div className="rounded-lg border border-gold-100 bg-gold-50/60 p-6 shadow-card">
+                  <h3 className="font-display mb-2 flex items-center gap-2 text-lg font-semibold text-ink-900">
+                    <Bell className="h-5 w-5 text-gold-700" />
                     {t("ticketReminder")}
                   </h3>
-                  <p className="text-sm text-slate-600 mb-4">{t("reminderDesc")}</p>
+                  <p className="text-sm text-ink-600 mb-4">{t("reminderDesc")}</p>
                   <form onSubmit={handleReminderSubmit} className="space-y-3">
                     <input
                       type="email"
@@ -3675,12 +3615,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       onChange={(e) => setReminderEmail(e.target.value)}
                       placeholder={t("reminderPlaceholder")}
                       required
-                      className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                      className="w-full rounded-lg border border-ink-300 bg-white px-3 py-2 text-sm focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
                     />
                     <button
                       type="submit"
                       disabled={reminderPending}
-                      className="w-full rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:opacity-50"
+                      className="w-full rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-ink-950 hover:bg-gold-400 disabled:opacity-50"
                     >
                       {reminderPending ? t("saving") : t("getReminder")}
                     </button>
@@ -3692,26 +3632,26 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   )}
                 </div>
               )}
-              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
-                <h3 className="text-lg font-semibold text-slate-900 mb-4">{t("secureShopping")}</h3>
+              <div className="rounded-lg border border-gold-300 bg-gradient-to-r from-gold-50 to-paper p-6">
+                <h3 className="mb-4 font-display text-lg font-semibold text-ink-900">{t("secureShopping")}</h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100">
-                      <Star className="h-4 w-4 text-primary-600" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gold-100">
+                      <Star className="h-4 w-4 text-gold-700" />
                     </div>
-                    <span className="text-sm text-slate-700">{t("originalTicket")}</span>
+                    <span className="text-sm text-ink-700">{t("originalTicket")}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100">
-                      <Star className="h-4 w-4 text-primary-600" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gold-100">
+                      <Star className="h-4 w-4 text-gold-700" />
                     </div>
-                    <span className="text-sm text-slate-700">{t("securePayment")}</span>
+                    <span className="text-sm text-ink-700">{t("securePayment")}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100">
-                      <Star className="h-4 w-4 text-primary-600" />
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gold-100">
+                      <Star className="h-4 w-4 text-gold-700" />
                     </div>
-                    <span className="text-sm text-slate-700">{t("instantDelivery")}</span>
+                    <span className="text-sm text-ink-700">{t("instantDelivery")}</span>
                   </div>
                 </div>
               </div>

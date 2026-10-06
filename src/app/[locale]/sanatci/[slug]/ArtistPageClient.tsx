@@ -249,19 +249,19 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
 
   if (!artist) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-ink-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="text-6xl mb-4">🎭</div>
-          <h1 className="text-2xl font-bold text-slate-900 mb-2">{t("artistNotFound")}</h1>
-          <p className="text-slate-600 mb-6">{t("artistNotFoundDesc", { slug })}</p>
+          <h1 className="text-2xl font-bold text-ink-900 mb-2">{t("artistNotFound")}</h1>
+          <p className="text-ink-600 mb-6">{t("artistNotFoundDesc", { slug })}</p>
           <div className="space-y-3">
             <a
               href="/"
-              className="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-ink-950 px-6 py-3 rounded-lg font-medium transition-colors"
             >
               {tCommon("backToHome")}
             </a>
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-ink-500">
               <p>{t("possibleReasons")}</p>
               <ul className="text-left mt-2 space-y-1">
                 <li>• {t("reason1")}</li>
@@ -289,7 +289,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
           }}
         >
           <div className="relative w-full max-w-4xl">
-            <div className="relative w-full h-[80vh] overflow-hidden rounded-xl border border-white/20 bg-transparent">
+            <div className="relative w-full h-[80vh] overflow-hidden rounded-lg border border-white/20 bg-transparent">
               <CoverImage
                 src={allGallery[galleryModalIndex].url}
                 alt={`${localized.name || artist.name} galeri`}
@@ -344,7 +344,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
           <div className="relative site-container py-6 md:py-0 md:h-full md:flex md:items-end md:pb-8">
             <div className="flex flex-col md:flex-row gap-4 md:gap-6 md:items-end">
               {!heroBannerUrl && (
-                <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-52 md:h-52 bg-gradient-to-br from-primary-600 to-primary-700 rounded-lg overflow-hidden flex-shrink-0 shadow-2xl self-start">
+                <div className="relative w-24 h-24 sm:w-32 sm:h-32 md:w-52 md:h-52 bg-gradient-to-br from-ink-800 to-ink-950 rounded-lg overflow-hidden flex-shrink-0 shadow-lift self-start">
                   <CoverImage
                     src={artist.image_url}
                     alt={artist.name}
@@ -369,7 +369,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                 <div className="flex flex-wrap gap-2 sm:gap-3">
                   <button
                     onClick={handleFollowToggle}
-                    className="flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base"
+                    className="flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-ink-950 px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base"
                   >
                     <Heart className="h-4 w-4 flex-shrink-0" />
                     {isFollowing ? t("following") : t("follow")}
@@ -402,13 +402,13 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                 <h2 className="section-title mb-4">
                   {t("aboutArtist", { name: localized.name || artist.name })}
                 </h2>
-                <div className="bg-white border border-slate-200 rounded-xl p-6">
+                <div className="bg-white border border-ink-200 rounded-lg p-6">
                   {topGallery.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
                       {topGallery.map((item, index) => (
                         <div
                           key={`${item.url}-${index}`}
-                          className="relative aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
+                          className="relative aspect-[4/3] rounded-lg overflow-hidden border border-ink-200 bg-ink-100"
                         >
                           <CoverImage
                             src={item.url}
@@ -434,7 +434,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                             {leftGallery.map((item, index) => (
                               <div
                                 key={`${item.url}-left-${index}`}
-                                className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
+                                className="aspect-[4/3] rounded-lg overflow-hidden border border-ink-200 bg-ink-100"
                               >
                                 <button
                                   type="button"
@@ -459,7 +459,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                             {rightGallery.map((item, index) => (
                               <div
                                 key={`${item.url}-right-${index}`}
-                                className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
+                                className="aspect-[4/3] rounded-lg overflow-hidden border border-ink-200 bg-ink-100"
                               >
                                 <button
                                   type="button"
@@ -483,14 +483,14 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                       </div>
                     </div>
                   ) : (
-                    <p className="text-slate-600">{t("bioPlaceholder")}</p>
+                    <p className="text-ink-600">{t("bioPlaceholder")}</p>
                   )}
                   {bottomGallery.length > 0 && (
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-5">
                       {bottomGallery.map((item, index) => (
                         <div
                           key={`${item.url}-bottom-${index}`}
-                          className="aspect-[4/3] rounded-lg overflow-hidden border border-slate-200 bg-slate-100"
+                          className="aspect-[4/3] rounded-lg overflow-hidden border border-ink-200 bg-ink-100"
                         >
                           <button
                             type="button"
@@ -513,15 +513,15 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                     parsedProfile.socials.instagram ||
                     parsedProfile.socials.website ||
                     youtubeEmbedUrls.length > 0) && (
-                    <div className="mt-6 pt-5 border-t border-slate-200">
-                      <h3 className="text-sm font-semibold text-slate-800 mb-3">{t("socialLinks")}</h3>
+                    <div className="mt-6 pt-5 border-t border-ink-200">
+                      <h3 className="text-sm font-semibold text-ink-800 mb-3">{t("socialLinks")}</h3>
                       <div className="flex flex-wrap gap-2">
                         {parsedProfile.socials.youtube && (
                           <a
                             href={parsedProfile.socials.youtube}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md bg-red-50 text-red-700 px-3 py-2 text-sm font-medium hover:bg-red-100"
+                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400"
                           >
                             YouTube <ExternalLink className="h-3.5 w-3.5" />
                           </a>
@@ -531,7 +531,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                             href={parsedProfile.socials.spotify}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md bg-green-50 text-green-700 px-3 py-2 text-sm font-medium hover:bg-green-100"
+                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400"
                           >
                             Spotify <ExternalLink className="h-3.5 w-3.5" />
                           </a>
@@ -541,7 +541,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                             href={parsedProfile.socials.instagram}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md bg-pink-50 text-pink-700 px-3 py-2 text-sm font-medium hover:bg-pink-100"
+                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400"
                           >
                             Instagram <ExternalLink className="h-3.5 w-3.5" />
                           </a>
@@ -551,7 +551,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                             href={parsedProfile.socials.website}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md bg-slate-100 text-slate-700 px-3 py-2 text-sm font-medium hover:bg-slate-200"
+                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400"
                           >
                             Web Sitesi <ExternalLink className="h-3.5 w-3.5" />
                           </a>
@@ -559,12 +559,12 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                       </div>
                       {youtubeEmbedUrls.length > 0 && (
                         <div className="mt-5">
-                          <h4 className="text-sm font-semibold text-slate-800 mb-3">{t("video")}</h4>
+                          <h4 className="text-sm font-semibold text-ink-800 mb-3">{t("video")}</h4>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {youtubeEmbedUrls.map((embedUrl, index) => (
                               <div
                                 key={`${embedUrl}-${index}`}
-                                className="aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-slate-100"
+                                className="aspect-video w-full overflow-hidden rounded-lg border border-ink-200 bg-ink-100"
                               >
                                 <iframe
                                   src={embedUrl}
@@ -590,8 +590,8 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
             <h2 className="card-title mb-4">{tHome("upcomingEvents")}</h2>
             <div className="space-y-4">
               {artistEvents.length === 0 ? (
-                <div className="rounded-xl border border-slate-200 bg-white p-6 text-center text-slate-500">
-                  <Music2 className="h-12 w-12 mx-auto text-slate-300 mb-2" />
+                <div className="rounded-lg border border-ink-200 bg-white p-6 text-center text-ink-500">
+                  <Music2 className="h-12 w-12 mx-auto text-ink-300 mb-2" />
                   <p className="text-sm">{tHome("noEventsSlider")}</p>
                 </div>
               ) : (
@@ -605,11 +605,11 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                       href={eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}
                     >
                       <div
-                        className={`overflow-hidden rounded-xl border shadow-sm hover:shadow-md transition-shadow ${
-                          isPast ? "bg-slate-50 border-slate-300 opacity-75" : "bg-white border-slate-200"
+                        className={`overflow-hidden rounded-lg border shadow-card hover:shadow-card transition-shadow ${
+                          isPast ? "bg-ink-50 border-ink-300 opacity-75" : "bg-white border-ink-200"
                         }`}
                       >
-                        <div className="aspect-video bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden relative">
+                        <div className="aspect-video bg-gradient-to-br from-gold-100 to-paper flex items-center justify-center overflow-hidden relative">
                           {event.image_url ? (
                             <img
                               src={resolvePublicImageUrl(event.image_url) ?? ""}
@@ -622,7 +622,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                               }}
                             />
                           ) : (
-                            <Music2 className="h-12 w-12 text-primary-400" />
+                            <Music2 className="h-12 w-12 text-gold-600" />
                           )}
                           {isPast && (
                             <div className="absolute left-2 top-2">
@@ -633,17 +633,17 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                           )}
                         </div>
                         <div className="p-4">
-                          <span className="text-xs font-medium text-primary-600">
+                          <span className="text-xs font-medium text-gold-700">
                             {event.category ? tCat(event.category) : "Etkinlik"}
                           </span>
                           <h3
                             className={`font-semibold line-clamp-2 mt-1 mb-2 ${
-                              isPast ? "text-slate-600" : "text-slate-900"
+                              isPast ? "text-ink-600" : "text-ink-900"
                             }`}
                           >
                             {localizedEvent.title}
                           </h3>
-                          <div className="space-y-1 text-sm text-slate-600">
+                          <div className="space-y-1 text-sm text-ink-600">
                             <div className="flex items-center gap-2">
                               <Calendar className="h-3.5 w-3.5 flex-shrink-0" />
                               <span>
@@ -657,8 +657,8 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                               </span>
                             </div>
                           </div>
-                          <div className="mt-3 pt-3 border-t border-slate-100">
-                            <span className={`font-bold ${isPast ? "text-slate-500" : "text-primary-600"}`}>
+                          <div className="mt-3 pt-3 border-t border-ink-100">
+                            <span className={`font-bold ${isPast ? "text-ink-500" : "text-gold-700"}`}>
                               {Number(event.price_from) > 0
                                 ? `${tHome("from")} ${formatPrice(Number(event.price_from), event.currency)}`
                                 : tHome("free")}

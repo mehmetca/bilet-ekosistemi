@@ -36,18 +36,18 @@ export default function SSSPage() {
   return (
     <div className="w-full min-w-0">
       <div className="flex items-center gap-3 mb-2">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-100 text-primary-600">
+        <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gold-100 text-gold-700">
           <HelpCircle className="h-6 w-6" />
         </div>
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">{t("title")}</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <h1 className="text-3xl font-bold text-ink-900">{t("title")}</h1>
+          <p className="text-sm text-ink-500 mt-1">
             {t("lastUpdated")}: {new Date().toLocaleDateString(dateLocale, { year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
       </div>
 
-      <p className="text-slate-700 leading-relaxed mb-8">{t("intro")}</p>
+      <p className="text-ink-700 leading-relaxed mb-8">{t("intro")}</p>
 
       <div className="space-y-2">
         {FAQ_KEYS.map((key, index) => {
@@ -58,21 +58,21 @@ export default function SSSPage() {
           return (
             <div
               key={key}
-              className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden"
+              className="rounded-lg border border-ink-200 bg-white shadow-card overflow-hidden"
             >
               <button
                 type="button"
                 onClick={() => setOpenIndex(isOpen ? null : index)}
-                className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-slate-50 transition-colors"
+                className="w-full flex items-center justify-between gap-4 px-5 py-4 text-left hover:bg-ink-50 transition-colors"
               >
-                <span className="font-medium text-slate-900">{q}</span>
+                <span className="font-medium text-ink-900">{q}</span>
                 <ChevronDown
-                  className={`h-5 w-5 shrink-0 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
+                  className={`h-5 w-5 shrink-0 text-ink-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
                 />
               </button>
               {isOpen && (
                 <div className="px-5 pb-4 pt-0">
-                  <p className="text-slate-600 leading-relaxed text-sm">{a}</p>
+                  <p className="text-ink-600 leading-relaxed text-sm">{a}</p>
                 </div>
               )}
             </div>

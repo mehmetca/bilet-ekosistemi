@@ -96,40 +96,40 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
   if (!user) return null;
 
   return (
-    <section className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
-      <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+    <section className="bg-white rounded-lg border border-ink-200 p-6 mb-6">
+      <h2 className="text-lg font-semibold text-ink-900 mb-4 flex items-center gap-2">
         <TicketIcon className="h-5 w-5" aria-hidden />
         {t("myTickets")}
       </h2>
       {loading ? (
-        <div className="text-slate-500 py-8 text-center">{t("loading")}</div>
+        <div className="text-ink-500 py-8 text-center">{t("loading")}</div>
       ) : error ? (
         <div className="py-6 text-center">
           <p className="text-amber-600 text-sm mb-2">{error}</p>
           <button
             type="button"
             onClick={fetchOrders}
-            className="text-primary-600 text-sm font-medium hover:underline"
+            className="text-gold-700 text-sm font-medium hover:underline"
           >
             {t("retry")}
           </button>
         </div>
       ) : orders.length === 0 ? (
         <div className="text-center py-8">
-          <Calendar className="h-12 w-12 text-slate-300 mx-auto mb-3" aria-hidden />
-          <p className="text-slate-600 font-medium">{t("noTickets")}</p>
-          <p className="text-sm text-slate-500 mt-1">{t("noTicketsDesc")}</p>
+          <Calendar className="h-12 w-12 text-ink-300 mx-auto mb-3" aria-hidden />
+          <p className="text-ink-600 font-medium">{t("noTickets")}</p>
+          <p className="text-sm text-ink-500 mt-1">{t("noTicketsDesc")}</p>
           <div className="mt-4 flex flex-wrap justify-center gap-3">
             <button
               type="button"
               onClick={fetchOrders}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 text-sm font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 border border-ink-300 rounded-lg text-ink-700 hover:bg-ink-50 text-sm font-medium"
             >
               {t("refresh")}
             </button>
             <NextLink
               href={`/${locale}`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500 text-ink-950 rounded-lg font-medium hover:bg-gold-400"
             >
               {t("browseEvents")}
               <ArrowRight className="h-4 w-4" aria-hidden />

@@ -22,16 +22,24 @@ import FeaturedEvents from "@/components/FeaturedEvents";
 const AnaHeroSlider = dynamic(() => import("@/components/AnaHeroSlider"), {
   ssr: false,
   loading: () => (
-    <div className="aspect-[16/7] w-full animate-pulse bg-slate-100 sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]" />
+    <div className="aspect-[16/7] w-full animate-pulse bg-ink-100 sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]" />
   ),
 });
 import { formatPrice } from "@/lib/formatPrice";
 import { getLocalizedEvent } from "@/lib/i18n-content";
-import { formatEventDateDMY, isEventPastByLocalDateTime } from "@/lib/date-utils";
+import { formatEventLongDateTime, isEventPastByLocalDateTime } from "@/lib/date-utils";
 import { resolvePublicImageUrl } from "@/lib/external-image";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { isAmedSporEvent, eventDetailPath } from "@/lib/amed-spor-utils";
 import CoverImage from "@/components/CoverImage";
+import SectionTitle from "@/components/ui/SectionTitle";
+import { badgeClass } from "@/components/ui/Badge";
+import { cardClass } from "@/components/ui/Card";
+import { buttonClass } from "@/components/ui/Button";
+import { inputClass } from "@/components/ui/Field";
+import { cn } from "@/components/ui/cn";
+
+type UiLocale = "tr" | "de" | "en" | "ku" | "ckb";
 
 function eventDateISO(event: Event): string {
   const d = String(event.date ?? "");
@@ -367,7 +375,7 @@ export default function ClientHomePage({
   return (
     <>
       {!hideHeader ? (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-paper">
           <Header />
         </div>
       ) : null}
@@ -376,27 +384,30 @@ export default function ClientHomePage({
 
       {/* Slider'lar */}
       <section className="site-container py-8 sm:py-10">
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-          <div className="p-5 pb-3 sm:p-6 sm:pb-4">
-            <h2 className="text-xl font-bold text-slate-900">{t("upcomingEvents")}</h2>
+        <div className="overflow-hidden rounded-lg border border-ink-200 bg-white shadow-card">
+          <div className="px-5 pb-3 pt-5 sm:px-6 sm:pb-4 sm:pt-6">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-ink-900">
+              {t("upcomingEvents")}
+            </h2>
           </div>
-          <div className="border-t border-slate-200">
-            <AnaHeroSlider placement="main_slider" initialAds={initialSliderAds} />
-          </div>
+          <span className="hairline" aria-hidden />
+          <AnaHeroSlider placement="main_slider" initialAds={initialSliderAds} />
         </div>
 
         {/* Şehirler - Yaklaşan etkinlikler ve Haberler slider'larının altında */}
         {cities.length > 0 && (
-          <div className="mt-8">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-2xl font-bold text-slate-900">{t("inYourCity")}</h2>
-              <Link
-                href="/sehirler"
-                className="text-primary-600 font-semibold hover:text-primary-700 hover:underline"
-              >
-                {t("viewAllCities")} →
-              </Link>
-            </div>
+          <div className="mt-10 md:mt-12">
+            <SectionTitle
+              title={t("inYourCity")}
+              action={
+                <Link
+                  href="/sehirler"
+                  className="text-sm font-semibold text-gold-700 transition-colors hover:text-gold-900 hover:underline"
+                >
+                  {t("viewAllCities")} →
+                </Link>
+              }
+            />
             <div className="relative -mx-4 md:-mx-4">
               <button
                 type="button"
@@ -406,7 +417,7 @@ export default function ClientHomePage({
                   const step = getCityCardScrollStep(window.innerWidth);
                   el.scrollBy({ left: -step, behavior: "smooth" });
                 }}
-                className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/20 text-white backdrop-blur-sm transition-all hover:bg-black/35 md:left-4"
+                className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md bg-gold-500 text-ink-950 transition-colors hover:bg-gold-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/70 md:left-4"
                 aria-label="Önceki"
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -419,7 +430,7 @@ export default function ClientHomePage({
                   const step = getCityCardScrollStep(window.innerWidth);
                   el.scrollBy({ left: step, behavior: "smooth" });
                 }}
-                className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/20 text-white backdrop-blur-sm transition-all hover:bg-black/35 md:right-4"
+                className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md bg-gold-500 text-ink-950 transition-colors hover:bg-gold-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/70 md:right-4"
                 aria-label="Sonraki"
               >
                 <ChevronRight className="h-6 w-6" />
@@ -431,27 +442,39 @@ export default function ClientHomePage({
                 {cities.map((city) => {
                   const name = (locale === "de" ? city.name_de : locale === "en" ? city.name_en : city.name_tr) || city.name_tr || city.name_de || city.name_en || city.slug;
                   const cityImageSrc = resolvePublicImageUrl(city.image_url);
+                  const isSelectedCity =
+                    selectedCity !== "all" &&
+                    getNormalizedCityKey(name) === getNormalizedCityKey(selectedCity);
                   return (
                     <Link
                       key={city.id}
                       href={`/city/${city.slug}`}
-                      className="group flex flex-shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200 snap-center w-[min(84vw,20rem)] max-w-[min(84vw,20rem)] sm:min-w-[210px] sm:max-w-[210px] sm:w-[210px] md:min-w-[230px] md:max-w-[230px] md:w-[230px] xl:min-w-[260px] xl:max-w-[260px] xl:w-[260px]"
+                      className={cn(
+                        cardClass({ hover: true }),
+                        "group flex w-[min(84vw,20rem)] max-w-[min(84vw,20rem)] flex-shrink-0 snap-center flex-col overflow-hidden sm:w-[210px] sm:max-w-[210px] md:w-[230px] md:max-w-[230px] xl:w-[260px] xl:max-w-[260px]",
+                        isSelectedCity && "border-gold-500 ring-1 ring-gold-500/40"
+                      )}
                     >
-                      <div className="relative aspect-[16/9] overflow-hidden bg-slate-100">
+                      <div className="relative aspect-[16/9] overflow-hidden bg-ink-100">
                         <CoverImage
                           src={cityImageSrc}
                           alt={name}
                           sizes="(max-width: 640px) 84vw, 260px"
                           zoomOnHover
                           fallback={
-                            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary-100 to-primary-50">
-                              <MapPin className="h-12 w-12 text-primary-400" />
+                            <div className="flex h-full w-full items-center justify-center bg-ink-100">
+                              <MapPin className="h-12 w-12 text-ink-300" />
                             </div>
                           }
                         />
                       </div>
-                      <div className="py-2.5 text-center">
-                        <h3 className="font-semibold text-slate-900 group-hover:text-primary-600">{name}</h3>
+                      <div className="flex items-center justify-center gap-2 border-t border-ink-200 px-3 py-3 text-center">
+                        <h3 className="font-display text-base font-semibold text-ink-900 transition-colors group-hover:text-gold-700">
+                          {name}
+                        </h3>
+                        {isSelectedCity && (
+                          <span className="rule-gold w-6 shrink-0" aria-hidden />
+                        )}
                       </div>
                     </Link>
                   );
@@ -471,25 +494,25 @@ export default function ClientHomePage({
 
       {/* Events */}
       <section id="events" className="site-container py-10 sm:py-12">
-        <h2 className="text-2xl font-bold text-slate-900 mb-4">{t("upcomingEvents")}</h2>
-        <div className="mb-6 rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <SectionTitle title={t("upcomingEvents")} />
+        <div className="mb-6 rounded-lg border border-ink-200 bg-white p-3 shadow-card">
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
             <div className="relative">
-              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
               <input
                 type="search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t("searchPlaceholder")}
                 aria-label={t("searchPlaceholder")}
-                className="h-10 w-full rounded-lg border border-slate-300 bg-white py-2 pl-9 pr-2 text-sm text-slate-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className={inputClass("pl-9")}
               />
             </div>
             <select
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
               aria-label={t("filters.allCities")}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900"
+              className={inputClass()}
             >
               <option value="all">{t("filters.allCities")}</option>
               {cityOptions.map((city) => (
@@ -502,7 +525,7 @@ export default function ClientHomePage({
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               aria-label={t("filters.allCategories")}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900"
+              className={inputClass()}
             >
               <option value="all">{t("filters.allCategories")}</option>
               {DISPLAY_CATEGORIES.map((key) => (
@@ -536,13 +559,13 @@ export default function ClientHomePage({
               }}
               aria-label={t("filters.eventDate")}
               placeholder={tCalendar("datePlaceholder")}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900"
+              className={inputClass()}
             />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "yaklasan" | "populer")}
               aria-label={t("filters.sort")}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-sm text-slate-900"
+              className={inputClass()}
             >
               <option value="yaklasan">{t("sortBy.upcoming")}</option>
               <option value="populer">{t("sortBy.popular")}</option>
@@ -557,7 +580,7 @@ export default function ClientHomePage({
                 setIsDateFilterActive(false);
                 setEventDateInput(formatLocalDateDMY(new Date()));
               }}
-              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm leading-tight"
+              className={buttonClass({ variant: "outline", size: "sm", className: "h-11 w-full" })}
             >
               {t("filters.clear")}
             </button>
@@ -565,17 +588,17 @@ export default function ClientHomePage({
         </div>
         
         {displayEvents.length === 0 ? (
-          <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-slate-500">
+          <div className="rounded-lg border border-ink-200 bg-white p-12 text-center shadow-card">
             {events.length === 0 ? (
               <>
-                <Music2 className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-                <p className="text-lg font-medium">{t("noEvents")}</p>
-                <p className="mt-2 text-sm">{t("noEventsSlider")}</p>
+                <Music2 className="mx-auto mb-4 h-16 w-16 text-gold-500" />
+                <p className="font-display text-xl font-semibold text-ink-900">{t("noEvents")}</p>
+                <p className="mt-2 text-sm text-ink-500">{t("noEventsSlider")}</p>
               </>
             ) : hasActiveFilters ? (
-              <p className="text-lg font-medium">{t("noEventsForFilter")}</p>
+              <p className="font-display text-xl font-semibold text-ink-900">{t("noEventsForFilter")}</p>
             ) : (
-              <p className="text-lg font-medium">{t("noEventsSlider")}</p>
+              <p className="font-display text-xl font-semibold text-ink-900">{t("noEventsSlider")}</p>
             )}
           </div>
         ) : (
@@ -583,114 +606,134 @@ export default function ClientHomePage({
             {displayEvents.map((event) => {
               const eventStatus = getEventStatus(event);
               const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as "tr" | "de" | "en");
-              
+              const when = formatEventLongDateTime(event.date, event.time, locale as UiLocale);
+
               return (
                 <div
                   key={event.id}
-                  className={`flex flex-col overflow-hidden rounded-2xl border shadow-sm hover:shadow-lg transition-shadow ${
-                    eventStatus.isPast 
-                      ? 'bg-slate-50 border-slate-300 opacity-75' 
-                      : 'bg-white border-slate-200'
-                  }`}
+                  className={cn(
+                    cardClass({ hover: !eventStatus.isPast }),
+                    "group flex flex-col overflow-hidden",
+                    eventStatus.isPast && "bg-ink-50"
+                  )}
                 >
-                  <Link href={`/${locale}${eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}`}>
-                    <div className="aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden cursor-pointer relative">
+                  <Link
+                    href={`/${locale}${eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}`}
+                    className="relative block"
+                  >
+                    <div className="relative aspect-[3/4] overflow-hidden bg-ink-100">
                       <CoverImage
                         src={event.image_url}
                         alt={localized.title}
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                        fallback={<Music2 className="h-16 w-16 text-primary-400" />}
+                        imageClassName={
+                          eventStatus.isPast
+                            ? "object-cover object-top opacity-60 grayscale"
+                            : "object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
+                        }
+                        fallback={
+                          <div className="flex h-full w-full items-center justify-center bg-ink-100">
+                            <Music2 className="h-16 w-16 text-ink-300" />
+                          </div>
+                        }
                       />
-                      
-                      {/* Durum Göstergesi */}
+                      <span className="poster-scrim pointer-events-none absolute inset-0" aria-hidden />
+
+                      <span className={badgeClass(eventStatus.isPast ? "muted" : "goldOnDark", "absolute left-3 top-3")}>
+                        {event.category ? tCat(event.category) : "Etkinlik"}
+                      </span>
+
                       {eventStatus.isPast && (
-                        <div className="absolute top-2 right-2">
-                          <span className="px-2 py-1 text-xs font-medium text-red-600 bg-red-500/20 backdrop-blur-sm rounded">
-                            {eventStatus.statusText}
-                          </span>
-                        </div>
+                        <span className={badgeClass("danger", "absolute right-3 top-3")}>
+                          {eventStatus.statusText}
+                        </span>
                       )}
 
-                      {/* Biten etkinliklerde belirgin etiket */}
                       {eventStatus.isPast && (
-                        <div className="absolute left-2 top-2">
-                          <span className="px-2 py-1 text-xs font-bold text-white bg-red-600 rounded">
-                            {t("eventEnded")}
-                          </span>
-                        </div>
+                        <span className={badgeClass("muted", "absolute left-3 top-11")}>
+                          {t("eventEnded")}
+                        </span>
                       )}
 
+                      {/* Afiş tarih damgası: serif gün + altın ay */}
+                      <span className="absolute bottom-3 left-3 flex flex-col" aria-hidden>
+                        <span className="font-display text-2xl leading-none text-white">
+                          {when.dayNum}
+                        </span>
+                        <span className="mt-1 text-[10px] uppercase tracking-widest2 text-gold-300">
+                          {when.monthShort}
+                        </span>
+                      </span>
                     </div>
                   </Link>
-                  
-                  <div className="flex-1 p-5">
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-xs font-medium text-primary-600">
-                          {event.category ? tCat(event.category) : "Etkinlik"}
-                        </span>
-                        {eventStatus.isPast && (
-                          <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
-                            {t("eventEnded")}
-                          </span>
-                        )}
-                      </div>
-                      <h3 className={`font-semibold line-clamp-1 mb-2 ${
-                        eventStatus.isPast ? 'text-slate-600' : 'text-slate-900'
-                      }`}>
-                        {localized.title}
-                      </h3>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 flex-shrink-0" />
-                          <span className={
-                            eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
-                          }>
-                            {new Date(event.date).toLocaleDateString("tr-TR")} • {event.time}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4 flex-shrink-0" />
-                          <span className={
-                            eventStatus.isPast ? 'text-slate-500' : 'text-slate-600'
-                          }>
-                            {localized.venue || event.venue}, {(event as Event & { city?: string | null }).city || event.location}
-                          </span>
-                        </div>
-                      </div>
-                      {eventStatus.isPast && (
-                        <p className="mt-3 text-xs font-medium text-red-600">
-                          {t("eventEndedBanner")}
-                        </p>
+
+                  <div className="flex flex-1 flex-col p-4">
+                    <h3
+                      className={cn(
+                        "line-clamp-2 font-display text-lg leading-snug transition-colors group-hover:text-gold-700",
+                        eventStatus.isPast ? "text-ink-500" : "text-ink-900"
                       )}
+                    >
+                      {localized.title}
+                    </h3>
+                    <div className="mt-2 space-y-1.5 text-sm">
+                      <div className="flex items-start gap-2">
+                        <Calendar className="mt-0.5 h-4 w-4 flex-shrink-0 text-ink-400" aria-hidden />
+                        <span className={eventStatus.isPast ? "text-ink-500" : "text-ink-600"}>
+                          {when.lineLong}
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-ink-400" aria-hidden />
+                        <span className={eventStatus.isPast ? "text-ink-500" : "text-ink-600"}>
+                          {localized.venue || event.venue}, {(event as Event & { city?: string | null }).city || event.location}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                  
-                  <div className="px-5 pb-5 border-t border-slate-100">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center pt-3">
-                      <span className={`font-bold text-lg ${
-                        eventStatus.isPast ? 'text-slate-500' : 'text-primary-600'
-                      }`}>
-                        {Number(event.price_from) > 0
-                          ? `${t("from")} ${formatPrice(Number(event.price_from), event.currency)}`
-                          : t("free")}
-                      </span>
-                      <button
-                        onClick={() => {
-                          if (eventStatus.isPast) {
-                            alert(t("eventEndedAlert"));
-                            return;
-                          }
-                          window.location.href = `/${locale}${eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}`;
-                        }}
-                        className={`text-sm font-medium flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg transition-colors w-full sm:w-auto ${
-                          eventStatus.isPast
-                            ? 'text-slate-500 bg-slate-100 cursor-not-allowed'
-                            : 'text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100'
-                        }`}
-                      >
-                        {eventStatus.isPast ? t("buyTicketDisabled") : t("buyTicket")}
-                      </button>
+                    {eventStatus.isPast && (
+                      <p className="mt-3 text-xs font-medium text-red-700">
+                        {t("eventEndedBanner")}
+                      </p>
+                    )}
+
+                    <div className="mt-auto pt-4">
+                      <span className="hairline mb-3" aria-hidden />
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <span
+                          className={cn(
+                            "text-lg font-semibold",
+                            eventStatus.isPast ? "text-ink-500" : "text-ink-900"
+                          )}
+                        >
+                          {Number(event.price_from) > 0 ? (
+                            <>
+                              <span className="mr-1 text-sm font-normal text-ink-500">{t("from")}</span>
+                              {formatPrice(Number(event.price_from), event.currency)}
+                            </>
+                          ) : (
+                            t("free")
+                          )}
+                        </span>
+                        <button
+                          onClick={() => {
+                            if (eventStatus.isPast) {
+                              alert(t("eventEndedAlert"));
+                              return;
+                            }
+                            window.location.href = `/${locale}${eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}`;
+                          }}
+                          className={buttonClass({
+                            variant: eventStatus.isPast ? "outline" : "primary",
+                            size: "md",
+                            className: cn(
+                              "w-full sm:w-auto",
+                              eventStatus.isPast && "cursor-not-allowed"
+                            ),
+                          })}
+                        >
+                          {eventStatus.isPast ? t("buyTicketDisabled") : t("buyTicket")}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -177,26 +177,26 @@ export default function SifreYenilePage() {
 
   if (!recoveryChecked) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" />
+      <div className="min-h-screen flex items-center justify-center bg-ink-50">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gold-500 border-t-transparent" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-ink-50">
       <Header />
       <main className="max-w-md mx-auto px-4 py-12">
         <NextLink
           href="/giris"
-          className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-8"
+          className="inline-flex items-center gap-2 text-ink-600 hover:text-ink-900 mb-8"
         >
           <ArrowLeft className="h-4 w-4" />
           Giriş sayfasına dön
         </NextLink>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-          <h1 className="text-xl font-bold text-slate-900 mb-2">Şifre sıfırlama</h1>
+        <div className="bg-white rounded-lg border border-ink-200 shadow-card p-8">
+          <h1 className="text-xl font-bold text-ink-900 mb-2">Şifre sıfırlama</h1>
 
           {(step === "email" || step === "sending") && (
             <>
@@ -209,23 +209,23 @@ export default function SifreYenilePage() {
                   </p>
                 </div>
               )}
-              <p className="text-slate-600 text-sm mb-6">
+              <p className="text-ink-600 text-sm mb-6">
                 Kayıtlı e-posta adresinizi girin. Size şifre sıfırlama bağlantısı göndereceğiz.
               </p>
               <form onSubmit={handleRequestReset} className="space-y-4">
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="email" className="block text-sm font-medium text-ink-700 mb-2">
                     E-posta
                   </label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-400" />
                     <input
                       id="email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="ornek@email.com"
-                      className="w-full rounded-lg border border-slate-300 pl-10 pr-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full rounded-lg border border-ink-300 pl-10 pr-4 py-3 text-ink-900 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                   </div>
                 </div>
@@ -237,7 +237,7 @@ export default function SifreYenilePage() {
                 <button
                   type="submit"
                   disabled={step === "sending"}
-                  className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full bg-gold-500 text-ink-950 py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {step === "sending" ? "Gönderiliyor..." : "Sıfırlama bağlantısı gönder"}
                 </button>
@@ -248,8 +248,8 @@ export default function SifreYenilePage() {
           {step === "sent" && (
             <div className="py-4">
               <CheckCircle className="h-14 w-14 text-green-500 mx-auto mb-4" />
-              <p className="text-slate-700 font-medium mb-2 text-center">E-posta gönderildi</p>
-              <p className="text-slate-600 text-sm mb-4">
+              <p className="text-ink-700 font-medium mb-2 text-center">E-posta gönderildi</p>
+              <p className="text-ink-600 text-sm mb-4">
                 <strong>{email}</strong> adresine şifre sıfırlama bağlantısı gönderdik. E-postayı
                 kontrol edin ve bağlantıya tıklayın. Gelen kutusunda göremiyorsanız spam klasörüne
                 bakın.
@@ -259,7 +259,7 @@ export default function SifreYenilePage() {
                 <button
                   type="button"
                   onClick={() => { setStep("email"); setEmail(""); setError(""); }}
-                  className="text-primary-600 hover:text-primary-700 font-medium text-sm"
+                  className="text-gold-700 hover:text-gold-700 font-medium text-sm"
                 >
                   Farklı e-posta ile tekrar dene
                 </button>
@@ -269,16 +269,16 @@ export default function SifreYenilePage() {
 
           {(step === "set_password" || step === "updating") && (
             <>
-              <p className="text-slate-600 text-sm mb-6">
+              <p className="text-ink-600 text-sm mb-6">
                 Yeni şifrenizi belirleyin (en az 6 karakter).
               </p>
               <form onSubmit={handleSetPassword} className="space-y-4">
                 <div>
-                  <label htmlFor="new-password" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="new-password" className="block text-sm font-medium text-ink-700 mb-2">
                     Yeni şifre
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-400" />
                     <input
                       id="new-password"
                       type={showPassword ? "text" : "password"}
@@ -286,19 +286,19 @@ export default function SifreYenilePage() {
                       onChange={(e) => setPassword(e.target.value)}
                       minLength={6}
                       placeholder="••••••••"
-                      className="w-full rounded-lg border border-slate-300 pl-10 pr-12 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full rounded-lg border border-ink-300 pl-10 pr-12 py-3 text-ink-900 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600"
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="new-password-confirm" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="new-password-confirm" className="block text-sm font-medium text-ink-700 mb-2">
                     Yeni şifre (tekrar)
                   </label>
                   <input
@@ -307,7 +307,7 @@ export default function SifreYenilePage() {
                     value={passwordConfirm}
                     onChange={(e) => setPasswordConfirm(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                 </div>
                 {error && (
@@ -318,7 +318,7 @@ export default function SifreYenilePage() {
                 <button
                   type="submit"
                   disabled={step === "updating"}
-                  className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full bg-gold-500 text-ink-950 py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {step === "updating" ? "Güncelleniyor..." : "Şifreyi güncelle"}
                 </button>
@@ -329,8 +329,8 @@ export default function SifreYenilePage() {
           {step === "done" && (
             <div className="text-center py-4">
               <CheckCircle className="h-14 w-14 text-green-500 mx-auto mb-4" />
-              <p className="text-slate-700 font-medium mb-2">Şifreniz güncellendi</p>
-              <p className="text-slate-600 text-sm">Giriş sayfasına yönlendiriliyorsunuz...</p>
+              <p className="text-ink-700 font-medium mb-2">Şifreniz güncellendi</p>
+              <p className="text-ink-600 text-sm">Giriş sayfasına yönlendiriliyorsunuz...</p>
             </div>
           )}
         </div>

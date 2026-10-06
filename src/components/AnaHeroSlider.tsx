@@ -179,7 +179,7 @@ export default function AnaHeroSlider({
   if (loading) {
     return (
       <div className="w-full">
-        <div className="aspect-[16/7] w-full animate-pulse bg-slate-100 sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]" />
+        <div className="aspect-[16/7] w-full animate-pulse bg-ink-100 sm:max-h-[480px] lg:aspect-[16/6] lg:max-h-[560px] xl:max-h-[640px]" />
       </div>
     );
   }
@@ -194,7 +194,7 @@ export default function AnaHeroSlider({
         onMouseLeave={() => setIsAutoPlay(true)}
       >
         {shownAds.length > 1 && (
-          <div className="absolute left-3 top-1/2 z-[2000] -translate-y-1/2 flex flex-col gap-2 pointer-events-auto sm:left-4 sm:gap-3">
+          <div className="pointer-events-auto absolute bottom-1 left-1/2 z-[2000] flex -translate-x-1/2 flex-row items-center gap-0.5 rounded-full bg-ink-950/25 px-1.5 py-0.5 backdrop-blur-sm sm:bottom-auto sm:left-4 sm:top-1/2 sm:flex-col sm:-translate-x-0 sm:-translate-y-1/2">
             {shownAds.map((ad, idx) => (
               <button
                 key={ad.id || idx}
@@ -202,13 +202,13 @@ export default function AnaHeroSlider({
                 onClick={() => goToIndex(idx)}
                 aria-label={`Slide ${idx + 1}`}
                 aria-current={idx === currentIndex ? "true" : undefined}
-                className="flex h-6 w-6 items-center justify-center"
+                className="group flex h-9 w-6 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/70 sm:h-6 sm:w-6"
               >
                 <span
-                  className={`block rounded-full shadow-md transition-all ${
+                  className={`block rounded-full transition-all duration-300 ease-out ${
                     idx === currentIndex
-                      ? "bg-primary-500 h-3 w-3 sm:h-3.5 sm:w-3.5"
-                      : "bg-white/80 h-2 w-2 sm:h-2.5 sm:w-2.5"
+                      ? "h-1.5 w-5 bg-gold-500 shadow-[0_0_0_1px_rgba(14,14,13,0.25)] sm:h-5 sm:w-1.5"
+                      : "h-1.5 w-1.5 bg-white/65 group-hover:bg-white/95 sm:h-1.5 sm:w-1.5"
                   }`}
                 />
               </button>
@@ -249,30 +249,30 @@ export default function AnaHeroSlider({
                     </picture>
                     {hasOverlay ? (
                       <>
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-black/10" />
+                        <div className="poster-scrim pointer-events-none absolute inset-0" aria-hidden />
                         <div className="absolute inset-x-3 bottom-3 z-10 sm:inset-x-auto sm:left-10 sm:right-8 sm:top-1/2 sm:bottom-auto sm:-translate-y-1/2 md:left-14 md:right-10">
                           <div className="flex items-end gap-3 sm:items-center sm:gap-8 md:gap-10">
                             {showDateBox ? (
-                              <div className="rounded-xl border border-white/35 bg-black/30 px-2.5 py-2 text-center text-white backdrop-blur-sm sm:rounded-2xl sm:px-5 sm:py-4 md:px-6 md:py-5">
+                              <div className="flex flex-col border-l-2 border-gold-500 pl-3 text-left sm:pl-4">
                                 {overlayDay ? (
-                                  <div className="text-3xl font-extrabold leading-none sm:text-5xl md:text-6xl">
+                                  <div className="font-display text-3xl font-semibold leading-none text-white drop-shadow-md sm:text-5xl md:text-6xl">
                                     {overlayDay}
                                   </div>
                                 ) : null}
                                 {overlayMonth ? (
-                                  <div className="mt-1 text-xs font-semibold leading-tight sm:text-base md:text-lg">
+                                  <div className="mt-1 text-[10px] font-semibold uppercase leading-tight tracking-widest2 text-gold-300 sm:text-xs md:text-sm">
                                     {overlayMonth}
                                   </div>
                                 ) : null}
                                 {overlayYear ? (
-                                  <div className="mt-0.5 text-xs font-semibold leading-tight sm:text-base md:text-lg">
+                                  <div className="mt-0.5 text-xs font-medium leading-tight text-white/70 sm:text-sm md:text-base">
                                     {overlayYear}
                                   </div>
                                 ) : null}
                               </div>
                             ) : null}
                             {overlayTitle ? (
-                              <h3 className="min-w-0 text-2xl font-extrabold leading-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] sm:text-5xl md:text-6xl lg:text-7xl">
+                              <h3 className="min-w-0 font-display text-2xl font-semibold leading-tight tracking-tight text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.45)] sm:text-5xl md:text-6xl lg:text-7xl">
                                 {overlayTitle}
                               </h3>
                             ) : null}

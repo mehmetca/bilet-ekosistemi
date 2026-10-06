@@ -26,7 +26,7 @@ export default function TicketTypeLabelSelect({
     <div className="flex flex-wrap items-center gap-2">
       <select
         id={id}
-        className={className ?? "rounded border border-slate-300 bg-white px-2 py-1.5 text-sm min-w-[12rem] max-w-full"}
+        className={className ?? "rounded border border-ink-300 bg-white px-2 py-1.5 text-sm min-w-[12rem] max-w-full"}
         value={selectValue}
         onChange={(e) => {
           const v = e.target.value;
@@ -48,7 +48,7 @@ export default function TicketTypeLabelSelect({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="tickets.name ile aynı yazın"
-          className="rounded border border-slate-300 px-2 py-1.5 text-sm w-56 max-w-full"
+          className="rounded border border-ink-300 px-2 py-1.5 text-sm w-56 max-w-full"
         />
       )}
     </div>

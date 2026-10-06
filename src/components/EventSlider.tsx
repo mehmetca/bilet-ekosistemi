@@ -98,11 +98,11 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
 
   if (sliderEvents.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-slate-200 p-8">
-        <h2 className="text-xl font-bold text-slate-900 mb-4">{title}</h2>
+      <div className="bg-white rounded-lg border border-ink-200 p-8">
+        <h2 className="text-xl font-bold text-ink-900 mb-4">{title}</h2>
         <div className="text-center py-8">
-          <Music2 className="h-16 w-16 mx-auto text-slate-300 mb-4" />
-          <p className="text-slate-500">{noEventsText}</p>
+          <Music2 className="h-16 w-16 mx-auto text-ink-300 mb-4" />
+          <p className="text-ink-500">{noEventsText}</p>
         </div>
       </div>
     );
@@ -114,10 +114,10 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
   const isPast = isEventPastByLocalDateTime(currentEvent.date, currentEvent.time);
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div className="bg-white rounded-lg border border-ink-200 overflow-hidden">
       {/* Başlık */}
       <div className="p-6 pb-4">
-        <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+        <h2 className="text-xl font-bold text-ink-900">{title}</h2>
       </div>
 
       {/* Slider */}
@@ -137,7 +137,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <Music2 className="h-24 w-24 text-primary-400" />
+              <Music2 className="h-24 w-24 text-ink-300" />
             </div>
           )}
 
@@ -147,7 +147,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
           {/* İçerik */}
           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-white">
             <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="text-xs font-medium bg-primary-600 px-2 py-1 rounded">
+              <span className="rounded bg-gold-500 px-2 py-1 text-xs font-semibold text-ink-950">
                 {CATEGORY_LABELS[currentEvent.category as keyof typeof CATEGORY_LABELS] ?? currentEvent.category ?? "Etkinlik"}
               </span>
               <span className="text-xs opacity-90">
@@ -173,7 +173,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className={`text-xl font-bold ${isPast ? "text-slate-400" : ""}`}>
+              <div className={`text-xl font-bold ${isPast ? "text-ink-400" : ""}`}>
                 {Number(currentEvent.price_from) > 0
                   ? formatPrice(Number(currentEvent.price_from), currentEvent.currency)
                   : freeText
@@ -181,13 +181,13 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
               </div>
               
               {isPast ? (
-                <span className="bg-slate-200 text-slate-500 px-6 py-2.5 rounded-lg font-semibold text-center w-full sm:w-auto cursor-not-allowed">
+                <span className="bg-ink-200 text-ink-500 px-6 py-2.5 rounded-lg font-semibold text-center w-full sm:w-auto cursor-not-allowed">
                   {tHome("buyTicketDisabled")}
                 </span>
               ) : (
                 <Link
                   href={eventDetailPath((currentEvent as Event & { show_slug?: string }).show_slug, currentEvent.id)}
-                  className="bg-primary-600 hover:bg-primary-700 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors text-center w-full sm:w-auto"
+                  className="bg-gold-500 hover:bg-gold-400 text-ink-950 px-6 py-2.5 rounded-lg font-semibold transition-colors text-center w-full sm:w-auto"
                 >
                   {buyTicketText}
                 </Link>
@@ -201,14 +201,14 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
           <>
             <button
               onClick={goToPrevious}
-              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-900 p-2 rounded-full shadow-lg transition-colors"
+              className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-ink-900 p-2 rounded-full shadow-lift transition-colors"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
             
             <button
               onClick={goToNext}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-slate-900 p-2 rounded-full shadow-lg transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 hover:bg-white text-ink-900 p-2 rounded-full shadow-lift transition-colors"
             >
               <ChevronRight className="h-5 w-5" />
             </button>
@@ -225,8 +225,8 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
               onClick={() => goToSlide(index)}
               className={`w-2 h-2 rounded-full transition-colors ${
                 index === currentIndex
-                  ? "bg-primary-600"
-                  : "bg-slate-300 hover:bg-slate-400"
+                  ? "bg-gold-500"
+                  : "bg-ink-300 hover:bg-ink-400"
               }`}
             />
           ))}
@@ -243,8 +243,8 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
                 onClick={() => goToSlide(index)}
                 className={`flex-shrink-0 w-32 h-20 rounded-lg overflow-hidden border-2 transition-all ${
                   index === currentIndex
-                    ? "border-primary-600 shadow-lg"
-                    : "border-slate-200 hover:border-slate-300"
+                    ? "border-gold-500 shadow-lift"
+                    : "border-ink-200 hover:border-ink-300"
                 }`}
               >
                 {event.image_url ? (
@@ -259,8 +259,8 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
                     }}
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center">
-                    <Music2 className="h-8 w-8 text-primary-400" />
+                  <div className="w-full h-full bg-gradient-to-br from-gold-100 to-paper flex items-center justify-center">
+                    <Music2 className="h-8 w-8 text-ink-300" />
                   </div>
                 )}
               </button>

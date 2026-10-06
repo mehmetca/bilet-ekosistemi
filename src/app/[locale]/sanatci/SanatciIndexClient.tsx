@@ -11,7 +11,7 @@ import type { Artist } from "@/types/database";
 import { Search as SearchIcon } from "lucide-react";
 import CoverImage from "@/components/CoverImage";
 
-const PAGE_SIZE = 21;
+const PAGE_SIZE = 20;
 const LETTERS = [
   "A",
   "B",
@@ -120,7 +120,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-ink-50">
       <Header />
       <main className="site-container py-6 sm:py-10">
         <div className="mb-4 sm:mb-6 text-center">
@@ -128,11 +128,11 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
           <p className="body-muted mt-2 sm:mt-3 text-base sm:text-lg">{t("subtitle")}</p>
         </div>
 
-        <div className="mb-4 sm:mb-6 rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+        <div className="mb-4 sm:mb-6 rounded-lg border border-ink-200 bg-white p-3 sm:p-4">
           <div className="flex flex-col gap-2 sm:gap-2.5">
             <div className="flex w-full justify-center py-1 sm:py-2">
               <div className="relative w-full max-w-xl sm:max-w-2xl">
-                <SearchIcon className="pointer-events-none absolute left-3 sm:left-4 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-slate-400" />
+                <SearchIcon className="pointer-events-none absolute left-3 sm:left-4 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-ink-400" />
                 <input
                   type="search"
                   value={searchTerm}
@@ -142,7 +142,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                     applyFilters(value, selectedLetter);
                   }}
                   placeholder={t("searchPlaceholder")}
-                  className="w-full rounded-lg border border-transparent bg-slate-100 py-3 pl-10 pr-3 text-sm text-slate-900 shadow-sm focus:border-transparent focus:bg-white focus:outline-none focus:ring-0 sm:py-3.5 sm:pl-12 sm:pr-4 sm:text-base"
+                  className="w-full rounded-lg border border-transparent bg-ink-100 py-3 pl-10 pr-3 text-sm text-ink-900 shadow-card focus:border-transparent focus:bg-white focus:outline-none focus:ring-0 sm:py-3.5 sm:pl-12 sm:pr-4 sm:text-base"
                 />
               </div>
             </div>
@@ -159,8 +159,8 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                 }}
                 className={`h-7 min-h-[1.75rem] shrink-0 rounded-md px-1.5 text-[10px] font-semibold leading-none sm:h-8 sm:min-h-0 sm:px-2.5 sm:text-xs md:h-9 md:px-3 md:text-sm ${
                   selectedLetter === "ALL"
-                    ? "bg-primary-600 text-white"
-                    : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                    ? "bg-gold-500 text-ink-950"
+                    : "border border-ink-300 bg-white text-ink-700 hover:bg-ink-50"
                 }`}
               >
                 {t("filterAll")}
@@ -175,8 +175,8 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                   }}
                   className={`h-7 min-w-[1.35rem] min-h-[1.75rem] shrink-0 rounded-md px-1 text-[10px] font-semibold leading-none sm:h-8 sm:min-w-8 sm:min-h-0 sm:px-2 sm:text-xs md:h-9 md:min-w-9 md:px-2.5 md:text-sm ${
                     selectedLetter === letter
-                      ? "bg-primary-600 text-white"
-                      : "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
+                      ? "bg-gold-500 text-ink-950"
+                      : "border border-ink-300 bg-white text-ink-700 hover:bg-ink-50"
                   }`}
                 >
                   {letter}
@@ -187,16 +187,16 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
         </div>
 
         {loading ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500">
+          <div className="rounded-lg border border-ink-200 bg-white p-10 text-center text-ink-500">
             {t("loading")}
           </div>
         ) : pagedArtists.length === 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500">
+          <div className="rounded-lg border border-ink-200 bg-white p-10 text-center text-ink-500">
             {t("noArtists")}
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {pagedArtists.map((artist, index) => {
                 const localized = getLocalizedArtist(artist as unknown as Record<string, unknown>, locale);
                 const parsed = parseArtistBio(localized.bio || artist.bio);
@@ -207,27 +207,27 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                   <Link
                     key={artist.id}
                     href={`/sanatci/${artist.slug}`}
-                    className="group overflow-hidden rounded-tl-xl rounded-br-xl rounded-tr-none rounded-bl-none border-[2px] border-slate-300 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-slate-400 hover:shadow-lg"
+                    className="group overflow-hidden rounded-tl-xl rounded-br-xl rounded-tr-none rounded-bl-none border-[2px] border-ink-300 bg-white shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-ink-400 hover:shadow-lift"
                   >
-                    <div className="relative aspect-[4/3] bg-slate-100 overflow-hidden">
+                    <div className="relative aspect-[4/3] bg-ink-100 overflow-hidden">
                       <CoverImage
                         src={artist.image_url}
                         alt={localized.name || artist.name}
-                        sizes="(max-width: 767px) 100vw, (max-width: 1279px) 50vw, 33vw"
-                        priority={currentPage === 1 && index < 6}
+                        sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw"
+                        priority={currentPage === 1 && index < 4}
                         zoomOnHover
                         fallback={
-                          <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-xs md:text-sm">
+                          <div className="absolute inset-0 flex items-center justify-center text-ink-400 text-xs md:text-sm">
                             {t("noPhoto")}
                           </div>
                         }
                       />
                     </div>
                     <div className="px-3 pt-3 pb-3 text-center">
-                      <h2 className="card-title text-sm md:text-base line-clamp-1 group-hover:text-primary-700">
+                      <h2 className="card-title text-sm md:text-base line-clamp-1 group-hover:text-gold-700">
                         {localized.name || artist.name}
                       </h2>
-                      <p className={`mt-2 text-xs md:text-sm text-slate-600 ${lineClampClass}`}>
+                      <p className={`mt-2 text-xs md:text-sm text-ink-600 ${lineClampClass}`}>
                         {excerpt || t("bioPlaceholder")}
                       </p>
                     </div>
@@ -241,7 +241,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-slate-300 disabled:cursor-not-allowed shadow-sm"
+                  className="px-3 py-2 text-sm font-medium text-ink-950 bg-gold-500 rounded-md hover:bg-gold-400 disabled:bg-ink-300 disabled:cursor-not-allowed shadow-card"
                 >
                   ← {tCommon("previous")}
                 </button>
@@ -251,10 +251,10 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                     <button
                       key={n}
                       onClick={() => goToPage(n)}
-                      className={`h-9 min-w-9 rounded-md px-3 text-sm shadow-sm ${
+                      className={`h-9 min-w-9 rounded-md px-3 text-sm shadow-card ${
                         n === currentPage
-                          ? "bg-primary-600 text-white"
-                          : "bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
+                          ? "bg-gold-500 text-ink-950"
+                          : "bg-white border border-ink-300 text-ink-700 hover:bg-ink-50"
                       }`}
                     >
                       {n}
@@ -265,7 +265,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-2 text-sm font-medium text-white bg-primary-600 rounded-md hover:bg-primary-700 disabled:bg-slate-300 disabled:cursor-not-allowed shadow-sm"
+                  className="px-3 py-2 text-sm font-medium text-ink-950 bg-gold-500 rounded-md hover:bg-gold-400 disabled:bg-ink-300 disabled:cursor-not-allowed shadow-card"
                 >
                   {tCommon("next")} →
                 </button>
@@ -281,10 +281,10 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
 function ArtistsLoadingFallback() {
   const t = useTranslations("artists");
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-ink-50">
       <Header />
       <main className="site-container py-10">
-        <div className="rounded-xl border border-slate-200 bg-white p-10 text-center text-slate-500">
+        <div className="rounded-lg border border-ink-200 bg-white p-10 text-center text-ink-500">
           {t("loading")}
         </div>
       </main>

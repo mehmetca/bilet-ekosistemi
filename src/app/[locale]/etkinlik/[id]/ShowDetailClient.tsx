@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import Image from "next/image";
 import NextLink from "next/link";
-import { Calendar, ChevronRight, Music2, Building2, Clock, MapPin } from "lucide-react";
+import { Calendar, ChevronRight, Music2, Building2 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import Header from "@/components/Header";
 import type { Event } from "@/types/database";
@@ -129,91 +129,54 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
 
   // Amed Spor: fiyat 0/boş iken satır "Yakında" gibi görünmesin.
   const isAmedSpor = firstEvent?.show_slug ? isAmedSporEvent(firstEvent.show_slug) : false;
-  const firstEventDate = formatEventLongDateTime(firstEvent.date, firstEvent.time, locale);
-  const firstEventVenue = (getLocalizedText(firstEvent as unknown as Record<string, unknown>, "venue", locale) || firstEvent.venue || "").trim();
-  const firstEventAddress = buildEventAddressLine(firstEvent, firstEventVenue);
 
   return (
     <div className="min-h-screen bg-[#f5f6f8]">
       <Header />
 
-      {/* Hero – görsel ve temel etkinlik bilgileri */}
-      <div className="border-b border-slate-200 bg-white">
-        <div className="site-container py-6 sm:py-8">
-          <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:items-stretch lg:gap-8">
-            <div className="relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-xl border border-slate-200 bg-slate-100 shadow-sm">
-              {firstEvent.image_url ? (
-                <Image
-                  src={resolvePublicImageUrl(firstEvent.image_url) ?? ""}
-                  alt={localized.title}
-                  fill
-                  priority
-                  className="object-cover"
-                  sizes="(max-width: 1024px) 100vw, 280px"
-                />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center">
-                  <Music2 className="h-16 w-16 text-slate-400" />
-                </div>
-              )}
-            </div>
-
-            <div className="flex min-w-0 flex-col justify-center">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+      {/* Hero – etkinlik özeti */}
+      <div className="border-b border-ink-200 bg-white">
+        <div className="site-container py-8">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+            <div>
+              <span className="eyebrow">
                 {tCat((firstEvent.category || "diger").toLowerCase())}
-              </p>
-              <h1 className="mt-2 text-3xl font-extrabold leading-tight text-slate-900 lg:text-4xl">{localized.title}</h1>
+              </span>
+              <h1 className="font-display mt-2 text-3xl font-semibold leading-tight text-ink-900 lg:text-4xl">{localized.title}</h1>
+              <span className="rule-gold mt-3" />
               {organizerDisplayName && (
-                <p className="mt-3 inline-flex w-fit items-center gap-2 rounded-md bg-primary-50 px-3 py-1.5 text-sm font-medium text-primary-700">
+                <p className="mt-3 inline-flex w-fit items-center gap-2 rounded-md bg-gold-50 px-3 py-1.5 text-sm font-medium text-gold-700">
                   <Building2 className="h-4 w-4" />
                   {t("organizer")}: {organizerDisplayName}
                 </p>
               )}
-
-              <div className="mt-6 grid gap-3 sm:grid-cols-2">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <Calendar className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("date")}</p>
-                      <p className="mt-1 font-semibold text-slate-900">{firstEventDate.lineLong}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-start gap-3">
-                    <Clock className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("time")}</p>
-                      <p className="mt-1 font-semibold text-slate-900">{firstEvent.time || "20:00"}</p>
-                    </div>
-                  </div>
-                </div>
-                {firstEventVenue && (
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:col-span-2">
-                    <div className="flex items-start gap-3">
-                      <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" />
-                      <div className="min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{t("venue")}</p>
-                        <p className="mt-1 font-semibold text-slate-900">{firstEventVenue}</p>
-                        {firstEventAddress && firstEventAddress !== firstEventVenue ? (
-                          <p className="mt-1 text-sm text-slate-600">{firstEventAddress}</p>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
               <div className="mt-5 flex flex-wrap items-center gap-4">
                 {(!isAmedSpor || minPrice > 0) && (
-                  <p className="text-2xl font-bold text-primary-700">
+                  <p className="text-2xl font-bold text-gold-700">
                     {minPrice > 0 ? `${t("from")} ${formatPrice(minPrice, firstEvent.currency)}` : t("comingSoon")}
                   </p>
                 )}
-                <span className="text-sm text-slate-500">
+                <span className="text-sm text-ink-500">
                   {upcomingEvents.length} {tShow("performances")}
                 </span>
+              </div>
+            </div>
+            <div>
+              <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-ink-200 bg-ink-100">
+                {firstEvent.image_url ? (
+                  <Image
+                    src={resolvePublicImageUrl(firstEvent.image_url) ?? ""}
+                    alt={localized.title}
+                    fill
+                    priority
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 360px"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Music2 className="h-16 w-16 text-ink-400" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -223,34 +186,34 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
       {/* Şehir seçimi ve seanslar */}
       <div className="site-container py-10">
         {isDraft && (
-          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
             <p className="font-medium">Bu etkinlik taslak olarak işaretlendi</p>
             <p className="mt-1 text-sm">Taslak etkinlikler ana sayfada görünmez ve bilet satışı kapalıdır. Bu sayfa yalnızca önizleme içindir.</p>
           </div>
         )}
         {isUnapproved && !isDraft && (
-          <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900">
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
             <p className="font-medium">Bu etkinlik onay bekliyor</p>
             <p className="mt-1 text-sm">Yönetici onayından sonra sitede yayına alınacak ve bilet satışı açılacaktır. Bu sayfa sadece önizleme içindir.</p>
           </div>
         )}
         {hasExternalTickets && (
-          <div className="mb-8 rounded-xl border border-blue-200 bg-blue-50 p-5">
-            <h2 className="text-lg font-semibold text-blue-900 mb-2">{t("ticketInfo")}</h2>
-            <p className="text-sm text-blue-900 mb-2">
+          <div className="mb-8 rounded-lg border border-gold-300 bg-gold-50 p-5">
+            <h2 className="font-display mb-2 text-lg font-semibold text-gold-700">{t("ticketInfo")}</h2>
+            <p className="text-sm text-gold-700 mb-2">
               {t("externalTicketInfo")}{" "}
               {t("priceFrom")}: <strong>{formatPrice(minPrice, firstEvent.currency)}</strong>
             </p>
-            <p className="text-sm text-blue-800 mb-2">{t("externalTicketDisclaimer")}</p>
-            <p className="text-sm text-blue-800 mb-2">{t("externalTicketDisclaimer2")} {t("externalTicketSupport")}</p>
+            <p className="text-sm text-gold-700 mb-2">{t("externalTicketDisclaimer")}</p>
+            <p className="text-sm text-gold-700 mb-2">{t("externalTicketDisclaimer2")} {t("externalTicketSupport")}</p>
           </div>
         )}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 mb-8">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">{tShow("selectCity")}</h2>
+        <div className="bg-white rounded-lg border border-ink-200 p-6 mb-8">
+          <h2 className="font-display mb-4 text-xl font-semibold text-ink-900">{tShow("selectCity")}</h2>
           <select
             value={selectedCity}
             onChange={(e) => setSelectedCity(e.target.value)}
-            className="w-full max-w-xs rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+            className="w-full max-w-xs rounded-lg border border-ink-300 px-4 py-3 text-ink-900 focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
           >
             <option value="all">{tShow("allCities")}</option>
             {cities.map((city) => (
@@ -261,13 +224,14 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
           </select>
         </div>
 
-        <h2 className="text-2xl font-bold text-slate-900 mb-6">
+        <h2 className="font-display text-2xl font-semibold text-ink-900">
           {t("ticketsAndPricesTitle", { title: localized.title || firstEvent.title })}
         </h2>
+        <span className="rule-gold mb-6 mt-3" />
 
         {displayEvents.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center text-slate-500">
-            <Calendar className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+          <div className="bg-white rounded-lg border border-ink-200 p-12 text-center text-ink-500">
+            <Calendar className="h-16 w-16 mx-auto text-ink-300 mb-4" />
             <p className="text-lg font-medium">
               {selectedCity === "all" ? tShow("noUpcomingPerformances") : tShow("noPerformancesInCity", { city: selectedCity })}
             </p>
@@ -337,14 +301,14 @@ function CityEventsSection({
 }) {
   const cityHeadlineTitle = formatCityTicketsTitle(showTitle, city, locale);
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-      <div className="border-b border-slate-200 bg-white px-5 py-4 sm:px-6 sm:py-5">
-        <h3 className="text-lg font-bold text-slate-900 sm:text-xl">{city}</h3>
-        <p className="mt-1 text-sm font-semibold text-slate-800 sm:text-base">
+    <div className="bg-white rounded-lg border border-ink-200 overflow-hidden shadow-card">
+      <div className="border-b border-ink-200 bg-white px-5 py-4 sm:px-6 sm:py-5">
+        <h3 className="font-display text-lg font-semibold text-ink-900 sm:text-xl">{city}</h3>
+        <p className="mt-1 text-sm font-semibold text-ink-800 sm:text-base">
           {locale === "tr" ? `${cityHeadlineTitle} Biletleri` : tShow("cityTicketsHeadline", { title: cityHeadlineTitle, city })}
         </p>
       </div>
-      <div className="divide-y divide-slate-100">
+      <div className="divide-y divide-ink-100">
         {events.map((event) => {
           const eventLocalized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale);
           const eventTitle = (eventLocalized.title || event.title || "").trim();
@@ -359,32 +323,32 @@ function CityEventsSection({
             <div
               key={event.id}
               className={`flex flex-col gap-4 px-4 py-5 transition-colors sm:flex-row sm:items-stretch sm:gap-6 sm:px-6 sm:py-6 ${
-                isPast ? "opacity-60" : "hover:bg-slate-50/60"
+                isPast ? "opacity-60" : "hover:bg-ink-50/60"
               }`}
             >
               <div className="flex min-w-0 flex-1 gap-4 sm:gap-6">
-                <div className="flex shrink-0 flex-row items-center gap-3 sm:flex-col sm:justify-center sm:gap-1 sm:border-r sm:border-slate-100 sm:pr-6">
+                <div className="flex shrink-0 flex-row items-center gap-3 sm:flex-col sm:justify-center sm:gap-1 sm:border-r sm:border-ink-100 sm:pr-6">
                   <div className="min-w-[4.25rem] text-center sm:min-w-[3.5rem]">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500">{dateParts.monthShort}</p>
-                    <p className="text-[2.1rem] font-extrabold leading-none text-slate-900 sm:text-[2.5rem]">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest2 text-gold-600">{dateParts.monthShort}</p>
+                    <p className="font-display text-[2.1rem] font-semibold leading-none text-ink-900 sm:text-[2.5rem]">
                       {dateParts.dayNum}
                     </p>
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
                   {eventTitle ? (
-                    <p className="text-base font-bold text-slate-900 sm:text-lg">{eventTitle}</p>
+                    <p className="font-display text-base font-semibold text-ink-900 sm:text-lg">{eventTitle}</p>
                   ) : null}
-                  <p className={eventTitle ? "text-sm font-medium text-slate-500" : "text-base font-semibold text-slate-900 sm:text-lg"}>
+                  <p className={eventTitle ? "text-sm font-medium text-ink-500" : "text-base font-semibold text-ink-900 sm:text-lg"}>
                     {dateParts.lineLong}
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-slate-600">
-                    <span className="font-semibold text-slate-800">{t("addressLabel")}</span>
+                  <p className="mt-2 text-sm leading-relaxed text-ink-600">
+                    <span className="font-semibold text-ink-800">{t("addressLabel")}</span>
                     {addressLine ? ` ${addressLine}` : " —"}
                   </p>
                   {organizerDisplayName ? (
-                    <p className="mt-2 text-sm text-slate-600">
-                      <span className="font-semibold text-slate-800">{t("organizer")}</span> {organizerDisplayName}
+                    <p className="mt-2 text-sm text-ink-600">
+                      <span className="font-semibold text-ink-800">{t("organizer")}</span> {organizerDisplayName}
                     </p>
                   ) : null}
                   {isPast ? (
@@ -394,16 +358,16 @@ function CityEventsSection({
                   ) : null}
                 </div>
               </div>
-              <div className="flex shrink-0 flex-col justify-center gap-3 border-t border-slate-100 pt-4 sm:min-w-[200px] sm:border-t-0 sm:pt-0 sm:pl-2">
+              <div className="flex shrink-0 flex-col justify-center gap-3 border-t border-ink-100 pt-4 sm:min-w-[200px] sm:border-t-0 sm:pt-0 sm:pl-2">
                 <div className="text-left sm:text-right">
                   {price > 0 || !(event.show_slug && isAmedSporEvent(event.show_slug)) ? (
-                    <p className="text-lg font-bold text-primary-700">
+                    <p className="text-lg font-bold text-gold-700">
                       {price > 0 ? `${t("from")} ${formatPrice(price, event.currency)}` : t("comingSoon")}
                     </p>
                   ) : null}
                 </div>
                 {isPast || salesBlocked ? (
-                  <span className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-200 px-6 py-3 font-semibold text-slate-500 cursor-not-allowed sm:ml-auto">
+                  <span className="inline-flex items-center justify-center gap-2 rounded-lg bg-ink-200 px-6 py-3 font-semibold text-ink-500 cursor-not-allowed sm:ml-auto">
                     {isPast ? t("eventEnded") : t("comingSoon")}
                   </span>
                 ) : (
@@ -413,7 +377,7 @@ function CityEventsSection({
                         ? `/${locale}/etkinlik/${event.id}/amed-spor-form`
                         : `/${locale}/etkinlik/${event.id}`
                     }
-                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-[#c62828] px-5 text-sm font-bold uppercase tracking-wide text-white shadow hover:bg-[#b71c1c] sm:ml-auto"
+                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-gold-500 px-5 text-sm font-bold uppercase tracking-wide text-ink-950 shadow-card hover:bg-gold-400 sm:ml-auto"
                   >
                     {event.show_slug && isAmedSporEvent(event.show_slug) ? t("amedSporFillForm") : t("buyTicket")}
                     <ChevronRight className="h-4 w-4" />

@@ -8,6 +8,9 @@ import { eventDetailPath } from "@/lib/amed-spor-utils";
 import type { Locale } from "@/lib/i18n-content";
 import { Music2 } from "lucide-react";
 import CoverImage from "@/components/CoverImage";
+import SectionTitle from "@/components/ui/SectionTitle";
+import { cardClass } from "@/components/ui/Card";
+import { cn } from "@/components/ui/cn";
 
 interface FeaturedEventsProps {
   events: Event[];
@@ -46,7 +49,7 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
 
   return (
     <section className="site-container py-12">
-      <h2 className="text-2xl font-bold text-slate-900 mb-6">{title}</h2>
+      <SectionTitle title={title} />
       <div className="grid gap-6 md:grid-cols-2">
         {featured.map((event) => {
           const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale);
@@ -57,27 +60,28 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
             <Link
               key={event.id}
               href={href}
-              className="group block overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all hover:shadow-lg hover:border-primary-200"
+              className={cn(cardClass({ hover: true }), "group block overflow-hidden")}
             >
-              <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-slate-200 to-slate-100">
+              <div className="relative aspect-[16/9] overflow-hidden bg-ink-100">
                 <CoverImage
                   src={event.image_url}
                   alt={localized.title}
                   sizes="(max-width: 768px) 100vw, 50vw"
+                  imageClassName="object-cover object-top transition-transform duration-500 group-hover:scale-[1.03]"
                   fallback={
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <Music2 className="h-24 w-24 text-slate-400" />
+                      <Music2 className="h-24 w-24 text-ink-300" />
                     </div>
                   }
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                {/* Alt satır: sol tarafta başlık + mekan, sağ tarafta tarih (etkinlik başlığı hizasında, şeffaf) */}
-                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between p-4 sm:p-5 md:p-6">
-                  <div className="min-w-0 flex-1 order-2 sm:order-1">
-                    <h3 className="text-base sm:text-lg md:text-xl font-bold text-white line-clamp-2 mb-1 drop-shadow-lg">
+                <div className="poster-scrim pointer-events-none absolute inset-0" aria-hidden />
+                {/* Alt satır: sol tarafta başlık + mekan, sağ tarafta tarih (afiş damgası) */}
+                <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-4 sm:flex-row sm:items-end sm:justify-between sm:p-5 md:p-6">
+                  <div className="order-2 min-w-0 flex-1 sm:order-1">
+                    <h3 className="mb-1 line-clamp-2 font-display text-base font-semibold tracking-tight text-white drop-shadow-lg sm:text-lg md:text-xl">
                       {localized.title}
                     </h3>
-                    <p className="text-sm text-white/90 line-clamp-1">
+                    <p className="line-clamp-1 text-sm text-white/75">
                       {[
                         (event as Event & { city?: string | null }).city || event.location,
                         localized.venue || event.venue,
@@ -86,11 +90,17 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
                         .join(" / ")}
                     </p>
                   </div>
-                  {/* Tarih: eski stil, alt alta (gün daha büyük) */}
-                  <div className="flex flex-shrink-0 flex-col items-center justify-center rounded-lg border-2 border-white/90 bg-transparent px-3 py-2.5 md:px-4 md:py-3 min-w-[4.25rem] sm:min-w-[5.5rem] text-white drop-shadow-md order-1 sm:order-2 self-start sm:self-auto">
-                    <span className="text-3xl md:text-4xl font-extrabold leading-none">{dateParts.day}</span>
-                    <span className="mt-1 text-xs md:text-sm font-semibold uppercase tracking-wide leading-tight">{dateParts.month}</span>
-                    <span className="text-xs md:text-sm font-medium leading-tight">{dateParts.year}</span>
+                  {/* Tarih: afiş damgası — altın çizgi, serif gün, altın ay */}
+                  <div className="order-1 flex flex-shrink-0 flex-col border-l-2 border-gold-500 pl-3 text-left sm:order-2 sm:self-auto">
+                    <span className="font-display text-3xl font-semibold leading-none text-white drop-shadow-md md:text-4xl">
+                      {dateParts.day}
+                    </span>
+                    <span className="mt-1 text-[10px] font-semibold uppercase leading-tight tracking-widest2 text-gold-300 md:text-xs">
+                      {dateParts.month}
+                    </span>
+                    <span className="text-xs font-medium leading-tight text-white/70">
+                      {dateParts.year}
+                    </span>
                   </div>
                 </div>
               </div>

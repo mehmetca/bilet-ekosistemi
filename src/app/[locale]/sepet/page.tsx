@@ -733,7 +733,7 @@ export default function CheckoutPage() {
   const emailSentSuccessText = t("ticketsSentSuccess");
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8]">
+    <div className="min-h-screen bg-paper">
         <SafeHeader />
 
       <div className="site-container py-8">
@@ -747,16 +747,16 @@ export default function CheckoutPage() {
           >
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
-                currentStep >= 1 ? "!bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
+                currentStep >= 1 ? "!bg-gold-500 text-ink-950" : "bg-ink-200 text-ink-600"
               }`}
             >
               1
             </div>
-            <span className={`text-sm font-semibold ${currentStep >= 1 ? "text-slate-900" : "text-slate-500"}`}>
+            <span className={`text-sm font-semibold ${currentStep >= 1 ? "text-ink-900" : "text-ink-500"}`}>
               {t("stepCart")}
             </span>
           </button>
-          <ChevronRight className="h-5 w-5 text-slate-400" />
+          <ChevronRight className="h-5 w-5 text-ink-400" />
           <button
             type="button"
             onClick={() => currentStep >= 2 && setCurrentStep(2)}
@@ -764,12 +764,12 @@ export default function CheckoutPage() {
           >
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
-                currentStep >= 2 ? "!bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
+                currentStep >= 2 ? "!bg-gold-500 text-ink-950" : "bg-ink-200 text-ink-600"
               }`}
             >
               2
             </div>
-            <span className={`text-sm font-medium ${currentStep >= 2 ? "text-slate-900" : "text-slate-500"}`}>
+            <span className={`text-sm font-medium ${currentStep >= 2 ? "text-ink-900" : "text-ink-500"}`}>
               {t("stepPayment")}
             </span>
           </button>
@@ -778,9 +778,9 @@ export default function CheckoutPage() {
 
         {!showExpiredFullPage && !allSuccess ? (
         <div className="mb-6 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">{t("title")}</h1>
+          <h1 className="text-2xl font-bold text-ink-900 md:text-3xl">{t("title")}</h1>
           {items.length > 0 ? (
-            <p className="text-base font-semibold text-primary-600 md:text-lg">
+            <p className="text-base font-semibold text-gold-700 md:text-lg">
               {t("cartHeadlineSummary", {
                 count: totalItems,
                 total: formatPrice(displayGrandTotal, checkoutCurrency),
@@ -791,7 +791,7 @@ export default function CheckoutPage() {
         ) : null}
 
         {!showExpiredFullPage && !allSuccess && items.length > 0 && reservationExpiresAt && reservationSecLeft > 0 ? (
-          <div className="mb-6 flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-950 shadow-sm">
+          <div className="mb-6 flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-950 shadow-card">
             <Clock className="h-6 w-6 shrink-0 text-emerald-700" aria-hidden />
             <p className="text-sm font-semibold sm:text-base">
               {t("reservationTimer", { time: reservationTimeStr })}
@@ -800,20 +800,20 @@ export default function CheckoutPage() {
         ) : null}
 
         {!user && !authLoading && items.length > 0 ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
-            <p className="mb-6 text-lg text-slate-700">{t("loginRequired")}</p>
-            <p className="mb-6 text-sm text-slate-500">{t("redirectingToLogin")}</p>
+          <div className="rounded-lg border border-ink-200 bg-white p-12 text-center">
+            <p className="mb-6 text-lg text-ink-700">{t("loginRequired")}</p>
+            <p className="mb-6 text-sm text-ink-500">{t("redirectingToLogin")}</p>
             <SafeNextLink
               href={`/${locale}/giris?redirect=/${locale}/sepet`}
-              className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-lg !bg-gold-500 px-6 py-3 font-semibold text-ink-950 hover:!bg-gold-400"
             >
               {t("loginOrSignup")}
             </SafeNextLink>
           </div>
         ) : allSuccess ? (
           <div className="space-y-6">
-            <div className="rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">
-              <h1 className="text-center text-3xl font-bold text-slate-900 md:text-4xl">
+            <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-green-800">
+              <h1 className="text-center text-3xl font-bold text-ink-900 md:text-4xl">
                 {successPageTitle}
               </h1>
               {results.every((r) => r.success && r.emailSent !== false) ? (
@@ -821,7 +821,7 @@ export default function CheckoutPage() {
               ) : null}
             </div>
             {results.some((r) => r.success && !r.emailSent) && (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-800">
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800">
                 <p className="font-medium">{t("emailNotSent")}</p>
                 <p className="mt-1 text-sm">{t("emailNotSentHint")}</p>
               </div>
@@ -830,7 +830,7 @@ export default function CheckoutPage() {
               r.success && r.ticketCode && r.orderDetails ? (
                 <div
                   key={idx}
-                  className="rounded-xl border border-green-200 bg-green-50 p-6"
+                  className="rounded-lg border border-green-200 bg-green-50 p-6"
                 >
                   <p className="mb-4 font-medium text-green-800">{t("orderCreatedSuccess")}</p>
                   <SafeTicketPrint
@@ -853,14 +853,14 @@ export default function CheckoutPage() {
             )}
             <SafeNextLink
               href={`/${locale}`}
-              className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-lg !bg-gold-500 px-6 py-3 font-semibold text-ink-950 hover:!bg-gold-400"
             >
               {t("continueShopping")}
             </SafeNextLink>
           </div>
         ) : !hydrated ? (
           <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+            <div className="h-8 w-8 animate-spin rounded-full border-4 border-gold-300 border-t-transparent" />
           </div>
         ) : shouldShowEmptyCart ? (
           showExpiredFullPage ? (
@@ -868,22 +868,22 @@ export default function CheckoutPage() {
               <SafeNextLink
                 href={`/${locale}`}
                 onClick={clearExpiredSession}
-                className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 hover:text-primary-800"
+                className="inline-flex items-center gap-2 text-sm font-semibold text-gold-700 hover:text-gold-700"
               >
                 <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
                 {t("backToShop")}
               </SafeNextLink>
               <div className="mt-10 text-center px-2">
-                <h2 className="text-2xl font-bold text-primary-800 md:text-3xl">
+                <h2 className="text-2xl font-bold text-gold-700 md:text-3xl">
                   {t("reservationExpiredPageTitle")}
                 </h2>
-                <p className="mt-3 max-w-lg mx-auto text-base text-slate-600">
+                <p className="mt-3 max-w-lg mx-auto text-base text-ink-600">
                   {t("reservationExpiredPageSubtitle")}
                 </p>
               </div>
               {expiredSnapshot ? (
-                <div className="mx-auto mt-10 max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
-                  <div className="relative h-48 w-full overflow-hidden bg-slate-200">
+                <div className="mx-auto mt-10 max-w-md overflow-hidden rounded-lg border border-ink-200 bg-white shadow-lift">
+                  <div className="relative h-48 w-full overflow-hidden bg-ink-200">
                     {expiredSnapshot.imageUrl && String(expiredSnapshot.imageUrl).trim() ? (
                       <>
                         <img
@@ -896,42 +896,42 @@ export default function CheckoutPage() {
                           <img
                             src={resolvePublicImageUrl(expiredSnapshot.imageUrl) ?? expiredSnapshot.imageUrl}
                             alt=""
-                            className="max-h-40 w-auto max-w-[220px] rounded-lg object-cover shadow-md"
+                            className="max-h-40 w-auto max-w-[220px] rounded-lg object-cover shadow-card"
                           />
                         </div>
                       </>
                     ) : (
-                      <div className="flex h-full items-center justify-center bg-slate-100">
-                        <Ticket className="h-16 w-16 text-slate-300" aria-hidden />
+                      <div className="flex h-full items-center justify-center bg-ink-100">
+                        <Ticket className="h-16 w-16 text-ink-300" aria-hidden />
                       </div>
                     )}
                   </div>
                   <div className="p-6 text-left">
-                    <h3 className="text-xl font-bold text-slate-900">{expiredSnapshot.eventTitle}</h3>
-                    <p className="mt-2 text-sm text-slate-600">
+                    <h3 className="text-xl font-bold text-ink-900">{expiredSnapshot.eventTitle}</h3>
+                    <p className="mt-2 text-sm text-ink-600">
                       {expiredSnapshot.venue}, {expiredSnapshot.location}
                     </p>
-                    <p className="mt-1 text-sm text-slate-600">
+                    <p className="mt-1 text-sm text-ink-600">
                       {formatCartEventWhen(locale, expiredSnapshot.eventDate, expiredSnapshot.eventTime)}
                     </p>
                     <SafeNextLink
                       href={`/${locale}/etkinlik/${expiredSnapshot.eventId}`}
                       onClick={clearExpiredSession}
-                      className="mt-6 flex w-full items-center justify-center rounded-xl bg-primary-600 px-4 py-3.5 text-center text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+                      className="mt-6 flex w-full items-center justify-center rounded-lg bg-gold-500 px-4 py-3.5 text-center text-sm font-semibold text-ink-950 transition-colors hover:bg-gold-400"
                     >
                       {t("checkAvailability")}
                     </SafeNextLink>
                   </div>
                 </div>
               ) : (
-                <div className="mx-auto mt-10 max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-md">
-                  <p className="text-sm leading-relaxed whitespace-pre-line text-slate-700">
+                <div className="mx-auto mt-10 max-w-md rounded-lg border border-ink-200 bg-white p-8 text-center shadow-card">
+                  <p className="text-sm leading-relaxed whitespace-pre-line text-ink-700">
                     {t("reservationExpiredNotice")}
                   </p>
                   <SafeNextLink
                     href={`/${locale}`}
                     onClick={clearExpiredSession}
-                    className="mt-6 inline-flex items-center justify-center rounded-xl bg-primary-600 px-6 py-3 text-sm font-semibold text-white hover:bg-primary-700"
+                    className="mt-6 inline-flex items-center justify-center rounded-lg bg-gold-500 px-6 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-400"
                   >
                     {t("continueShopping")}
                   </SafeNextLink>
@@ -941,7 +941,7 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-800"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-gold-700 hover:text-gold-700"
                 >
                   <ArrowUp className="h-4 w-4 shrink-0" aria-hidden />
                   {t("scrollToTop")}
@@ -949,13 +949,13 @@ export default function CheckoutPage() {
               </div>
             </div>
           ) : (
-          <div className="rounded-xl border border-slate-200 bg-white p-12 text-center">
-            <ShoppingCart className="mx-auto mb-4 h-16 w-16 text-slate-300" />
-            <h2 className="mb-2 text-xl font-semibold text-slate-800">{t("emptyCart")}</h2>
-            <p className="mb-6 text-slate-600">{t("emptyCartDesc")}</p>
+          <div className="rounded-lg border border-ink-200 bg-white p-12 text-center">
+            <ShoppingCart className="mx-auto mb-4 h-16 w-16 text-ink-300" />
+            <h2 className="mb-2 text-xl font-semibold text-ink-800">{t("emptyCart")}</h2>
+            <p className="mb-6 text-ink-600">{t("emptyCartDesc")}</p>
             <SafeNextLink
               href={`/${locale}`}
-              className="inline-flex items-center gap-2 rounded-lg !bg-blue-600 px-6 py-3 font-semibold text-white hover:!bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-lg !bg-gold-500 px-6 py-3 font-semibold text-ink-950 hover:!bg-gold-400"
             >
               {t("continueShopping")}
             </SafeNextLink>
@@ -976,16 +976,16 @@ export default function CheckoutPage() {
                 {items.map((item) => (
                   <div
                     key={item.ticketId}
-                    className="flex gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                    className="flex gap-4 rounded-lg border border-ink-200 bg-white p-4 shadow-card"
                   >
                     {item.imageUrl && (
-                      <div className="relative h-20 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
+                      <div className="relative h-20 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-ink-100">
                         <img src={resolvePublicImageUrl(item.imageUrl) ?? item.imageUrl} alt="" className="h-full w-full object-cover" />
                       </div>
                     )}
                     <div className="min-w-0 flex-1">
-                      <h3 className="font-semibold text-slate-900">{item.eventTitle}</h3>
-                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-600">
+                      <h3 className="font-semibold text-ink-900">{item.eventTitle}</h3>
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-600">
                         <span className="flex items-center gap-1.5">
                           <Calendar className="h-4 w-4 shrink-0" />
                           {formatEventDateDMY(item.eventDate)}
@@ -1008,17 +1008,17 @@ export default function CheckoutPage() {
                         ) : null}
                       </div>
                       <div className="mt-2 flex items-center gap-2">
-                        <Ticket className="h-4 w-4 text-primary-600" />
-                        <span className="text-sm font-medium text-slate-700">
+                        <Ticket className="h-4 w-4 text-gold-700" />
+                        <span className="text-sm font-medium text-ink-700">
                           {collapseDuplicateAdjacentTicketLabel(item.ticketName || "")}
                         </span>
                       </div>
                       {item.seatIds && item.seatIds.length > 0 ? (
                         <div className="mt-2">
-                          <p className="text-xs font-semibold text-slate-700">
+                          <p className="text-xs font-semibold text-ink-700">
                             {t("seatsInCart", { count: item.seatIds.length })}
                           </p>
-                          <ul className="mt-1 list-none space-y-0.5 pl-0 text-xs text-slate-600">
+                          <ul className="mt-1 list-none space-y-0.5 pl-0 text-xs text-ink-600">
                             {item.seatIds.map((seatId, idx) => {
                               const line = item.seatCaptions?.[idx]?.trim() || t("seatLineFallback", { n: idx + 1 });
                               return (
@@ -1034,13 +1034,13 @@ export default function CheckoutPage() {
                     <div className="flex flex-col items-end gap-2">
                       <div className="flex items-center gap-2">
                         {item.seatIds && item.seatIds.length > 0 ? (
-                          <span className="text-sm font-semibold text-slate-700">{item.seatIds.length} koltuk</span>
+                          <span className="text-sm font-semibold text-ink-700">{item.seatIds.length} koltuk</span>
                         ) : (
                           <>
                             <button
                               type="button"
                               onClick={() => updateQuantity(item.ticketId, item.quantity - 1)}
-                              className="h-8 w-8 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
+                              className="h-8 w-8 rounded border border-ink-300 bg-white text-ink-600 hover:bg-ink-50"
                             >
                               −
                             </button>
@@ -1049,14 +1049,14 @@ export default function CheckoutPage() {
                               type="button"
                               onClick={() => updateQuantity(item.ticketId, item.quantity + 1)}
                               disabled={item.quantity >= item.available}
-                              className="h-8 w-8 rounded border border-slate-300 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                              className="h-8 w-8 rounded border border-ink-300 bg-white text-ink-600 hover:bg-ink-50 disabled:opacity-50"
                             >
                               +
                             </button>
                           </>
                         )}
                       </div>
-                      <p className="text-lg font-bold text-primary-700">
+                      <p className="text-lg font-bold text-gold-700">
                         {formatPrice(
                           item.price * (item.seatIds && item.seatIds.length > 0 ? item.seatIds.length : item.quantity),
                           item.currency as import("@/types/database").EventCurrency | undefined
@@ -1074,18 +1074,18 @@ export default function CheckoutPage() {
                   </div>
                 ))}
 
-                <div className="rounded-xl border border-slate-200 bg-white p-6">
-                  <h2 className="mb-2 text-lg font-bold text-slate-900">{t("deliveryMethod")}</h2>
-                  <p className="mb-4 text-sm text-slate-600">{t("deliveryOptionsIntro")}</p>
+                <div className="rounded-lg border border-ink-200 bg-white p-6">
+                  <h2 className="mb-2 text-lg font-bold text-ink-900">{t("deliveryMethod")}</h2>
+                  <p className="mb-4 text-sm text-ink-600">{t("deliveryOptionsIntro")}</p>
                   <button
                     type="button"
                     onClick={() => setShowDeliveryOptions((v) => !v)}
-                    className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                    className="rounded-lg border border-ink-300 bg-white px-4 py-2 text-sm font-semibold text-ink-700 hover:bg-ink-50"
                   >
                     {t("selectShipping")}
                   </button>
                   {showDeliveryOptions ? (
-                    <div className="mt-4 divide-y divide-slate-200 rounded-lg border border-slate-200 overflow-hidden">
+                    <div className="mt-4 divide-y divide-ink-200 rounded-lg border border-ink-200 overflow-hidden">
                       {(
                         [
                           { id: "e_ticket" as const, icon: Mail, title: t("eTicket"), desc: t("eTicketDesc"), fee: 0 },
@@ -1116,23 +1116,23 @@ export default function CheckoutPage() {
                               setStep2AddressError(null);
                             }}
                             className={`flex w-full items-start gap-3 p-4 text-left transition-colors ${
-                              selected ? "bg-blue-50" : "bg-white hover:bg-slate-50"
+                              selected ? "bg-gold-50" : "bg-white hover:bg-ink-50"
                             }`}
                           >
                             <div
                               className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
-                                selected ? "bg-blue-600 text-white" : "bg-slate-200 text-slate-600"
+                                selected ? "bg-gold-500 text-ink-950" : "bg-ink-200 text-ink-600"
                               }`}
                             >
                               <Icon className="h-5 w-5" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="font-semibold text-slate-900">{opt.title}</p>
-                              <p className="mt-0.5 text-sm text-slate-600">{opt.desc}</p>
+                              <p className="font-semibold text-ink-900">{opt.title}</p>
+                              <p className="mt-0.5 text-sm text-ink-600">{opt.desc}</p>
                             </div>
                             <div className="flex-shrink-0 text-right">
                               {opt.fee > 0 ? (
-                                <span className="text-sm font-bold text-slate-900">+{formatPrice(opt.fee, checkoutCurrency)}</span>
+                                <span className="text-sm font-bold text-ink-900">+{formatPrice(opt.fee, checkoutCurrency)}</span>
                               ) : (
                                 <span className="text-sm font-semibold text-emerald-700">{t("shippingIncluded")}</span>
                               )}
@@ -1145,27 +1145,27 @@ export default function CheckoutPage() {
                 </div>
 
                 {showDeliveryOptions ? (
-                  <div className="rounded-xl border border-slate-200 bg-white p-6">
-                    <h2 className="mb-4 text-lg font-bold text-slate-900">{t("customerInfo")}</h2>
+                  <div className="rounded-lg border border-ink-200 bg-white p-6">
+                    <h2 className="mb-4 text-lg font-bold text-ink-900">{t("customerInfo")}</h2>
                     {user ? (
-                      <div className="mb-4 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
+                      <div className="mb-4 rounded-lg bg-ink-50 p-4 text-sm text-ink-700">
                         <p><span className="font-medium">{t("fullName")}:</span> {buyerName || user.email?.split("@")[0] || "—"}</p>
                         <p className="mt-1"><span className="font-medium">{t("email")}:</span> {buyerEmail || user.email || "—"}</p>
                       </div>
                     ) : null}
-                    <p className="mt-3 text-xs text-slate-500">
+                    <p className="mt-3 text-xs text-ink-500">
                       {deliveryChoice !== "e_ticket" ? t("addressHintPhysical") : t("addressHint")}
                     </p>
                     <div className="mt-3 grid gap-4 sm:grid-cols-2">
                       <div className="sm:col-span-2">
-                        <label className="mb-2 block text-sm font-medium text-slate-600">
+                        <label className="mb-2 block text-sm font-medium text-ink-600">
                           {deliveryChoice !== "e_ticket" ? t("addressRequired") : t("addressOptional")}
                         </label>
                         <input
                           type="text"
                           value={buyerAddress}
                           onChange={(e) => setBuyerAddress(e.target.value)}
-                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                          className="w-full rounded-lg border border-ink-300 px-4 py-2.5 focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
                           placeholder={t("address")}
                         />
                       </div>
@@ -1174,7 +1174,7 @@ export default function CheckoutPage() {
                           type="text"
                           value={buyerPlz}
                           onChange={(e) => setBuyerPlz(e.target.value)}
-                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                          className="w-full rounded-lg border border-ink-300 px-4 py-2.5 focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
                           placeholder={t("plz")}
                         />
                       </div>
@@ -1183,13 +1183,13 @@ export default function CheckoutPage() {
                           type="text"
                           value={buyerCity}
                           onChange={(e) => setBuyerCity(e.target.value)}
-                          className="w-full rounded-lg border border-slate-300 px-4 py-2.5 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                          className="w-full rounded-lg border border-ink-300 px-4 py-2.5 focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
                           placeholder={t("city")}
                         />
                       </div>
                     </div>
                     {user && !buyerAddress && !buyerPlz && !buyerCity ? (
-                      <p className="mt-2 text-xs text-primary-600">
+                      <p className="mt-2 text-xs text-gold-700">
                         <SafeNextLink href={`/${locale}/bilgilerim`} className="underline hover:no-underline">
                           {t("fillFromProfile")}
                         </SafeNextLink>
@@ -1205,18 +1205,18 @@ export default function CheckoutPage() {
             {currentStep === 2 && (
               <div className="space-y-4">
               {/* Stripe ödeme - üstte */}
-              <div className="rounded-xl border border-slate-200 bg-white p-6">
-                <h2 className="mb-4 text-lg font-bold text-slate-900 flex items-center gap-2">
-                  <CreditCard className="h-5 w-5 text-slate-600" />
+              <div className="rounded-lg border border-ink-200 bg-white p-6">
+                <h2 className="mb-4 text-lg font-bold text-ink-900 flex items-center gap-2">
+                  <CreditCard className="h-5 w-5 text-ink-600" />
                   {t("paymentDetails")}
                 </h2>
-                <p className="mb-4 flex items-center gap-2 text-sm text-slate-600">
+                <p className="mb-4 flex items-center gap-2 text-sm text-ink-600">
                   <Lock className="h-4 w-4" />
                   {t("securePayment")}
                 </p>
                 {checkoutClientSecret && stripePromise ? (
                   <div className="mt-4 px-0 md:px-1">
-                    <div className="w-full rounded-lg border border-slate-200 bg-white p-2 md:p-3 lg:p-4">
+                    <div className="w-full rounded-lg border border-ink-200 bg-white p-2 md:p-3 lg:p-4">
                       <SafeEmbeddedCheckoutProvider
                         stripe={stripePromise}
                         options={{
@@ -1230,7 +1230,7 @@ export default function CheckoutPage() {
                   </div>
                 ) : null}
                 {(isPending || isStripeReturning) ? (
-                  <p className="mt-3 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                  <p className="mt-3 rounded-md border border-gold-300 bg-gold-50 px-3 py-2 text-sm text-gold-700">
                     {t("paymentProcessingWait")}
                   </p>
                 ) : null}
@@ -1240,7 +1240,7 @@ export default function CheckoutPage() {
                 <button
                   type="button"
                   onClick={() => setCurrentStep(1)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-700 hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-lg border border-ink-300 bg-white px-6 py-3 font-semibold text-ink-700 hover:bg-ink-50"
                 >
                   {t("stepBack")}
                 </button>
@@ -1251,12 +1251,12 @@ export default function CheckoutPage() {
 
             {/* Sağ: Bestellübersicht — tüm adımlar */}
             <aside className="lg:sticky lg:top-24">
-              <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h2 className="mb-4 text-lg font-bold text-slate-900">{t("orderOverview")}</h2>
-                <div className="space-y-4 border-b border-slate-200 pb-4">
+              <div className="rounded-lg border border-ink-200 bg-white p-6 shadow-card">
+                <h2 className="mb-4 text-lg font-bold text-ink-900">{t("orderOverview")}</h2>
+                <div className="space-y-4 border-b border-ink-200 pb-4">
                   {items.map((item) => (
                     <div key={item.ticketId} className="text-sm">
-                      <div className="flex justify-between gap-3 font-semibold text-slate-900">
+                      <div className="flex justify-between gap-3 font-semibold text-ink-900">
                         <span>
                           {item.quantity} × {collapseDuplicateAdjacentTicketLabel(item.ticketName || "")}
                         </span>
@@ -1267,7 +1267,7 @@ export default function CheckoutPage() {
                           )}
                         </span>
                       </div>
-                      <div className="mt-1 space-y-0.5 text-xs text-slate-600">
+                      <div className="mt-1 space-y-0.5 text-xs text-ink-600">
                         <p className="flex items-center gap-1.5">
                           <Calendar className="h-3.5 w-3.5 shrink-0" />
                           {formatEventDateDMY(item.eventDate)}
@@ -1292,7 +1292,7 @@ export default function CheckoutPage() {
                     </div>
                   ))}
                 </div>
-                <div className="mt-4 space-y-2 text-sm text-slate-600">
+                <div className="mt-4 space-y-2 text-sm text-ink-600">
                   <div className="flex justify-between">
                     <span>{t("subtotal")}</span>
                     <span>{formatPrice(totalPrice, checkoutCurrency)}</span>
@@ -1310,13 +1310,13 @@ export default function CheckoutPage() {
                     </div>
                   )}
                 </div>
-                <div className="mt-4 flex justify-between text-lg font-bold text-slate-900">
+                <div className="mt-4 flex justify-between text-lg font-bold text-ink-900">
                   <span>{t("total")}</span>
-                  <span className="text-primary-700">
+                  <span className="text-gold-700">
                     {formatPrice(displayGrandTotal, checkoutCurrency)}
                   </span>
                 </div>
-                <p className="mt-2 text-xs leading-relaxed text-slate-500">
+                <p className="mt-2 text-xs leading-relaxed text-ink-500">
                   {deliveryChoice !== "e_ticket" && shippingFeeOnce > 0
                       ? t("summaryFooterWithShipping")
                       : t("summaryFooterDigital")}
@@ -1345,7 +1345,7 @@ export default function CheckoutPage() {
                         void handleCompleteOrder(e as unknown as React.FormEvent);
                       }}
                       disabled={isPending || items.length === 0 || !user}
-                      className="mt-6 w-full rounded-lg !bg-blue-600 py-4 font-semibold text-white transition-colors hover:!bg-blue-700 disabled:bg-slate-300 disabled:text-slate-500"
+                      className="mt-6 w-full rounded-lg !bg-gold-500 py-4 font-semibold text-ink-950 transition-colors hover:!bg-gold-400 disabled:bg-ink-200 disabled:text-ink-400"
                     >
                       {isPending ? t("processing") : t("completeOrder")}
                     </button>

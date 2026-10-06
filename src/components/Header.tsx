@@ -9,6 +9,9 @@ import { usePathname, useRouter } from "@/i18n/navigation";
 import { useTranslations } from "next-intl";
 import { useLocale } from "next-intl";
 import { stripLocalePrefixes } from "@/lib/i18n-pathname";
+import { buttonClass } from "@/components/ui/Button";
+import { badgeClass } from "@/components/ui/Badge";
+import { cn } from "@/components/ui/cn";
 
 const navLinks = [
   { href: "/", labelKey: "nav.events" },
@@ -42,6 +45,12 @@ function withLocalePrefix(pathname: string, targetLocale: string): string {
 
 function navHref(locale: string, href: string): string {
   return withLocalePrefix(href, locale);
+}
+
+/** Aktif menü öğesi (altın gösterge) — locale öneki soyulmuş pathname ile karşılaştırır. */
+function isActiveNavLink(strippedPathname: string, href: string): boolean {
+  const current = (strippedPathname || "/").replace(/\/+$/, "") || "/";
+  return current === href;
 }
 
 export default function Header() {
@@ -94,7 +103,7 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200 bg-white/95 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
+    <header className="sticky top-0 z-50 border-b border-ink-200 bg-paper/95 backdrop-blur pt-[env(safe-area-inset-top,0px)]">
       <div className="site-container flex h-[60px] sm:h-[68px] items-center justify-between">
 
 <NextLink
@@ -118,19 +127,29 @@ export default function Header() {
 
                {/* Masaüstü menü - ortada: nav + sepet + dil */}
         <nav className="hidden md:flex flex-1 justify-center items-center gap-6">
-          {navLinks.map(({ href, labelKey }) => (
-            <NextLink
-              key={href}
-              href={navHref(locale, href)}
-              className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
-            >
-              {t(labelKey)}
-            </NextLink>
-          ))}
+          {navLinks.map(({ href, labelKey }) => {
+            const active = isActiveNavLink(pathForLocaleSwitch, href);
+            return (
+              <NextLink
+                key={href}
+                href={navHref(locale, href)}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "relative py-1 font-medium tracking-tight transition-colors",
+                  "after:absolute after:inset-x-0 after:-bottom-0.5 after:h-0.5 after:origin-left after:bg-gold-500 after:transition-transform after:duration-200",
+                  active
+                    ? "text-ink-900 after:scale-x-100"
+                    : "text-ink-700 after:scale-x-0 hover:text-ink-900 hover:after:scale-x-100"
+                )}
+              >
+                {t(labelKey)}
+              </NextLink>
+            );
+          })}
           <div className="flex items-center gap-2">
             {cartReserveSecLeft > 0 && (
               <span
-                className="hidden lg:inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-900"
+                className={badgeClass("success", "hidden gap-1.5 lg:inline-flex")}
                 title={tCheckout("reservationTimer", { time: cartReserveStr })}
               >
                 <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -140,11 +159,11 @@ export default function Header() {
             <NextLink
               href={`/${locale}/sepet`}
               prefetch={false}
-              className="relative flex items-center gap-1 text-slate-600 hover:text-primary-600 font-medium transition-colors"
+              className="relative flex h-11 items-center gap-1 rounded-md px-1 font-medium text-ink-700 transition-colors hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/70"
             >
               <ShoppingCart className="h-5 w-5" />
               {totalItems > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary-600 text-[10px] font-bold text-white">
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-gold-500 text-[10px] font-bold text-ink-950">
                   {totalItems > 9 ? "9+" : totalItems}
                 </span>
               )}
@@ -154,7 +173,7 @@ export default function Header() {
             <button
               type="button"
               onClick={() => setLangDropdownOpen((o) => !o)}
-              className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-primary-600 transition-colors"
+              className={buttonClass({ variant: "ghost", size: "sm", className: "h-11" })}
               aria-label="Dil seç"
               aria-expanded={langDropdownOpen}
             >
@@ -162,7 +181,7 @@ export default function Header() {
               <ChevronDown className={`h-4 w-4 transition-transform ${langDropdownOpen ? "rotate-180" : ""}`} />
             </button>
             {langDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1 py-1 min-w-[140px] bg-white rounded-lg border border-slate-200 shadow-lg z-50">
+              <div className="absolute right-0 top-full z-50 mt-1.5 min-w-[150px] overflow-hidden rounded-md border border-ink-200 bg-paper py-1 shadow-lift">
                 {SUPPORTED_LOCALES.map((loc) => (
                   <button
                     key={loc}
@@ -171,11 +190,14 @@ export default function Header() {
                       router.replace(withLocalePrefix(pathForLocaleSwitch, loc));
                       setLangDropdownOpen(false);
                     }}
-                    className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 transition-colors ${
+                    aria-current={locale === loc ? "true" : undefined}
+                    className={cn(
+                      "flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition-colors",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gold-500/70",
                       locale === loc
-                        ? "bg-primary-50 text-primary-700 font-medium"
-                        : "text-slate-700 hover:bg-slate-50"
-                    }`}
+                        ? "bg-gold-50 font-semibold text-gold-900"
+                        : "text-ink-700 hover:bg-ink-100 hover:text-ink-900"
+                    )}
                   >
                     <img
                       src={LOCALE_FLAG_URLS[loc]}
@@ -183,7 +205,7 @@ export default function Header() {
                       className="h-4 w-5 rounded-[2px] object-cover"
                       loading="lazy"
                     />
-                    <span className="text-slate-500">–</span>
+                    <span className="text-ink-400" aria-hidden>–</span>
                     <span>{LOCALE_LABELS[loc]}</span>
                   </button>
                 ))}
@@ -197,7 +219,7 @@ export default function Header() {
             hasManagementRole ? (
               <NextLink
                 href="/yonetim"
-                className="flex items-center gap-2 text-slate-600 hover:text-primary-600 font-medium transition-colors"
+                className={buttonClass({ variant: "ghost", size: "sm" })}
               >
                 <User className="h-4 w-4" />
                 {t("nav.management")}
@@ -205,7 +227,7 @@ export default function Header() {
             ) : (
               <NextLink
                 href={navHref(locale, "/panel")}
-                className="flex items-center gap-2 text-slate-600 hover:text-primary-600 font-medium transition-colors"
+                className={buttonClass({ variant: "ghost", size: "sm" })}
               >
                 <User className="h-4 w-4" />
                 {t("nav.myInfo")}
@@ -214,7 +236,7 @@ export default function Header() {
           ) : (
             <NextLink
               href={navHref(locale, "/giris")}
-              className="flex items-center gap-2 text-slate-600 hover:text-primary-600 font-medium transition-colors"
+              className={buttonClass({ variant: "gold", size: "sm" })}
             >
               <LogIn className="h-4 w-4" />
               {t("nav.login")} / {t("nav.signup")}
@@ -225,15 +247,19 @@ export default function Header() {
         {/* Mobil: hamburger + açılır menü */}
         <div className="flex md:hidden items-center gap-2 ml-auto">
           {user && hasManagementRole && (
-            <NextLink href="/yonetim" className="text-sm text-slate-500 hover:text-primary-600">
+            <NextLink
+              href="/yonetim"
+              className={buttonClass({ variant: "ghost", size: "sm", className: "h-11" })}
+            >
               {t("nav.admin")}
             </NextLink>
           )}
           <button
             type="button"
             onClick={() => setMobileMenuOpen((o) => !o)}
-            className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-primary-600 transition-colors"
+            className={buttonClass({ variant: "ghost", size: "sm", className: "h-11" })}
             aria-label={mobileMenuOpen ? "Menüyü kapat" : "Menüyü aç"}
+            aria-expanded={mobileMenuOpen}
           >
             {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -244,47 +270,60 @@ export default function Header() {
       {mobileMenuOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/40 md:hidden"
+            className="fixed inset-0 z-40 bg-ink-950/50 md:hidden"
             aria-hidden
             onClick={(e) => {
               if (e.target === e.currentTarget) setMobileMenuOpen(false);
             }}
           />
           <nav
-            className="absolute left-0 right-0 top-full z-50 flex flex-col gap-1 border-b border-slate-200 bg-white py-3 px-4 shadow-lg md:hidden"
+            className="absolute left-0 right-0 top-full z-50 flex flex-col gap-1 border-b border-ink-200 bg-paper px-4 py-3 shadow-lift md:hidden"
             role="navigation"
           >
-            {navLinks.map(({ href, labelKey }) => (
-              <NextLink
-                key={href}
-                href={navHref(locale, href)}
-                onClick={() => setMobileMenuOpen(false)}
-                className="block rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
-              >
-                {t(labelKey)}
-              </NextLink>
-            ))}
+            {navLinks.map(({ href, labelKey }) => {
+              const active = isActiveNavLink(pathForLocaleSwitch, href);
+              return (
+                <NextLink
+                  key={href}
+                  href={navHref(locale, href)}
+                  onClick={() => setMobileMenuOpen(false)}
+                  aria-current={active ? "page" : undefined}
+                  className={cn(
+                    "flex min-h-11 items-center gap-2 rounded-md px-4 py-3 font-medium transition-colors",
+                    active
+                      ? "bg-gold-50 text-gold-900"
+                      : "text-ink-700 hover:bg-ink-100 hover:text-ink-900"
+                  )}
+                >
+                  {t(labelKey)}
+                </NextLink>
+              );
+            })}
             <NextLink
               href={`/${locale}/sepet`}
               prefetch={false}
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
+              className="flex min-h-11 items-center gap-2 rounded-md px-4 py-3 font-medium text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-900"
             >
               <ShoppingCart className="h-5 w-5" />
               Sepet {totalItems > 0 && `(${totalItems})`}
             </NextLink>
-            <div className="relative px-4 py-2" ref={langDropdownMobileRef}>
+
+            <span className="hairline my-2" aria-hidden />
+
+            <div className="relative px-4 py-1" ref={langDropdownMobileRef}>
               <button
                 type="button"
                 onClick={() => setLangDropdownOpen((o) => !o)}
-                className="flex items-center gap-2 w-full rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
+                aria-expanded={langDropdownOpen}
+                className="flex min-h-11 w-full items-center gap-2 rounded-md px-4 py-3 font-medium text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/70"
               >
                 <Globe className="h-5 w-5" />
                 <span>{LOCALE_LABELS[locale] || locale.toUpperCase()}</span>
-                <ChevronDown className={`h-4 w-4 ml-auto transition-transform ${langDropdownOpen ? "rotate-180" : ""}`} />
+                <ChevronDown className={`ml-auto h-4 w-4 transition-transform ${langDropdownOpen ? "rotate-180" : ""}`} />
               </button>
               {langDropdownOpen && (
-                <div className="mt-1 py-1 bg-white rounded-lg border border-slate-200 shadow-lg">
+                <div className="mt-1 overflow-hidden rounded-md border border-ink-200 bg-white py-1 shadow-card">
                   {SUPPORTED_LOCALES.map((loc) => (
                     <button
                       key={loc}
@@ -294,9 +333,13 @@ export default function Header() {
                         setLangDropdownOpen(false);
                         setMobileMenuOpen(false);
                       }}
-                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center gap-2 ${
-                        locale === loc ? "bg-primary-50 text-primary-700 font-medium" : "hover:bg-slate-50"
-                      }`}
+                      aria-current={locale === loc ? "true" : undefined}
+                      className={cn(
+                        "flex min-h-11 w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition-colors",
+                        locale === loc
+                          ? "bg-gold-50 font-semibold text-gold-900"
+                          : "text-ink-700 hover:bg-ink-100 hover:text-ink-900"
+                      )}
                     >
                       <img
                         src={LOCALE_FLAG_URLS[loc]}
@@ -304,19 +347,22 @@ export default function Header() {
                         className="h-4 w-5 rounded-[2px] object-cover"
                         loading="lazy"
                       />
-                      <span className="text-slate-500">–</span>
+                      <span className="text-ink-400" aria-hidden>–</span>
                       <span>{LOCALE_LABELS[loc]}</span>
                     </button>
                   ))}
                 </div>
               )}
             </div>
+
+            <span className="hairline my-2" aria-hidden />
+
             {user ? (
               hasManagementRole ? (
                 <NextLink
                   href="/yonetim"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
+                  className="flex min-h-11 items-center gap-2 rounded-md px-4 py-3 font-medium text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-900"
                 >
                   <User className="h-4 w-4" />
                   {t("nav.management")}
@@ -325,7 +371,7 @@ export default function Header() {
                 <NextLink
                   href={navHref(locale, "/panel")}
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
+                  className="flex min-h-11 items-center gap-2 rounded-md px-4 py-3 font-medium text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-900"
                 >
                   <User className="h-4 w-4" />
                   {t("nav.myInfo")}
@@ -335,7 +381,7 @@ export default function Header() {
               <NextLink
                 href={navHref(locale, "/giris")}
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-2 rounded-lg px-4 py-3 text-slate-700 hover:bg-slate-100 hover:text-primary-600 font-medium"
+                className="flex min-h-11 items-center gap-2 rounded-md px-4 py-3 font-medium text-ink-700 transition-colors hover:bg-ink-100 hover:text-ink-900"
               >
                 <LogIn className="h-4 w-4" />
                 {t("nav.login")} / {t("nav.signup")}

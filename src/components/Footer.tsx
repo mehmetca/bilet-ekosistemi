@@ -40,6 +40,9 @@ const legalMenuLinks = [
   { href: "/bilgilendirme/b2b", labelKey: "footer.b2b" },
 ];
 
+/** Marka adları — hero'daki hap listesinden footer'a taşındı (çevrilebilir metin değil). */
+const PAYMENT_METHODS = ["VISA", "Mastercard", "AMEX", "Apple Pay", "Google Pay", "Stripe", "3D Secure"];
+
 /** localePrefix: always — /tr/... ; kök + hash: /tr#id */
 function hrefWithLocale(locale: string, href: string): string {
   if (href.startsWith("/#")) {
@@ -78,7 +81,7 @@ function renderSocialIcon(platform: string) {
 }
 
 function SocialRow({ className, items }: { className?: string; items: SocialItem[] }) {
-  const linkClass = "text-slate-600 hover:text-primary-600 transition-colors";
+  const linkClass = "text-ink-300 transition-colors hover:text-gold-300";
   if (!items || items.length === 0) return null;
 
   return (
@@ -130,39 +133,37 @@ export default function Footer() {
   if (!mounted) return null;
 
   return (
-    <footer className="border-t border-slate-200/80 bg-slate-50">
-      <div className="site-container py-10">
+    <footer className="surface-ink border-t border-ink-800">
+      <div className="site-container py-12 md:py-14">
         <div className="grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-12">
           <div className="flex flex-col items-center md:items-start">
             <NextLink
               href={hrefWithLocale(locale, "/")}
-              className="mb-2 flex items-center gap-2"
+              className="mb-4 inline-flex"
             >
               <Image
-                src="/images/kurdevent-logo.png"
+                src="/images/kurdevent-logo-light.png"
                 alt="Kurdevent Logo"
                 width={300}
                 height={90}
-                style={{ width: "auto", height: "auto" }}
+                className="h-8 w-auto"
                 priority
               />
             </NextLink>
-            <p className="max-w-[260px] text-center text-sm text-slate-600 md:text-left">
+            <p className="max-w-[260px] text-center text-sm leading-relaxed text-ink-300 md:text-left">
               {t("footer.tagline")}
             </p>
-            <SocialRow items={socialLinks} className="mt-4 flex flex-wrap items-center justify-center gap-4 md:justify-start" />
+            <SocialRow items={socialLinks} className="mt-5 flex flex-wrap items-center justify-center gap-4 md:justify-start" />
           </div>
 
           <div className="flex flex-col items-center md:items-start">
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-900">
-              {t("footer.menu")}
-            </h3>
-            <nav className="flex flex-col items-center gap-2 md:items-start">
+            <h3 className="eyebrow-light mb-4">{t("footer.menu")}</h3>
+            <nav className="flex flex-col items-center gap-2.5 md:items-start">
               {infoMenuLinks.map(({ href, labelKey }) => (
                 <NextLink
                   key={href}
                   href={hrefWithLocale(locale, href)}
-                  className="text-sm text-slate-600 transition-colors hover:text-primary-600"
+                  className="text-sm text-ink-400 transition-colors hover:text-gold-300"
                 >
                   {t(labelKey)}
                 </NextLink>
@@ -171,15 +172,13 @@ export default function Footer() {
           </div>
 
           <div className="flex flex-col items-center md:items-start">
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-slate-900">
-              {t("footer.legal")}
-            </h3>
-            <nav className="flex flex-col items-center gap-2 md:items-start">
+            <h3 className="eyebrow-light mb-4">{t("footer.legal")}</h3>
+            <nav className="flex flex-col items-center gap-2.5 md:items-start">
               {legalMenuLinks.map(({ href, labelKey }) => (
                 <NextLink
                   key={href}
                   href={hrefWithLocale(locale, href)}
-                  className="text-sm text-slate-600 transition-colors hover:text-primary-600"
+                  className="text-sm text-ink-400 transition-colors hover:text-gold-300"
                 >
                   {t(labelKey)}
                 </NextLink>
@@ -189,24 +188,24 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-slate-200">
+      <div className="border-t border-ink-800">
         <div className="site-container py-8">
-          <div className="grid grid-cols-1 gap-8 text-xs text-slate-500 md:grid-cols-2 md:gap-12">
+          <div className="grid grid-cols-1 gap-8 text-xs leading-relaxed text-ink-400 md:grid-cols-2 md:gap-12">
             <div className="space-y-4">
               <section id="gonderim-politikasi">
-                <strong className="text-slate-700">
+                <strong className="font-semibold text-ink-200">
                   {t("footer.shippingPolicy")}:
                 </strong>{" "}
                 {t("footer.shippingPolicyDesc")}
               </section>
               <section id="canli-stok">
-                <strong className="text-slate-700">
+                <strong className="font-semibold text-ink-200">
                   {t("footer.liveStock")}:
                 </strong>{" "}
                 {t("footer.liveStockDesc")}
               </section>
               <section id="mesafeli-satis-on-bilgilendirme">
-                <strong className="text-slate-700">
+                <strong className="font-semibold text-ink-200">
                   {t("footer.preContractInfo")}:
                 </strong>{" "}
                 {t("footer.preContractInfoDesc")}
@@ -214,13 +213,13 @@ export default function Footer() {
             </div>
             <div className="space-y-4">
               <section id="iade-politikasi">
-                <strong className="text-slate-700">
+                <strong className="font-semibold text-ink-200">
                   {t("footer.refundPolicy")}:
                 </strong>{" "}
                 {t("footer.refundPolicyDesc")}
               </section>
               <section id="guvenli-odeme">
-                <strong className="text-slate-700">
+                <strong className="font-semibold text-ink-200">
                   {t("footer.securePayment")}:
                 </strong>{" "}
                 {t("footer.securePaymentDesc")}
@@ -230,9 +229,17 @@ export default function Footer() {
         </div>
       </div>
 
-      <div className="border-t border-slate-200">
-        <div className="site-container py-4">
-          <p className="text-center text-sm font-medium text-slate-600">
+      <div className="border-t border-ink-800">
+        <div className="site-container py-5">
+          <ul
+            className="m-0 mb-3 flex list-none flex-wrap items-center justify-center gap-x-5 gap-y-1.5 p-0 text-[11px] font-semibold uppercase tracking-widest2 text-ink-400 md:justify-start"
+            aria-label={t("home.paymentMethodsLabel")}
+          >
+            {PAYMENT_METHODS.map((method) => (
+              <li key={method}>{method}</li>
+            ))}
+          </ul>
+          <p className="text-center text-sm font-medium text-ink-400 md:text-left">
             {t("footer.copyright")}
           </p>
         </div>

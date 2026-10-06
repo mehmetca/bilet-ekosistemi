@@ -855,26 +855,26 @@ export default function AmedSporFormClient({
               <Link
                 key={amedEvent.id}
                 href={`/etkinlik/${amedEvent.id}`}
-                className="block border border-slate-200 rounded-xl overflow-hidden hover:border-primary-500 hover:shadow-md transition-all bg-white group"
+                className="block border border-ink-200 rounded-lg overflow-hidden hover:border-gold-500 hover:shadow-card transition-all bg-white group"
               >
-                <div className="relative aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-50 flex items-center justify-center overflow-hidden">
+                <div className="relative aspect-[3/4] bg-gradient-to-br from-gold-100 to-paper flex items-center justify-center overflow-hidden">
                   <CoverImage
                     src={amedEvent.image_url}
                     alt={amedEvent.title}
                     sizes="(max-width: 1024px) 100vw, 360px"
                     zoomOnHover
-                    fallback={<Music2 className="h-12 w-12 text-primary-400" />}
+                    fallback={<Music2 className="h-12 w-12 text-gold-600" />}
                   />
                 </div>
                 <div className="p-4">
-                  <h4 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-primary-700">
+                  <h4 className="font-semibold text-sm mb-2 line-clamp-2 group-hover:text-gold-700">
                     {amedEvent.title}
                   </h4>
-                  <div className="text-xs text-slate-600 mb-2">
+                  <div className="text-xs text-ink-600 mb-2">
                     {formatEventDateDMY(amedEvent.date)}
                   </div>
                   {Number(amedEvent.price_from) > 0 && (
-                    <div className="text-sm font-bold text-primary-600">
+                    <div className="text-sm font-bold text-gold-700">
                       {formatPrice(Number(amedEvent.price_from), amedEvent.currency)}
                     </div>
                   )}
@@ -882,7 +882,7 @@ export default function AmedSporFormClient({
               </Link>
             ))
           ) : (
-            <p className="text-sm text-slate-500">{t("noAmedEvents")}</p>
+            <p className="text-sm text-ink-500">{t("noAmedEvents")}</p>
           )}
         </div>
       </div>
@@ -891,7 +891,7 @@ export default function AmedSporFormClient({
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-ink-50">
         <Header />
         {amedBanner}
         <div className="p-8">
@@ -905,8 +905,8 @@ export default function AmedSporFormClient({
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 mb-2">{t("formSubmittedTitle")}</h1>
-                    <p className="text-gray-600 mb-4">
+                    <h1 className="text-2xl font-bold text-ink-900 mb-2">{t("formSubmittedTitle")}</h1>
+                    <p className="text-ink-600 mb-4">
                       {requiresPayment ? t("redirectingPayment") : t("completedThankyou")}
                     </p>
                     {requiresPayment ? (
@@ -915,14 +915,14 @@ export default function AmedSporFormClient({
                         onClick={() => {
                           window.location.href = `/${locale}/sepet`;
                         }}
-                        className="mt-4 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                        className="mt-4 px-6 py-2 bg-gold-500 text-ink-950 rounded-lg hover:bg-gold-400 transition-colors"
                       >
                         {t("goToCart")}
                       </button>
                     ) : (
                       <Link
                         href={`/etkinlik/${event.id}`}
-                        className="inline-block mt-4 px-6 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-900 transition-colors"
+                        className="inline-block mt-4 px-6 py-2 bg-gold-500 text-ink-950 rounded-lg hover:bg-gold-400 transition-colors"
                       >
                         {t("backToEvent")}
                       </Link>
@@ -939,7 +939,7 @@ export default function AmedSporFormClient({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-ink-50">
       <Header />
       {amedBanner}
       <div className="p-8">
@@ -948,7 +948,7 @@ export default function AmedSporFormClient({
             <div className="lg:col-span-2">
               <div className="bg-white rounded-lg shadow p-8">
                 <h1 className="text-2xl font-bold mb-2">{localized.title}</h1>
-                <p className="text-gray-600 mb-4">{t("pleaseFillForm")}</p>
+                <p className="text-ink-600 mb-4">{t("pleaseFillForm")}</p>
 
                 {event.max_tickets ? (
                   <div className="mb-6">
@@ -962,7 +962,7 @@ export default function AmedSporFormClient({
                     <select
                       value={ticketCount}
                       onChange={(e) => handleTicketCountChange(Number(e.target.value))}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      className="w-full px-4 py-2 border border-ink-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gold-500"
                     >
                       {Array.from({ length: maxAttendees }, (_, i) => i + 1).map((num) => (
                         <option key={num} value={num}>
@@ -973,17 +973,17 @@ export default function AmedSporFormClient({
                   </div>
 
                   {/* Tribün / İzleme Alanı Seçimi (VIP Tribünü veya Özel Loca) */}
-                  <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-gray-50/50">
+                  <div className="space-y-3 p-4 border border-ink-200 rounded-lg bg-ink-50/50">
                     <div>
                       <h3 className="font-semibold text-lg">{t("seatingAreaTitle")}</h3>
-                      <p className="text-xs text-slate-600 mt-0.5">{t("seatingAreaDesc")}</p>
+                      <p className="text-xs text-ink-600 mt-0.5">{t("seatingAreaDesc")}</p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                       <label
-                        className={`relative flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
+                        className={`relative flex items-center gap-3 p-3.5 border-2 rounded-lg cursor-pointer transition-all ${
                           seatingPreference === "vip"
-                            ? "border-primary-600 bg-primary-50/50 shadow-sm"
-                            : "border-gray-200 hover:border-gray-300 bg-white"
+                            ? "border-gold-500 bg-gold-50/50 shadow-card"
+                            : "border-ink-200 hover:border-ink-300 bg-white"
                         }`}
                       >
                         <input
@@ -992,15 +992,15 @@ export default function AmedSporFormClient({
                           value="vip"
                           checked={seatingPreference === "vip"}
                           onChange={() => setSeatingPreference("vip")}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500"
+                          className="h-4 w-4 text-gold-700 focus:ring-gold-500"
                         />
-                        <span className="font-semibold text-sm text-slate-900">{t("seatingVip")}</span>
+                        <span className="font-semibold text-sm text-ink-900">{t("seatingVip")}</span>
                       </label>
                       <label
-                        className={`relative flex items-center gap-3 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
+                        className={`relative flex items-center gap-3 p-3.5 border-2 rounded-lg cursor-pointer transition-all ${
                           seatingPreference === "loca"
-                            ? "border-primary-600 bg-primary-50/50 shadow-sm"
-                            : "border-gray-200 hover:border-gray-300 bg-white"
+                            ? "border-gold-500 bg-gold-50/50 shadow-card"
+                            : "border-ink-200 hover:border-ink-300 bg-white"
                         }`}
                       >
                         <input
@@ -1009,9 +1009,9 @@ export default function AmedSporFormClient({
                           value="loca"
                           checked={seatingPreference === "loca"}
                           onChange={() => setSeatingPreference("loca")}
-                          className="h-4 w-4 text-primary-600 focus:ring-primary-500"
+                          className="h-4 w-4 text-gold-700 focus:ring-gold-500"
                         />
-                        <span className="font-semibold text-sm text-slate-900">{t("seatingLoca")}</span>
+                        <span className="font-semibold text-sm text-ink-900">{t("seatingLoca")}</span>
                       </label>
                     </div>
                   </div>
@@ -1021,14 +1021,14 @@ export default function AmedSporFormClient({
                     {attendees.map((attendee, index) => (
                       <div
                         key={index}
-                        className="p-4 border border-gray-200 rounded-lg bg-gray-50/50 space-y-4"
+                        className="p-4 border border-ink-200 rounded-lg bg-ink-50/50 space-y-4"
                       >
                         <h3 className="font-semibold text-lg">
                           {t("personInfo").replace("{n}", String(index + 1))}
                         </h3>
 
                         <div>
-                          <div className="mb-2 rounded-lg border border-primary-100 bg-primary-50 px-4 py-3 text-sm leading-6 text-primary-800">
+                          <div className="mb-2 rounded-lg border border-gold-100 bg-gold-50 px-4 py-3 text-sm leading-6 text-gold-700">
                             {t("fullNameWarning")}
                           </div>
                           <label className="block text-sm font-medium mb-2">
@@ -1041,7 +1041,7 @@ export default function AmedSporFormClient({
                               handleAttendeeChange(index, "full_name", e.target.value)
                             }
                             className={`w-full px-4 py-2 border rounded-lg ${
-                              errors[`full_name_${index}`] ? "border-red-500" : "border-gray-300"
+                              errors[`full_name_${index}`] ? "border-red-500" : "border-ink-300"
                             }`}
                             required
                           />
@@ -1062,7 +1062,7 @@ export default function AmedSporFormClient({
                                 handleAttendeeChange(index, "email", e.target.value)
                               }
                               className={`w-full px-4 py-2 border rounded-lg ${
-                                errors[`email_${index}`] ? "border-red-500" : "border-gray-300"
+                                errors[`email_${index}`] ? "border-red-500" : "border-ink-300"
                               }`}
                               required
                             />
@@ -1082,7 +1082,7 @@ export default function AmedSporFormClient({
                                 handleAttendeeChange(index, "phone", e.target.value)
                               }
                               className={`w-full px-4 py-2 border rounded-lg ${
-                                errors[`phone_${index}`] ? "border-red-500" : "border-gray-300"
+                                errors[`phone_${index}`] ? "border-red-500" : "border-ink-300"
                               }`}
                               required
                             />
@@ -1117,7 +1117,7 @@ export default function AmedSporFormClient({
                                 handleAttendeeChange(index, "id_country", value === "other" ? "" : value);
                               }}
                               className={`w-full px-4 py-2 border rounded-lg bg-white ${
-                                errors[`id_country_${index}`] ? "border-red-500" : "border-gray-300"
+                                errors[`id_country_${index}`] ? "border-red-500" : "border-ink-300"
                               }`}
                               required
                             >
@@ -1140,7 +1140,7 @@ export default function AmedSporFormClient({
                                 }
                                 placeholder={t("idCountryOtherPlaceholder")}
                                 className={`w-full px-4 py-2 border rounded-lg mt-2 ${
-                                  errors[`id_country_${index}`] ? "border-red-500" : "border-gray-300"
+                                  errors[`id_country_${index}`] ? "border-red-500" : "border-ink-300"
                                 }`}
                                 required
                               />
@@ -1162,14 +1162,14 @@ export default function AmedSporFormClient({
                               }
                               placeholder={t("passoNumberPlaceholder")}
                               className={`w-full px-4 py-2 border rounded-lg ${
-                                errors[`passo_number_${index}`] ? "border-red-500" : "border-gray-300"
+                                errors[`passo_number_${index}`] ? "border-red-500" : "border-ink-300"
                               }`}
                               required
                             />
                             {errors[`passo_number_${index}`] ? (
                               <p className="text-red-500 text-sm mt-1">{errors[`passo_number_${index}`]}</p>
                             ) : null}
-                            <p className="text-xs text-slate-500 mt-1">{t("passoNumberHelp")}</p>
+                            <p className="text-xs text-ink-500 mt-1">{t("passoNumberHelp")}</p>
                           </div>
                         </div>
                       </div>
@@ -1178,18 +1178,18 @@ export default function AmedSporFormClient({
 
                   {/* Ek Hizmet Seçenekleri (Konaklama & Uçak Bileti) - Yalnızca fiyat tanımlıysa gösterilir */}
                   {(Number(event.accommodation_price) > 0 || Number(event.flight_price) > 0) && (
-                    <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-gray-50/50">
+                    <div className="space-y-3 p-4 border border-ink-200 rounded-lg bg-ink-50/50">
                       <h3 className="font-semibold text-lg">{t("additionalServicesTitle")}</h3>
                       <div className="space-y-2 pt-1">
                         {Number(event.accommodation_price) > 0 && (
-                          <label className="flex items-center gap-3 p-3 border rounded-lg bg-white cursor-pointer hover:bg-slate-50 transition-colors">
+                          <label className="flex items-center gap-3 p-3 border rounded-lg bg-white cursor-pointer hover:bg-ink-50 transition-colors">
                             <input
                               type="checkbox"
                               checked={hasAccommodation}
                               onChange={(e) => setHasAccommodation(e.target.checked)}
-                              className="h-4 w-4 text-primary-600 rounded focus:ring-primary-500"
+                              className="h-4 w-4 text-gold-700 rounded focus:ring-gold-500"
                             />
-                            <span className="text-sm font-medium text-slate-800">
+                            <span className="text-sm font-medium text-ink-800">
                               {t("includeAccommodation").replace(
                                 "{price}",
                                 formatPrice(Number(event.accommodation_price), event.currency)
@@ -1198,14 +1198,14 @@ export default function AmedSporFormClient({
                           </label>
                         )}
                         {Number(event.flight_price) > 0 && (
-                          <label className="flex items-center gap-3 p-3 border rounded-lg bg-white cursor-pointer hover:bg-slate-50 transition-colors">
+                          <label className="flex items-center gap-3 p-3 border rounded-lg bg-white cursor-pointer hover:bg-ink-50 transition-colors">
                             <input
                               type="checkbox"
                               checked={hasFlight}
                               onChange={(e) => setHasFlight(e.target.checked)}
-                              className="h-4 w-4 text-primary-600 rounded focus:ring-primary-500"
+                              className="h-4 w-4 text-gold-700 rounded focus:ring-gold-500"
                             />
-                            <span className="text-sm font-medium text-slate-800">
+                            <span className="text-sm font-medium text-ink-800">
                               {t("includeFlight").replace(
                                 "{price}",
                                 formatPrice(Number(event.flight_price), event.currency)
@@ -1225,7 +1225,7 @@ export default function AmedSporFormClient({
                       type="text"
                       value={formData.organization}
                       onChange={(e) => handleChange("organization", e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-4 py-2 border border-ink-300 rounded-lg"
                       placeholder={t("organizationPlaceholder")}
                     />
                   </div>
@@ -1241,7 +1241,7 @@ export default function AmedSporFormClient({
                         value={formData.language_preference}
                         onChange={(e) => handleChange("language_preference", e.target.value)}
                         className={`w-full px-4 py-2 border rounded-lg ${
-                          errors.language_preference ? "border-red-500" : "border-gray-300"
+                          errors.language_preference ? "border-red-500" : "border-ink-300"
                         }`}
                         required
                       >
@@ -1263,7 +1263,7 @@ export default function AmedSporFormClient({
                     <textarea
                       value={formData.additional_notes}
                       onChange={(e) => handleChange("additional_notes", e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      className="w-full px-4 py-2 border border-ink-300 rounded-lg"
                       rows={3}
                       placeholder={t("additionalNotesPlaceholder")}
                     />
@@ -1277,7 +1277,7 @@ export default function AmedSporFormClient({
                       onChange={(e) => handleChange("accept_phone_contact", e.target.checked)}
                       className="mt-0.5 h-4 w-4 shrink-0"
                     />
-                    <label htmlFor="accept_phone_contact" className="text-sm text-slate-700">
+                    <label htmlFor="accept_phone_contact" className="text-sm text-ink-700">
                       {t("acceptPhoneContact")}
                     </label>
                   </div>
@@ -1286,11 +1286,11 @@ export default function AmedSporFormClient({
                   {(Number(event.price_from) > 0 ||
                     (hasAccommodation && Number(event.accommodation_price) > 0) ||
                     (hasFlight && Number(event.flight_price) > 0)) && (
-                    <div className="p-4 bg-slate-900 text-white rounded-xl space-y-2">
-                      <h4 className="font-semibold text-xs tracking-wider text-slate-300 uppercase">
+                    <div className="p-4 bg-ink-900 text-white rounded-lg space-y-2">
+                      <h4 className="font-semibold text-xs tracking-wider text-ink-300 uppercase">
                         {t("orderSummaryTitle")}
                       </h4>
-                      <div className="text-sm space-y-1.5 text-slate-200">
+                      <div className="text-sm space-y-1.5 text-ink-200">
                         {Number(event.price_from) > 0 && (
                           <div className="flex justify-between">
                             <span>
@@ -1325,7 +1325,7 @@ export default function AmedSporFormClient({
                           </div>
                         )}
                       </div>
-                      <div className="border-t border-slate-700 pt-2 flex justify-between items-center text-lg font-bold text-yellow-400">
+                      <div className="border-t border-ink-700 pt-2 flex justify-between items-center text-lg font-bold text-yellow-400">
                         <span>{t("totalAmount")}</span>
                         <span>
                           {formatPrice(
@@ -1349,7 +1349,7 @@ export default function AmedSporFormClient({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[180px]"
+                    className="w-full rounded-lg bg-gold-500 px-5 py-2.5 text-sm font-semibold text-ink-950 shadow-card transition-colors hover:bg-gold-400 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[180px]"
                   >
                     {isSubmitting ? t("submitting") : hasAnyPrice ? t("addToCart") : t("submitForm")}
                   </button>

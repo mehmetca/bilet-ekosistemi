@@ -3,70 +3,16 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
-    --accent-foreground: 222.2 84% 4.9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
-  }
-}
-
-@layer base {
   * {
-    @apply border-border;
+    @apply border-ink-200;
   }
   html {
     min-height: 100%;
     overflow-x: hidden;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-paper text-ink-900 antialiased;
     min-height: 100vh;
-    /* Beyaz sayfa: arka plan ve metin rengini garanti et */
-    background-color: #ffffff;
-    color: #0f172a;
-  }
-  body.dark {
-    background-color: hsl(222.2 84% 4.9%);
-    color: hsl(210 40% 98%);
   }
   /* İlk tıklamada link/butonun tetiklenmesi: mobilde 300ms gecikmeyi kaldırır */
   a,
@@ -74,12 +20,51 @@
   [role="button"] {
     touch-action: manipulation;
   }
+  ::selection {
+    @apply bg-gold-200 text-ink-900;
+  }
 }
 
 @layer components {
   /** Genel site sayfalarında tek tip yatay genişlik (tailwind theme.container üst sınırı + padding). */
   .site-container {
     @apply container mx-auto px-4;
+  }
+
+  /** Küçük altın üst-etiket: "SEZON 2026", "BU HAFTA" gibi. */
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-widest2 text-gold-700;
+  }
+
+  /** İnce altın ayraç — afiş geleneğinden. */
+  .rule-gold {
+    @apply block h-px w-12 bg-gold-500;
+  }
+
+  /** Koyu zeminde altın üst-etiket. */
+  .eyebrow-light {
+    @apply text-[11px] font-semibold uppercase tracking-widest2 text-gold-400;
+  }
+
+  /** Bölüm ayıracı — ince mürekkep çizgi. */
+  .hairline {
+    @apply block h-px w-full bg-ink-200;
+  }
+
+  /** Afiş görseli üstünde serif metnin okunurluğu için mürekkep degrade. */
+  .poster-scrim {
+    background-image: linear-gradient(
+      to top,
+      rgba(14, 14, 13, 0.92) 0%,
+      rgba(14, 14, 13, 0.62) 34%,
+      rgba(14, 14, 13, 0.18) 70%,
+      rgba(14, 14, 13, 0) 100%
+    );
+  }
+
+  /** Koyu yüzeyli bölüm (hero, footer, vurgu bantları). */
+  .surface-ink {
+    @apply bg-ink-950 text-ink-100;
   }
 }
 
@@ -92,17 +77,17 @@
     display: none;
   }
 
-  /* Typography system (safe + reversible) */
+  /* Tipografi ölçeği — gövde sans. (Sanatçılar/Takvim sayfaları eski serifsiz başlık fontunu kullanır.) */
   .page-title {
-    @apply text-3xl font-bold text-slate-900 md:text-4xl;
+    @apply text-3xl font-bold text-ink-900 md:text-4xl;
   }
   .section-title {
-    @apply text-2xl font-bold text-slate-900;
+    @apply text-2xl font-bold text-ink-900;
   }
   .card-title {
-    @apply text-lg font-semibold text-slate-900;
+    @apply text-lg font-semibold text-ink-900;
   }
   .body-muted {
-    @apply text-slate-600;
+    @apply text-ink-500;
   }
 }

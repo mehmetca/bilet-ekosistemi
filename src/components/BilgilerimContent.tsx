@@ -238,8 +238,8 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
 
   if (!inYonetim && (authLoading || (!user && loading))) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-slate-500">{t("loading")}</div>
+      <div className="min-h-screen bg-ink-50 flex items-center justify-center">
+        <div className="text-ink-500">{t("loading")}</div>
       </div>
     );
   }
@@ -248,32 +248,32 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-bold text-slate-900 mb-6">{t("title")}</h1>
+      <h1 className="text-2xl font-bold text-ink-900 mb-6">{t("title")}</h1>
 
       {loading ? (
-        <div className="text-slate-500">{t("loading")}</div>
+        <div className="text-ink-500">{t("loading")}</div>
       ) : (
         <form onSubmit={handleSaveProfile} className="space-y-6">
           {/* Müşteri Numarası - organizatörler için gizle (müşteri değiller) */}
           {!isOrganizerInYonetim && (
-            <div className="bg-white rounded-xl border border-slate-200 p-6">
-              <label className="block text-sm font-medium text-slate-700 mb-1">{t("kundennummer")}</label>
+            <div className="bg-white rounded-lg border border-ink-200 p-6">
+              <label className="block text-sm font-medium text-ink-700 mb-1">{t("kundennummer")}</label>
               <input
                 type="text"
                 value={profile?.kundennummer || "—"}
                 readOnly
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg bg-slate-50 text-slate-600"
+                className="w-full px-3 py-2 border border-ink-200 rounded-lg bg-ink-50 text-ink-600"
               />
             </div>
           )}
 
           {/* Anrede */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t("anrede")}</label>
+            <label className="block text-sm font-medium text-ink-700 mb-2">{t("anrede")}</label>
             <select
               value={form.anrede}
               onChange={(e) => setForm((f) => ({ ...f, anrede: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
             >
               <option value="">—</option>
               <option value="Herr">{t("anredeHerr")}</option>
@@ -285,71 +285,71 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
           {/* Adı / Soyadı - organizatörlerde doluysa değiştirilemez */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">{t("firstName")}</label>
+              <label className="block text-sm font-medium text-ink-700 mb-2">{t("firstName")}</label>
               <input
                 type="text"
                 value={form.first_name}
                 onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
                 readOnly={isOrganizerInYonetim && !!(profile?.first_name?.trim())}
-                className={`w-full px-3 py-2 border rounded-lg ${isOrganizerInYonetim && profile?.first_name?.trim() ? "bg-slate-100 text-slate-600 border-slate-200" : "border-slate-300 focus:border-primary-500 focus:ring-primary-500"}`}
+                className={`w-full px-3 py-2 border rounded-lg ${isOrganizerInYonetim && profile?.first_name?.trim() ? "bg-ink-100 text-ink-600 border-ink-200" : "border-ink-300 focus:border-gold-500 focus:ring-gold-500"}`}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">{t("lastName")}</label>
+              <label className="block text-sm font-medium text-ink-700 mb-2">{t("lastName")}</label>
               <input
                 type="text"
                 value={form.last_name}
                 onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))}
                 readOnly={isOrganizerInYonetim && !!(profile?.last_name?.trim())}
-                className={`w-full px-3 py-2 border rounded-lg ${isOrganizerInYonetim && profile?.last_name?.trim() ? "bg-slate-100 text-slate-600 border-slate-200" : "border-slate-300 focus:border-primary-500 focus:ring-primary-500"}`}
+                className={`w-full px-3 py-2 border rounded-lg ${isOrganizerInYonetim && profile?.last_name?.trim() ? "bg-ink-100 text-ink-600 border-ink-200" : "border-ink-300 focus:border-gold-500 focus:ring-gold-500"}`}
               />
             </div>
           </div>
 
           {/* Firma */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t("firma")}</label>
+            <label className="block text-sm font-medium text-ink-700 mb-2">{t("firma")}</label>
             <input
               type="text"
               value={form.firma}
               onChange={(e) => setForm((f) => ({ ...f, firma: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
             />
           </div>
 
           {/* Adres */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t("address")}</label>
+            <label className="block text-sm font-medium text-ink-700 mb-2">{t("address")}</label>
             <input
               type="text"
               value={form.address}
               onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
               placeholder={t("addressHint")}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
             />
-            <p className="mt-1 text-xs text-slate-500">{t("addressHint")}</p>
+            <p className="mt-1 text-xs text-ink-500">{t("addressHint")}</p>
           </div>
 
           {/* PLZ / Stadt */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">{t("plzCity")}</label>
+              <label className="block text-sm font-medium text-ink-700 mb-2">{t("plzCity")}</label>
               <input
                 type="text"
                 value={form.plz}
                 onChange={(e) => setForm((f) => ({ ...f, plz: e.target.value }))}
                 placeholder={t("plzPlaceholder")}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">{t("cityLabel")}</label>
+              <label className="block text-sm font-medium text-ink-700 mb-2">{t("cityLabel")}</label>
               <input
                 type="text"
                 value={form.city}
                 onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
                 placeholder={t("cityPlaceholder")}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
               />
             </div>
           </div>
@@ -357,67 +357,67 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
           {/* Ort / Land */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">{t("ort")}</label>
+              <label className="block text-sm font-medium text-ink-700 mb-2">{t("ort")}</label>
               <input
                 type="text"
                 value={form.ort}
                 onChange={(e) => setForm((f) => ({ ...f, ort: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">{t("country")}</label>
+              <label className="block text-sm font-medium text-ink-700 mb-2">{t("country")}</label>
               <input
                 type="text"
                 value={form.country}
                 onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
               />
             </div>
           </div>
 
           {/* E-Mail */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t("email")}</label>
+            <label className="block text-sm font-medium text-ink-700 mb-2">{t("email")}</label>
             <input
               type="email"
               value={form.email}
               onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
               required
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
             />
           </div>
 
           {/* Telefon */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t("telefon")}</label>
+            <label className="block text-sm font-medium text-ink-700 mb-2">{t("telefon")}</label>
             <input
               type="tel"
               value={form.telefon}
               onChange={(e) => setForm((f) => ({ ...f, telefon: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
             />
           </div>
 
           {/* Handynummer */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t("handynummer")}</label>
+            <label className="block text-sm font-medium text-ink-700 mb-2">{t("handynummer")}</label>
             <input
               type="tel"
               value={form.handynummer}
               onChange={(e) => setForm((f) => ({ ...f, handynummer: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
             />
           </div>
 
           {/* Geburtsdatum */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t("geburtsdatum")}</label>
+            <label className="block text-sm font-medium text-ink-700 mb-2">{t("geburtsdatum")}</label>
             <input
               type="date"
               value={form.geburtsdatum}
               onChange={(e) => setForm((f) => ({ ...f, geburtsdatum: e.target.value }))}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
             />
           </div>
 
@@ -435,7 +435,7 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
           <button
             type="submit"
             disabled={saveLoading}
-            className="flex items-center gap-2 w-full justify-center py-3 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50"
+            className="flex items-center gap-2 w-full justify-center py-3 bg-gold-500 text-ink-950 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {t("saveData")}
@@ -445,8 +445,8 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
 
       {/* Organizasyon Başvuru Bilgileri - organizatörler için düzenlenebilir */}
       {(organizerRequest || isOrganizerInYonetim) && (
-        <div className="mt-10 pt-8 border-t border-slate-200">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+        <div className="mt-10 pt-8 border-t border-ink-200">
+          <h2 className="text-lg font-semibold text-ink-900 mb-4 flex items-center gap-2">
             <Building2 className="h-5 w-5" />
             {t("organizationFormSection")}
           </h2>
@@ -460,102 +460,102 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
             <p className="text-red-700 text-sm font-medium mb-4">{t("organizationFormStatusRejected")}</p>
           )}
           {isOrganizerInYonetim ? (
-            <form onSubmit={handleSaveOrganization} className="bg-slate-50 rounded-xl border border-slate-200 p-6 space-y-4">
+            <form onSubmit={handleSaveOrganization} className="bg-ink-50 rounded-lg border border-ink-200 p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{tApp("companyName")}</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("companyName")}</label>
                   <input
                     type="text"
                     value={orgForm.company_name}
                     onChange={(e) => setOrgForm((o) => ({ ...o, company_name: e.target.value }))}
                     placeholder={tApp("companyNamePlaceholder")}
                     readOnly={!!(organizerRequest?.company_name?.trim())}
-                    className={`w-full px-3 py-2 border rounded-lg ${organizerRequest?.company_name?.trim() ? "bg-slate-100 text-slate-600 border-slate-200" : "border-slate-300 focus:border-primary-500 focus:ring-primary-500"}`}
+                    className={`w-full px-3 py-2 border rounded-lg ${organizerRequest?.company_name?.trim() ? "bg-ink-100 text-ink-600 border-ink-200" : "border-ink-300 focus:border-gold-500 focus:ring-gold-500"}`}
                     title={organizerRequest?.company_name?.trim() ? t("organizationInfoReadOnlyHint") : undefined}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{tApp("legalForm")}</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("legalForm")}</label>
                   <input
                     type="text"
                     value={orgForm.legal_form}
                     onChange={(e) => setOrgForm((o) => ({ ...o, legal_form: e.target.value }))}
                     placeholder={tApp("legalFormPlaceholder")}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{tApp("address")}</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("address")}</label>
                   <input
                     type="text"
                     value={orgForm.address}
                     onChange={(e) => setOrgForm((o) => ({ ...o, address: e.target.value }))}
                     placeholder={tApp("addressPlaceholder")}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{tApp("phone")}</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("phone")}</label>
                   <input
                     type="tel"
                     value={orgForm.phone}
                     onChange={(e) => setOrgForm((o) => ({ ...o, phone: e.target.value }))}
                     placeholder={tApp("phonePlaceholder")}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{tApp("representativeName")}</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("representativeName")}</label>
                   <input
                     type="text"
                     value={orgForm.representative_name}
                     onChange={(e) => setOrgForm((o) => ({ ...o, representative_name: e.target.value }))}
                     placeholder={tApp("representativeNamePlaceholder")}
                     readOnly={!!(organizerRequest?.representative_name?.trim())}
-                    className={`w-full px-3 py-2 border rounded-lg ${organizerRequest?.representative_name?.trim() ? "bg-slate-100 text-slate-600 border-slate-200" : "border-slate-300 focus:border-primary-500 focus:ring-primary-500"}`}
+                    className={`w-full px-3 py-2 border rounded-lg ${organizerRequest?.representative_name?.trim() ? "bg-ink-100 text-ink-600 border-ink-200" : "border-ink-300 focus:border-gold-500 focus:ring-gold-500"}`}
                     title={organizerRequest?.representative_name?.trim() ? t("organizationInfoReadOnlyHint") : undefined}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{tApp("organizationDisplayName")}</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("organizationDisplayName")}</label>
                   <input
                     type="text"
                     value={orgForm.organization_display_name}
                     onChange={(e) => setOrgForm((o) => ({ ...o, organization_display_name: e.target.value }))}
                     placeholder={tApp("organizationDisplayNamePlaceholder")}
                     readOnly={!!(organizerRequest?.organization_display_name?.trim())}
-                    className={`w-full px-3 py-2 border rounded-lg ${organizerRequest?.organization_display_name?.trim() ? "bg-slate-100 text-slate-600 border-slate-200" : "border-slate-300 focus:border-primary-500 focus:ring-primary-500"}`}
+                    className={`w-full px-3 py-2 border rounded-lg ${organizerRequest?.organization_display_name?.trim() ? "bg-ink-100 text-ink-600 border-ink-200" : "border-ink-300 focus:border-gold-500 focus:ring-gold-500"}`}
                     title={organizerRequest?.organization_display_name?.trim() ? t("organizationInfoReadOnlyHint") : undefined}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{tApp("tradeRegister")}</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("tradeRegister")}</label>
                   <input
                     type="text"
                     value={orgForm.trade_register}
                     onChange={(e) => setOrgForm((o) => ({ ...o, trade_register: e.target.value }))}
                     placeholder={tApp("tradeRegisterPlaceholder")}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{tApp("tradeRegisterNumber")}</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("tradeRegisterNumber")}</label>
                   <input
                     type="text"
                     value={orgForm.trade_register_number}
                     onChange={(e) => setOrgForm((o) => ({ ...o, trade_register_number: e.target.value }))}
                     placeholder={tApp("tradeRegisterNumberPlaceholder")}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{tApp("vatId")}</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("vatId")}</label>
                   <input
                     type="text"
                     value={orgForm.vat_id}
                     onChange={(e) => setOrgForm((o) => ({ ...o, vat_id: e.target.value }))}
                     placeholder={tApp("vatIdPlaceholder")}
-                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
                   />
                 </div>
               </div>
@@ -568,50 +568,50 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
               <button
                 type="submit"
                 disabled={orgSaveLoading}
-                className="flex items-center gap-2 justify-center py-3 px-6 bg-primary-600 text-white rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50"
+                className="flex items-center gap-2 justify-center py-3 px-6 bg-gold-500 text-ink-950 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
                 {t("saveOrganizationInfo")}
               </button>
             </form>
           ) : (
-            <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 space-y-4">
+            <div className="bg-ink-50 rounded-lg border border-ink-200 p-6 space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-slate-500 block mb-1">{tApp("companyName")}</span>
-                  <span className="text-slate-900">{organizerRequest?.company_name || "—"}</span>
+                  <span className="text-ink-500 block mb-1">{tApp("companyName")}</span>
+                  <span className="text-ink-900">{organizerRequest?.company_name || "—"}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block mb-1">{tApp("legalForm")}</span>
-                  <span className="text-slate-900">{organizerRequest?.legal_form || "—"}</span>
+                  <span className="text-ink-500 block mb-1">{tApp("legalForm")}</span>
+                  <span className="text-ink-900">{organizerRequest?.legal_form || "—"}</span>
                 </div>
                 <div className="sm:col-span-2">
-                  <span className="text-slate-500 block mb-1">{tApp("address")}</span>
-                  <span className="text-slate-900">{organizerRequest?.address || "—"}</span>
+                  <span className="text-ink-500 block mb-1">{tApp("address")}</span>
+                  <span className="text-ink-900">{organizerRequest?.address || "—"}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block mb-1">{tApp("phone")}</span>
-                  <span className="text-slate-900">{organizerRequest?.phone || "—"}</span>
+                  <span className="text-ink-500 block mb-1">{tApp("phone")}</span>
+                  <span className="text-ink-900">{organizerRequest?.phone || "—"}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block mb-1">{tApp("representativeName")}</span>
-                  <span className="text-slate-900">{organizerRequest?.representative_name || profile ? [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "—" : "—"}</span>
+                  <span className="text-ink-500 block mb-1">{tApp("representativeName")}</span>
+                  <span className="text-ink-900">{organizerRequest?.representative_name || profile ? [profile.first_name, profile.last_name].filter(Boolean).join(" ") || "—" : "—"}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block mb-1">{tApp("organizationDisplayName")}</span>
-                  <span className="text-slate-900">{organizerRequest?.organization_display_name || "—"}</span>
+                  <span className="text-ink-500 block mb-1">{tApp("organizationDisplayName")}</span>
+                  <span className="text-ink-900">{organizerRequest?.organization_display_name || "—"}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block mb-1">{tApp("tradeRegister")}</span>
-                  <span className="text-slate-900">{organizerRequest?.trade_register || "—"}</span>
+                  <span className="text-ink-500 block mb-1">{tApp("tradeRegister")}</span>
+                  <span className="text-ink-900">{organizerRequest?.trade_register || "—"}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block mb-1">{tApp("tradeRegisterNumber")}</span>
-                  <span className="text-slate-900">{organizerRequest?.trade_register_number || "—"}</span>
+                  <span className="text-ink-500 block mb-1">{tApp("tradeRegisterNumber")}</span>
+                  <span className="text-ink-900">{organizerRequest?.trade_register_number || "—"}</span>
                 </div>
                 <div>
-                  <span className="text-slate-500 block mb-1">{tApp("vatId")}</span>
-                  <span className="text-slate-900">{organizerRequest?.vat_id || "—"}</span>
+                  <span className="text-ink-500 block mb-1">{tApp("vatId")}</span>
+                  <span className="text-ink-900">{organizerRequest?.vat_id || "—"}</span>
                 </div>
               </div>
             </div>
@@ -620,39 +620,39 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
       )}
 
       {/* Veri koruması */}
-      <p className="mt-6 text-sm text-slate-600">
+      <p className="mt-6 text-sm text-ink-600">
         {t("dataProtection")}{" "}
-        <Link href="/bilgilendirme/cerez-politikasi" className="text-primary-600 hover:underline">
+        <Link href="/bilgilendirme/cerez-politikasi" className="text-gold-700 hover:underline">
           {t("dataProtectionLink")}
         </Link>{" "}
         {t("dataProtectionSuffix")}
       </p>
 
       {/* Şifre değiştirme */}
-      <div className="mt-10 pt-8 border-t border-slate-200">
-        <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+      <div className="mt-10 pt-8 border-t border-ink-200">
+        <h2 className="text-lg font-semibold text-ink-900 mb-4 flex items-center gap-2">
           <Lock className="h-5 w-5" />
           {t("changePassword")}
         </h2>
         <form onSubmit={handleSavePassword} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t("newPassword")}</label>
+            <label className="block text-sm font-medium text-ink-700 mb-2">{t("newPassword")}</label>
             <input
               type="password"
               value={password.newPassword}
               onChange={(e) => setPassword((p) => ({ ...p, newPassword: e.target.value }))}
               placeholder="••••••••"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">{t("confirmPassword")}</label>
+            <label className="block text-sm font-medium text-ink-700 mb-2">{t("confirmPassword")}</label>
             <input
               type="password"
               value={password.confirm}
               onChange={(e) => setPassword((p) => ({ ...p, confirm: e.target.value }))}
               placeholder="••••••••"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+              className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
             />
           </div>
           {pwdError && (
@@ -668,7 +668,7 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
           <button
             type="submit"
             disabled={pwdLoading}
-            className="flex items-center gap-2 w-full justify-center py-3 bg-slate-700 text-white rounded-lg font-semibold hover:bg-slate-800 disabled:opacity-50"
+            className="flex items-center gap-2 w-full justify-center rounded-lg bg-gold-500 py-3 font-semibold text-ink-950 hover:bg-gold-400 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {t("save")}

@@ -414,7 +414,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-ink-50">
       <Header />
 
       <div className="site-container py-16">
@@ -422,24 +422,24 @@ export default function LoginPage() {
           {/* Geri butonu */}
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-slate-600 hover:text-primary-600 transition-colors mb-8"
+            className="inline-flex items-center gap-2 text-ink-600 hover:text-gold-800 transition-colors mb-8"
           >
             <ArrowLeft className="h-4 w-4" />
             {tCommon("backToHome")}
           </Link>
 
           {/* Giriş formu */}
-          <div id="giris-form" className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+          <div id="giris-form" className="bg-white rounded-lg border border-ink-200 shadow-card p-8">
             <div className="text-center mb-8">
-              <h1 className="text-2xl font-bold text-slate-900 mb-2">{t("loginTitle")}</h1>
-              <p className="text-slate-600">
+              <h1 className="text-2xl font-bold text-ink-900 mb-2">{t("loginTitle")}</h1>
+              <p className="text-ink-600">
                 {t("loginSubtitle")}
               </p>
             </div>
 
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="email" className="block text-sm font-medium text-ink-700 mb-2">
                   {t("email")}
                 </label>
                 <input
@@ -450,12 +450,12 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder={t("emailPlaceholder")}
-                  className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-ink-700 mb-2">
                   {t("password")}
                 </label>
                 <div className="relative">
@@ -467,12 +467,12 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     placeholder={t("passwordPlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 pr-12 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 pr-12 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600"
                   >
                     {showPassword ? (
                       <EyeOff className="h-5 w-5" />
@@ -484,7 +484,7 @@ export default function LoginPage() {
                 <div className="mt-2 flex justify-end">
                   <NextLink
                     href="/sifre-yenile"
-                    className="text-sm font-medium text-primary-600 hover:text-primary-700 hover:underline"
+                    className="text-sm font-medium text-gold-700 hover:text-gold-700 hover:underline"
                   >
                     {t("forgotPassword")}
                   </NextLink>
@@ -500,7 +500,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-gold-500 text-ink-950 py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
                   t("loggingIn")
@@ -514,10 +514,10 @@ export default function LoginPage() {
 
               <div className="relative my-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200" />
+                  <div className="w-full border-t border-ink-200" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="bg-white px-3 text-slate-500">{t("or")}</span>
+                  <span className="bg-white px-3 text-ink-500">{t("or")}</span>
                 </div>
               </div>
 
@@ -525,19 +525,19 @@ export default function LoginPage() {
                 type="button"
                 onClick={() => handleGoogleSignIn(false)}
                 disabled={googleLoading}
-                className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-ink-300 bg-white text-ink-700 font-medium hover:bg-ink-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 <GoogleIcon />
                 {googleLoading ? t("loggingIn") : t("loginWithGoogle")}
               </button>
             </form>
 
-            <p className="mt-6 text-center text-sm text-slate-500">
+            <p className="mt-6 text-center text-sm text-ink-500">
               {t("noAccount")}{" "}
               <button
                 type="button"
                 onClick={() => document.getElementById("uyelik-form")?.scrollIntoView({ behavior: "smooth" })}
-                className="text-primary-600 hover:text-primary-700 font-medium"
+                className="text-gold-700 hover:text-gold-700 font-medium"
               >
                 {t("signUpLink")}
               </button>
@@ -545,21 +545,21 @@ export default function LoginPage() {
           </div>
 
           {/* Üye ol (Bilet alıcılar için) */}
-          <div id="uyelik-form" className="mt-12 pt-12 border-t border-slate-200">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+          <div id="uyelik-form" className="mt-12 pt-12 border-t border-ink-200">
+            <div className="bg-white rounded-lg border border-ink-200 shadow-card p-8">
               <div className="text-center mb-6">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary-100 text-primary-600 mb-3">
+                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gold-100 text-gold-700 mb-3">
                   <UserPlus className="h-6 w-6" />
                 </div>
-                <h2 className="text-xl font-bold text-slate-900 mb-2">{t("signUpTitle")}</h2>
-                <p className="text-slate-600 text-sm">
+                <h2 className="text-xl font-bold text-ink-900 mb-2">{t("signUpTitle")}</h2>
+                <p className="text-ink-600 text-sm">
                   {t("signUpSubtitle")}
                 </p>
               </div>
 
               <form onSubmit={handleRegister} className="space-y-5">
                 <div>
-                  <label htmlFor="reg-email" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="reg-email" className="block text-sm font-medium text-ink-700 mb-2">
                     {t("email")} *
                   </label>
                   <input
@@ -570,13 +570,13 @@ export default function LoginPage() {
                     onChange={(e) => setRegEmail(e.target.value)}
                     required
                     placeholder={t("regEmailPlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="reg-firstname" className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="reg-firstname" className="block text-sm font-medium text-ink-700 mb-2">
                       {t("regFirstNameLabel")} *
                     </label>
                     <input
@@ -587,11 +587,11 @@ export default function LoginPage() {
                       onChange={(e) => setRegFirstName(e.target.value)}
                       required
                       placeholder={t("regFirstNamePlaceholder")}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                   </div>
                   <div>
-                    <label htmlFor="reg-lastname" className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="reg-lastname" className="block text-sm font-medium text-ink-700 mb-2">
                       {t("regLastNameLabel")} *
                     </label>
                     <input
@@ -602,13 +602,13 @@ export default function LoginPage() {
                       onChange={(e) => setRegLastName(e.target.value)}
                       required
                       placeholder={t("regLastNamePlaceholder")}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="reg-anrede" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="reg-anrede" className="block text-sm font-medium text-ink-700 mb-2">
                     {t("regGenderLabel")}
                   </label>
                   <select
@@ -616,7 +616,7 @@ export default function LoginPage() {
                     autoComplete="honorific-prefix"
                     value={regAnrede}
                     onChange={(e) => setRegAnrede(e.target.value)}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   >
                     <option value="">{t("regGenderUnspecified")}</option>
                     <option value="Herr">{t("regGenderMale")}</option>
@@ -626,7 +626,7 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="reg-phone" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="reg-phone" className="block text-sm font-medium text-ink-700 mb-2">
                     {t("regPhoneLabel")}
                   </label>
                   <input
@@ -636,13 +636,13 @@ export default function LoginPage() {
                     value={regPhone}
                     onChange={(e) => setRegPhone(e.target.value)}
                     placeholder={t("regPhonePlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="reg-country" className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="reg-country" className="block text-sm font-medium text-ink-700 mb-2">
                       {t("regCountryLabel")}
                     </label>
                     <input
@@ -652,11 +652,11 @@ export default function LoginPage() {
                       value={regCountry}
                       onChange={(e) => setRegCountry(e.target.value)}
                       placeholder={t("regCountryPlaceholder")}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                   </div>
                   <div>
-                    <label htmlFor="reg-city" className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="reg-city" className="block text-sm font-medium text-ink-700 mb-2">
                       {t("regCityLabel")}
                     </label>
                     <input
@@ -666,13 +666,13 @@ export default function LoginPage() {
                       value={regCity}
                       onChange={(e) => setRegCity(e.target.value)}
                       placeholder={t("regCityPlaceholder")}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="reg-password" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="reg-password" className="block text-sm font-medium text-ink-700 mb-2">
                     {t("password")} *
                   </label>
                   <div className="relative">
@@ -686,20 +686,20 @@ export default function LoginPage() {
                       minLength={8}
                       maxLength={24}
                       placeholder={t("regPasswordPlaceholder")}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-3 pr-12 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 pr-12 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                     <button
                       type="button"
                       onClick={() => setRegShowPassword(!regShowPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600"
                     >
                       {regShowPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
                   </div>
-                  <p className="mt-2 text-xs text-slate-600">
+                  <p className="mt-2 text-xs text-ink-600">
                     {t("regPasswordRulesTitle")}
                   </p>
-                  <ul className="mt-1 text-xs text-slate-500 list-disc list-inside space-y-0.5">
+                  <ul className="mt-1 text-xs text-ink-500 list-disc list-inside space-y-0.5">
                     <li>{t("regPasswordRuleNoPersonalInfo")}</li>
                     <li>{t("regPasswordRuleUpperLower")}</li>
                     <li>{t("regPasswordRuleLength")}</li>
@@ -707,7 +707,7 @@ export default function LoginPage() {
                 </div>
 
                 <div>
-                  <label htmlFor="reg-password-confirm" className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="reg-password-confirm" className="block text-sm font-medium text-ink-700 mb-2">
                     {t("regPasswordConfirmLabel")} *
                   </label>
                   <input
@@ -720,7 +720,7 @@ export default function LoginPage() {
                     minLength={8}
                     maxLength={24}
                     placeholder={t("regPasswordConfirmPlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                 </div>
 
@@ -730,10 +730,10 @@ export default function LoginPage() {
                       type="checkbox"
                       checked={agreeTerms}
                       onChange={(e) => setAgreeTerms(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                      className="mt-1 h-4 w-4 rounded border-ink-300 text-gold-700 focus:ring-gold-500"
                     />
-                    <span className="text-sm text-slate-700">
-                      <Link href="/bilgilendirme/kullanim-kosullari" className="text-primary-600 hover:underline">{t("regTermsLinkText")}</Link> {t("regTermsSuffix")}
+                    <span className="text-sm text-ink-700">
+                      <Link href="/bilgilendirme/kullanim-kosullari" className="text-gold-700 hover:underline">{t("regTermsLinkText")}</Link> {t("regTermsSuffix")}
                     </span>
                   </label>
                   <label className="flex items-start gap-3 cursor-pointer">
@@ -741,10 +741,10 @@ export default function LoginPage() {
                       type="checkbox"
                       checked={agreePrivacy}
                       onChange={(e) => setAgreePrivacy(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                      className="mt-1 h-4 w-4 rounded border-ink-300 text-gold-700 focus:ring-gold-500"
                     />
-                    <span className="text-sm text-slate-700">
-                      {t("regPrivacyPrefix")} <Link href="/bilgilendirme/cerez-politikasi" className="text-primary-600 hover:underline">{t("regPrivacyLinkText")}</Link> {t("regPrivacySuffix")}
+                    <span className="text-sm text-ink-700">
+                      {t("regPrivacyPrefix")} <Link href="/bilgilendirme/cerez-politikasi" className="text-gold-700 hover:underline">{t("regPrivacyLinkText")}</Link> {t("regPrivacySuffix")}
                     </span>
                   </label>
                   <label className="flex items-start gap-3 cursor-pointer">
@@ -752,9 +752,9 @@ export default function LoginPage() {
                       type="checkbox"
                       checked={agreeMarketing}
                       onChange={(e) => setAgreeMarketing(e.target.checked)}
-                      className="mt-1 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                      className="mt-1 h-4 w-4 rounded border-ink-300 text-gold-700 focus:ring-gold-500"
                     />
-                    <span className="text-sm text-slate-700">
+                    <span className="text-sm text-ink-700">
                       {t("regMarketingConsent")}
                     </span>
                   </label>
@@ -772,12 +772,12 @@ export default function LoginPage() {
                   </div>
                 )}
 
-                <p className="text-sm text-slate-600 text-center">
+                <p className="text-sm text-ink-600 text-center">
                   {t("hasAccount")}{" "}
                   <button
                     type="button"
                     onClick={() => document.getElementById("giris-form")?.scrollIntoView({ behavior: "smooth" })}
-                    className="text-primary-600 hover:text-primary-700 font-medium"
+                    className="text-gold-700 hover:text-gold-700 font-medium"
                   >
                     {t("loginCta")}
                   </button>
@@ -786,7 +786,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={regLoading}
-                  className="w-full bg-primary-600 text-white py-3 rounded-lg font-semibold hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-gold-500 text-ink-950 py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   {regLoading ? t("registering") : (
                     <>
@@ -798,10 +798,10 @@ export default function LoginPage() {
 
                 <div className="relative my-6">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200" />
+                    <div className="w-full border-t border-ink-200" />
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="bg-white px-3 text-slate-500">{t("or")}</span>
+                    <span className="bg-white px-3 text-ink-500">{t("or")}</span>
                   </div>
                 </div>
 
@@ -809,7 +809,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => handleGoogleSignIn(true)}
                   disabled={regGoogleLoading}
-                  className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-slate-300 bg-white text-slate-700 font-medium hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full flex items-center justify-center gap-3 py-3 rounded-lg border border-ink-300 bg-white text-ink-700 font-medium hover:bg-ink-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <GoogleIcon />
                   {regGoogleLoading ? t("registering") : t("signUpWithGoogle")}
@@ -818,47 +818,47 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <div className="mt-12 pt-12 border-t border-slate-200">
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+          <div className="mt-12 pt-12 border-t border-ink-200">
+            <div className="bg-white rounded-lg border border-ink-200 shadow-card p-8">
               <div className="text-center mb-6">
-                <h2 className="text-xl font-bold text-slate-900 mb-2">Kontrolör Başvurusu</h2>
-                <p className="text-slate-600 text-sm">
+                <h2 className="text-xl font-bold text-ink-900 mb-2">Kontrolör Başvurusu</h2>
+                <p className="text-ink-600 text-sm">
                   Bilet kontrol ekibi için başvuru formu. Admin onayı olmadan giriş yapılamaz.
                 </p>
               </div>
               <form onSubmit={handleControllerApply} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Ad Soyad *</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-2">Ad Soyad *</label>
                   <input
                     type="text"
                     value={ctrlFullName}
                     onChange={(e) => setCtrlFullName(e.target.value)}
                     required
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Telefon *</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-2">Telefon *</label>
                   <input
                     type="tel"
                     value={ctrlPhone}
                     onChange={(e) => setCtrlPhone(e.target.value)}
                     required
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">E-posta *</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-2">E-posta *</label>
                   <input
                     type="email"
                     value={ctrlEmail}
                     onChange={(e) => setCtrlEmail(e.target.value)}
                     required
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">Şifre *</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-2">Şifre *</label>
                   <input
                     type="password"
                     autoComplete="new-password"
@@ -866,7 +866,7 @@ export default function LoginPage() {
                     onChange={(e) => setCtrlPassword(e.target.value)}
                     required
                     minLength={8}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3"
                   />
                 </div>
                 {ctrlError && <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">{ctrlError}</div>}
@@ -874,7 +874,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={ctrlLoading}
-                  className="w-full bg-slate-900 text-white py-3 rounded-lg font-semibold hover:bg-slate-800 disabled:opacity-50"
+                  className="w-full rounded-lg bg-gold-500 py-3 font-semibold text-ink-950 hover:bg-gold-400 disabled:opacity-50"
                 >
                   {ctrlLoading ? "Gönderiliyor..." : "Kontrolör Başvurusu Gönder"}
                 </button>

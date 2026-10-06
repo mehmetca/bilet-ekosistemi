@@ -102,37 +102,37 @@ export default function OrganizerApplicationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-ink-50">
       <Header />
       <main className="site-container py-8">
         <div className="mx-auto max-w-2xl">
         <Link
           href={`/${locale}/giris`}
-          className="inline-flex items-center gap-2 text-slate-600 hover:text-primary-600 text-sm font-medium mb-6"
+          className="inline-flex items-center gap-2 text-ink-600 hover:text-gold-800 text-sm font-medium mb-6"
         >
           <ArrowLeft className="h-4 w-4" />
           {tApp("backToLogin")}
         </Link>
 
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
+        <div className="bg-white rounded-lg border border-ink-200 shadow-card p-8">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary-100 text-primary-600 mb-4">
+            <div className="inline-flex items-center justify-center w-14 h-14 rounded-lg bg-gold-100 text-gold-700 mb-4">
               <Calendar className="h-7 w-7" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">{tApp("title")}</h1>
-            <p className="text-slate-600 text-sm leading-relaxed">{tApp("subtitle")}</p>
+            <h1 className="text-2xl font-bold text-ink-900 mb-2">{tApp("title")}</h1>
+            <p className="text-ink-600 text-sm leading-relaxed">{tApp("subtitle")}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Hesap Bilgileri */}
             <section>
-              <h2 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-ink-800 mb-4 flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 {tApp("accountSection")}
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="org-email" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="org-email" className="block text-sm font-medium text-ink-700 mb-1">
                     {t("email")}
                   </label>
                   <input
@@ -142,11 +142,11 @@ export default function OrganizerApplicationPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     placeholder={t("regEmailPlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                 </div>
                 <div>
-                  <label htmlFor="org-password" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="org-password" className="block text-sm font-medium text-ink-700 mb-1">
                     {t("password")}
                   </label>
                   <div className="relative">
@@ -158,12 +158,12 @@ export default function OrganizerApplicationPage() {
                       required
                       minLength={6}
                       placeholder={t("regPasswordPlaceholder")}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-3 pr-12 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 pr-12 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600"
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
@@ -174,13 +174,13 @@ export default function OrganizerApplicationPage() {
 
             {/* Firma / DDG § 5 Bilgileri */}
             <section>
-              <h2 className="text-sm font-semibold text-slate-800 mb-4 flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-ink-800 mb-4 flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
                 {tApp("companySection")}
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="company-name" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="company-name" className="block text-sm font-medium text-ink-700 mb-1">
                     {tApp("companyName")} *
                   </label>
                   <input
@@ -190,11 +190,11 @@ export default function OrganizerApplicationPage() {
                     onChange={(e) => setCompanyName(e.target.value)}
                     required
                     placeholder={tApp("companyNamePlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                 </div>
                 <div>
-                  <label htmlFor="legal-form" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="legal-form" className="block text-sm font-medium text-ink-700 mb-1">
                     {tApp("legalForm")} *
                   </label>
                   <input
@@ -204,11 +204,11 @@ export default function OrganizerApplicationPage() {
                     onChange={(e) => setLegalForm(e.target.value)}
                     required
                     placeholder={tApp("legalFormPlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                 </div>
                 <div>
-                  <label htmlFor="address" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="address" className="block text-sm font-medium text-ink-700 mb-1">
                     {tApp("address")} *
                   </label>
                   <textarea
@@ -218,11 +218,11 @@ export default function OrganizerApplicationPage() {
                     required
                     rows={3}
                     placeholder={tApp("addressPlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 resize-none"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500 resize-none"
                   />
                 </div>
                 <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="phone" className="block text-sm font-medium text-ink-700 mb-1">
                     {tApp("phone")} *
                   </label>
                   <input
@@ -232,12 +232,12 @@ export default function OrganizerApplicationPage() {
                     onChange={(e) => setPhone(e.target.value)}
                     required
                     placeholder={tApp("phonePlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="trade-register" className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="trade-register" className="block text-sm font-medium text-ink-700 mb-1">
                       {tApp("tradeRegister")}
                     </label>
                     <input
@@ -246,11 +246,11 @@ export default function OrganizerApplicationPage() {
                       value={tradeRegister}
                       onChange={(e) => setTradeRegister(e.target.value)}
                       placeholder={tApp("tradeRegisterPlaceholder")}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                   </div>
                   <div>
-                    <label htmlFor="trade-register-number" className="block text-sm font-medium text-slate-700 mb-1">
+                    <label htmlFor="trade-register-number" className="block text-sm font-medium text-ink-700 mb-1">
                       {tApp("tradeRegisterNumber")}
                     </label>
                     <input
@@ -259,12 +259,12 @@ export default function OrganizerApplicationPage() {
                       value={tradeRegisterNumber}
                       onChange={(e) => setTradeRegisterNumber(e.target.value)}
                       placeholder={tApp("tradeRegisterNumberPlaceholder")}
-                      className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="vat-id" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="vat-id" className="block text-sm font-medium text-ink-700 mb-1">
                     {tApp("vatId")}
                   </label>
                   <input
@@ -273,11 +273,11 @@ export default function OrganizerApplicationPage() {
                     value={vatId}
                     onChange={(e) => setVatId(e.target.value)}
                     placeholder={tApp("vatIdPlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                 </div>
                 <div>
-                  <label htmlFor="representative" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="representative" className="block text-sm font-medium text-ink-700 mb-1">
                     {tApp("representativeName")} *
                   </label>
                   <input
@@ -287,11 +287,11 @@ export default function OrganizerApplicationPage() {
                     onChange={(e) => setRepresentativeName(e.target.value)}
                     required
                     placeholder={tApp("representativeNamePlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
                 </div>
                 <div>
-                  <label htmlFor="org-display-name" className="block text-sm font-medium text-slate-700 mb-1">
+                  <label htmlFor="org-display-name" className="block text-sm font-medium text-ink-700 mb-1">
                     {tApp("organizationDisplayName")} *
                   </label>
                   <input
@@ -301,29 +301,29 @@ export default function OrganizerApplicationPage() {
                     onChange={(e) => setOrganizationDisplayName(e.target.value)}
                     required
                     placeholder={tApp("organizationDisplayNamePlaceholder")}
-                    className="w-full rounded-lg border border-slate-300 px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
-                  <p className="mt-1 text-xs text-slate-500">{tApp("organizationDisplayNameHelp")}</p>
+                  <p className="mt-1 text-xs text-ink-500">{tApp("organizationDisplayNameHelp")}</p>
                 </div>
               </div>
             </section>
 
             {/* Sözleşme Onayı */}
             <section>
-              <h2 className="text-sm font-semibold text-slate-800 mb-4">{tApp("termsSection")}</h2>
+              <h2 className="text-sm font-semibold text-ink-800 mb-4">{tApp("termsSection")}</h2>
               <label className="flex items-start gap-3 cursor-pointer group">
                 <input
                   type="checkbox"
                   checked={termsAccepted}
                   onChange={(e) => setTermsAccepted(e.target.checked)}
-                  className="mt-1 h-5 w-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                  className="mt-1 h-5 w-5 rounded border-ink-300 text-gold-700 focus:ring-gold-500"
                 />
-                <span className="text-sm text-slate-700 group-hover:text-slate-900">
+                <span className="text-sm text-ink-700 group-hover:text-ink-900">
                   {tApp("termsCheckbox")}
                 </span>
               </label>
-              <p className="text-xs text-slate-500 mt-2 ml-8">
-                <Link href="/bilgilendirme/b2b" className="text-primary-600 hover:underline">
+              <p className="text-xs text-ink-500 mt-2 ml-8">
+                <Link href="/bilgilendirme/b2b" className="text-gold-700 hover:underline">
                   {tApp("termsB2BLink")}
                 </Link>{" "}
                 {tApp("termsB2BLinkSuffix")}
@@ -345,7 +345,7 @@ export default function OrganizerApplicationPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-slate-800 text-white py-3 rounded-lg font-semibold hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              className="w-full rounded-lg bg-gold-500 py-3 font-semibold text-ink-950 hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {loading ? t("submitting") : t("organizerApply")}
             </button>
