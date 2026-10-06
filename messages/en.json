@@ -324,7 +324,10 @@
     "bestplatzbuchungDesc": "You choose the price – we assign the best available seats",
     "saalplanbuchung": "Hall plan booking",
     "saalplanbuchungDesc": "Choose your seat from the hall plan",
+    "noSeatingPlanMessage": "No seat selection is defined for this event.",
+    "noSeatingPlanHint": "Use the \"Best seat booking\" option to purchase tickets.",
     "deinePlatze": "Your seats",
+    "ticketDeliveryNote": "The tickets will be available for download immediately after sending the payment details and will also be sent to you by e-mail.",
     "ticketsAndPricesTitle": "{title} — Tickets & prices",
     "cityFilterAll": "All",
     "venueTicketsSubtitle": "{city} — {title}",
@@ -511,6 +514,8 @@
     "refundPolicyDesc": "Refund conditions are determined by the event organiser. Refund or change may apply according to event and campaign conditions. Please review the relevant event conditions before purchase.",
     "shippingPolicyDesc": "Standard shipping (DE): 2–4 business days. Express shipping (DE): Orders placed before noon (Mon–Fri) delivered next business day. Digital ticket: Printable immediately after contract. Printed ticket is chargeable; delivered to those paying shipping. Shipping options are shown in the cart.",
     "liveStockDesc": "Stock information is updated in real time.",
+    "preContractInfo": "Pre-contractual Information (Distance Sales)",
+    "preContractInfoDesc": "The full address and contact details can be found in our Impressum (Legal Notice).",
     "copyright": "© 2026 KurdEvents",
     "cookiePolicy": "Cookie Policy",
     "information": "Information",
@@ -598,7 +603,9 @@
     "responsible": "Responsible Person",
     "responsibleValue": "Herr Özgül Adsiz",
     "dispute": "Dispute Resolution",
-    "disputeDesc": "EU consumers may use the online dispute resolution platform: https://www.verbraucher-schlichter.de/"
+    "disputeDesc": "EU consumers may use the online dispute resolution platform: https://www.verbraucher-schlichter.de/",
+    "platformRole": "Platform Role",
+    "platformRoleDesc": "KurdEvents is a ticketing platform. Returns, cancellations and exchanges are the responsibility of the respective organiser. If an event is cancelled, the payment is not paid out to the organiser; the ticket price (after deduction of fees) is refunded to the buyers."
   },
   "distanceSales": {
     "title": "Distance Sales Agreement",

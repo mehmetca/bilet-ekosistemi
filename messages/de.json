@@ -324,7 +324,10 @@
     "bestplatzbuchungDesc": "Du wählst den Preis – wir die besten verfügbaren Plätze",
     "saalplanbuchung": "Saalplanbuchung",
     "saalplanbuchungDesc": "Such dir deinen Platz selbst aus",
+    "noSeatingPlanMessage": "Für diese Veranstaltung ist keine Sitzplatzwahl definiert.",
+    "noSeatingPlanHint": "Verwende die Option \"Bestplatzbuchung\", um Tickets zu kaufen.",
     "deinePlatze": "Deine Plätze",
+    "ticketDeliveryNote": "Die Tickets stehen sofort nach Übermittlung der Zahlungsdaten zum Download bereit und werden Ihnen zusätzlich per E-Mail zugesendet.",
     "ticketsAndPricesTitle": "{title} — Tickets & Preise",
     "cityFilterAll": "Alle",
     "venueTicketsSubtitle": "{city} — {title}",
@@ -511,6 +514,8 @@
     "refundPolicyDesc": "Die Rückgabebedingungen werden vom Veranstalter festgelegt. Rückgabe oder Änderung gemäß Veranstaltungs- und Kampagnenbedingungen möglich. Bitte prüfen Sie vor dem Kauf die jeweiligen Veranstaltungsbedingungen.",
     "shippingPolicyDesc": "Standardversand (DE): 2–4 Werktage. Expressversand (DE): Bestellungen vor Mittag (Mo–Fr) werden am nächsten Werktag geliefert. Digitales Ticket: Sofort nach Vertragsabschluss druckbar. Gedrucktes Ticket ist kostenpflichtig; wird an Versandkosten-Zahler geliefert. Versandoptionen werden im Warenkorb angezeigt.",
     "liveStockDesc": "Bestandsinformationen werden in Echtzeit aktualisiert.",
+    "preContractInfo": "Vorvertragliche Informationen (Fernabsatz)",
+    "preContractInfoDesc": "Die vollständige Anschrift und die Kontaktdaten finden Sie im Impressum.",
     "copyright": "© 2026 KurdEvents",
     "cookiePolicy": "Cookie-Richtlinie",
     "information": "Informationen",
@@ -598,7 +603,9 @@
     "responsible": "Verantwortlich",
     "responsibleValue": "Herr Özgül Adsiz",
     "dispute": "Streitschlichtung",
-    "disputeDesc": "EU-Verbraucher können die Online-Streitbeilegungsplattform nutzen: https://www.verbraucher-schlichter.de/"
+    "disputeDesc": "EU-Verbraucher können die Online-Streitbeilegungsplattform nutzen: https://www.verbraucher-schlichter.de/",
+    "platformRole": "Rolle der Plattform",
+    "platformRoleDesc": "KurdEvents ist eine Ticketing-Plattform. Rückgabe, Stornierung und Umtausch von Tickets liegen in der Verantwortung des jeweiligen Veranstalters. Wird eine Veranstaltung abgesagt, wird die Zahlung nicht an den Veranstalter ausgezahlt; der Ticketpreis (nach Abzug von Gebühren) wird an die Käufer zurückerstattet."
   },
   "distanceSales": {
     "title": "Fernabsatzvertrag",

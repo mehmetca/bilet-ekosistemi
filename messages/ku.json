@@ -463,7 +463,10 @@
     "bestplatzbuchungDesc": "Hûn bihayê hilbijêrin, em ê kursiyên çêtirîn berdest destnîşan bikin",
     "saalplanbuchung": "Bi bijartina cîhek bilêtan bikirin",
     "saalplanbuchungDesc": "Ji plana salonê kursiyên xwe hilbijêrin",
+    "noSeatingPlanMessage": "Ji bo vê bûyerê hilbijartina kursiyê nehatiye destnîşan kirin.",
+    "noSeatingPlanHint": "Ji bo kirîna bilêtê, vebijarka \"Li gorî kategoriya bihayê bilêtan bikirin\" bikar bînin.",
     "deinePlatze": "Cihên hatine hilbijartin",
+    "ticketDeliveryNote": "Bilêt dê tavilê piştî şandina agahiyên dravdanê ji bo daxistinê amade bin û ji bilî vê jî dê bi e-nameyê ji we re bên şandin.",
     "ticketsAndPricesTitle": "{title} Bilêt û Biha",
     "cityFilterAll": "Gişt",
     "venueTicketsSubtitle": "{city} - {title}",
@@ -568,6 +571,8 @@
     "refundPolicyDesc": "Mercên vegerandinê ji hêla organîzatorê bûyerê ve têne destnîşankirin. Li gorî bûyer û şert û mercên kampanyayê vegerandin an guhertin dikarin bêne kirin. Ji kerema xwe berî kirînê şert û mercên bûyera têkildar binihêrin.",
     "shippingPolicyDesc": "Barkirina standard (DE): 2-4 rojên kar. Barkirina bilez (DE): Fermanên ku berî nîvro (Duşem-Fi) hatine danîn dê roja karûbarê din werin radest kirin. Bilêta dîjîtal: Piştî peymanê di cih de dikare were çap kirin. Bilêtên çapkirî ji bo xercê ne; Ew ji kesên ku heqê barkêşiyê didin tê radest kirin. Vebijarkên barkirinê di selika kirînê de têne peyda kirin.",
     "liveStockDesc": "Agahdariya stock tavilê tê nûve kirin.",
+    "preContractInfo": "Agahdariya Pêş-Firotinê (Firotina Dûr)",
+    "preContractInfoDesc": "Navnîşana tevahî û agahdariya pêwendiyê di rûpela Impressum de têne dîtin.",
     "copyright": "© 2026 KurdEvents",
     "cookiePolicy": "Siyaseta Cookie",
     "information": "Ji bo agahdarkirinê",
@@ -655,7 +660,9 @@
     "responsible": "Kesê berpirsiyar",
     "responsibleValue": "Herr Özgül Adsiz",
     "dispute": "Çareserkirina Nakokîyê",
-    "disputeDesc": "Xerîdarên Yekîtiya Ewropî dikarin platforma çareserkirina nakokiyên serhêl bikar bînin: https://www.verbraucher-schlichter.de/"
+    "disputeDesc": "Xerîdarên Yekîtiya Ewropî dikarin platforma çareserkirina nakokiyên serhêl bikar bînin: https://www.verbraucher-schlichter.de/",
+    "platformRole": "Rola Platformê",
+    "platformRoleDesc": "KurdEvents platformek bilêtan e. Vegerandin, betalkirin û guherandina bilêtan berpirsiyariya organîzatorê têkildar e. Ger çalakî bê betalkirin, pere ji organîzator re nayê dayîn; bihayê bilêtê (piştî daxistina heqan) ji kiriyaran re tê vegerandin."
   },
   "distanceSales": {
     "title": "Peymana Firotina Dûr",
