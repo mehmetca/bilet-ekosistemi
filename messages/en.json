@@ -1,4 +1,12 @@
 {
+  "welcomeEmail": {
+    "subject": "Welcome to KurdEvents!",
+    "greeting": "Hello {name},",
+    "intro": "Thank you for joining KurdEvents! You can now browse events, purchase tickets and become part of our community.",
+    "accountCreated": "Your account has been created successfully. If you have any questions, feel free to contact us at any time.",
+    "closing": "We wish you enjoyable events!",
+    "team": "KurdEvents Team"
+  },
   "common": {
     "backToHome": "Back to Home",
     "home": "Home",

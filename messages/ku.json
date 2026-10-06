@@ -1,4 +1,12 @@
 {
+  "welcomeEmail": {
+    "subject": "Bi xêr hatî KurdEvents!",
+    "greeting": "Silav {name},",
+    "intro": "Spas ji bo ku te tevlî KurdEventsê bû! Niha dikarî li bûyeran binêre, bilêtan bikirî û bibî beşek ji civaka me.",
+    "accountCreated": "Hesabê te bi serketin hate çêkirin. Eger pirsên te hebin, dikarî her dem bi me re têkilî daynî.",
+    "closing": "Em ji te re bûyerên xweş dixwazin!",
+    "team": "Tîma KurdEvents"
+  },
   "common": {
     "backToHome": "Vegere rûpela sereke",
     "home": "Rûpela sereke",
