@@ -1118,7 +1118,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const renderNow = useMemo(() => new Date(nowIso), [nowIso]);
   const searchParams = useSearchParams();
   const showSeatGridDebug = searchParams.get("seatDebug") === "1";
-  const { addItem, addItemsBatch, removeSeatItem, totalItems, items: cartItems } = useCart();
+  const { addItem, addItemsBatch, removeSeatItem, removeItem, totalItems, items: cartItems } = useCart();
 
   const [ticketState, setTicketState] = useState<EventTicket[]>(tickets);
   const sortedTicketState = useMemo(() => {
@@ -3319,14 +3319,33 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   </div>
 
                   <aside className="rounded-lg border border-ink-200 bg-white p-5 h-fit">
+                    <p className="text-sm text-ink-600 mb-3">{t("ticketDeliveryNote")}</p>
                     <h3 className="font-display mb-4 text-lg font-semibold text-ink-900">{t("deinePlatze")}</h3>
                     {priceCategorySidebarMergedRows.length > 0 ? (
                       <div>
-                        <ul className="space-y-1 text-sm text-ink-700">
-                          {priceCategorySidebarMergedRows.map((row, idx) => (
-                            <li key={`price-cat-merged-${row.ticketId}`}>
-                              {idx + 1}. {formatDeinePlatzPriceCategoryLine(row.ticket, event.currency, locale)} ×{" "}
-                              {row.displayQty}
+                        <ul className="mb-4 space-y-2">
+                          {priceCategorySidebarMergedRows.map((row) => (
+                            <li key={`price-cat-merged-${row.ticketId}`} className="flex items-center justify-between gap-2 rounded-lg bg-white border border-ink-100 px-3 py-2 text-sm shadow-card">
+                              <span className="text-ink-700 truncate" title={shortenTicketDisplayName(row.ticket.name || row.ticket.ticket_type || "Standart")}>
+                                {shortenTicketDisplayName(row.ticket.name || row.ticket.ticket_type || "Standart")}
+                                {row.displayQty > 1 ? <span className="text-ink-500"> × {row.displayQty}</span> : null}
+                              </span>
+                              <span className="font-semibold text-gold-700 flex-shrink-0">{formatPrice(Number(row.ticket.price || 0), event.currency)}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTicketCountsByType((prev) => {
+                                    const next = { ...prev };
+                                    delete next[row.ticketId];
+                                    return next;
+                                  });
+                                  removeItem(row.ticketId);
+                                }}
+                                className="text-ink-400 hover:text-red-600 p-1 flex-shrink-0"
+                                aria-label={tCheckout("remove")}
+                              >
+                                ×
+                              </button>
                             </li>
                           ))}
                         </ul>
@@ -3335,6 +3354,48 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                             {t("priceSidebarBasketMixedHint")}
                           </p>
                         ) : null}
+
+                        {(() => {
+                          const sidebarCount = priceCategorySidebarMergedRows.reduce((sum, row) => sum + row.displayQty, 0);
+                          const sidebarTotal = priceCategorySidebarMergedRows.reduce((sum, row) => sum + Number(row.ticket.price || 0) * row.displayQty, 0);
+                          const processingFeePerTicket =
+                            typeof event.checkout_processing_fee === "number" && event.checkout_processing_fee > 0
+                              ? Number(event.checkout_processing_fee)
+                              : 0;
+                          const processingFeeTotal = processingFeePerTicket * sidebarCount;
+                          const grandTotal = sidebarTotal + processingFeeTotal;
+                          return (
+                            <div className="mb-3 space-y-1 text-sm text-ink-700">
+                              <p>
+                                {t("seatsSelectedWithTotal", {
+                                  count: sidebarCount,
+                                  total: formatPrice(sidebarTotal, event.currency),
+                                })}
+                              </p>
+                              <p className="flex items-center justify-between">
+                                <strong>{tCheckout("total")}:</strong>
+                                <span>{formatPrice(sidebarTotal, event.currency)}</span>
+                              </p>
+                              <p className="flex items-center justify-between">
+                                <strong>{tCheckout("fees")}:</strong>
+                                {processingFeePerTicket > 0 && sidebarCount > 0 ? (
+                                  <span className="text-right">
+                                    <span className="text-ink-600">
+                                      ({formatPrice(processingFeePerTicket, event.currency)} × {sidebarCount}){" "}
+                                    </span>
+                                    {formatPrice(processingFeeTotal, event.currency)}
+                                  </span>
+                                ) : (
+                                  <span>{formatPrice(0, event.currency)}</span>
+                                )}
+                              </p>
+                              <p className="flex items-center justify-between">
+                                <strong>{t("grandTotalLabel")}:</strong>
+                                <span>{formatPrice(grandTotal, event.currency)}</span>
+                              </p>
+                            </div>
+                          );
+                        })()}
                       </div>
                     ) : (
                       <p className="text-sm text-ink-500">

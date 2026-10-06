@@ -25,7 +25,8 @@
     "seatplan:analyze-duisburg": "node scripts/analyze-duisburg-svg.js",
     "seatplan:duisburg-section-labels": "node scripts/build-duisburg-svg-section-labels.mjs",
     "seatplan:dump-duisburg-labels": "node scripts/dump-duisburg-labels-json.mjs",
-    "seatplan:refresh-duisburg-visual": "npm run seatplan:build-duisburg-coords && npm run seatplan:duisburg-section-labels"
+    "seatplan:refresh-duisburg-visual": "npm run seatplan:build-duisburg-coords && npm run seatplan:duisburg-section-labels",
+    "i18n-args": "node scripts/check-i18n-args.mjs"
   },
   "dependencies": {
     "@getbrevo/brevo": "^6.0.3",
