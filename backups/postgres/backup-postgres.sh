@@ -18,9 +18,28 @@ fi
 if [ -z "${DATABASE_URL:-}" ] && [ -n "${PGHOST:-}" ] && [ -n "${PGPASSWORD:-}" ]; then
   export DATABASE_URL="postgres://${PGUSER:-postgres}@${PGHOST}:${PGPORT:-5432}/${PGDATABASE:-postgres}"
 fi
-if [ -z "${DATABASE_URL:-}" ]; then
-  echo "DATABASE_URL bulunamadı. Supabase'de Connect > Session pooler > 'Connection string' (postgresql://postgres.[ref]:password@db-....supabase.co:5432/postgres) satırını kopyala." >&2
+if [ -z "${DATABASE_URL:-}" ] && [ -z "${PGHOST:-}" ]; then
+  echo "DATABASE_URL bulunamadı. Supabase Connect > Postgres > 'Direct connection' satırını olduğu gibi gir: postgresql://postgres:sifre@db.dzncmwjffopednfgjwlo.supabase.co:5432/postgres" >&2
   exit 1
+fi
+
+# Tek satır URL'i libpq değişkenlerine çevir: parola ne argv'de ne hata çıktısında görünür,
+# parola içinde @ : / gibi karakter olsa bile bozulmaz.
+if [[ "$DATABASE_URL" == *://*:*@* ]]; then
+  _rest=${DATABASE_URL#*://}
+  _cred=${_rest%@*}
+  _hostdb=${_rest##*@}
+  export PGPASSWORD=${_cred#*:}
+  export PGUSER=${_cred%%:*}
+  export PGDATABASE=${_hostdb##*/}
+  _hp=${_hostdb%/*}
+  if [[ "$_hp" == *:* ]]; then
+    export PGPORT=${_hp##*:}
+    export PGHOST=${_hp%:*}
+  else
+    export PGHOST=$_hp
+  fi
+  unset DATABASE_URL
 fi
 
 mkdir -p "$OUT_DIR"
@@ -28,7 +47,7 @@ rm -f "${OUT_DIR}/${PREFIX}-"*.sql.gz.part
 trap 'rm -f "$PART"' EXIT
 
 echo "[backup] ${STAMP} start"
-pg_dump --no-owner --no-privileges --format=plain "$DATABASE_URL" | gzip -"$COMPRESS_LEVEL" > "$PART"
+pg_dump --no-owner --no-privileges --format=plain ${DATABASE_URL:+"$DATABASE_URL"} | gzip -"$COMPRESS_LEVEL" > "$PART"
 
 BYTES=$(wc -c < "$PART")
 if ! zcat "$PART" 2>/dev/null | head -n 3 | grep -qi "PostgreSQL database dump"; then
