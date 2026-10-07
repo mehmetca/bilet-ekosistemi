@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle, XCircle, Calendar, MapPin, User, LogOut, ShieldCheck, Lock, Save, Camera, LogIn, BookOpen } from "lucide-react";
-import { checkTicket, type CheckResult } from "@/app/kontrol/actions";
+import { CheckCircle, XCircle, Calendar, MapPin, User, LogOut, ShieldCheck, Lock, Save, Camera, BookOpen, WifiOff } from "lucide-react";
+import {
+  markTicketEntry,
+  verifyTicketAtDoor,
+  type CheckResult,
+  type DoorPrevious,
+} from "@/app/kontrol/actions";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import { supabase } from "@/lib/supabase-client";
 import QRScanner from "@/components/QRScanner";
+import DoorCounters from "@/components/DoorCounters";
+import { feedbackService } from "@/lib/feedbackService";
 import {
   fetchUserProfile,
   updateUserPassword,
@@ -22,6 +29,20 @@ type ProfileForm = {
   handynummer: string;
 };
 
+function previousEntryText(previous?: DoorPrevious): string | null {
+  if (!previous?.at) return null;
+  const at = new Date(previous.at).toLocaleString("tr-TR");
+  const by = previous.actorName ? ` · ${previous.actorName}` : "";
+  return `İlk giriş: ${at}${by}`;
+}
+
+/** Mobilde yatay kaydırmalı sekme şeridi, md ve üzerinde dikey menü. */
+function navTabClass(active: boolean): string {
+  return `min-h-[44px] flex-none whitespace-nowrap rounded-lg px-3 py-2.5 text-left text-sm md:w-full ${
+    active ? "bg-primary-600 text-white" : "text-slate-700 hover:bg-slate-100"
+  }`;
+}
+
 export default function KontrolPage() {
   const searchParams = useSearchParams();
   const codeParam = searchParams.get("code");
@@ -32,9 +53,12 @@ export default function KontrolPage() {
   const [manualCode, setManualCode] = useState(codeParam || "");
   const [result, setResult] = useState<CheckResult | null>(null);
   const [loading, setLoading] = useState(false);
+  /** Son doğrulamanın konusu; "Giriş işaretle" bu kodu kullanır. */
+  const [checkedCode, setCheckedCode] = useState(codeParam?.trim() ?? "");
+  const [marking, setMarking] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [checkinLoading, setCheckinLoading] = useState(false);
-  const [checkinDone, setCheckinDone] = useState(false);
+  const [scannerMounted, setScannerMounted] = useState(false);
+  const [netError, setNetError] = useState<string | null>(null);
   const autoCheckedCodeRef = useRef<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -54,17 +78,6 @@ export default function KontrolPage() {
 
   const canShowDashboard =
     !!user && !authLoading && (isStaff || userRole === "controller" || userRole === "admin");
-
-  // Ticket QR links open this standalone staff page; lookup still requires staff auth.
-  useEffect(() => {
-    const code = codeParam?.trim();
-    if (authLoading || !user || !code || (!isStaff && userRole !== "controller" && userRole !== "admin")) return;
-    if (autoCheckedCodeRef.current === code) return;
-    autoCheckedCodeRef.current = code;
-    setManualCode(code);
-    setLoading(true);
-    void checkTicket(code).then(setResult).finally(() => setLoading(false));
-  }, [authLoading, codeParam, user, isStaff, userRole]);
 
   // Oturum sona erdiyse (unauthenticated) hata ekranı yerine ana sayfaya yönlendir
   useEffect(() => {
@@ -99,11 +112,80 @@ export default function KontrolPage() {
     };
   }, [canShowDashboard, user?.id, user?.email]);
 
+  const handleScan = useCallback(async (code: string) => {
+    const clean = code.trim();
+    if (!clean || loading) return;
+    setLoading(true);
+    setNetError(null);
+    setManualCode(clean);
+    setCheckedCode(clean);
+    try {
+      const res = await verifyTicketAtDoor(clean);
+      setResult(res);
+      if (!res.valid && res.reason === "used") {
+        void feedbackService.playError();
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          navigator.vibrate([80, 40, 80]);
+        }
+      }
+    } catch {
+      // Kapıda ağ kopması: boş ekran yerine tekrar denenebilir bir uyarı göster.
+      setResult(null);
+      setNetError("Bağlantı kurulamadı. İnterneti kontrol edip tekrar okutun.");
+      void feedbackService.playWarning();
+    } finally {
+      setLoading(false);
+    }
+  }, [loading]);
+
+  // Giriş onayı ayrı insan hamlesi: deneme amaçlı okumalar bileti yakmaz.
+  const handleMark = useCallback(async () => {
+    const code = checkedCode.trim();
+    if (!code || marking || loading) return;
+    setMarking(true);
+    setNetError(null);
+    try {
+      const res = await markTicketEntry(code);
+      setResult(res);
+      if (res.valid && res.marked) {
+        void feedbackService.playSuccess();
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          navigator.vibrate([40]);
+        }
+      } else if (!res.valid && res.reason === "used") {
+        void feedbackService.playError();
+      }
+    } catch {
+      setResult(null);
+      setNetError("Bağlantı kurulamadı. İnterneti kontrol edip tekrar deneyin.");
+      void feedbackService.playWarning();
+    } finally {
+      setMarking(false);
+    }
+  }, [checkedCode, marking, loading]);
+
+  // Onay düğmesi tek yerde üretilir: sonuç kartında ve kamera şeridinde aynı öğe.
+  const confirmBar = useMemo(() => {
+    if (!result?.valid || result.marked) return null;
+    return (
+      <button
+        type="button"
+        onClick={() => void handleMark()}
+        disabled={marking}
+        className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl bg-green-600 px-4 text-base font-bold text-white active:bg-green-700 disabled:opacity-60"
+      >
+        <CheckCircle className="h-5 w-5" />
+        {marking ? "İşleniyor..." : "Giriş işaretle"}
+      </button>
+    );
+  }, [result, marking, handleMark]);
+
   const resultPanel = useMemo(() => {
     if (!result) return null;
+    const usedLine = result.reason === "used" ? previousEntryText(result.previous) : null;
     return (
       <div
-        className={`rounded-2xl border p-6 ${
+        className={`rounded-2xl border p-4 sm:p-6 ${
           result.valid ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"
         }`}
       >
@@ -111,7 +193,7 @@ export default function KontrolPage() {
           <>
             <div className="flex items-center gap-2 text-green-800 font-semibold mb-4">
               <CheckCircle className="h-6 w-6 flex-shrink-0" />
-              Geçerli bilet - girişe izin verildi
+              {result.marked ? "Giriş işaretlendi" : "Geçerli bilet — onay bekliyor"}
             </div>
             <dl className="space-y-3 text-green-800">
               <div className="flex items-start gap-3">
@@ -137,59 +219,93 @@ export default function KontrolPage() {
                 </div>
               </div>
             </dl>
+            <div className="mt-5 space-y-2">
+              {confirmBar}
+              {result.marked ? null : (
+                <p className="text-xs leading-5 text-green-700">
+                  Bu düğmeye basmadan bilet kullanılmamış olur. Deneme amaçlı okutmalarda basmayın.
+                </p>
+              )}
+            </div>
           </>
         ) : (
-          <div className="flex items-center gap-2 text-red-800 font-semibold">
-            <XCircle className="h-6 w-6 flex-shrink-0" />
-            {"reason" in result && result.reason === "not_found"
-              ? "Bilet bulunamadı. Kodu kontrol edin."
-              : "reason" in result && result.reason === "used"
-                ? "Bu bilet daha önce kullanılmıştır."
-                : "reason" in result && result.reason === "invalid"
-                  ? result.message || "Bilet geçersiz."
-                  : (result as { message?: string; error?: string }).message || (result as { error?: string }).error || "Bir hata oluştu. Lütfen tekrar deneyin."}
+          <div className="text-red-800">
+            <div className="flex items-center gap-2 font-semibold">
+              <XCircle className="h-6 w-6 flex-shrink-0" />
+              {result.reason === "not_found"
+                ? "Bilet bulunamadı. Kodu kontrol edin."
+                : result.reason === "used"
+                  ? "Bu bilet içeri geçti."
+                  : result.reason === "invalid"
+                    ? result.message || "Bilet geçersiz."
+                    : result.message || "Bir hata oluştu. Lütfen tekrar deneyin."}
+            </div>
+            {usedLine ? (
+              <p className="mt-2 pl-8 text-sm text-red-700">{usedLine}</p>
+            ) : null}
           </div>
         )}
       </div>
     );
-  }, [result]);
+  }, [result, confirmBar]);
 
-  async function runTicketCheck(code: string) {
-    const clean = code.trim();
-    if (!clean) return;
-    setLoading(true);
-    setCheckinDone(false);
-    try {
-      const res = await checkTicket(clean);
-      setResult(res);
-    } finally {
-      setLoading(false);
+  // Sürekli taramada hüküm kameranın üstünde görünür; her bilet için modal açılıp kapanmaz.
+  const scanOverlayStatus = useMemo(() => {
+    if (loading) {
+      return (
+        <div className="rounded-lg bg-slate-100 p-3 text-sm text-slate-600">Kontrol ediliyor...</div>
+      );
     }
-  }
+    if (netError) {
+      return (
+        <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900">
+          <WifiOff className="h-5 w-5 flex-shrink-0" />
+          {netError}
+        </div>
+      );
+    }
+    if (!result) return null;
+    if (result.valid) {
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 p-3 text-sm font-semibold text-green-800">
+            <CheckCircle className="h-5 w-5 flex-shrink-0" />
+            {result.marked
+              ? "Giriş işaretlendi"
+              : `Geçerli bilet — onay bekliyor: ${result.eventTitle}`}
+          </div>
+          {confirmBar}
+        </div>
+      );
+    }
+    const text =
+      result.reason === "used"
+        ? "Bu bilet içeri geçti."
+        : result.reason === "not_found"
+          ? "Bilet bulunamadı. Kodu kontrol edin."
+          : result.message || "Bilet geçersiz.";
+    const previousLine = result.reason === "used" ? previousEntryText(result.previous) : null;
+    return (
+      <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-red-800">
+        <div className="flex items-center gap-2 text-sm font-semibold">
+          <XCircle className="h-5 w-5 flex-shrink-0" />
+          {text}
+        </div>
+        {previousLine ? (
+          <p className="mt-1 pl-7 text-xs text-red-700">{previousLine}</p>
+        ) : null}
+      </div>
+    );
+  }, [loading, netError, result, confirmBar]);
 
-  async function handleCheckin() {
-    if (!manualCode.trim() || !result?.valid || checkinLoading) return;
-    setCheckinLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.access_token) throw new Error("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
-      const response = await fetch("/api/checkin-ticket", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({ ticket_code: manualCode.trim().toUpperCase() }),
-      });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data?.message || "Giriş işaretlenemedi.");
-      setCheckinDone(true);
-    } catch (error) {
-      alert(error instanceof Error ? error.message : "Giriş işaretlenemedi.");
-    } finally {
-      setCheckinLoading(false);
-    }
-  }
+  // Bilet QR bağlantısı (/kontrol?code=BLT-…) açıldığında: yalnız doğrula; onay ayrı.
+  useEffect(() => {
+    const code = codeParam?.trim();
+    if (authLoading || !user || !code || (!isStaff && userRole !== "controller" && userRole !== "admin")) return;
+    if (autoCheckedCodeRef.current === code) return;
+    autoCheckedCodeRef.current = code;
+    void handleScan(code);
+  }, [authLoading, codeParam, user, isStaff, userRole, handleScan]);
 
   async function handleSaveProfile(e: React.FormEvent) {
     e.preventDefault();
@@ -250,53 +366,49 @@ export default function KontrolPage() {
 
   if (canShowDashboard) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 md:p-6">
-        <div className="mx-auto max-w-6xl grid gap-6 md:grid-cols-[240px_1fr]">
-          <aside className="rounded-2xl border border-slate-200 bg-white p-4 h-max">
-            <h2 className="px-2 text-sm font-semibold text-slate-500 mb-2">Kontrolör Paneli</h2>
-            <nav className="space-y-1">
+      <div className="min-h-screen bg-slate-50 p-3 sm:p-4 md:p-6">
+        <div className="mx-auto max-w-6xl grid gap-4 md:gap-6 md:grid-cols-[240px_1fr]">
+          <aside className="rounded-2xl border border-slate-200 bg-white p-2 sm:p-4 md:h-max">
+            <h2 className="mb-2 hidden px-2 text-sm font-semibold text-slate-500 md:block">
+              Kontrolör Paneli
+            </h2>
+            <nav className="flex gap-1 overflow-x-auto md:flex-col md:gap-0 md:space-y-1">
               <button
                 onClick={() => setActiveTab("scan")}
-                className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
-                  activeTab === "scan" ? "bg-primary-600 text-white" : "text-slate-700 hover:bg-slate-100"
-                }`}
+                className={`${navTabClass(activeTab === "scan")}`}
               >
                 Bilet Kontrol
               </button>
               <Link
                 href="/kontrol/kullanim-klavuzu"
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                className={`${navTabClass(false)} flex items-center gap-2`}
               >
                 <BookOpen className="h-4 w-4" />
-                Kullanım kılavuzu
+                Kılavuz
               </Link>
               <button
                 onClick={() => setActiveTab("profile")}
-                className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
-                  activeTab === "profile" ? "bg-primary-600 text-white" : "text-slate-700 hover:bg-slate-100"
-                }`}
+                className={navTabClass(activeTab === "profile")}
               >
                 Bilgilerim
               </button>
               <button
                 onClick={() => setActiveTab("password")}
-                className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
-                  activeTab === "password" ? "bg-primary-600 text-white" : "text-slate-700 hover:bg-slate-100"
-                }`}
+                className={navTabClass(activeTab === "password")}
               >
                 Şifre Değiştir
               </button>
+              <button
+                onClick={() => void handleSignOut()}
+                className="flex min-h-[44px] flex-none items-center justify-center gap-2 whitespace-nowrap rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-medium text-red-700 hover:bg-red-100 md:mt-3 md:w-full"
+              >
+                <LogOut className="h-4 w-4" />
+                Çıkış
+              </button>
             </nav>
-            <button
-              onClick={() => void handleSignOut()}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
-            >
-              <LogOut className="h-4 w-4" />
-              Çıkış
-            </button>
           </aside>
 
-          <main className="rounded-2xl border border-slate-200 bg-white p-6">
+          <main className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-6">
             {activeTab === "scan" && (
               <div className="space-y-4">
                 <h1 className="text-xl font-bold text-slate-900 flex items-center gap-2">
@@ -306,60 +418,44 @@ export default function KontrolPage() {
                 <p className="text-sm text-slate-600">
                   QR koddan gelen bilet kodunu otomatik kontrol edebilir veya aşağıdan manuel sorgulayabilirsiniz.
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     value={manualCode}
                     onChange={(e) => setManualCode(e.target.value)}
                     placeholder="Bilet kodu girin"
-                    className="flex-1 rounded-lg border border-slate-300 px-3 py-2 focus:border-primary-500 focus:ring-1 focus:ring-primary-500"
+                    className="min-h-[48px] flex-1 rounded-lg border border-slate-300 px-3 text-base focus:border-primary-500 focus:ring-1 focus:ring-primary-500 sm:text-sm"
                   />
                   <button
-                    onClick={() => void runTicketCheck(manualCode)}
-                    className="rounded-lg bg-primary-600 px-4 py-2 font-semibold text-white hover:bg-primary-700"
+                    onClick={() => void handleScan(manualCode)}
+                    disabled={loading}
+                    className="min-h-[48px] rounded-lg bg-primary-600 px-4 font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
                   >
                     Kontrol Et
                   </button>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowQRScanner(true)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                  onClick={() => {
+                    setShowQRScanner(true);
+                    setScannerMounted(true);
+                  }}
+                  className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 text-base font-semibold text-white hover:bg-primary-700 sm:w-auto"
                 >
-                  <Camera className="h-4 w-4" />
-                  QR kodu tara
+                  <Camera className="h-5 w-5" />
+                  Bilet Tara
                 </button>
-                {showQRScanner && (
-                  <QRScanner
-                    onScan={(code) => {
-                      setShowQRScanner(false);
-                      setManualCode(code);
-                      void runTicketCheck(code);
-                    }}
-                    onClose={() => setShowQRScanner(false)}
-                  />
+                {netError && (
+                  <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-900">
+                    <WifiOff className="h-5 w-5 flex-shrink-0" />
+                    {netError}
+                  </div>
                 )}
                 {loading ? (
                   <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-slate-600">
                     Kontrol ediliyor...
                   </div>
                 ) : resultPanel}
-                {result?.valid && (
-                  checkinDone ? (
-                    <div className="flex items-center gap-2 rounded-lg bg-green-50 p-3 text-sm font-medium text-green-800">
-                      <CheckCircle className="h-5 w-5" /> Giriş işaretlendi.
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => void handleCheckin()}
-                      disabled={checkinLoading}
-                      className="inline-flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2 font-semibold text-white hover:bg-green-800 disabled:opacity-50"
-                    >
-                      <LogIn className="h-4 w-4" />
-                      {checkinLoading ? "İşleniyor..." : "Girişi işaretle"}
-                    </button>
-                  )
-                )}
+                <DoorCounters eventId={result?.eventId} />
               </div>
             )}
 
@@ -448,6 +544,17 @@ export default function KontrolPage() {
               </form>
             )}
           </main>
+
+          {scannerMounted && (
+            <div hidden={!showQRScanner} inert={!showQRScanner}>
+              <QRScanner
+                busy={!showQRScanner}
+                onScan={(code) => void handleScan(code)}
+                onClose={() => setShowQRScanner(false)}
+                statusSlot={scanOverlayStatus}
+              />
+            </div>
+          )}
         </div>
       </div>
     );

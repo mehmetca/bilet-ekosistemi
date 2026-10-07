@@ -243,7 +243,7 @@ export default function BiletListesiPage() {
   // Sadece admin ve controller erişebilir - kontrolü devre dışı bırak
   // if (!isAdmin && !isController) {
   //   return (
-  //     <div className="p-8">
+  //     <div className="p-4 sm:p-8">
   //       <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center">
   //         <Ticket className="h-12 w-12 text-red-600 mx-auto mb-4" />
   //         <h2 className="text-lg font-semibold text-red-800 mb-2">
@@ -259,7 +259,7 @@ export default function BiletListesiPage() {
 
   if (loading) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-8">
         <div className="text-center text-slate-500">Yükleniyor...</div>
       </div>
     );
@@ -270,7 +270,7 @@ export default function BiletListesiPage() {
 
   return (
     <AdminOnlyGuard>
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-5">
           <h1 className="text-xl font-bold text-slate-900">
@@ -296,7 +296,7 @@ export default function BiletListesiPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Sipariş no, bilet kodu, etkinlik adı veya alıcı ara..."
-              className="w-full pl-9 pr-4 py-2.5 text-sm border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500"
+              className="min-h-[44px] w-full pl-9 pr-4 py-2.5 text-base border border-slate-300 rounded-lg focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
             />
           </div>
         </div>

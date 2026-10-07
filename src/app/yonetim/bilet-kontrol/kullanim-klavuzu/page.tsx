@@ -6,10 +6,10 @@ import { ArrowLeft } from "lucide-react";
 
 export default function BiletKontrolKullanimKlavuzuPage() {
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-8">
       <div className="mx-auto max-w-4xl">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-900">Bilet Kontrol Kullanım Kılavuzu</h1>
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Bilet Kontrol Kullanım Kılavuzu</h1>
           <Link
             href="/yonetim/bilet-kontrol"
             className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
@@ -41,7 +41,7 @@ export default function BiletKontrolKullanimKlavuzuPage() {
                 />
               </div>
               <p className="mt-2 text-xs text-slate-700">
-                <code>Kamera ile Tara</code> ve sonra <code>Şimdi Tara</code>. Giriş yoksa önce login ekranı açılır.
+                <code>Bilet Tara</code> butonuna basın; kamera açılır açılmaz tarama başlar ve ardışık biletler için açık kalır. Giriş yoksa önce login ekranı açılır.
               </p>
             </div>
 
@@ -57,12 +57,12 @@ export default function BiletKontrolKullanimKlavuzuPage() {
                 />
               </div>
               <p className="mt-2 text-xs text-green-900">
-                Girişe izin verilebilir, alttaki <code>Giriş işaretle</code> butonuna mutlaka basın.
+                Kapıda (<code>/kontrol</code>) ve bu panelde okutmak yalnız doğrular; bilet kullanılmış olmaz. Kartta <code>Geçerli bilet — onay bekliyor</code> yazar ve altında <code>Giriş işaretle</code> butonu durur.
               </p>
             </div>
 
             <div className="rounded-2xl border border-green-200 bg-green-50 p-4">
-              <div className="mb-2 text-sm font-semibold text-green-900">3) Giriş işaretlendi onayı</div>
+              <div className="mb-2 text-sm font-semibold text-green-900">3) "Giriş işaretle" düğmesine basın</div>
               <div className="overflow-hidden rounded-xl border border-green-200 bg-white">
                 <Image
                   src="/images/controller-guide/step-3.png"
@@ -73,7 +73,7 @@ export default function BiletKontrolKullanimKlavuzuPage() {
                 />
               </div>
               <p className="mt-2 text-xs text-green-900">
-                <code>Giriş işaretlendi</code> mesajını görmeden işlemi tamamlanmış saymayın.
+                Bilet sahibi içeri geçecekse bu düğmeye basın; <code>Giriş işaretlendi</code> mesajını görmeden işlemi tamamlanmış saymayın. Deneme amaçlı okutmalarda basmayın, bilet sahibi sonra içeri giremez.
               </p>
             </div>
 
@@ -89,7 +89,7 @@ export default function BiletKontrolKullanimKlavuzuPage() {
                 />
               </div>
               <p className="mt-2 text-xs text-red-900">
-                Bilet daha önce kullanılmış veya geçersizdir; ziyaretçiyi nazik şekilde içeri almayın.
+                Kapıda kırmızı <code>Bu bilet içeri geçti.</code> yazıyorsa bilet daha önce okutulmuştur; ziyaretçiyi nazik şekilde içeri almayın.
               </p>
             </div>
           </div>

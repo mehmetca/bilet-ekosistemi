@@ -53,33 +53,35 @@ export default function ControlGuidePage() {
         </div>
 
         <p className="mb-6 rounded-lg border border-slate-200 bg-white p-4 text-slate-700">
-          Bilet sahibi biletini basılı olarak veya telefonundan gösterdiğinde QR kodu okutun. Yeşil sonuç biletin geçerli olduğunu gösterir; girişi tamamlamak için mutlaka “Giriş işaretle” düğmesine basın. Kırmızı sonuçta bileti kabul etmeyin.
+          Bilet sahibi kodu gösterdiğinde okutun. Yeşil kart biletin geçerli olduğunu gösterir; girişi
+          tamamlamak için <strong>“Giriş işaretle”</strong> düğmesine basın — bu düğmeye basmadan bilet
+          kullanılmaz. Kırmızı sonuçta bileti kabul etmeyin.
         </p>
 
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <GuideStep
-            title="1. QR kodunu okutun"
+            title="1. Kodu okutun"
             image="/images/controller-guide/step-1.png"
             alt="QR kod tarama ekranı"
-            description="Bilet kontrol ekranında Kamera ile Tara seçeneğini açıp QR kodu telefon kamerasına gösterin. Kamera izni için siteyi HTTPS üzerinden açın."
+            description="Bilet kontrol ekranında Bilet Tara düğmesine basın; kamera açılır açılmaz tarama başlar ve ardışık biletler için açık kalır. Basılı biletteki kare QR de dikey barkod da okunur. Kamera izni için siteyi HTTPS üzerinden açın."
           />
           <GuideStep
             title="2. Yeşil kartı doğrulayın"
             image="/images/controller-guide/step-2.png"
             alt="Geçerli bilet sonucu"
-            description="Etkinlik ve bilet bilgilerini kontrol edin. Bilet geçerliyse Giriş işaretle düğmesine basın."
+            description="Etkinlik ve bilet bilgilerini kontrol edin. Kart “onay bekliyor” yazar. Onay düğmesi hem sonuç kartında hem kamera ekranının üst şeridindedir; kamerayı kapatmadan işaretleme yapabilirsiniz."
           />
           <GuideStep
-            title="3. Giriş onayını bekleyin"
+            title="3. “Giriş işaretle” düğmesine basın"
             image="/images/controller-guide/step-3.png"
             alt="Giriş işaretlendi onayı"
-            description="Giriş işaretlendi onayını görmeden işlemi tamamlanmış saymayın. Sonraki bilet için kontrol ekranına dönün."
+            description="“Giriş işaretlendi” onayını görmeden işlemi tamamlanmış saymayın. Deneme amaçlı okutmalarda düğmeye basmayın; böylece bilet kullanılmamış kalır. Kapı özeti gelen/kalan/satılan sayılarını ve görevli kırılımını gösterir, 15 saniyede bir tazelenir."
           />
           <GuideStep
             title="4. Kırmızı kartta giriş vermeyin"
             image="/images/controller-guide/step-4.png"
             alt="Kullanılmış veya geçersiz bilet sonucu"
-            description="Bilet bulunamadı, geçersiz veya daha önce kullanılmış uyarısı varsa bileti kabul etmeyin; gerekirse sorumlu kişiye danışın."
+            description="“Bu bilet içeri geçti” yazısı ve altında ilk girişin saati ile okutan görevlinin adı varsa bileti kabul etmeyin. “Bilet bulunamadı” veya “Bilet geçersiz” uyarısında sorumlu kişiye danışın."
           />
         </div>
       </div>
