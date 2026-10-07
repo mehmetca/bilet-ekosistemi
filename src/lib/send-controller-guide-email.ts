@@ -11,11 +11,11 @@ export async function sendControllerGuideEmail(input: {
     const fromName = process.env.BREVO_FROM_NAME;
 
     if (!brevoApiKey || !fromEmail || !fromName) {
-      console.error("Brevo ENV eksik:", {
-        brevoApiKey,
-        fromEmail,
-        fromName,
-      });
+      console.error("Brevo ENV eksik:", [
+        !brevoApiKey && "BREVO_API_KEY",
+        !fromEmail && "BREVO_FROM_EMAIL",
+        !fromName && "BREVO_FROM_NAME",
+      ].filter(Boolean));
       return { sent: false, reason: "Brevo yapılandırması eksik." };
     }
 

@@ -138,7 +138,12 @@ function KullanicilarContent() {
           eventIds: controllerEventIds,
         }),
       });
-      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        mailSent?: boolean;
+        mailReason?: string;
+        passwordGenerated?: boolean;
+      };
       if (!res.ok) {
         alert(data.error || "Kontrolör oluşturulamadı.");
         return;
@@ -147,7 +152,15 @@ function KullanicilarContent() {
       setControllerEventIds([]);
       setShowControllerForm(false);
       await fetchData();
-      alert("Kontrolör hesabı oluşturuldu.");
+      alert(
+        data.mailSent
+          ? "Kontrolör hesabı oluşturuldu. Giriş bilgileri ve kullanım anlatımı kişinin e-postasına gönderildi."
+          : `Giriş maili gönderilemedi${data.mailReason ? ` (${data.mailReason})` : ""}. ${
+              data.passwordGenerated
+                ? "Hesap oluşturulamadı, tekrar deneyin."
+                : "Şifreyi kişiyle ayrıca paylaş."
+            }`
+      );
     } catch (error) {
       alert(error instanceof Error ? error.message : "Kontrolör oluşturulamadı.");
     } finally {
@@ -290,9 +303,9 @@ function KullanicilarContent() {
       headers: authHeaders(accessToken, true),
       body: JSON.stringify({ action: "approveController", requestId: req.id }),
     });
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    const data = (await res.json().catch(() => ({}))) as { error?: string; mailSent?: boolean };
     if (!res.ok) return alert(data.error || "Kontrolör onayı başarısız");
-    alert("Kontrolör onaylandı.");
+    alert(data.mailSent ? "Kontrolör onaylandı, kullanım anlatımı e-postasına gönderildi." : "Kontrolör onaylandı.");
     fetchData();
   }
 
@@ -472,9 +485,8 @@ function KullanicilarContent() {
                 />
               </label>
               <label className="text-sm font-medium text-slate-700">
-                İlk şifre
+                İlk şifre (opsiyonel)
                 <input
-                  required
                   type="password"
                   minLength={8}
                   value={controllerForm.password}
@@ -482,6 +494,9 @@ function KullanicilarContent() {
                   className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 font-normal"
                   autoComplete="new-password"
                 />
+                <span className="mt-1 block text-xs font-normal text-slate-500">
+                  Boş bırakırsan sistem şifre üretir ve giriş bağlantısıyla birlikte kişinin e-postasına gönderir.
+                </span>
               </label>
             </div>
 

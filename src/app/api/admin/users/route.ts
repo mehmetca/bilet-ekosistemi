@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireAdmin } from "@/lib/api-auth";
 import { validatePagination, validateEmail } from "@/lib/validation";
+import { generateStaffPassword } from "@/lib/generate-staff-password";
+import {
+  sendControllerApprovedEmail,
+  sendControllerCredentialsEmail,
+} from "@/lib/send-controller-credentials-email";
 
 type AuthUser = { id: string; email?: string; created_at?: string };
 type ControllerRequest = {
@@ -137,7 +142,10 @@ export async function POST(request: NextRequest) {
       const cleanFirstName = String(firstName || "").trim().slice(0, 100);
       const cleanLastName = String(lastName || "").trim().slice(0, 100);
       const cleanPhone = String(phone || "").trim().slice(0, 40);
-      const cleanPassword = String(password || "");
+      /** Şifre boş bırakılırsa sistem üretir ve yalnızca mail ile gönderilir. */
+      const suppliedPassword = String(password || "");
+      const generatedPassword = !suppliedPassword;
+      const cleanPassword = generatedPassword ? generateStaffPassword() : suppliedPassword;
       const eventIds = Array.isArray(rawEventIds)
         ? [...new Set(rawEventIds.filter((id): id is string => typeof id === "string" && id.length > 0))]
         : [];
@@ -145,7 +153,7 @@ export async function POST(request: NextRequest) {
       if (!validateEmail(cleanEmail) || !cleanFirstName || !cleanLastName || !cleanPhone) {
         return NextResponse.json({ error: "Ad, soyad, telefon ve geçerli e-posta zorunludur." }, { status: 400 });
       }
-      if (cleanPassword.length < 8 || cleanPassword.length > 72) {
+      if (!generatedPassword && (cleanPassword.length < 8 || cleanPassword.length > 72)) {
         return NextResponse.json({ error: "Şifre 8-72 karakter arasında olmalıdır." }, { status: 400 });
       }
       if (cleanPhone.replace(/\D/g, "").length < 7) {
@@ -216,7 +224,26 @@ export async function POST(request: NextRequest) {
         if (assignmentError) return rollbackUser(`Etkinlik atamaları kaydedilemedi: ${assignmentError.message}`);
       }
 
-      return NextResponse.json({ success: true, userId });
+      const mail = await sendControllerCredentialsEmail({
+        email: cleanEmail,
+        fullName: `${cleanFirstName} ${cleanLastName}`,
+        password: cleanPassword,
+      });
+
+      // Üretilen şifre yalnız bu mailde: gitmezse hesap kimsenin bilmediği bir şifreyle açık kalır.
+      if (!mail.sent && generatedPassword) {
+        return rollbackUser(
+          `Kontrolör hesabı oluşturuldu fakat giriş maili gönderilemedi (${mail.reason || "bilinmeyen neden"}); hesap geri alındı. Lütfen tekrar deneyin.`
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        userId,
+        passwordGenerated: generatedPassword,
+        mailSent: mail.sent,
+        mailReason: mail.reason,
+      });
     }
 
     if (action === "assignControllerEvents") {
@@ -295,7 +322,9 @@ export async function POST(request: NextRequest) {
       }
       const { data: createData, error: createError } = await supabase.auth.admin.createUser({
         email,
-        password: Math.random().toString(36).substring(2, 15),
+        // Rastgele güçlü şifre: gösterilmez de gönderilmez de. Yönetici hesabı açmak için;
+        // gerçek erişim için Supabase "şifre sıfırlama" maili gerekir.
+        password: generateStaffPassword(20),
         email_confirm: true,
         user_metadata: { role, created_by: "admin" },
       });
@@ -401,7 +430,9 @@ export async function POST(request: NextRequest) {
         .eq("id", requestId);
       if (updErr) return NextResponse.json({ error: updErr.message }, { status: 500 });
 
-      return NextResponse.json({ success: true });
+      const mail = await sendControllerApprovedEmail({ email: req.email, fullName: req.full_name });
+
+      return NextResponse.json({ success: true, mailSent: mail.sent, mailReason: mail.reason });
     }
 
     if (action === "rejectController") {
