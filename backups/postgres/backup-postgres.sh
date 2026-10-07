@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+MODE="${1:-daemon}"
+case "$MODE" in
+  run|daemon) ;;
+  *) echo "Kullanım: backup-postgres.sh [run|daemon]  (run = tek yedek al ve çık)" >&2; exit 64 ;;
+esac
+
 OUT_DIR="${BACKUP_DIR:-/backups}"
 KEEP_DAYS="${KEEP_DAYS:-8}"
 COMPRESS_LEVEL="${COMPRESS_LEVEL:-6}"
@@ -65,7 +71,9 @@ DELETED=$(find "$OUT_DIR" -maxdepth 1 -name "${PREFIX}-*.sql.gz" -type f -mtime 
 echo "[backup] retention: ${KEEP_DAYS} günden eski ${DELETED} dosya silindi"
 echo "[backup] toplam: $(find "$OUT_DIR" -maxdepth 1 -name "${PREFIX}-*.sql.gz" -type f | wc -l) dosya, $(du -sh "$OUT_DIR" | cut -f1)"
 
-# SCHEDULER_ONESHOT=1: Coolify Schedule'lar job gibi çalıştırdığında exit etsin
-if [ "${SCHEDULER_ONESHOT:-0}" = "1" ]; then exit 0; fi
-echo "[backup] bekliyor (SCHEDULER_ONESHOT=1 ise exit eder)"
+# Coolify Scheduled Tasks bu komutu çalışan konteynerin İÇİNDE çalıştırıyor (yeni konteyner
+# açmıyor), o yüzden ana konteyner daemon modunda ayakta durmak zorunda; planlı iş ise
+# "backup-postgres.sh run" ile tek seferlik çalışıp çıkmalı.
+if [ "$MODE" = "run" ] || [ "${SCHEDULER_ONESHOT:-0}" = "1" ]; then exit 0; fi
+echo "[backup] daemon: planlı çalışma bekleniyor (Scheduled Tasks komutu: backup-postgres.sh run)"
 while :; do sleep 3600; done

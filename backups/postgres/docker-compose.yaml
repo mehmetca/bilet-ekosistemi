@@ -1,0 +1,18 @@
+services:
+  backup:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: bilet-postgres-backup
+    command:
+      - daemon
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+      - BACKUP_DIR=${BACKUP_DIR:-/backups}
+      - KEEP_DAYS=${KEEP_DAYS:-8}
+      - SCHEDULER_ONESHOT=0
+    volumes:
+      - bilet-backups:/backups
+
+volumes:
+  bilet-backups:
