@@ -13,8 +13,13 @@ PART="${TARGET}.part"
 if [ -z "${DATABASE_URL:-}" ] && [ -n "${DB_PASSWORD:-}" ]; then
   export DATABASE_URL="postgres://postgres:${DB_PASSWORD}@db:5432/postgres"
 fi
+# Alternatif: bağlantı bilgilerini ayrı ayrı ver (DATABASE_URL'i hiç kurmadan)
+# PGHOST=dbxxxx.supabase.co  PGPORT=5432  PGUSER=postgres  PGPASSWORD=...  PGDATABASE=postgres
+if [ -z "${DATABASE_URL:-}" ] && [ -n "${PGHOST:-}" ] && [ -n "${PGPASSWORD:-}" ]; then
+  export DATABASE_URL="postgres://${PGUSER:-postgres}@${PGHOST}:${PGPORT:-5432}/${PGDATABASE:-postgres}"
+fi
 if [ -z "${DATABASE_URL:-}" ]; then
-  echo "DATABASE_URL tanımlı değil (Supabase için Settings > Database > Connection string > URI, 'Database connection string' olanı seçin)." >&2
+  echo "DATABASE_URL bulunamadı. Supabase'de Connect > Session pooler > 'Connection string' (postgresql://postgres.[ref]:password@db-....supabase.co:5432/postgres) satırını kopyala." >&2
   exit 1
 fi
 
