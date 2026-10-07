@@ -9,23 +9,9 @@ STAMP="$(date -u +%Y-%m-%d_%H%M%SZ)"
 TARGET="${OUT_DIR}/${PREFIX}-${STAMP}.sql.gz"
 PART="${TARGET}.part"
 
-# Coolify PostgreSQL servisleri için iç ağ adreslerini dönüştürür
-if [ -z "${DATABASE_URL:-}" ] && [ -n "${DB_PASSWORD:-}" ]; then
-  export DATABASE_URL="postgres://postgres:${DB_PASSWORD}@db:5432/postgres"
-fi
-# Alternatif: bağlantı bilgilerini ayrı ayrı ver (DATABASE_URL'i hiç kurmadan)
-# PGHOST=dbxxxx.supabase.co  PGPORT=5432  PGUSER=postgres  PGPASSWORD=...  PGDATABASE=postgres
-if [ -z "${DATABASE_URL:-}" ] && [ -n "${PGHOST:-}" ] && [ -n "${PGPASSWORD:-}" ]; then
-  export DATABASE_URL="postgres://${PGUSER:-postgres}@${PGHOST}:${PGPORT:-5432}/${PGDATABASE:-postgres}"
-fi
-if [ -z "${DATABASE_URL:-}" ] && [ -z "${PGHOST:-}" ]; then
-  echo "DATABASE_URL bulunamadı. Supabase Connect > Postgres > 'Direct connection' satırını olduğu gibi gir: postgresql://postgres:sifre@db.dzncmwjffopednfgjwlo.supabase.co:5432/postgres" >&2
-  exit 1
-fi
-
-# Tek satır URL'i libpq değişkenlerine çevir: parola ne argv'de ne hata çıktısında görünür,
+# Bağlantıyı her zaman libpq değişkenlerine çevir: parola ne argv'de ne hata çıktısında görünür,
 # parola içinde @ : / gibi karakter olsa bile bozulmaz.
-if [[ "$DATABASE_URL" == *://*:*@* ]]; then
+if [ -n "${DATABASE_URL:-}" ] && [[ "$DATABASE_URL" == *://*:*@* ]]; then
   _rest=${DATABASE_URL#*://}
   _cred=${_rest%@*}
   _hostdb=${_rest##*@}
@@ -39,15 +25,25 @@ if [[ "$DATABASE_URL" == *://*:*@* ]]; then
   else
     export PGHOST=$_hp
   fi
-  unset DATABASE_URL
 fi
+unset DATABASE_URL
+
+# Coolify'nin kendi Postgres servisi için kısayol (Supabase'de gerekmez)
+if [ -z "${PGHOST:-}" ] && [ -n "${DB_PASSWORD:-}" ]; then
+  export PGHOST=db PGUSER=postgres PGDATABASE=postgres PGPORT=5432 PGPASSWORD="$DB_PASSWORD"
+fi
+if [ -z "${PGHOST:-}" ]; then
+  echo "Bağlantı yok. Supabase Connect > Postgres > 'Direct connection' satırını olduğu gibi DATABASE_URL olarak gir: postgresql://postgres:sifre@db.dzncmwjffopednfgjwlo.supabase.co:5432/postgres" >&2
+  exit 1
+fi
+export PGPORT="${PGPORT:-5432}"
 
 mkdir -p "$OUT_DIR"
 rm -f "${OUT_DIR}/${PREFIX}-"*.sql.gz.part
 trap 'rm -f "$PART"' EXIT
 
 echo "[backup] ${STAMP} start"
-pg_dump --no-owner --no-privileges --format=plain ${DATABASE_URL:+"$DATABASE_URL"} | gzip -"$COMPRESS_LEVEL" > "$PART"
+pg_dump --no-owner --no-privileges --format=plain | gzip -"$COMPRESS_LEVEL" > "$PART"
 
 BYTES=$(wc -c < "$PART")
 if ! zcat "$PART" 2>/dev/null | head -n 3 | grep -qi "PostgreSQL database dump"; then
