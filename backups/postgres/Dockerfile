@@ -1,5 +1,5 @@
 # Coolify'da zamanlanmış Postgres yedeği için kullanılan minimal imaj.
-FROM postgres:16-alpine
+FROM postgres:16-alpine3.24
 
 RUN apk add --no-cache bash
 

@@ -6,7 +6,7 @@
 # - runtime imajı standalone çıktısı ile KÜÇÜK tutulur (chown/export hızlı olur)
 
 # ---------- 1) Temel imaj ----------
-FROM node:22-alpine AS base
+FROM node:22-alpine3.24 AS base
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 
