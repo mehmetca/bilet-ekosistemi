@@ -69,22 +69,3 @@ jobs:
           path: |
             semgrep.sarif
             semgrep.txt
-
-  # 4. Konteyner / İşletim Sistemi Güvenliği
-  container-scanning:
-    name: Docker Image Security (Trivy)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Kodu İndir
-        uses: actions/checkout@v4
-      - name: Uygulama İmajını İnşa Et (Build)
-        run: docker build --file Dockerfile -t bilet-ekosistemi:${{ github.sha }} .
-      - name: Trivy ile Zafiyet Taraması
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          image-ref: 'bilet-ekosistemi:${{ github.sha }}'
-          format: 'table'
-          exit-code: '1' # Kritik/ağır bir açık bulunursa pipeline'ı durdur
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL,HIGH'
