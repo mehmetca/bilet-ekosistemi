@@ -5,11 +5,13 @@
  * Apex ↔ www için middleware artık döngü yapmaz; yine de GSC mülkünüz hangi host ise env’i ona yazın.
  */
 
-/** Eski alan adları; env veya Vercel URL hâlâ burayı gösterse bile kanonik çıktı www.kurdevents.com olur. */
+/** Eski alan adları; env veya Vercel URL hâlâ burayı gösterse bile kanonik çıktı kurdevents.com olur. */
 const LEGACY_PUBLIC_HOSTS = new Set(["eventseat.de", "www.eventseat.de"]);
 
-/** Üretim SEO / Lighthouse: canlı ölçümler www host üzerinde; canonical/hreflang tek hostta kalmalı. */
-const CANONICAL_PUBLIC_ORIGIN = "https://www.kurdevents.com";
+/** Üretim SEO / Lighthouse: içeriği gerçek host'ta sunmak zorundayız. Cloudflare www → apex'e
+ * 302 atıyor; kanonik apex seçilirse canonical/sitemap/hreflang fiilen erişilen host ile birebir
+ * örtüşür (aksi halde Google gördüğü her kanonik adresi yönlendirme sanıp indekslemiyordu). */
+const CANONICAL_PUBLIC_ORIGIN = "https://kurdevents.com";
 
 const KURDEVENTS_APEX_HOST = "kurdevents.com";
 const KURDEVENTS_WWW_HOST = "www.kurdevents.com";
