@@ -7,6 +7,12 @@ import { fetchSitemapDynamicPaths } from "@/lib/seo/sitemap-dynamic";
 /** Site haritası botlar tarafından sık istenir; public URL seti sık değişmediği için 30 dk cache yeterli. */
 export const revalidate = 1800;
 
+/** `trailingSlash: true` — sitemap adresleri sayfanın gerçek adresiyle birebir aynı bitmeli,
+ *  aksi halde Google 985 adresin tamamında 308 görüp "Page with redirect" ile indekslemeyi erteliyor. */
+function withTrailingSlash(url: string): string {
+  return url.endsWith("/") ? url : `${url}/`;
+}
+
 function pushLocalizedEntries(
   entries: MetadataRoute.Sitemap,
   base: string,
@@ -17,14 +23,14 @@ function pushLocalizedEntries(
   changeFrequency: NonNullable<MetadataRoute.Sitemap[0]["changeFrequency"]>,
   priority: number
 ) {
+  const path = pathSuffix.replace(/\/+$/, "");
   for (const locale of locales) {
-    const path = pathSuffix === "" ? "" : pathSuffix;
-    const url = `${base}/${locale}${path}`;
+    const url = withTrailingSlash(`${base}/${locale}${path}`);
     const languages: Record<string, string> = {};
     for (const l of locales) {
-      languages[l] = `${base}/${l}${path}`;
+      languages[l] = withTrailingSlash(`${base}/${l}${path}`);
     }
-    languages["x-default"] = `${base}/${defaultLocale}${path}`;
+    languages["x-default"] = withTrailingSlash(`${base}/${defaultLocale}${path}`);
     entries.push({
       url,
       lastModified,
