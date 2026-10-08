@@ -1,5 +1,6 @@
 # Coolify'da zamanlanmış Postgres yedeği için kullanılan minimal imaj.
-FROM postgres:16-alpine3.24
+# pg_dump, sunucudan eskiyse dökümü reddediyor; Supabase PG17 açabildiği için istemci 17.
+FROM postgres:17-alpine
 
 RUN apk add --no-cache bash
 
