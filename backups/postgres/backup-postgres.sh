@@ -65,7 +65,10 @@ do_backup() {
   pg_dump --no-owner --no-privileges --format=plain | gzip -"$COMPRESS_LEVEL" > "$PART"
 
   BYTES=$(wc -c < "$PART")
-  if ! gzip -dc "$PART" 2>/dev/null | head -n 3 | grep -qi "PostgreSQL database dump"; then
+  # head -n 3 kullanılamaz: head ilk 3 satırda çıktığı için gzip SIGPIPE ile 141'e düşüyor,
+  # pipefail bunu pipeline hatası sayıp geçerli dökümü "bozuk" ilan ediyordu. sed akışı sonuna
+  # kadar okur, erken çıkmaz.
+  if ! gzip -dc "$PART" 2>/dev/null | sed -n '1,3p' | grep -qi "PostgreSQL database dump"; then
     echo "[backup] FAIL: dump başlığı yok (${BYTES} bayt), çıktı bozuk. $PART siliniyor." >&2
     rm -f "$PART"
     return 1
