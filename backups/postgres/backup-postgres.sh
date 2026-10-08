@@ -44,7 +44,19 @@ do_backup() {
     return 1
   fi
   export PGPORT="${PGPORT:-5432}"
-  echo "[backup] hedef: ${PGHOST}:${PGPORT}/${PGDATABASE} (user=${PGUSER})"
+
+  # Supabase'in AAAA (IPv6) kaydı var; konteynerde IPv6 route'u yok. Alpine'ın musl çözücüsü
+  # AI_ADDRCONFIG uygulamadığı için önce IPv6'yu dener ve "Network unreachable" alır.
+  # Bu yüzden hedefin IPv4 adresi çözülüp libpq'ya yapıştırılır (host adı SNI için kalır).
+  if [[ "$PGHOST" =~ [a-zA-Z] ]]; then
+    IPV4=$(getent ahostsv4 "$PGHOST" 2>/dev/null | awk '{print $1; exit}' || true)
+    if [ -n "${IPV4:-}" ]; then
+      export PGHOSTADDR="$IPV4"
+    else
+      echo "[backup] UYARI: ${PGHOST} için IPv4 çözülemedi, doğrulanmamış halde denenecek." >&2
+    fi
+  fi
+  echo "[backup] hedef: ${PGHOST}${PGHOSTADDR:+ (IPv4 ${PGHOSTADDR})}:${PGPORT}/${PGDATABASE} (user=${PGUSER})"
 
   mkdir -p "$OUT_DIR"
   rm -f "${OUT_DIR}/${PREFIX}-"*.sql.gz.part

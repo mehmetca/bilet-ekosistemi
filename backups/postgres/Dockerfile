@@ -2,7 +2,7 @@
 # pg_dump, sunucudan eskiyse dökümü reddediyor; Supabase PG17 açabildiği için istemci 17.
 FROM postgres:17-alpine
 
-RUN apk add --no-cache bash
+RUN apk add --no-cache bash musl-utils
 
 WORKDIR /backup
 COPY backup-postgres.sh /usr/local/bin/backup-postgres.sh
