@@ -50,7 +50,7 @@ export function buildHomeMetadata(locale: string): Metadata {
   const ogImage = buildOgImageUrl({ title, locale: loc });
 
   return {
-    title,
+    title: { absolute: title },
     description,
     alternates: buildCanonicalAlternates(loc, pathSuffix),
     openGraph: {

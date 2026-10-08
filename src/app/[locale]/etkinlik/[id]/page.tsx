@@ -50,7 +50,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const localized = getLocalizedEvent(event as unknown as Record<string, unknown>, locale as Locale);
   const eventTitle = localized.title || event.title;
   const eventDescription = localized.description || event.description;
-  const title = `${eventTitle} | KurdEvents`;
+  const title = eventTitle;
   const description =
     eventDescription?.replace(/<[^>]*>/g, "").slice(0, 160) ||
     `${eventTitle} - ${event.date} ${event.time || ""} ${localized.venue || event.venue || ""}.`;

@@ -1,5 +1,6 @@
 import { setRequestLocale } from "next-intl/server";
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { routing } from "@/i18n/routing";
 import { getMaintenanceModeCached } from "@/lib/maintenance-mode";
 
@@ -25,6 +26,16 @@ const COPY: Record<string, { title: string; body: string }> = {
     body: "ماڵپەڕەکەمان ئێستا بەهۆی چاککردنەوەی کورت کاتی داخراوە. تکایە دواتر هەوڵ بدەنەوە.",
   },
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const copy = COPY[locale] || COPY.tr;
+  return { title: copy.title, robots: { index: false, follow: false } };
+}
 
 export default async function BakimPage({
   params,

@@ -54,7 +54,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const artist = await getArtistBySlug(slug);
   if (!artist) {
     return {
-      title: "Sanatci bulunamadi | KurdEvents",
+      title: "Sanatci bulunamadi",
       robots: { index: false, follow: true },
     };
   }
@@ -62,7 +62,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const canonicalSlug = artist.slug || slug;
   const localized = getLocalizedArtist(artist as unknown as Record<string, unknown>, locale);
   const parsed = parseArtistBio(localized.bio || artist.bio);
-  const title = `${localized.name || artist.name} | KurdEvents`;
+  const title = localized.name || artist.name;
   const description = (parsed.content || artist.bio || "")
     .replace(/<[^>]*>/g, "")
     .replace(/\s+/g, " ")

@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const pathSuffix = `/city/${slug}`;
   if (!city) {
     return buildLocalePathMetadata(locale, pathSuffix, {
-      title: "City | KurdEvents",
+      title: "City",
       description: "KurdEvents city event listings.",
     });
   }
@@ -38,7 +38,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ckb: `بۆنە و بلیتەکانی ${name} لە KurdEvents ببینە.`,
   };
   return buildLocalePathMetadata(locale, pathSuffix, {
-    title: `${name} | KurdEvents`,
+    title: name,
     description: localized.description?.replace(/<[^>]*>/g, "").slice(0, 160).trim() || cityDescriptions[locale],
   });
 }

@@ -6,23 +6,23 @@ import LoginPage from "../../giris/page";
 
 const LOGIN_SEO: Record<Locale, { title: string; description: string }> = {
   tr: {
-    title: "Giriş Yap / Üye Ol | KurdEvents",
+    title: "Giriş Yap / Üye Ol",
     description: "KurdEvents hesabınıza giriş yapın veya yeni hesap oluşturun.",
   },
   de: {
-    title: "Anmelden / Registrieren | KurdEvents",
+    title: "Anmelden / Registrieren",
     description: "Melden Sie sich bei KurdEvents an oder erstellen Sie ein neues Konto.",
   },
   en: {
-    title: "Log In / Sign Up | KurdEvents",
+    title: "Log In / Sign Up",
     description: "Log in to your KurdEvents account or create a new account.",
   },
   ku: {
-    title: "Têkeve / Tomar bibe | KurdEvents",
+    title: "Têkeve / Tomar bibe",
     description: "Têkeve hesabê xwe yê KurdEvents an hesabek nû çêbike.",
   },
   ckb: {
-    title: "چوونەژوورەوە / تۆماربوون | KurdEvents",
+    title: "چوونەژوورەوە / تۆماربوون",
     description: "بچۆ ژوورەوە بۆ هەژماری KurdEvents یان هەژمارێکی نوێ دروست بکە.",
   },
 };

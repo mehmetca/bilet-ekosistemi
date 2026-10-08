@@ -20,7 +20,7 @@ export async function generateMetadata({
     : routing.defaultLocale;
   const t = await getTranslations({ locale, namespace: "cities" });
   return buildLocalePathMetadata(locale, "/sehirler", {
-    title: `${t("title")} | KurdEvents`,
+    title: t("title"),
     description: t("subtitle"),
   });
 }

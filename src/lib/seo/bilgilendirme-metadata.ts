@@ -31,5 +31,5 @@ export async function buildBilgilendirmePageMetadata(
   }
   if (!title) title = "KurdEvents";
   const description = intro.replace(/<[^>]*>/g, "").slice(0, 160).trim() || title;
-  return buildLocalePathMetadata(loc, pathSuffix, { title: `${title} | KurdEvents`, description });
+  return buildLocalePathMetadata(loc, pathSuffix, { title, description });
 }
