@@ -11,6 +11,7 @@ import NextLink from "next/link";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import Header from "@/components/Header";
+import { formatSupabaseAuthErrorMessage } from "@/lib/supabase-auth-errors";
 
 type Step = "email" | "sending" | "sent" | "set_password" | "updating" | "done";
 const APP_LOCALES = new Set(["tr", "de", "en", "ku", "ckb"]);
@@ -20,7 +21,7 @@ function formatAuthUserMessage(err: unknown): string {
   if (/rate limit|too many requests/i.test(msg)) {
     return "Çok sık şifre sıfırlama isteği gönderildi. Lütfen birkaç dakika bekleyip tekrar deneyin.";
   }
-  return msg;
+  return formatSupabaseAuthErrorMessage(msg);
 }
 
 function resolveLocaleFromPath(pathname: string): string {
@@ -230,7 +231,7 @@ export default function SifreYenilePage() {
                   </div>
                 </div>
                 {error && (
-                  <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="whitespace-pre-line text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
                     {error}
                   </p>
                 )}
@@ -311,7 +312,7 @@ export default function SifreYenilePage() {
                   />
                 </div>
                 {error && (
-                  <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="whitespace-pre-line text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
                     {error}
                   </p>
                 )}
