@@ -2344,7 +2344,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         onClick={shareToFacebook}
                         className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:bg-ink-50"
                       >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gold-500 text-xs font-bold text-ink-950">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gold-500 text-xs font-bold text-white">
                           f
                         </span>
                         Facebook
@@ -2366,7 +2366,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         onClick={shareToWhatsApp}
                         className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:bg-ink-50"
                       >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gold-500 text-[10px] font-bold text-ink-950">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gold-500 text-[10px] font-bold text-white">
                           WA
                         </span>
                         WhatsApp
@@ -2388,7 +2388,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         onClick={shareToLinkedIn}
                         className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm font-medium text-ink-700 hover:bg-ink-50"
                       >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gold-500 text-[10px] font-bold text-ink-950">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gold-500 text-[10px] font-bold text-white">
                           in
                         </span>
                         LinkedIn
@@ -2533,7 +2533,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     href={externalTicketUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-ink-950 hover:bg-gold-400"
+                    className="inline-flex items-center gap-2 rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gold-400"
                   >
                     {t("buyExternal")}
                     <ChevronRight className="h-4 w-4" />
@@ -2571,14 +2571,14 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           <button
                             type="button"
                             onClick={() => setSeatMapView("map")}
-                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "map" ? "bg-gold-500 text-ink-950" : "bg-ink-100 text-ink-700 hover:bg-ink-200"}`}
+                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "map" ? "bg-gold-500 text-white" : "bg-ink-100 text-ink-700 hover:bg-ink-200"}`}
                           >
                             {t("floorPlanViewTab")}
                           </button>
                           <button
                             type="button"
                             onClick={() => setSeatMapView("list")}
-                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "list" ? "bg-gold-500 text-ink-950" : "bg-ink-100 text-ink-700 hover:bg-ink-200"}`}
+                            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${seatMapView === "list" ? "bg-gold-500 text-white" : "bg-ink-100 text-ink-700 hover:bg-ink-200"}`}
                           >
                             {t("listViewTab")}
                           </button>
@@ -2884,7 +2884,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   <NextLink
                                     href={`/${locale}/sepet`}
                                     prefetch={false}
-                                    className="inline-flex w-full items-center justify-center rounded-lg bg-gold-500 px-4 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-400"
+                                    className="inline-flex w-full items-center justify-center rounded-lg bg-gold-500 px-4 py-3 text-sm font-semibold text-white hover:bg-gold-400"
                                   >
                                     {tCheckout("goToCheckout")}
                                   </NextLink>
@@ -2937,7 +2937,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       setHasSeatSelectionAddedToCart(true);
                                     }}
                                     disabled={blockSeatSale || atCartTicketCap}
-                                    className="w-full rounded-lg bg-gold-500 px-4 py-3 text-ink-950 font-semibold hover:bg-gold-400 disabled:opacity-50"
+                                    className="w-full rounded-lg bg-gold-500 px-4 py-3 text-white font-semibold hover:bg-gold-400 disabled:opacity-50"
                                   >
                                     {tCheckout("addToCart")} ({selectedSeatIds.size})
                                   </button>
@@ -3029,7 +3029,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 <NextLink
                                   href={`/${locale}/sepet`}
                                   prefetch={false}
-                                  className="inline-flex items-center justify-center rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-ink-950 hover:bg-gold-400"
+                                  className="inline-flex items-center justify-center rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gold-400"
                                 >
                                   {tCheckout("goToCheckout")}
                                 </NextLink>
@@ -3063,7 +3063,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     onClick={() => {
                       window.location.href = `/${locale}/etkinlik/${event.id}/amed-spor-form`;
                     }}
-                    className="w-full bg-gold-500 text-ink-950 py-3 rounded-lg font-semibold hover:bg-gold-400"
+                    className="w-full bg-gold-500 text-white py-3 rounded-lg font-semibold hover:bg-gold-400"
                   >
                     {t("amedSporFillForm")}
                   </button>
@@ -3117,7 +3117,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           window.location.href = `/${locale}/sepet`;
                         }, 600);
                       }}
-                      className="bg-gold-500 text-ink-950 px-4 py-2 rounded-lg font-semibold hover:bg-gold-400"
+                      className="bg-gold-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gold-400"
                     >
                       {locale === "en" ? "Go to Cart" : "Sepete Git"}
                     </button>
@@ -3311,7 +3311,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           isPastEvent ||
                           selectedPriceTicketEntries.length === 0
                         }
-                        className="w-full rounded-lg bg-gold-500 px-8 py-4 text-lg font-semibold text-ink-950 transition-colors hover:bg-gold-400 disabled:bg-ink-300 disabled:text-ink-500"
+                        className="w-full rounded-lg bg-gold-500 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-gold-400 disabled:bg-ink-300 disabled:text-ink-500"
                       >
                         {tCheckout("addToCart")} ({selectedPriceTicketTotalCount})
                       </button>
@@ -3411,7 +3411,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <NextLink
                         href={`/${locale}/sepet`}
                         prefetch={false}
-                        className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-gold-500 px-4 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-400"
+                        className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-gold-500 px-4 py-3 text-sm font-semibold text-white hover:bg-gold-400"
                       >
                         {tCheckout("goToCheckout")}
                       </NextLink>
@@ -3681,7 +3681,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     <button
                       type="submit"
                       disabled={reminderPending}
-                      className="w-full rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-ink-950 hover:bg-gold-400 disabled:opacity-50"
+                      className="w-full rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gold-400 disabled:opacity-50"
                     >
                       {reminderPending ? t("saving") : t("getReminder")}
                     </button>

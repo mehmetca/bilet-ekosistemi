@@ -417,7 +417,7 @@ export default function ClientHomePage({
                   const step = getCityCardScrollStep(window.innerWidth);
                   el.scrollBy({ left: -step, behavior: "smooth" });
                 }}
-                className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md bg-gold-500 text-ink-950 transition-colors hover:bg-gold-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/70 md:left-4"
+                className="absolute left-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md bg-gold-500 text-white transition-colors hover:bg-gold-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/70 md:left-4"
                 aria-label="Önceki"
               >
                 <ChevronLeft className="h-6 w-6" />
@@ -430,7 +430,7 @@ export default function ClientHomePage({
                   const step = getCityCardScrollStep(window.innerWidth);
                   el.scrollBy({ left: step, behavior: "smooth" });
                 }}
-                className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md bg-gold-500 text-ink-950 transition-colors hover:bg-gold-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/70 md:right-4"
+                className="absolute right-2 top-1/2 z-10 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-md bg-gold-500 text-white transition-colors hover:bg-gold-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-500/70 md:right-4"
                 aria-label="Sonraki"
               >
                 <ChevronRight className="h-6 w-6" />

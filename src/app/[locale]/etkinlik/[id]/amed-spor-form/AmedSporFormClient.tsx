@@ -915,14 +915,14 @@ export default function AmedSporFormClient({
                         onClick={() => {
                           window.location.href = `/${locale}/sepet`;
                         }}
-                        className="mt-4 px-6 py-2 bg-gold-500 text-ink-950 rounded-lg hover:bg-gold-400 transition-colors"
+                        className="mt-4 px-6 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-400 transition-colors"
                       >
                         {t("goToCart")}
                       </button>
                     ) : (
                       <Link
                         href={`/etkinlik/${event.id}`}
-                        className="inline-block mt-4 px-6 py-2 bg-gold-500 text-ink-950 rounded-lg hover:bg-gold-400 transition-colors"
+                        className="inline-block mt-4 px-6 py-2 bg-gold-500 text-white rounded-lg hover:bg-gold-400 transition-colors"
                       >
                         {t("backToEvent")}
                       </Link>
@@ -1349,7 +1349,7 @@ export default function AmedSporFormClient({
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full rounded-lg bg-gold-500 px-5 py-2.5 text-sm font-semibold text-ink-950 shadow-card transition-colors hover:bg-gold-400 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[180px]"
+                    className="w-full rounded-lg bg-gold-500 px-5 py-2.5 text-sm font-semibold text-white shadow-card transition-colors hover:bg-gold-400 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[180px]"
                   >
                     {isSubmitting ? t("submitting") : hasAnyPrice ? t("addToCart") : t("submitForm")}
                   </button>

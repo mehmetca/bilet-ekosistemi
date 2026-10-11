@@ -257,7 +257,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
           <div className="space-y-3">
             <a
               href="/"
-              className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-ink-950 px-6 py-3 rounded-lg font-medium transition-colors"
+              className="inline-flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-white px-6 py-3 rounded-lg font-medium transition-colors"
             >
               {tCommon("backToHome")}
             </a>
@@ -369,7 +369,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                 <div className="flex flex-wrap gap-2 sm:gap-3">
                   <button
                     onClick={handleFollowToggle}
-                    className="flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-ink-950 px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base"
+                    className="flex items-center gap-2 bg-gold-500 hover:bg-gold-400 text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-lg font-medium transition-colors text-sm sm:text-base"
                   >
                     <Heart className="h-4 w-4 flex-shrink-0" />
                     {isFollowing ? t("following") : t("follow")}
@@ -521,7 +521,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                             href={parsedProfile.socials.youtube}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400"
+                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-white hover:bg-gold-400"
                           >
                             YouTube <ExternalLink className="h-3.5 w-3.5" />
                           </a>
@@ -531,7 +531,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                             href={parsedProfile.socials.spotify}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400"
+                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-white hover:bg-gold-400"
                           >
                             Spotify <ExternalLink className="h-3.5 w-3.5" />
                           </a>
@@ -541,7 +541,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                             href={parsedProfile.socials.instagram}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400"
+                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-white hover:bg-gold-400"
                           >
                             Instagram <ExternalLink className="h-3.5 w-3.5" />
                           </a>
@@ -551,7 +551,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                             href={parsedProfile.socials.website}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400"
+                            className="inline-flex items-center gap-1 rounded-md bg-gold-500 px-3 py-2 text-sm font-medium text-white hover:bg-gold-400"
                           >
                             Web Sitesi <ExternalLink className="h-3.5 w-3.5" />
                           </a>

@@ -159,7 +159,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                 }}
                 className={`h-7 min-h-[1.75rem] shrink-0 rounded-md px-1.5 text-[10px] font-semibold leading-none sm:h-8 sm:min-h-0 sm:px-2.5 sm:text-xs md:h-9 md:px-3 md:text-sm ${
                   selectedLetter === "ALL"
-                    ? "bg-gold-500 text-ink-950"
+                    ? "bg-gold-500 text-white"
                     : "border border-ink-300 bg-white text-ink-700 hover:bg-ink-50"
                 }`}
               >
@@ -175,7 +175,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                   }}
                   className={`h-7 min-w-[1.35rem] min-h-[1.75rem] shrink-0 rounded-md px-1 text-[10px] font-semibold leading-none sm:h-8 sm:min-w-8 sm:min-h-0 sm:px-2 sm:text-xs md:h-9 md:min-w-9 md:px-2.5 md:text-sm ${
                     selectedLetter === letter
-                      ? "bg-gold-500 text-ink-950"
+                      ? "bg-gold-500 text-white"
                       : "border border-ink-300 bg-white text-ink-700 hover:bg-ink-50"
                   }`}
                 >
@@ -241,7 +241,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                 <button
                   onClick={() => goToPage(currentPage - 1)}
                   disabled={currentPage === 1}
-                  className="px-3 py-2 text-sm font-medium text-ink-950 bg-gold-500 rounded-md hover:bg-gold-400 disabled:bg-ink-300 disabled:cursor-not-allowed shadow-card"
+                  className="px-3 py-2 text-sm font-medium text-white bg-gold-500 rounded-md hover:bg-gold-400 disabled:bg-ink-300 disabled:cursor-not-allowed shadow-card"
                 >
                   ← {tCommon("previous")}
                 </button>
@@ -253,7 +253,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                       onClick={() => goToPage(n)}
                       className={`h-9 min-w-9 rounded-md px-3 text-sm shadow-card ${
                         n === currentPage
-                          ? "bg-gold-500 text-ink-950"
+                          ? "bg-gold-500 text-white"
                           : "bg-white border border-ink-300 text-ink-700 hover:bg-ink-50"
                       }`}
                     >
@@ -265,7 +265,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
                 <button
                   onClick={() => goToPage(currentPage + 1)}
                   disabled={currentPage === totalPages}
-                  className="px-3 py-2 text-sm font-medium text-ink-950 bg-gold-500 rounded-md hover:bg-gold-400 disabled:bg-ink-300 disabled:cursor-not-allowed shadow-card"
+                  className="px-3 py-2 text-sm font-medium text-white bg-gold-500 rounded-md hover:bg-gold-400 disabled:bg-ink-300 disabled:cursor-not-allowed shadow-card"
                 >
                   {tCommon("next")} →
                 </button>

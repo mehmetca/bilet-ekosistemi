@@ -345,7 +345,7 @@ export default function OrganizerApplicationPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-gold-500 py-3 font-semibold text-ink-950 hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+              className="w-full rounded-lg bg-gold-500 py-3 font-semibold text-white hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             >
               {loading ? t("submitting") : t("organizerApply")}
             </button>

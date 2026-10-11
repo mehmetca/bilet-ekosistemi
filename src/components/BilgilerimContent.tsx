@@ -435,7 +435,7 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
           <button
             type="submit"
             disabled={saveLoading}
-            className="flex items-center gap-2 w-full justify-center py-3 bg-gold-500 text-ink-950 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50"
+            className="flex items-center gap-2 w-full justify-center py-3 bg-gold-500 text-white rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {t("saveData")}
@@ -568,7 +568,7 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
               <button
                 type="submit"
                 disabled={orgSaveLoading}
-                className="flex items-center gap-2 justify-center py-3 px-6 bg-gold-500 text-ink-950 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50"
+                className="flex items-center gap-2 justify-center py-3 px-6 bg-gold-500 text-white rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
                 {t("saveOrganizationInfo")}
@@ -668,7 +668,7 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
           <button
             type="submit"
             disabled={pwdLoading}
-            className="flex items-center gap-2 w-full justify-center rounded-lg bg-gold-500 py-3 font-semibold text-ink-950 hover:bg-gold-400 disabled:opacity-50"
+            className="flex items-center gap-2 w-full justify-center rounded-lg bg-gold-500 py-3 font-semibold text-white hover:bg-gold-400 disabled:opacity-50"
           >
             <Save className="h-4 w-4" />
             {t("save")}

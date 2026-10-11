@@ -34,7 +34,7 @@ export default function NotFound() {
         <div className="space-y-3">
           <Link
             href="/"
-            className="w-full bg-gold-500 text-ink-950 py-2 px-4 rounded-lg font-semibold hover:bg-gold-400 transition-colors inline-flex items-center justify-center gap-2"
+            className="w-full bg-gold-500 text-white py-2 px-4 rounded-lg font-semibold hover:bg-gold-400 transition-colors inline-flex items-center justify-center gap-2"
           >
             <Home className="h-4 w-4" />
             Ana Sayfaya Dön

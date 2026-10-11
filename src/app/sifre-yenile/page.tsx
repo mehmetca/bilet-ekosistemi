@@ -237,7 +237,7 @@ export default function SifreYenilePage() {
                 <button
                   type="submit"
                   disabled={step === "sending"}
-                  className="w-full bg-gold-500 text-ink-950 py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full bg-gold-500 text-white py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {step === "sending" ? "Gönderiliyor..." : "Sıfırlama bağlantısı gönder"}
                 </button>
@@ -318,7 +318,7 @@ export default function SifreYenilePage() {
                 <button
                   type="submit"
                   disabled={step === "updating"}
-                  className="w-full bg-gold-500 text-ink-950 py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="w-full bg-gold-500 text-white py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   {step === "updating" ? "Güncelleniyor..." : "Şifreyi güncelle"}
                 </button>

@@ -377,7 +377,7 @@ function CityEventsSection({
                         ? `/${locale}/etkinlik/${event.id}/amed-spor-form`
                         : `/${locale}/etkinlik/${event.id}`
                     }
-                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-gold-500 px-5 text-sm font-bold uppercase tracking-wide text-ink-950 shadow-card hover:bg-gold-400 sm:ml-auto"
+                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-gold-500 px-5 text-sm font-bold uppercase tracking-wide text-white shadow-card hover:bg-gold-400 sm:ml-auto"
                   >
                     {event.show_slug && isAmedSporEvent(event.show_slug) ? t("amedSporFillForm") : t("buyTicket")}
                     <ChevronRight className="h-4 w-4" />

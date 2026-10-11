@@ -197,7 +197,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                         ? `${t("home.from")} ${formatPrice(Number(event.price_from), event.currency)}`
                         : t("home.free")}
                     </span>
-                    <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg text-sm font-medium bg-gold-500 text-ink-950 hover:bg-gold-400">
+                    <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg text-sm font-medium bg-gold-500 text-white hover:bg-gold-400">
                       {t("calendar.buyTicket")}
                     </span>
                   </div>
@@ -281,7 +281,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                     onClick={() => setPastPage(pageNum)}
                     className={`rounded-md px-3 py-1.5 text-sm ${
                       pageNum === safePastPage
-                        ? "bg-gold-500 text-ink-950"
+                        ? "bg-gold-500 text-white"
                         : "border border-ink-300 text-ink-700 hover:bg-ink-50"
                     }`}
                   >

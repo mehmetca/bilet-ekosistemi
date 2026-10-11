@@ -19,8 +19,8 @@ const BASE =
   "disabled:pointer-events-none disabled:opacity-50";
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: "bg-gold-500 font-semibold text-ink-950 hover:bg-gold-400 active:bg-gold-600",
-  gold: "bg-gold-500 font-semibold text-ink-950 hover:bg-gold-400 active:bg-gold-600",
+  primary: "bg-gold-500 font-semibold text-white hover:bg-gold-400 active:bg-gold-600",
+  gold: "bg-gold-500 font-semibold text-white hover:bg-gold-400 active:bg-gold-600",
   outline: "border border-ink-300 text-ink-800 hover:border-ink-900 hover:bg-ink-100",
   outlineLight: "border border-white/30 text-white hover:border-gold-400 hover:bg-white/10",
   ghost: "text-ink-700 hover:bg-ink-100 hover:text-ink-900",

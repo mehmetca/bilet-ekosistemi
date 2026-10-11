@@ -55,7 +55,7 @@ export default function CookieConsent() {
             </button>
             <button
               onClick={handleAccept}
-              className="px-4 py-2 text-sm font-medium text-ink-950 bg-gold-500 hover:bg-gold-400 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-gold-500 hover:bg-gold-400 rounded-lg transition-colors"
             >
               {t("accept")}
             </button>

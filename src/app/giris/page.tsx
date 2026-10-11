@@ -500,7 +500,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-gold-500 text-ink-950 py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                className="w-full bg-gold-500 text-white py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
               >
                 {loading ? (
                   t("loggingIn")
@@ -786,7 +786,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={regLoading}
-                  className="w-full bg-gold-500 text-ink-950 py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                  className="w-full bg-gold-500 text-white py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
                   {regLoading ? t("registering") : (
                     <>
@@ -874,7 +874,7 @@ export default function LoginPage() {
                 <button
                   type="submit"
                   disabled={ctrlLoading}
-                  className="w-full rounded-lg bg-gold-500 py-3 font-semibold text-ink-950 hover:bg-gold-400 disabled:opacity-50"
+                  className="w-full rounded-lg bg-gold-500 py-3 font-semibold text-white hover:bg-gold-400 disabled:opacity-50"
                 >
                   {ctrlLoading ? "Gönderiliyor..." : "Kontrolör Başvurusu Gönder"}
                 </button>

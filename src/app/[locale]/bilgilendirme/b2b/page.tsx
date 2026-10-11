@@ -74,7 +74,7 @@ export default function B2BPage() {
           ))}
           <NextLink
             href="/organizator-basvuru"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap bg-gold-500 text-ink-950 hover:bg-gold-400 active:bg-gold-600 transition-colors shrink-0"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap bg-gold-500 text-white hover:bg-gold-400 active:bg-gold-600 transition-colors shrink-0"
           >
             <FileEdit className="h-4 w-4 shrink-0" />
             {t("organizers.menuOrganizerApplication")}

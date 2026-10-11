@@ -747,7 +747,7 @@ export default function CheckoutPage() {
           >
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold ${
-                currentStep >= 1 ? "!bg-gold-500 text-ink-950" : "bg-ink-200 text-ink-600"
+                currentStep >= 1 ? "!bg-gold-500 text-white" : "bg-ink-200 text-ink-600"
               }`}
             >
               1
@@ -764,7 +764,7 @@ export default function CheckoutPage() {
           >
             <div
               className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold ${
-                currentStep >= 2 ? "!bg-gold-500 text-ink-950" : "bg-ink-200 text-ink-600"
+                currentStep >= 2 ? "!bg-gold-500 text-white" : "bg-ink-200 text-ink-600"
               }`}
             >
               2
@@ -805,7 +805,7 @@ export default function CheckoutPage() {
             <p className="mb-6 text-sm text-ink-500">{t("redirectingToLogin")}</p>
             <SafeNextLink
               href={`/${locale}/giris?redirect=/${locale}/sepet`}
-              className="inline-flex items-center gap-2 rounded-lg !bg-gold-500 px-6 py-3 font-semibold text-ink-950 hover:!bg-gold-400"
+              className="inline-flex items-center gap-2 rounded-lg !bg-gold-500 px-6 py-3 font-semibold text-white hover:!bg-gold-400"
             >
               {t("loginOrSignup")}
             </SafeNextLink>
@@ -853,7 +853,7 @@ export default function CheckoutPage() {
             )}
             <SafeNextLink
               href={`/${locale}`}
-              className="inline-flex items-center gap-2 rounded-lg !bg-gold-500 px-6 py-3 font-semibold text-ink-950 hover:!bg-gold-400"
+              className="inline-flex items-center gap-2 rounded-lg !bg-gold-500 px-6 py-3 font-semibold text-white hover:!bg-gold-400"
             >
               {t("continueShopping")}
             </SafeNextLink>
@@ -917,7 +917,7 @@ export default function CheckoutPage() {
                     <SafeNextLink
                       href={`/${locale}/etkinlik/${expiredSnapshot.eventId}`}
                       onClick={clearExpiredSession}
-                      className="mt-6 flex w-full items-center justify-center rounded-lg bg-gold-500 px-4 py-3.5 text-center text-sm font-semibold text-ink-950 transition-colors hover:bg-gold-400"
+                      className="mt-6 flex w-full items-center justify-center rounded-lg bg-gold-500 px-4 py-3.5 text-center text-sm font-semibold text-white transition-colors hover:bg-gold-400"
                     >
                       {t("checkAvailability")}
                     </SafeNextLink>
@@ -931,7 +931,7 @@ export default function CheckoutPage() {
                   <SafeNextLink
                     href={`/${locale}`}
                     onClick={clearExpiredSession}
-                    className="mt-6 inline-flex items-center justify-center rounded-lg bg-gold-500 px-6 py-3 text-sm font-semibold text-ink-950 hover:bg-gold-400"
+                    className="mt-6 inline-flex items-center justify-center rounded-lg bg-gold-500 px-6 py-3 text-sm font-semibold text-white hover:bg-gold-400"
                   >
                     {t("continueShopping")}
                   </SafeNextLink>
@@ -955,7 +955,7 @@ export default function CheckoutPage() {
             <p className="mb-6 text-ink-600">{t("emptyCartDesc")}</p>
             <SafeNextLink
               href={`/${locale}`}
-              className="inline-flex items-center gap-2 rounded-lg !bg-gold-500 px-6 py-3 font-semibold text-ink-950 hover:!bg-gold-400"
+              className="inline-flex items-center gap-2 rounded-lg !bg-gold-500 px-6 py-3 font-semibold text-white hover:!bg-gold-400"
             >
               {t("continueShopping")}
             </SafeNextLink>
@@ -1121,7 +1121,7 @@ export default function CheckoutPage() {
                           >
                             <div
                               className={`mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${
-                                selected ? "bg-gold-500 text-ink-950" : "bg-ink-200 text-ink-600"
+                                selected ? "bg-gold-500 text-white" : "bg-ink-200 text-ink-600"
                               }`}
                             >
                               <Icon className="h-5 w-5" />
@@ -1345,7 +1345,7 @@ export default function CheckoutPage() {
                         void handleCompleteOrder(e as unknown as React.FormEvent);
                       }}
                       disabled={isPending || items.length === 0 || !user}
-                      className="mt-6 w-full rounded-lg !bg-gold-500 py-4 font-semibold text-ink-950 transition-colors hover:!bg-gold-400 disabled:bg-ink-200 disabled:text-ink-400"
+                      className="mt-6 w-full rounded-lg !bg-gold-500 py-4 font-semibold text-white transition-colors hover:!bg-gold-400 disabled:bg-ink-200 disabled:text-ink-400"
                     >
                       {isPending ? t("processing") : t("completeOrder")}
                     </button>

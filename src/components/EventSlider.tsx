@@ -147,7 +147,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
           {/* İçerik */}
           <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 text-white">
             <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="rounded bg-gold-500 px-2 py-1 text-xs font-semibold text-ink-950">
+              <span className="rounded bg-gold-500 px-2 py-1 text-xs font-semibold text-white">
                 {CATEGORY_LABELS[currentEvent.category as keyof typeof CATEGORY_LABELS] ?? currentEvent.category ?? "Etkinlik"}
               </span>
               <span className="text-xs opacity-90">
@@ -187,7 +187,7 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
               ) : (
                 <Link
                   href={eventDetailPath((currentEvent as Event & { show_slug?: string }).show_slug, currentEvent.id)}
-                  className="bg-gold-500 hover:bg-gold-400 text-ink-950 px-6 py-2.5 rounded-lg font-semibold transition-colors text-center w-full sm:w-auto"
+                  className="bg-gold-500 hover:bg-gold-400 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors text-center w-full sm:w-auto"
                 >
                   {buyTicketText}
                 </Link>

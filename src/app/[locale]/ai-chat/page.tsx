@@ -77,7 +77,7 @@ export default function AIChatPage() {
             <p className="text-sm">Projenizle ilgili her şeyi sorabilirsiniz. Dosyaları inceletmek için özel komutu kullanabilirsiniz:</p>
             <button 
               onClick={() => handleSend("oku: scripts/dev.js")}
-              className="flex items-center gap-2 rounded-lg border border-gold-600 bg-gold-500 px-3 py-2 text-xs font-medium text-ink-950 transition hover:bg-gold-400"
+              className="flex items-center gap-2 rounded-lg border border-gold-600 bg-gold-500 px-3 py-2 text-xs font-medium text-white transition hover:bg-gold-400"
             >
               <FileCode className="w-4 h-4" />
               Örnek: oku: scripts/dev.js
@@ -147,7 +147,7 @@ export default function AIChatPage() {
           <button
             onClick={() => handleSend()}
             disabled={isLoading}
-            className="bg-gold-500 hover:bg-gold-400 disabled:bg-ink-700 text-ink-950 p-3 rounded-lg transition shadow-lift flex items-center justify-center"
+            className="bg-gold-500 hover:bg-gold-400 disabled:bg-ink-700 text-white p-3 rounded-lg transition shadow-lift flex items-center justify-center"
           >
             <Send className="w-5 h-5" />
           </button>

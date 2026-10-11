@@ -172,7 +172,7 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
             </div>
             <button
               type="submit"
-              className="h-11 rounded-lg bg-gold-500 px-5 font-semibold text-ink-950 hover:bg-gold-400"
+              className="h-11 rounded-lg bg-gold-500 px-5 font-semibold text-white hover:bg-gold-400"
             >
               {t("search")}
             </button>

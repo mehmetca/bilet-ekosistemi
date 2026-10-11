@@ -158,7 +158,7 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
                       </span>
                       <Link
                         href={eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}
-                        className="inline-flex items-center gap-1 rounded-lg bg-gold-500 px-3 py-2 text-sm font-medium text-ink-950 hover:bg-gold-400"
+                        className="inline-flex items-center gap-1 rounded-lg bg-gold-500 px-3 py-2 text-sm font-medium text-white hover:bg-gold-400"
                       >
                         {tHome("buyTicket")}
                         <ChevronRight className="h-4 w-4" />

@@ -129,7 +129,7 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
             </button>
             <NextLink
               href={`/${locale}`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500 text-ink-950 rounded-lg font-medium hover:bg-gold-400"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gold-500 text-white rounded-lg font-medium hover:bg-gold-400"
             >
               {t("browseEvents")}
               <ArrowRight className="h-4 w-4" aria-hidden />
