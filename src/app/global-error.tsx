@@ -44,9 +44,9 @@ export default function GlobalError({
           <p
             style={{
               marginBottom: "1rem",
-              background: "#FDF1F0",
-              color: "#9C231A",
-              border: "1px solid #F7BDB6",
+              background: "#FCF3F4",
+              color: "#96081E",
+              border: "1px solid #F6C0C9",
               borderRadius: "0.5rem",
               padding: "0.75rem",
               fontSize: "0.875rem",

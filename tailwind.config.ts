@@ -3,7 +3,7 @@ import type { Config } from "tailwindcss";
 /**
  * KurdEvents marka paleti.
  * primary = mürekkep ölçeği (aksiyon, link, odak) — açık zeminde yüksek kontrast.
- * Token adı `gold` korundu (sınıflar değişmesin diye); değerler marka kırmızısı.
+ * Token adı `gold` korundu (sınıflar değişmesin diye); değerler Passo kırmızısı (#DC0B2C).
  */
 const ink = {
   50: "#F6F6F5",
@@ -20,17 +20,17 @@ const ink = {
 };
 
 const gold = {
-  50: "#FDF1F0",
-  100: "#FBDFDC",
-  200: "#F7BDB6",
-  300: "#F09189",
-  400: "#E96B60",
-  500: "#E23B2E",
-  600: "#C22D22",
-  700: "#9C231A",
-  800: "#771B14",
-  900: "#5C1610",
-  950: "#3F0F0A",
+  50: "#FCF3F4",
+  100: "#FAE3E6",
+  200: "#F6C0C9",
+  300: "#F391A0",
+  400: "#F0516A",
+  500: "#DC0B2C",
+  600: "#B80A25",
+  700: "#96081E",
+  800: "#770618",
+  900: "#590613",
+  950: "#36050C",
 };
 
 const config: Config = {
@@ -65,7 +65,8 @@ const config: Config = {
         /** amber sınıfları kahve/kehribar tonlarında; aynı kırmızı ölçeğe bağlandı. */
         amber: { ...gold, DEFAULT: gold[500] },
         ink,
-        paper: "#FAF5F4",
+        /** Site sayfası zemini — nötr, var ile yok arası kırık beyaz. */
+        paper: "#FAFAF9",
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],

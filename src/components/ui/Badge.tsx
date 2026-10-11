@@ -19,7 +19,7 @@ const VARIANTS: Record<BadgeVariant, string> = {
   success: "border-emerald-300 bg-emerald-50 text-emerald-800",
   danger: "border-red-300 bg-red-50 text-red-800",
   light: "border-white/25 bg-white/10 text-white",
-  goldOnDark: "border-gold-500/40 bg-gold-500/15 text-gold-300",
+  goldOnDark: "border-gold-700 bg-gold-600 text-white",
 };
 
 const BASE =
