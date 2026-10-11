@@ -11,6 +11,7 @@ import {
   type DoorPrevious,
 } from "@/app/kontrol/actions";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import ControllerApplyForm from "@/components/ControllerApplyForm";
 import { supabase } from "@/lib/supabase-client";
 import QRScanner from "@/components/QRScanner";
 import DoorCounters from "@/components/DoorCounters";
@@ -608,13 +609,16 @@ export default function KontrolPage() {
         )}
 
         {!codeParam && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
-            <p className="mb-4">Bilet kodu bulunamadı.</p>
-            <p className="text-sm">
-              Bilet kontrolü için {" "}
-              <Link href="/giris?redirect=%2Fkontrol" className="text-primary-600 underline">yetkili hesabınızla giriş yapın</Link>.
-            </p>
-          </div>
+          <>
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
+              <p className="mb-4">Bilet kodu bulunamadı.</p>
+              <p className="text-sm">
+                Bilet kontrolü için {" "}
+                <Link href="/giris?redirect=%2Fkontrol" className="text-primary-600 underline">yetkili hesabınızla giriş yapın</Link>.
+              </p>
+            </div>
+            <ControllerApplyForm />
+          </>
         )}
       </div>
     </div>
