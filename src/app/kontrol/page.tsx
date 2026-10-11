@@ -572,7 +572,7 @@ export default function KontrolPage() {
             ← KurdEvents
           </Link>
         </div>
-        <h1 className="text-xl font-bold text-slate-900 text-center mb-2">
+        <h1 className="mb-2 text-center font-display text-3xl font-bold text-slate-900 sm:text-4xl">
           Bilet Kontrol
         </h1>
         <p className="text-slate-600 text-center text-sm mb-8">
@@ -611,11 +611,14 @@ export default function KontrolPage() {
         {!codeParam && (
           <>
             <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-600">
-              <p className="mb-4">Bilet kodu bulunamadı.</p>
-              <p className="text-sm">
-                Bilet kontrolü için {" "}
-                <Link href="/giris?redirect=%2Fkontrol" className="text-primary-600 underline">yetkili hesabınızla giriş yapın</Link>.
-              </p>
+              <p className="text-base">Bilet kontrolü için yetkili hesabınızla giriş yapın.</p>
+              <Link
+                href="/giris?redirect=%2Fkontrol"
+                className="mt-6 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg bg-gold-500 px-6 text-base font-semibold text-white hover:bg-gold-600"
+              >
+                <Lock className="h-5 w-5" />
+                Yetkili Girişi
+              </Link>
             </div>
             <ControllerApplyForm />
           </>

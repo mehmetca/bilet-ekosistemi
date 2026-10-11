@@ -655,13 +655,16 @@ export default function ClientHomePage({
                         </span>
                       )}
 
-                      {/* Afiş tarih damgası: serif gün + beyaz çip üstünde tam kırmızı ay */}
-                      <span className="absolute bottom-3 left-3 flex flex-col" aria-hidden>
-                        <span className="font-display text-[28px] leading-none text-white on-photo-shadow">
+                      {/* Afiş tarih damgası: gün / ay / yıl tek kırmızı çerçeveli kutuda, ortalanmış */}
+                      <span className="date-chip absolute bottom-3 left-3 gap-[5px]" aria-hidden>
+                        <span className="font-display text-[22px] leading-none">
                           {when.dayNum}
                         </span>
-                        <span className="month-chip mt-1">
+                        <span className="text-[11px] font-semibold uppercase leading-none tracking-widest2">
                           {when.monthShort}
+                        </span>
+                        <span className="font-display text-[22px] leading-none">
+                          {when.year}
                         </span>
                       </span>
                     </div>

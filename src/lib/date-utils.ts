@@ -157,17 +157,17 @@ const CKB_MONTHS_LONG = [
 ] as const;
 
 /**
- * Etkinlik kartı: kısa ay, gün, uzun satır (gün ay yıl günadı, saat).
+ * Etkinlik kartı: kısa ay, gün, yıl, uzun satır (gün ay yıl günadı, saat).
  */
 export function formatEventLongDateTime(
   dateStr: string | null | undefined,
   timeStr: string | null | undefined,
   locale: SupportedUiLocale
-): { monthShort: string; dayNum: string; lineLong: string } {
+): { monthShort: string; dayNum: string; year: string; lineLong: string } {
   const ymd = parseEventYmd(dateStr);
   const time = String(timeStr ?? "").trim() || "20:00";
   if (!ymd) {
-    return { monthShort: "", dayNum: "—", lineLong: time };
+    return { monthShort: "", dayNum: "—", year: "", lineLong: time };
   }
   const { y, m, d } = ymd;
   const localDate = new Date(y, m - 1, d);
@@ -180,6 +180,7 @@ export function formatEventLongDateTime(
     return {
       monthShort: shortM,
       dayNum: String(d),
+      year: String(y),
       lineLong: `${dd} ${longM} ${y} ${dow}, ${time}`,
     };
   }
@@ -192,8 +193,9 @@ export function formatEventLongDateTime(
   });
   const shortFmt = new Intl.DateTimeFormat(loc, { month: "short" });
   return {
-    monthShort: shortFmt.format(localDate),
+    monthShort: shortFmt.format(localDate).replace(/\.$/, ""),
     dayNum: String(d),
+    year: String(y),
     lineLong: `${longFmt.format(localDate)}, ${time}`,
   };
 }

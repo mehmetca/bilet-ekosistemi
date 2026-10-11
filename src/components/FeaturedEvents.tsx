@@ -28,7 +28,9 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
     const monthIndex = Math.max(0, Math.min(11, Number(m[2]) - 1));
     const day = String(Number(m[3]));
     const localeCode = locale === "tr" ? "tr-TR" : locale === "de" ? "de-DE" : "en-US";
-    const month = new Intl.DateTimeFormat(localeCode, { month: "long" }).format(new Date(Number(year), monthIndex, 1));
+    const month = new Intl.DateTimeFormat(localeCode, { month: "short" })
+      .format(new Date(Number(year), monthIndex, 1))
+      .replace(/\.$/, "");
     return { day, month, year };
   };
 
@@ -90,16 +92,18 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
                         .join(" / ")}
                     </p>
                   </div>
-                  {/* Tarih: afiş damgası — kırmızı çizgi, serif gün, beyaz çipte tam kırmızı ay */}
-                  <div className="order-1 flex flex-shrink-0 flex-col border-l-2 border-gold-500 pl-3 text-left sm:order-2 sm:self-auto">
-                    <span className="font-display text-[34px] font-semibold leading-none text-white drop-shadow-md md:text-[40px]">
-                      {dateParts.day}
-                    </span>
-                    <span className="month-chip mt-1 md:text-[13px]">
-                      {dateParts.month}
-                    </span>
-                    <span className="text-xs font-medium leading-tight text-white/70">
-                      {dateParts.year}
+                  {/* Tarih: gün / ay / yıl tek kırmızı çerçeveli kutuda, ortalanmış */}
+                  <div className="order-1 flex flex-shrink-0 text-left sm:order-2 sm:self-auto">
+                    <span className="date-chip gap-[7px] px-3 py-2">
+                      <span className="font-display text-[28px] font-semibold leading-none md:text-[32px]">
+                        {dateParts.day}
+                      </span>
+                      <span className="text-[12px] font-semibold uppercase leading-none tracking-widest2">
+                        {dateParts.month}
+                      </span>
+                      <span className="font-display text-[28px] font-semibold leading-none md:text-[32px]">
+                        {dateParts.year}
+                      </span>
                     </span>
                   </div>
                 </div>
