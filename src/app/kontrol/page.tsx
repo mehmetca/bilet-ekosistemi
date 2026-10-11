@@ -16,6 +16,7 @@ import { supabase } from "@/lib/supabase-client";
 import QRScanner from "@/components/QRScanner";
 import DoorCounters from "@/components/DoorCounters";
 import { feedbackService } from "@/lib/feedbackService";
+import { formatSupabaseAuthErrorMessage } from "@/lib/supabase-auth-errors";
 import {
   fetchUserProfile,
   updateUserPassword,
@@ -347,6 +348,8 @@ export default function KontrolPage() {
       await updateUserPassword(password.newPassword);
       setPassword({ newPassword: "", confirm: "" });
       setPwdMsg("Şifre güncellendi.");
+    } catch (err) {
+      setPwdErr(formatSupabaseAuthErrorMessage(err) || "Şifre güncellenemedi.");
     } finally {
       setPwdSaving(false);
     }
@@ -532,7 +535,7 @@ export default function KontrolPage() {
                   placeholder="Yeni şifre (tekrar)"
                   className="w-full rounded-lg border border-slate-300 px-3 py-2"
                 />
-                {pwdErr ? <p className="text-sm text-red-600">{pwdErr}</p> : null}
+                {pwdErr ? <p className="whitespace-pre-line text-sm text-red-600">{pwdErr}</p> : null}
                 {pwdMsg ? <p className="text-sm text-green-700">{pwdMsg}</p> : null}
                 <button
                   type="submit"

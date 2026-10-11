@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser-client";
+import { formatSupabaseAuthErrorMessage } from "@/lib/supabase-auth-errors";
 
 const ACCOUNT_EXISTS_PATTERN = /already registered|already exists/i;
 
@@ -42,7 +43,7 @@ export default function ControllerApplyForm() {
           setError("Bu e-posta zaten kayıtlı. Giriş yapıp admin onayı bekleyin.");
           return;
         }
-        setError(signUpError.message || "Kontrolör başvurusu başlatılamadı.");
+        setError(formatSupabaseAuthErrorMessage(signUpError) || "Kontrolör başvurusu başlatılamadı.");
         return;
       }
 
@@ -131,7 +132,7 @@ export default function ControllerApplyForm() {
             className="w-full rounded-lg border border-slate-300 px-3 py-2.5"
           />
         </div>
-        {error ? <p className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</p> : null}
+        {error ? <p className="whitespace-pre-line rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-600">{error}</p> : null}
         {success ? (
           <p className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">{success}</p>
         ) : null}
