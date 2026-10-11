@@ -85,8 +85,6 @@ export default function EventCalendar({ events }: EventCalendarProps) {
     <div className="space-y-6">
       {/* Başlık ve Filtreler */}
       <div className="bg-white rounded-lg border border-ink-200 p-6">
-        <h1 className="text-4xl md:text-5xl font-bold text-ink-900 mb-6 text-center">{t("calendar.title")}</h1>
-        
         {/* Filtreler */}
         <div className="flex flex-col md:flex-row gap-4">
           {/* Kategori Filtresi */}
@@ -138,7 +136,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                 ? `${t(`categories.${selectedCategory}`)} ${t("calendar.eventsOfCategory")}`
                 : t("home.upcomingEvents");
           })()}
-          <span className="ml-2 text-sm font-normal text-ink-500">
+          <span className="ml-2 whitespace-nowrap text-sm font-normal text-ink-500">
             ({upcomingEvents.length} {t("calendar.eventsCount")})
           </span>
         </h2>
@@ -211,7 +209,7 @@ export default function EventCalendar({ events }: EventCalendarProps) {
           <div className="mt-12">
             <h3 className="card-title mb-4">
               {t("home.pastEvents")}
-              <span className="ml-2 text-sm font-normal text-ink-500">
+              <span className="ml-2 whitespace-nowrap text-sm font-normal text-ink-500">
                 ({pastEvents.length} {t("calendar.eventsCount")})
               </span>
             </h3>

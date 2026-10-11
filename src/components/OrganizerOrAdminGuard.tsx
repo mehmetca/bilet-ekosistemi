@@ -28,7 +28,7 @@ export default function OrganizerOrAdminGuard({ children }: OrganizerOrAdminGuar
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+      <div className="min-h-screen bg-paper flex items-center justify-center">
         <div className="text-slate-500">Yükleniyor...</div>
       </div>
     );
@@ -40,7 +40,7 @@ export default function OrganizerOrAdminGuard({ children }: OrganizerOrAdminGuar
 
   if (!isAdmin && !isOrganizer) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-paper flex items-center justify-center p-4">
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 max-w-md text-center">
           <h1 className="text-xl font-semibold text-slate-900 mb-2">Bu sayfaya erişim yetkiniz yok</h1>
           <p className="text-slate-600 mb-6">

@@ -32,7 +32,7 @@ export default function BilgilendirmeLayout({
   const isB2BPage = pathname?.includes("/b2b");
 
   return (
-    <div className="min-h-screen bg-ink-50">
+    <div className="min-h-screen bg-paper">
       <Header />
       <div className="site-container py-6">
         <Link

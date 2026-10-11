@@ -891,7 +891,7 @@ export default function AmedSporFormClient({
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-ink-50">
+      <div className="min-h-screen bg-paper">
         <Header />
         {amedBanner}
         <div className="p-8">
@@ -939,7 +939,7 @@ export default function AmedSporFormClient({
   }
 
   return (
-    <div className="min-h-screen bg-ink-50">
+    <div className="min-h-screen bg-paper">
       <Header />
       {amedBanner}
       <div className="p-8">

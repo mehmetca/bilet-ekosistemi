@@ -249,7 +249,7 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
 
   if (!artist) {
     return (
-      <div className="min-h-screen bg-ink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-paper flex items-center justify-center">
         <div className="text-center max-w-md mx-auto px-4">
           <div className="text-6xl mb-4">🎭</div>
           <h1 className="text-2xl font-bold text-ink-900 mb-2">{t("artistNotFound")}</h1>

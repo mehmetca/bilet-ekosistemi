@@ -49,7 +49,7 @@ function DefaultErrorFallback({ error, retry }: { error?: Error; retry: () => vo
   };
 
   return (
-    <div className="min-h-screen bg-ink-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-paper flex items-center justify-center p-4">
       <div className="bg-white rounded-lg border border-ink-200 shadow-card p-8 max-w-md w-full text-center">
         <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
           <svg

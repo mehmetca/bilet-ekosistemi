@@ -40,12 +40,12 @@ export default async function TakvimPage() {
     const locale = (await getLocale()) as Locale;
 
     return (
-      <div className="min-h-screen bg-ink-50">
+      <div className="min-h-screen bg-paper">
         <Header />
         
         <main className="site-container py-8">
           <div className="mb-8 text-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-slate-900">{t("title")}</h1>
+            <h1 className="break-words hyphens-auto text-[30px] font-bold leading-tight text-slate-900 sm:text-4xl md:text-5xl">{t("title")}</h1>
             <p className="mt-4 text-lg text-slate-600">{CALENDAR_DESCRIPTIONS[locale]}</p>
           </div>
           <EventCalendar events={events} />
@@ -62,7 +62,7 @@ export default async function TakvimPage() {
   } catch (error) {
     console.error("TakvimPage error:", error);
     return (
-      <div className="min-h-screen bg-ink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-paper flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-ink-900 mb-4">Hata Oluştu</h1>
           <p className="text-ink-600">Takvim sayfası yüklenirken bir hata oluştu.</p>

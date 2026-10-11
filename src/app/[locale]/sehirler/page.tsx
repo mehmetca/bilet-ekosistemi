@@ -30,7 +30,7 @@ export default async function SehirlerPage() {
   const t = await getTranslations("cities");
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8]">
+    <div className="min-h-screen bg-paper">
       <Header />
       <div className="site-container py-12">
         <div className="mb-10 text-center">

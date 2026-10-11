@@ -31,6 +31,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: { default: SITE_OG_TITLE, template: "%s | KurdEvents" },
   description: SITE_OG_DESCRIPTION,
+  manifest: "/manifest.json",
   openGraph: {
     type: "website",
     locale: "tr_TR",

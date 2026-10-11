@@ -255,12 +255,12 @@ export default function AnaHeroSlider({
                             {showDateBox ? (
                               <div className="flex flex-col border-l-2 border-gold-500 pl-3 text-left sm:pl-4">
                                 {overlayDay ? (
-                                  <div className="font-display text-3xl font-semibold leading-none text-white drop-shadow-md sm:text-5xl md:text-6xl">
+                                  <div className="font-display text-[34px] font-semibold leading-none text-white drop-shadow-md sm:text-[52px] md:text-[64px]">
                                     {overlayDay}
                                   </div>
                                 ) : null}
                                 {overlayMonth ? (
-                                  <div className="mt-1 text-[10px] font-semibold uppercase leading-tight tracking-widest2 text-gold-300 sm:text-xs md:text-sm">
+                                  <div className="month-chip mt-1 sm:text-[13px] md:text-sm">
                                     {overlayMonth}
                                   </div>
                                 ) : null}

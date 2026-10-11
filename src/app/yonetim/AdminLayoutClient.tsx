@@ -26,7 +26,7 @@ export default function AdminLayoutClient({
 
   return (
     <AdminGuard>
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-paper">
       <AdminNavigationFixed
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}

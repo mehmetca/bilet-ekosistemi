@@ -2251,7 +2251,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8]">
+    <div className="min-h-screen bg-paper">
       <Header />
       
       <div className="border-b border-ink-200 bg-white">

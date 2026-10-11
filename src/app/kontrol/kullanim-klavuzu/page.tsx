@@ -39,7 +39,7 @@ export default function ControlGuidePage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-6 md:px-8">
+    <main className="min-h-screen bg-paper px-4 py-6 md:px-8">
       <div className="mx-auto max-w-5xl">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-2xl font-bold text-slate-900">Bilet Kontrol Kullanım Kılavuzu</h1>

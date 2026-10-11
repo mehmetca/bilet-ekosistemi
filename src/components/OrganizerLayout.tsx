@@ -99,7 +99,7 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
   });
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-paper">
       {/* Sol Menü - mobilde overlay */}
       <div
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-white border-r border-slate-200 transform transition-transform duration-200 ease-out md:relative md:translate-x-0 flex flex-col ${

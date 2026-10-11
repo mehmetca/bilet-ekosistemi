@@ -496,7 +496,7 @@ export default function ClientHomePage({
       <section id="events" className="site-container py-10 sm:py-12">
         <SectionTitle title={t("upcomingEvents")} />
         <div className="mb-6 rounded-lg border border-ink-200 bg-white p-3 shadow-card">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 lg:grid-cols-6 [&>*]:min-w-0">
             <div className="relative">
               <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400" />
               <input
@@ -655,12 +655,12 @@ export default function ClientHomePage({
                         </span>
                       )}
 
-                      {/* Afiş tarih damgası: serif gün + altın ay */}
+                      {/* Afiş tarih damgası: serif gün + beyaz çip üstünde tam kırmızı ay */}
                       <span className="absolute bottom-3 left-3 flex flex-col" aria-hidden>
-                        <span className="font-display text-2xl leading-none text-white">
+                        <span className="font-display text-[28px] leading-none text-white on-photo-shadow">
                           {when.dayNum}
                         </span>
-                        <span className="mt-1 text-[10px] uppercase tracking-widest2 text-gold-300">
+                        <span className="month-chip mt-1">
                           {when.monthShort}
                         </span>
                       </span>

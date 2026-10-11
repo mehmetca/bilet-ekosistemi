@@ -358,7 +358,7 @@ export default function KontrolPage() {
 
   if (!codeParam && authLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center text-slate-600">
+      <div className="min-h-screen bg-paper flex items-center justify-center text-slate-600">
         Yükleniyor...
       </div>
     );
@@ -366,7 +366,7 @@ export default function KontrolPage() {
 
   if (canShowDashboard) {
     return (
-      <div className="min-h-screen bg-slate-50 p-3 sm:p-4 md:p-6">
+      <div className="min-h-screen bg-paper p-3 sm:p-4 md:p-6">
         <div className="mx-auto max-w-6xl grid gap-4 md:gap-6 md:grid-cols-[240px_1fr]">
           <aside className="rounded-2xl border border-slate-200 bg-white p-2 sm:p-4 md:h-max">
             <h2 className="mb-2 hidden px-2 text-sm font-semibold text-slate-500 md:block">
@@ -561,7 +561,7 @@ export default function KontrolPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8 px-4">
+    <div className="min-h-screen bg-paper py-8 px-4">
       <div className="max-w-lg mx-auto">
         <div className="text-center mb-6">
           <Link

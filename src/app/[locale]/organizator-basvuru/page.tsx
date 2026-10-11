@@ -102,7 +102,7 @@ export default function OrganizerApplicationPage() {
   }
 
   return (
-    <div className="min-h-screen bg-ink-50">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="site-container py-8">
         <div className="mx-auto max-w-2xl">

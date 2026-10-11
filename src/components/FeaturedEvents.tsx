@@ -90,12 +90,12 @@ export default function FeaturedEvents({ events, locale, title = "Events" }: Fea
                         .join(" / ")}
                     </p>
                   </div>
-                  {/* Tarih: afiş damgası — altın çizgi, serif gün, altın ay */}
+                  {/* Tarih: afiş damgası — kırmızı çizgi, serif gün, beyaz çipte tam kırmızı ay */}
                   <div className="order-1 flex flex-shrink-0 flex-col border-l-2 border-gold-500 pl-3 text-left sm:order-2 sm:self-auto">
-                    <span className="font-display text-3xl font-semibold leading-none text-white drop-shadow-md md:text-4xl">
+                    <span className="font-display text-[34px] font-semibold leading-none text-white drop-shadow-md md:text-[40px]">
                       {dateParts.day}
                     </span>
-                    <span className="mt-1 text-[10px] font-semibold uppercase leading-tight tracking-widest2 text-gold-300 md:text-xs">
+                    <span className="month-chip mt-1 md:text-[13px]">
                       {dateParts.month}
                     </span>
                     <span className="text-xs font-medium leading-tight text-white/70">

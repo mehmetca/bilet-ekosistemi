@@ -130,9 +130,9 @@ export default function HeroBackgroundSlider({
         );
       })}
       
-      {/* Afiş okunurluğu: mürekkep degrade + genel ince mürekkep katmanı */}
-      <div className="poster-scrim absolute inset-0" aria-hidden />
-      <div className="absolute inset-0 bg-ink-950/70" aria-hidden />
+      {/* Afiş okunurluğu: açık mürekkep degrade + mürekkep katmanı */}
+      <div className="hero-scrim absolute inset-0" aria-hidden />
+      <div className="absolute inset-0 bg-ink-950/40" aria-hidden />
     </div>
   );
 }

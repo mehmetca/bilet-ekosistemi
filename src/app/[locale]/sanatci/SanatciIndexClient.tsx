@@ -120,7 +120,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
   }
 
   return (
-    <div className="min-h-screen bg-ink-50">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="site-container py-6 sm:py-10">
         <div className="mb-4 sm:mb-6 text-center">
@@ -281,7 +281,7 @@ function SanatciIndexContent({ initialArtists }: { initialArtists: Artist[] }) {
 function ArtistsLoadingFallback() {
   const t = useTranslations("artists");
   return (
-    <div className="min-h-screen bg-ink-50">
+    <div className="min-h-screen bg-paper">
       <Header />
       <main className="site-container py-10">
         <div className="rounded-lg border border-ink-200 bg-white p-10 text-center text-ink-500">

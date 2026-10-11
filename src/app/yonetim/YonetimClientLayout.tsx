@@ -147,7 +147,7 @@ export default function YonetimClientLayout({
   return (
     <AdminGuard>
       {!loading && isAdmin ? (
-        <div className="flex min-h-screen bg-slate-50">
+        <div className="flex min-h-screen bg-paper">
           <AdminNavigationFixed isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <div className="flex-1 flex flex-col overflow-hidden min-w-0">
             <AdminPolicyHeader onMenuClick={() => setSidebarOpen(true)} />
@@ -166,7 +166,7 @@ export default function YonetimClientLayout({
           </Suspense>
         </OrganizerLayout>
       ) : !loading && isController ? (
-        <div className="flex min-h-screen bg-slate-50">
+        <div className="flex min-h-screen bg-paper">
           <aside className="relative z-10 hidden w-56 shrink-0 border-r border-slate-200 bg-white md:flex md:flex-col">
             <ControllerSidebar />
           </aside>
@@ -217,7 +217,7 @@ export default function YonetimClientLayout({
           </div>
         </div>
       ) : (
-        <div className="flex min-h-screen bg-slate-50">
+        <div className="flex min-h-screen bg-paper">
           <AdminNavigationFixed isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
           <div className="flex-1 flex flex-col overflow-hidden min-w-0">
             <AdminPolicyHeader onMenuClick={() => setSidebarOpen(true)} />

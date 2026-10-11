@@ -131,7 +131,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
   const isAmedSpor = firstEvent?.show_slug ? isAmedSporEvent(firstEvent.show_slug) : false;
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8]">
+    <div className="min-h-screen bg-paper">
       <Header />
 
       {/* Hero – etkinlik özeti */}
@@ -329,7 +329,7 @@ function CityEventsSection({
               <div className="flex min-w-0 flex-1 gap-4 sm:gap-6">
                 <div className="flex shrink-0 flex-row items-center gap-3 sm:flex-col sm:justify-center sm:gap-1 sm:border-r sm:border-ink-100 sm:pr-6">
                   <div className="min-w-[4.25rem] text-center sm:min-w-[3.5rem]">
-                    <p className="text-[11px] font-semibold uppercase tracking-widest2 text-gold-600">{dateParts.monthShort}</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-widest2 text-gold-500">{dateParts.monthShort}</p>
                     <p className="font-display text-[2.1rem] font-semibold leading-none text-ink-900 sm:text-[2.5rem]">
                       {dateParts.dayNum}
                     </p>

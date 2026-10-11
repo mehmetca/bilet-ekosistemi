@@ -108,7 +108,7 @@ export default function MekanDetailClient({
 
   if (!venueRaw || !localized) {
     return (
-      <div className="min-h-screen bg-[#f5f6f8]">
+      <div className="min-h-screen bg-paper">
         <Header />
         <div className="site-container py-16 text-center text-slate-600">{t("notFound")}</div>
       </div>
@@ -129,7 +129,7 @@ export default function MekanDetailClient({
   const venueName = localized.name || (venueRaw.name as string | null) || venueIdResolved;
 
   return (
-    <div className="min-h-screen bg-[#f5f6f8]">
+    <div className="min-h-screen bg-paper">
       <Header />
 
       {isGalleryModalOpen && gallery[galleryModalIndex] && (

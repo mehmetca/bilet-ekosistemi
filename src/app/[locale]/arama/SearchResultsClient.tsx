@@ -155,7 +155,7 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
   };
 
   return (
-    <div className="min-h-screen bg-ink-50">
+    <div className="min-h-screen bg-paper">
       <main className="site-container py-8">
         <div className="rounded-lg border border-ink-200 bg-white p-4 sm:p-6">
           <h1 className="mb-4 text-2xl font-bold text-ink-900">{pageTitle}</h1>

@@ -20,7 +20,7 @@ export default async function HomePageHero({ locale, shell }: HomePageHeroProps)
 
   return (
     <>
-      <section className="hero-lcp-fold relative flex min-h-[min(100dvh,820px)] flex-col justify-center bg-ink-950 py-24 text-white md:min-h-screen md:py-28">
+      <section className="hero-lcp-fold relative flex min-h-[min(68dvh,820px)] flex-col justify-center bg-ink-950 py-16 text-white md:min-h-screen md:py-28">
         <HomeHeroLcp imageUrl={first?.image_url} alt={lcpAlt} />
         <HeroBackgroundSlider
           initialBackgrounds={shell.heroBackgrounds}
@@ -28,17 +28,17 @@ export default async function HomePageHero({ locale, shell }: HomePageHeroProps)
         />
         <div className="relative z-10 site-container">
           <div className="mx-auto max-w-2xl text-center md:mx-0 md:max-w-3xl md:text-left">
-            <span className="eyebrow-light mb-5 block">{tFooter("siteName")}</span>
+            <span className="eyebrow-on-photo on-photo-shadow mb-5 block">{tFooter("siteName")}</span>
             <h1 className="break-words hyphens-auto">
-              <span className="block font-display text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
+              <span className="on-photo-shadow block font-display text-4xl font-semibold leading-[1.05] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-7xl">
                 {t("heroTitle")}
               </span>
               <span className="rule-gold mx-auto my-6 md:mx-0 md:my-7 md:w-20" aria-hidden />
-              <span className="block font-sans text-base font-medium leading-relaxed text-gold-300 sm:text-lg md:text-xl">
+              <span className="on-photo-shadow block font-sans text-base font-medium leading-relaxed text-white sm:text-lg md:text-xl">
                 {t("seoH1")}
               </span>
             </h1>
-            <p className="mx-auto mt-6 max-w-xl whitespace-pre-line font-sans text-base leading-relaxed text-white/75 md:mx-0 md:mt-8 md:text-lg">
+            <p className="on-photo-shadow mx-auto mt-6 max-w-xl whitespace-pre-line font-sans text-base leading-relaxed text-white/85 md:mx-0 md:mt-8 md:text-lg">
               {t("heroSubtitle")}
             </p>
             <HomeHeroControls />

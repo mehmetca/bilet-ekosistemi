@@ -238,7 +238,7 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
 
   if (!inYonetim && (authLoading || (!user && loading))) {
     return (
-      <div className="min-h-screen bg-ink-50 flex items-center justify-center">
+      <div className="min-h-screen bg-paper flex items-center justify-center">
         <div className="text-ink-500">{t("loading")}</div>
       </div>
     );

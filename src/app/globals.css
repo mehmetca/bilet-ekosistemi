@@ -41,9 +41,24 @@
     @apply block h-px w-12 bg-gold-500;
   }
 
-  /** Koyu zeminde altın üst-etiket. */
+  /** Koyu zeminde tam kirmizi ust-etiket. */
   .eyebrow-light {
-    @apply text-[11px] font-semibold uppercase tracking-widest2 text-gold-400;
+    @apply text-[11px] font-semibold uppercase tracking-widest2 text-gold-500;
+  }
+
+  /** Fotoğraf üstünde okunurluk için beyaz üst-etiket. */
+  .eyebrow-on-photo {
+    @apply text-[13px] font-semibold uppercase tracking-widest2 text-white;
+  }
+
+  /** Fotoğraf üstündeki metne mürekkep gölgesi — parlak sahne ışığında kaybolmasın. */
+  .on-photo-shadow {
+    text-shadow: 0 1px 2px rgba(14, 14, 13, 0.7), 0 2px 14px rgba(14, 14, 13, 0.55);
+  }
+
+  /** Afiş üstü ay etiketi — kırmızı çerçeveli, beyaz yazı. */
+  .month-chip {
+    @apply inline-block w-fit rounded border border-gold-500 bg-ink-950/45 px-2 py-[4px] text-[12px] font-semibold uppercase leading-none tracking-widest2 text-white;
   }
 
   /** Bölüm ayıracı — ince mürekkep çizgi. */
@@ -58,6 +73,17 @@
       rgba(14, 14, 13, 0.92) 0%,
       rgba(14, 14, 13, 0.62) 34%,
       rgba(14, 14, 13, 0.18) 70%,
+      rgba(14, 14, 13, 0) 100%
+    );
+  }
+
+  /** Hero degrade — afişin okunur kalması ama fotoğrafın kararmaması için daha açık. */
+  .hero-scrim {
+    background-image: linear-gradient(
+      to top,
+      rgba(14, 14, 13, 0.72) 0%,
+      rgba(14, 14, 13, 0.38) 34%,
+      rgba(14, 14, 13, 0.06) 70%,
       rgba(14, 14, 13, 0) 100%
     );
   }
