@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Link } from "@/i18n/navigation";
 import Header from "@/components/Header";
 import { useTranslations, useLocale } from "next-intl";
-import { getLocalizedVenue, type Locale } from "@/lib/i18n-content";
+import { getLocalizedVenue } from "@/lib/i18n-content";
 import { ChevronDown, MapPin, Search as SearchIcon, Users } from "lucide-react";
 import CoverImage from "@/components/CoverImage";
 
@@ -54,25 +54,7 @@ interface Venue {
   rules_en?: string | null;
 }
 
-const ALL = "__all__";
-const OTHER = "__other__";
-
-const CARD_FRAME =
-  "group overflow-hidden rounded-tl-xl rounded-br-xl rounded-tr-none rounded-bl-none border-[2px] border-ink-300 bg-white shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-ink-400 hover:shadow-lift";
-
-function localized(venue: Venue, locale: Locale) {
-  return getLocalizedVenue(venue as unknown as Record<string, unknown>, locale);
-}
-
-function cityOf(venue: Venue, locale: Locale): string {
-  return localized(venue, locale).city || venue.city || OTHER;
-}
-
-function nameOf(venue: Venue, locale: Locale): string {
-  return localized(venue, locale).name || venue.name || "";
-}
-
-function venuePhoto(venue: Venue): string | null {
+function venueImage(venue: Venue): string | null {
   return (
     venue.image_url_1 ||
     venue.image_url_2 ||
@@ -83,116 +65,75 @@ function venuePhoto(venue: Venue): string | null {
   );
 }
 
-function detailOf(venue: Venue, locale: Locale): string {
-  const loc = localized(venue, locale);
-  return [loc.city || venue.city, loc.address || venue.address].filter(Boolean).join(" • ");
-}
-
-type CardProps = {
-  venue: Venue;
-  locale: Locale;
-  index: number;
-  capacityLabel: string;
-  personsLabel: string;
-};
-
-function VenueTile({ venue, locale, index, capacityLabel, personsLabel }: CardProps) {
-  return (
-    <Link href={`/mekanlar/${venue.id}`} className={CARD_FRAME}>
-      <div className="relative aspect-[4/3] overflow-hidden bg-ink-100">
-        <CoverImage
-          src={venuePhoto(venue)}
-          alt={nameOf(venue, locale)}
-          sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw"
-          priority={index < 4}
-          zoomOnHover
-          fallback={
-            <div className="absolute inset-0 flex items-center justify-center">
-              <MapPin className="h-8 w-8 text-ink-400" />
-            </div>
-          }
-        />
-      </div>
-      <div className="px-3 pb-3 pt-3 text-center">
-        <h3 className="card-title line-clamp-1 text-sm group-hover:text-gold-700 md:text-base">
-          {nameOf(venue, locale)}
-        </h3>
-        {detailOf(venue, locale) && (
-          <p className="mt-1 line-clamp-1 text-xs text-ink-600 md:text-sm">{detailOf(venue, locale)}</p>
-        )}
-        {venue.capacity != null && (
-          <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-ink-500 md:text-sm">
-            <Users className="h-4 w-4 shrink-0" aria-hidden />
-            {capacityLabel}: {venue.capacity} {personsLabel}
-          </p>
-        )}
-      </div>
-    </Link>
-  );
-}
-
 export default function MekanlarClient({ initialVenues }: { initialVenues: Venue[] }) {
   const t = useTranslations("venues");
-  const locale = useLocale() as Locale;
-  const [venues] = useState<Venue[]>(initialVenues);
+  const locale = useLocale() as "tr" | "de" | "en";
   const [search, setSearch] = useState("");
-  const [selectedCity, setSelectedCity] = useState<string>(ALL);
+  const [selectedCity, setSelectedCity] = useState("__all__");
 
-  const searched = useMemo(() => {
-    const q = search.trim().toLocaleLowerCase("tr");
-    if (!q) return venues;
-    return venues.filter((venue) =>
-      [nameOf(venue, locale), localized(venue, locale).address || venue.address, cityOf(venue, locale)]
-        .filter(Boolean)
-        .join(" ")
-        .toLocaleLowerCase("tr")
-        .includes(q),
-    );
-  }, [search, venues, locale]);
+  const localized = useMemo(
+    () =>
+      initialVenues.map((venue) => {
+        const l = getLocalizedVenue(venue as unknown as Record<string, unknown>, locale);
+        return {
+          venue,
+          name: l.name || venue.name,
+          address: l.address || venue.address,
+          city: l.city || venue.city || "__other__",
+        };
+      }),
+    [initialVenues, locale]
+  );
 
-  const cityCounts = useMemo(() => {
+  const citiesWithCount = useMemo(() => {
     const counts = new Map<string, number>();
-    for (const venue of searched) {
-      const city = cityOf(venue, locale);
-      counts.set(city, (counts.get(city) || 0) + 1);
-    }
-    return [...counts.entries()].sort((a, b) => {
-      if (a[0] === b[0]) return 0;
-      if (a[0] === OTHER) return 1;
-      if (b[0] === OTHER) return -1;
-      return a[0].localeCompare(b[0], locale);
-    });
-  }, [searched, locale]);
+    for (const item of localized) counts.set(item.city, (counts.get(item.city) ?? 0) + 1);
+    const named = Array.from(counts.keys())
+      .filter((city) => city !== "__other__")
+      .sort((a, b) => a.localeCompare(b, locale));
+    return counts.has("__other__") ? [...named, "__other__"] : named;
+  }, [localized, locale]);
 
-  const groups = useMemo(() => {
-    const visible =
-      selectedCity === ALL ? searched : searched.filter((venue) => cityOf(venue, locale) === selectedCity);
-    let order = 0;
-    return cityCounts
-      .map(([city]) => ({
+  const grouped = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const matched = localized.filter((item) => {
+      if (selectedCity !== "__all__" && item.city !== selectedCity) return false;
+      if (!term) return true;
+      return [item.name, item.address, item.city].filter(Boolean).join(" ").toLowerCase().includes(term);
+    });
+
+    const order = selectedCity === "__all__" ? citiesWithCount : [selectedCity];
+    const buckets = new Map<string, typeof matched>();
+    for (const city of order) buckets.set(city, []);
+    for (const item of matched) {
+      if (!buckets.has(item.city)) buckets.set(item.city, []);
+      buckets.get(item.city)!.push(item);
+    }
+    return Array.from(buckets.entries())
+      .filter(([, list]) => list.length > 0)
+      .map(([city, list]) => ({
         city,
-        venues: visible
-          .filter((venue) => cityOf(venue, locale) === city)
-          .sort((a, b) => nameOf(a, locale).localeCompare(nameOf(b, locale), locale))
-          .map((venue) => ({ venue, index: order++ })),
-      }))
-      .filter((group) => group.venues.length > 0);
-  }, [cityCounts, searched, selectedCity, locale]);
+        label: city === "__other__" ? t("other") : city,
+        venues: list.sort((a, b) => a.name.localeCompare(b.name, locale)),
+      }));
+  }, [localized, search, selectedCity, citiesWithCount, locale, t]);
+
+  const totalShown = grouped.reduce((sum, section) => sum + section.venues.length, 0);
 
   return (
     <div className="min-h-screen bg-paper">
       <Header />
 
       <main className="site-container py-6 sm:py-10">
-        <div className="mb-4 text-center sm:mb-6">
+        <div className="mb-4 sm:mb-6 text-center">
           <h1 className="page-title text-3xl sm:text-4xl md:text-5xl">{t("title")}</h1>
-          <p className="body-muted mt-2 text-base sm:mt-3 sm:text-lg">{t("subtitle")}</p>
+          <p className="body-muted mt-2 sm:mt-3 text-base sm:text-lg">{t("subtitle")}</p>
         </div>
 
         <div className="mb-6 rounded-lg border border-ink-200 bg-white p-3 sm:p-4">
           <div className="flex flex-col gap-2.5 sm:flex-row">
             <div className="relative w-full sm:flex-1">
-              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-400 sm:left-4 sm:h-5 sm:w-5" />
+              <SearchIcon className="pointer-events-none absolute left-3 sm:left-4 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-ink-400" />
               <label className="sr-only" htmlFor="venue-search">
                 {t("searchPlaceholder")}
               </label>
@@ -216,10 +157,10 @@ export default function MekanlarClient({ initialVenues }: { initialVenues: Venue
                 onChange={(e) => setSelectedCity(e.target.value)}
                 className="w-full min-h-[44px] appearance-none rounded-lg border border-transparent bg-ink-100 py-3 pl-4 pr-10 text-sm font-semibold text-ink-900 shadow-card focus:border-transparent focus:bg-white focus:outline-none focus:ring-0 sm:text-base"
               >
-                <option value={ALL}>{t("allCities")}</option>
-                {cityCounts.map(([city]) => (
+                <option value="__all__">{t("allCities")}</option>
+                {citiesWithCount.map((city) => (
                   <option key={city} value={city}>
-                    {city === OTHER ? t("other") : city}
+                    {city === "__other__" ? t("other") : city}
                   </option>
                 ))}
               </select>
@@ -228,37 +169,63 @@ export default function MekanlarClient({ initialVenues }: { initialVenues: Venue
           </div>
         </div>
 
-        {venues.length === 0 ? (
-          <div className="rounded-lg border border-ink-200 bg-white p-10 text-center text-ink-500">
-            <MapPin className="mx-auto h-12 w-12 text-ink-300" />
-            <p className="mt-3 text-base font-medium">{t("noVenues")}</p>
+        {initialVenues.length === 0 ? (
+          <div className="rounded-lg border border-ink-200 bg-white p-12 text-center text-ink-500">
+            <MapPin className="mx-auto h-16 w-16 text-ink-300" />
+            <p className="mt-4 text-lg font-medium">{t("noVenues")}</p>
           </div>
-        ) : groups.length === 0 ? (
-          <div className="rounded-lg border border-ink-200 bg-white p-10 text-center text-ink-500">
-            <SearchIcon className="mx-auto h-12 w-12 text-ink-300" />
-            <p className="mt-3 text-base font-medium">{t("noMatchingVenues")}</p>
+        ) : totalShown === 0 ? (
+          <div className="rounded-lg border border-ink-200 bg-white p-12 text-center text-ink-500">
+            <SearchIcon className="mx-auto h-16 w-16 text-ink-300" />
+            <p className="mt-4 text-lg font-medium">{t("noMatchingVenues")}</p>
           </div>
         ) : (
           <div className="space-y-8">
-            {groups.map((group) => (
-              <section key={group.city}>
+            {grouped.map((section) => (
+              <section key={section.city}>
                 <div className="mb-3 flex items-baseline gap-2 border-b border-ink-200 pb-2">
-                  <h2 className="section-title text-xl sm:text-2xl">
-                    {group.city === OTHER ? t("other") : group.city}
-                  </h2>
-                  <span className="text-xs text-ink-400 sm:text-sm">{group.venues.length}</span>
+                  <h2 className="section-title text-xl sm:text-2xl">{section.label}</h2>
+                  <span className="text-xs text-ink-400 sm:text-sm">{section.venues.length}</span>
                 </div>
+
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {group.venues.map(({ venue, index }) => (
-                    <VenueTile
-                      key={venue.id}
-                      venue={venue}
-                      locale={locale}
-                      index={index}
-                      capacityLabel={t("capacity")}
-                      personsLabel={t("persons")}
-                    />
-                  ))}
+                  {section.venues.map((item, index) => {
+                    const { venue } = item;
+                    return (
+                      <Link
+                        key={venue.id}
+                        href={`/mekanlar/${venue.id}`}
+                        className="group block overflow-hidden rounded-tl-xl rounded-br-xl border-[2px] border-ink-300 bg-white shadow-card transition-all duration-300 hover:-translate-y-1 hover:border-ink-400 hover:shadow-lift"
+                      >
+                        <div className="relative aspect-[4/3] overflow-hidden bg-ink-100">
+                          <CoverImage
+                            src={venueImage(venue)}
+                            alt={item.name}
+                            sizes="(max-width: 639px) 100vw, (max-width: 1023px) 50vw, (max-width: 1279px) 33vw, 25vw"
+                            priority={index < 2}
+                            zoomOnHover
+                            fallback={
+                              <div className="absolute inset-0 flex items-center justify-center text-ink-400">
+                                <MapPin className="h-8 w-8" />
+                              </div>
+                            }
+                          />
+                        </div>
+                        <div className="px-3 pb-3 pt-3 text-center sm:px-4 sm:pb-4 sm:pt-4">
+                          <h3 className="card-title text-sm line-clamp-1 group-hover:text-gold-700 md:text-base">{item.name}</h3>
+                          {item.address && (
+                            <p className="mt-1.5 line-clamp-1 text-xs text-ink-500 sm:text-[13px]">{item.address}</p>
+                          )}
+                          {venue.capacity != null && (
+                            <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-ink-600 sm:text-sm">
+                              <Users className="h-4 w-4 flex-shrink-0" />
+                              {venue.capacity} {t("persons")}
+                            </p>
+                          )}
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
               </section>
             ))}
