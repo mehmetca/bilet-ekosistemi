@@ -25,7 +25,7 @@ const SLOTS: { key: SlotKey; title: string; hint: string; dark: boolean }[] = [
   {
     key: "favicon",
     title: "Favicon (sekme simgesi)",
-    hint: "Kare PNG (64x64 veya 192x192). Tarayıcı sekmesinde site adının yanında görünür.",
+    hint: "Kare ICO veya PNG (64x64 veya 192x192). Tarayıcı sekmesinde site adının yanında görünür.",
     dark: false,
   },
 ];
@@ -158,7 +158,7 @@ export default function BrandingLogosPage() {
                   fileInputs.current[slot.key] = el;
                 }}
                 type="file"
-                accept="image/*"
+                accept="image/png,image/jpeg,image/webp,image/x-icon,.ico,.png,.jpg,.jpeg,.webp"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];

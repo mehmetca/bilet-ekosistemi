@@ -9,9 +9,9 @@ export const IMAGE_STANDARDS = {
   /** Yedek limit - API'de 5MB kabul edilebilir */
   MAX_FILE_SIZE_FALLBACK: 5 * 1024 * 1024,
   /** İzin verilen MIME tipleri */
-  ALLOWED_TYPES: ["image/jpeg", "image/jpg", "image/png", "image/webp"] as const,
+  ALLOWED_TYPES: ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/x-icon", "image/vnd.microsoft.icon"] as const,
   /** İzin verilen uzantılar */
-  ALLOWED_EXTENSIONS: [".jpg", ".jpeg", ".png", ".webp"],
+  ALLOWED_EXTENSIONS: [".jpg", ".jpeg", ".png", ".webp", ".ico"],
   /** Önerilen boyutlar (genişlik x yükseklik) */
   RECOMMENDED: {
     /** Etkinlik kartı / liste (afiş 3:4) */
@@ -34,6 +34,7 @@ const MAGIC_BYTES = {
   jpeg: [[0xFF, 0xD8, 0xFF]],
   png: [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
   webp: [[0x52, 0x49, 0x46, 0x46]],
+  ico: [[0x00, 0x00, 0x01, 0x00]],
 } as const;
 
 function checkMagicBytes(buffer: ArrayBuffer, format: keyof typeof MAGIC_BYTES): boolean {
@@ -63,6 +64,10 @@ async function validateMagicBytes(file: File): Promise<string | null> {
     if (!checkMagicBytes(buffer, "webp")) {
       return "Dosya geçerli bir WebP değil (magic bytes uyuşmuyor)";
     }
+  } else if (file.type === "image/x-icon" || file.type === "image/vnd.microsoft.icon") {
+    if (!checkMagicBytes(buffer, "ico")) {
+      return "Dosya geçerli bir ICO değil (magic bytes uyuşmuyor)";
+    }
   }
 
   return null;
@@ -76,7 +81,7 @@ export async function validateImageFile(file: File, strict = false): Promise<str
       : `Dosya boyutu ${Math.round(maxSize / 1024 / 1024)}MB'dan küçük olmalı`;
   }
   if (!IMAGE_STANDARDS.ALLOWED_TYPES.includes(file.type as (typeof IMAGE_STANDARDS.ALLOWED_TYPES)[number])) {
-    return "Sadece JPG, PNG veya WebP formatında resim yüklenebilir";
+    return "Sadece JPG, PNG, WebP veya ICO formatında resim yüklenebilir";
   }
 
   // Magic bytes kontrolü

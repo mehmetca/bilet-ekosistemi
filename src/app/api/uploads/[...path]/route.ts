@@ -6,6 +6,7 @@ const UPLOAD_ROOT = path.resolve(process.env.LOCAL_UPLOAD_DIR?.trim() || "/data/
 const CONTENT_TYPES: Record<string, string> = {
   ".avif": "image/avif",
   ".gif": "image/gif",
+  ".ico": "image/x-icon",
   ".jpeg": "image/jpeg",
   ".jpg": "image/jpeg",
   ".png": "image/png",
