@@ -5,6 +5,7 @@ import Providers from "@/components/Providers";
 import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import { SimpleAuthProvider } from "@/contexts/SimpleAuthContext";
 import { getSiteUrl } from "@/lib/site-url";
+import { getBranding } from "@/lib/branding";
 import { buildOgImageUrl } from "@/lib/seo/locale-path-metadata";
 import { validateEnv } from "@/lib/env-validation";
 
@@ -27,35 +28,39 @@ const SITE_OG_DESCRIPTION =
   "KurdEvents ile tiyatro, konser ve etkinlik biletlerini güvenle satın. Çoklu dil desteği ve kolay ödeme.";
 const SITE_OG_IMAGE = buildOgImageUrl({ title: SITE_OG_TITLE, locale: "tr" });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(getSiteUrl()),
-  title: { default: SITE_OG_TITLE, template: "%s | KurdEvents" },
-  description: SITE_OG_DESCRIPTION,
-  manifest: "/manifest.json",
-  openGraph: {
-    type: "website",
-    locale: "tr_TR",
-    url: getSiteUrl(),
-    siteName: "KurdEvents",
-    title: SITE_OG_TITLE,
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getBranding();
+  return {
+    metadataBase: new URL(getSiteUrl()),
+    title: { default: SITE_OG_TITLE, template: "%s | KurdEvents" },
     description: SITE_OG_DESCRIPTION,
-    images: [{ url: SITE_OG_IMAGE, width: 600, height: 600, alt: SITE_OG_TITLE }],
-  },
-  twitter: {
-    card: "summary",
-    title: SITE_OG_TITLE,
-    description: SITE_OG_DESCRIPTION,
-    images: [SITE_OG_IMAGE],
-  },
-  robots: {
-    index: true,
-    follow: true,
-    googleBot: {
+    manifest: "/manifest.json",
+    icons: { icon: branding.favicon, apple: branding.favicon },
+    openGraph: {
+      type: "website",
+      locale: "tr_TR",
+      url: getSiteUrl(),
+      siteName: "KurdEvents",
+      title: SITE_OG_TITLE,
+      description: SITE_OG_DESCRIPTION,
+      images: [{ url: SITE_OG_IMAGE, width: 600, height: 600, alt: SITE_OG_TITLE }],
+    },
+    twitter: {
+      card: "summary",
+      title: SITE_OG_TITLE,
+      description: SITE_OG_DESCRIPTION,
+      images: [SITE_OG_IMAGE],
+    },
+    robots: {
       index: true,
-      follow: true
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true
+      }
     }
-  }
-};
+  };
+}
 
 // Environment validation at app startup
 if (typeof window === 'undefined') {
