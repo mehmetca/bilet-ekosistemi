@@ -12,6 +12,7 @@ import { stripLocalePrefixes } from "@/lib/i18n-pathname";
 import { buttonClass } from "@/components/ui/Button";
 import { badgeClass } from "@/components/ui/Badge";
 import { cn } from "@/components/ui/cn";
+import { useBranding } from "@/hooks/useBranding";
 
 const navLinks = [
   { href: "/", labelKey: "nav.events" },
@@ -73,6 +74,7 @@ export default function Header() {
       : "";
   const hasManagementRole = isAdmin || isController || isOrganizer;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const branding = useBranding();
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
   const langDropdownDesktopRef = useRef<HTMLDivElement>(null);
   const langDropdownMobileRef = useRef<HTMLDivElement>(null);
@@ -111,7 +113,7 @@ export default function Header() {
   className="flex h-11 shrink-0 items-center gap-2 sm:h-[52px] w-[160px] sm:w-[180px] md:w-[168px]"
 >
   <img
-    src="/images/kurdevent-logo.png"
+    src={branding.logoHeader}
     alt="Kurdevent Logo"
     width={160}
     height={50}

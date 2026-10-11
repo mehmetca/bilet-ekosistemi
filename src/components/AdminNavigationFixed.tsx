@@ -22,6 +22,7 @@ import {
   LayoutGrid,
   PieChart,
   Image as ImageIcon,
+  Palette,
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
@@ -51,6 +52,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       { href: "/yonetim/sehirler", label: t("nav.cities"), icon: MapPin, description: t("nav.citiesDesc") },
       { href: "/yonetim/slider-yonetimi", label: t("nav.slider"), icon: Megaphone, description: t("nav.sliderDesc") },
       { href: "/yonetim/hero-backgrounds", label: "Ana Slider Fotoğrafları", icon: ImageIcon, description: "Hero görseli ekle, sil, görünür/gizli yap" },
+      { href: "/yonetim/logolar", label: "Logo ve Simgeler", icon: Palette, description: "Üst/alt logo ve favicon yükle" },
       { href: "/yonetim/sanatcilar", label: t("nav.artists"), icon: User, description: t("nav.artistsDesc") },
       { href: "/yonetim/bilet-turleri", label: t("nav.ticketTypes"), icon: Ticket, description: t("nav.ticketTypesDesc") },
       { href: "/yonetim/bilet-listesi", label: t("nav.orders"), icon: CreditCard, description: t("nav.ordersDesc") },

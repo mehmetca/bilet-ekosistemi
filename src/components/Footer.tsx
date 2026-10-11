@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import NextLink from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
+import { useBranding } from "@/hooks/useBranding";
 import {
   Instagram,
   Facebook,
@@ -111,6 +112,7 @@ export default function Footer() {
   const t = useTranslations();
   const locale = useLocale();
   const [mounted, setMounted] = useState(false);
+  const branding = useBranding();
   const [socialLinks, setSocialLinks] = useState<SocialItem[]>([
     { platform: "instagram", url: "https://instagram.com/kurdeventofficial" },
     { platform: "facebook", url: "https://www.facebook.com/KurdEventOfficial" },
@@ -142,7 +144,7 @@ export default function Footer() {
               className="mb-4 inline-flex"
             >
               <Image
-                src="/images/kurdevent-logo-light.png"
+                src={branding.logoFooter}
                 alt="Kurdevent Logo"
                 width={300}
                 height={90}
