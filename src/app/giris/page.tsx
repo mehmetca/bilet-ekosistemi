@@ -21,7 +21,6 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-const PASSWORD_EXISTS_PATTERN = /already registered|already exists/i;
 const PASSWORD_VALIDATION_PATTERN = /password|weak|at least \d+ characters/i;
 
 
@@ -58,13 +57,6 @@ export default function LoginPage() {
   const [regCity, setRegCity] = useState("");
   const [regPhone, setRegPhone] = useState("");
   const [regAnrede, setRegAnrede] = useState("");
-  const [ctrlFullName, setCtrlFullName] = useState("");
-  const [ctrlPhone, setCtrlPhone] = useState("");
-  const [ctrlEmail, setCtrlEmail] = useState("");
-  const [ctrlPassword, setCtrlPassword] = useState("");
-  const [ctrlLoading, setCtrlLoading] = useState(false);
-  const [ctrlError, setCtrlError] = useState("");
-  const [ctrlSuccess, setCtrlSuccess] = useState("");
 
   useEffect(() => {
     return () => {
@@ -340,76 +332,6 @@ export default function LoginPage() {
         setLoading(false);
         activeLoginAttemptRef.current = 0;
       }
-    }
-  }
-
-  async function handleControllerApply(e: React.FormEvent) {
-    e.preventDefault();
-    if (ctrlLoading) return;
-    setCtrlError("");
-    setCtrlSuccess("");
-    if (!ctrlFullName.trim() || !ctrlPhone.trim()) {
-      setCtrlError("Ad Soyad ve telefon zorunludur.");
-      return;
-    }
-    if (!ctrlEmail.trim() || !ctrlPassword.trim()) {
-      setCtrlError("E-posta ve şifre zorunludur.");
-      return;
-    }
-
-    setCtrlLoading(true);
-    try {
-      const sb = createSupabaseBrowserClient();
-      const { data: signUpData, error: signUpError } = await sb.auth.signUp({
-        email: ctrlEmail.trim(),
-        password: ctrlPassword,
-        options: { emailRedirectTo: undefined },
-      });
-      if (signUpError) {
-        if (PASSWORD_EXISTS_PATTERN.test(signUpError.message || "")) {
-          setCtrlError("Bu e-posta zaten kayıtlı. Giriş yapıp admin onayı bekleyin.");
-          return;
-        }
-        setCtrlError(signUpError.message || "Kontrolör başvurusu başlatılamadı.");
-        return;
-      }
-
-      const {
-        data: { session },
-      } = await sb.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken || !signUpData.user?.id) {
-        setCtrlError("Başvuru için oturum açılamadı. Lütfen tekrar deneyin.");
-        return;
-      }
-
-      const res = await fetch("/api/controller-request", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          full_name: ctrlFullName.trim(),
-          phone: ctrlPhone.trim(),
-        }),
-      });
-      const payload = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) {
-        setCtrlError(payload.error || "Başvuru kaydedilemedi.");
-        return;
-      }
-
-      await sb.auth.signOut({ scope: "local" });
-      setCtrlSuccess("Başvurunuz alındı. Admin onayından sonra giriş yapabilirsiniz.");
-      setCtrlFullName("");
-      setCtrlPhone("");
-      setCtrlEmail("");
-      setCtrlPassword("");
-    } catch (err) {
-      setCtrlError(err instanceof Error ? err.message : "Beklenmeyen hata");
-    } finally {
-      setCtrlLoading(false);
     }
   }
 
@@ -813,70 +735,6 @@ export default function LoginPage() {
                 >
                   <GoogleIcon />
                   {regGoogleLoading ? t("registering") : t("signUpWithGoogle")}
-                </button>
-              </form>
-            </div>
-          </div>
-
-          <div className="mt-12 pt-12 border-t border-ink-200">
-            <div className="bg-white rounded-lg border border-ink-200 shadow-card p-8">
-              <div className="text-center mb-6">
-                <h2 className="text-xl font-bold text-ink-900 mb-2">Kontrolör Başvurusu</h2>
-                <p className="text-ink-600 text-sm">
-                  Bilet kontrol ekibi için başvuru formu. Admin onayı olmadan giriş yapılamaz.
-                </p>
-              </div>
-              <form onSubmit={handleControllerApply} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-ink-700 mb-2">Ad Soyad *</label>
-                  <input
-                    type="text"
-                    value={ctrlFullName}
-                    onChange={(e) => setCtrlFullName(e.target.value)}
-                    required
-                    className="w-full rounded-lg border border-ink-300 px-4 py-3"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink-700 mb-2">Telefon *</label>
-                  <input
-                    type="tel"
-                    value={ctrlPhone}
-                    onChange={(e) => setCtrlPhone(e.target.value)}
-                    required
-                    className="w-full rounded-lg border border-ink-300 px-4 py-3"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink-700 mb-2">E-posta *</label>
-                  <input
-                    type="email"
-                    value={ctrlEmail}
-                    onChange={(e) => setCtrlEmail(e.target.value)}
-                    required
-                    className="w-full rounded-lg border border-ink-300 px-4 py-3"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-ink-700 mb-2">Şifre *</label>
-                  <input
-                    type="password"
-                    autoComplete="new-password"
-                    value={ctrlPassword}
-                    onChange={(e) => setCtrlPassword(e.target.value)}
-                    required
-                    minLength={8}
-                    className="w-full rounded-lg border border-ink-300 px-4 py-3"
-                  />
-                </div>
-                {ctrlError && <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">{ctrlError}</div>}
-                {ctrlSuccess && <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">{ctrlSuccess}</div>}
-                <button
-                  type="submit"
-                  disabled={ctrlLoading}
-                  className="w-full rounded-lg bg-gold-500 py-3 font-semibold text-white hover:bg-gold-400 disabled:opacity-50"
-                >
-                  {ctrlLoading ? "Gönderiliyor..." : "Kontrolör Başvurusu Gönder"}
                 </button>
               </form>
             </div>

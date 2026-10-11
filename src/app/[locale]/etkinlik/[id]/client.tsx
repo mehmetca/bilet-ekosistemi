@@ -2469,8 +2469,10 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               )}
 
               {/* Bestplatzbuchung / Saalplanbuchung – ikonlu seçim */}
+              {/* Koltuk planı (seating_plan_id) olan etkinliklerde her iki seçenek gösterilir.
+                  Planı olmayan etkinliklerde yalnızca "Fiyat kategorisine göre" gösterilir. */}
               {!isExternalOnlyEvent && !isAmedSpor && (
-                <div className="mb-8 grid sm:grid-cols-2 gap-4">
+                <div className={`mb-8 grid gap-4 ${hasSeatingPlan ? "sm:grid-cols-2" : "sm:grid-cols-1 max-w-md"}`}>
                   <button
                     type="button"
                     onClick={() => setBookingMode("price")}
@@ -2488,26 +2490,28 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <span className="mt-1 block text-sm opacity-90">{t("bestplatzbuchungDesc")}</span>
                     </div>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setBookingMode("seat")}
-                    className={`rounded-lg border-2 p-6 text-left transition-all flex gap-4 items-start ${
-                      bookingMode === "seat"
-                        ? "border-gold-500 bg-gold-50/80 text-ink-900 shadow-card shadow-gold-200/40"
-                        : "border-ink-200 bg-ink-50/50 text-ink-600 hover:border-ink-300 hover:bg-ink-100"
-                    }`}
-                  >
-                    <span className={`flex-shrink-0 rounded-lg p-3 ${bookingMode === "seat" ? "bg-gold-100 text-gold-700" : "bg-ink-200 text-ink-500"}`}>
-                      <DoorOpen className="h-10 w-10" />
-                    </span>
-                    <div className="min-w-0">
-                      <span className="block font-bold text-lg">{t("saalplanbuchung")}</span>
-                      <span className="mt-1 block text-sm opacity-90">{t("saalplanbuchungDesc")}</span>
-                    </div>
-                  </button>
+                  {hasSeatingPlan && (
+                    <button
+                      type="button"
+                      onClick={() => setBookingMode("seat")}
+                      className={`rounded-lg border-2 p-6 text-left transition-all flex gap-4 items-start ${
+                        bookingMode === "seat"
+                          ? "border-gold-500 bg-gold-50/80 text-ink-900 shadow-card shadow-gold-200/40"
+                          : "border-ink-200 bg-ink-50/50 text-ink-600 hover:border-ink-300 hover:bg-ink-100"
+                      }`}
+                    >
+                      <span className={`flex-shrink-0 rounded-lg p-3 ${bookingMode === "seat" ? "bg-gold-100 text-gold-700" : "bg-ink-200 text-ink-500"}`}>
+                        <DoorOpen className="h-10 w-10" />
+                      </span>
+                      <div className="min-w-0">
+                        <span className="block font-bold text-lg">{t("saalplanbuchung")}</span>
+                        <span className="mt-1 block text-sm opacity-90">{t("saalplanbuchungDesc")}</span>
+                      </div>
+                    </button>
+                  )}
                 </div>
               )}
-              {!isExternalOnlyEvent && bookingMode === null && !isAmedSpor && (
+              {hasSeatingPlan && !isExternalOnlyEvent && bookingMode === null && !isAmedSpor && (
                 <p className="mb-8 text-sm text-ink-600">
                   {locale === "de"
                     ? "Bitte wählen Sie eine Buchungsart."
@@ -2541,14 +2545,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               )}
 
-              {/* Yer seçerek: oturum planı varsa koltuk listesi, yoksa bilgi mesajı */}
+              {/* Yer seçerek: oturum planı varsa koltuk listesi — plan yoksa bu blok artık görünmez
+                  (seat butonu yalnızca hasSeatingPlan durumunda render edildiğinden bu şart asla doğru olmaz;
+                  güvenlik katmanı olarak burada bırakıldı) */}
               {!isExternalOnlyEvent && bookingMode === "seat" && !hasSeatingPlan && (
                 <div className="rounded-lg border border-ink-200 bg-ink-50 p-6 text-center text-ink-600">
-                  <p className="font-medium">Bu etkinlik için koltuk seçimi tanımlanmamış.</p>
-                  <p className="mt-2 text-sm">Bilet almak için &quot;Fiyat kategorisine göre bilet al&quot; seçeneğini kullanabilirsiniz.</p>
-                  <p className="mt-3 text-xs text-ink-500">
-                    Koltuk seçimini açmak için: Yönetim → Etkinlikler → bu etkinliği düzenle → Mekan seçin, &quot;Oturum planı&quot; alanından bir plan seçip kaydedin.
-                  </p>
+                  <p className="font-medium">{t("noSeatingPlanMessage")}</p>
+                  <p className="mt-2 text-sm">{t("noSeatingPlanHint")}</p>
                 </div>
               )}
               {!isExternalOnlyEvent && bookingMode === "seat" && hasSeatingPlan && (
