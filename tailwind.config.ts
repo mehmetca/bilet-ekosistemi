@@ -1,10 +1,9 @@
 import type { Config } from "tailwindcss";
 
 /**
- * KurdEvents marka paleti — logo'dan ölçüldü (public/images/kurdevent-logo.png):
- * altın #D8A858 (%51) ve mürekkep #181818 (%32).
+ * KurdEvents marka paleti.
  * primary = mürekkep ölçeği (aksiyon, link, odak) — açık zeminde yüksek kontrast.
- * gold = marka vurgusu (ayraç, rozet, hover, koyu yüzey).
+ * Token adı `gold` korundu (sınıflar değişmesin diye); değerler marka kırmızısı.
  */
 const ink = {
   50: "#F6F6F5",
@@ -21,16 +20,17 @@ const ink = {
 };
 
 const gold = {
-  50: "#FBF6EC",
-  100: "#F6EAD0",
-  200: "#EED6A4",
-  300: "#E4C079",
-  400: "#DCB066",
-  500: "#D8A858",
-  600: "#C08F3F",
-  700: "#9C7231",
-  800: "#7C5A29",
-  900: "#654A24",
+  50: "#FDF1F0",
+  100: "#FBDFDC",
+  200: "#F7BDB6",
+  300: "#F09189",
+  400: "#E96B60",
+  500: "#E23B2E",
+  600: "#C22D22",
+  700: "#9C231A",
+  800: "#771B14",
+  900: "#5C1610",
+  950: "#3F0F0A",
 };
 
 const config: Config = {
@@ -62,8 +62,10 @@ const config: Config = {
       colors: {
         primary: { ...ink, DEFAULT: ink[900] },
         gold: { ...gold, DEFAULT: gold[500] },
+        /** amber sınıfları kahve/kehribar tonlarında; aynı kırmızı ölçeğe bağlandı. */
+        amber: { ...gold, DEFAULT: gold[500] },
         ink,
-        paper: "#FAF8F4",
+        paper: "#FAF5F4",
       },
       fontFamily: {
         display: ["var(--font-display)", "Georgia", "serif"],
