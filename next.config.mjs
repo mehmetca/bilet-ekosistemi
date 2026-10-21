@@ -62,7 +62,7 @@ const nextConfig = {
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.stripe.com https://*.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://translate.googleapis.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://sb.kurdevents.com wss://sb.kurdevents.com https://api.stripe.com https://*.stripe.com https://*.sentry.io https://*.ingest.sentry.io https://translate.googleapis.com",
       "frame-src 'self' https://js.stripe.com https://hooks.stripe.com https://*.stripe.com https://www.youtube.com https://www.youtube-nocookie.com https://youtube.com https://www.google.com https://www.openstreetmap.org https://*.openstreetmap.org",
       "media-src 'self' https: blob:",
       "form-action 'self' https://hooks.stripe.com",
