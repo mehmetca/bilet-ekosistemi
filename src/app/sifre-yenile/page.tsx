@@ -56,10 +56,33 @@ export default function SifreYenilePage() {
     async function checkRecoverySession() {
       const code = searchParams.get("code");
       if (code) {
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-        if (!mounted) return;
-        if (!exchangeError && data?.session) {
-          setStep("set_password");
+        let exchangeFailed = false;
+        try {
+          const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (!mounted) return;
+          if (!exchangeError && data?.session) {
+            setStep("set_password");
+            setRecoveryChecked(true);
+            return;
+          }
+          exchangeFailed = Boolean(exchangeError);
+        } catch {
+          exchangeFailed = true;
+        }
+
+        // PKCE kodunu Supabase istemcisi URL'den otomatik tüketmiş olabilir;
+        // bu durumda oturum zaten kuruludur, kodu ikinci kez değiş tokuş etme.
+        // Otomatik değiş tokuş bizden birkaç yüz ms sonra bitebildiği için kısa süre bekle.
+        if (exchangeFailed) {
+          for (let attempt = 0; attempt < 4; attempt += 1) {
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (!mounted) return;
+            if (sessionData.session?.user) {
+              setStep("set_password");
+              break;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 300));
+          }
         }
         setRecoveryChecked(true);
         return;
