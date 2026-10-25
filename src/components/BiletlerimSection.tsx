@@ -31,6 +31,9 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
   const [printOrderId, setPrintOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [lastSent, setLastSent] = useState<Record<string, string>>({});
 
   const fetchOrders = useCallback(async () => {
     if (!user) return;
@@ -50,6 +53,21 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
         tickets: normalizeRelation(row.tickets),
       }));
       setOrders(data);
+
+      const orderIds = data.map((order) => order.id);
+      if (orderIds.length > 0) {
+        const { data: logRows } = await supabase
+          .from("ticket_email_logs")
+          .select("order_id, sent_at")
+          .in("order_id", orderIds)
+          .order("sent_at", { ascending: false });
+        const latest: Record<string, string> = {};
+        for (const row of logRows || []) {
+          const orderId = row.order_id as string;
+          if (!latest[orderId]) latest[orderId] = row.sent_at as string;
+        }
+        setLastSent(latest);
+      }
     } catch (e) {
       console.error("Biletlerim fetch error:", e);
       setError(t("ordersLoadFailed"));
@@ -91,6 +109,74 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
 
   function handleTogglePrint(orderId: string) {
     setPrintOrderId((prev) => (prev === orderId ? null : orderId));
+  }
+
+  async function handleResend(orderId: string) {
+    setBusyId(`${orderId}:mail`);
+    setNotice(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setNotice(t("sessionExpired"));
+        return;
+      }
+      const res = await fetch(`/api/orders/${orderId}/resend-ticket-email`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = (await res.json().catch(() => ({}))) as { sentAt?: string; error?: string };
+      if (res.ok) {
+        if (body.sentAt) setLastSent((prev) => ({ ...prev, [orderId]: body.sentAt! }));
+        setNotice(t("resendEmailSent"));
+      } else {
+        setNotice(body.error || t("resendEmailFailed"));
+      }
+    } catch (e) {
+      console.error("resend ticket email error:", e);
+      setNotice(t("resendEmailFailed"));
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDownload(orderId: string) {
+    setBusyId(`${orderId}:pdf`);
+    setNotice(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setNotice(t("sessionExpired"));
+        return;
+      }
+      const res = await fetch(`/api/orders/${orderId}/ticket-pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        setNotice(body.error || t("resendEmailFailed"));
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `kurdevents-e-bilet-${orderId.slice(0, 8)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("ticket pdf download error:", e);
+      setNotice(t("resendEmailFailed"));
+    } finally {
+      setBusyId(null);
+    }
   }
 
   if (!user) return null;
@@ -137,13 +223,24 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
           </div>
         </div>
       ) : (
-        <BiletlerimOrderList
-          orders={orders}
-          printOrderId={printOrderId}
-          onTogglePrint={handleTogglePrint}
-          onDelete={handleDelete}
-          deletingId={deletingId}
-        />
+        <>
+          {notice && (
+            <p className="mb-3 rounded-lg bg-ink-50 px-3 py-2 text-sm text-ink-700" role="status">
+              {notice}
+            </p>
+          )}
+          <BiletlerimOrderList
+            orders={orders}
+            printOrderId={printOrderId}
+            onTogglePrint={handleTogglePrint}
+            onDelete={handleDelete}
+            deletingId={deletingId}
+            onResend={handleResend}
+            onDownload={handleDownload}
+            busyId={busyId}
+            lastSent={lastSent}
+          />
+        </>
       )}
     </section>
   );

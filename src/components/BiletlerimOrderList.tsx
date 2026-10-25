@@ -1,6 +1,6 @@
 "use client";
 
-import { Printer, Trash2 } from "lucide-react";
+import { Download, Loader2, Mail, Printer, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import TicketPrint from "@/components/TicketPrint";
 import type { EventCurrency, TicketType } from "@/types/database";
@@ -28,6 +28,10 @@ type Props = {
   onTogglePrint: (orderId: string) => void;
   onDelete: (orderId: string) => void;
   deletingId: string | null;
+  onResend: (orderId: string) => void;
+  onDownload: (orderId: string) => void;
+  busyId: string | null;
+  lastSent: Record<string, string>;
 };
 
 export default function BiletlerimOrderList({
@@ -36,6 +40,10 @@ export default function BiletlerimOrderList({
   onTogglePrint,
   onDelete,
   deletingId,
+  onResend,
+  onDownload,
+  busyId,
+  lastSent,
 }: Props) {
   const t = useTranslations("panel");
 
@@ -55,6 +63,16 @@ export default function BiletlerimOrderList({
                   : order.events?.date || "—"}
                 {order.events?.venue && ` • ${order.events.venue}`}
               </p>
+              {lastSent[order.id] && (
+                <p className="text-xs text-ink-400 mt-1">
+                  {t("lastSentAt", {
+                    date: new Date(lastSent[order.id]!).toLocaleString("tr-TR", {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    }),
+                  })}
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <span className="text-ink-600">
@@ -79,14 +97,42 @@ export default function BiletlerimOrderList({
                     : t("pending")}
               </span>
               {order.status === "completed" && (order.ticket_code || (order.ticketCodes && order.ticketCodes.length > 0)) && (
-                <button
-                  type="button"
-                  onClick={() => onTogglePrint(order.id)}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gold-700 hover:text-gold-700 hover:bg-gold-50 rounded-lg transition-colors"
-                >
-                  <Printer className="h-4 w-4" aria-hidden />
-                  {t("printTicket")}
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onTogglePrint(order.id)}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-gold-700 hover:text-gold-700 hover:bg-gold-50 rounded-lg transition-colors"
+                  >
+                    <Printer className="h-4 w-4" aria-hidden />
+                    {t("printTicket")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDownload(order.id)}
+                    disabled={busyId === `${order.id}:pdf`}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-ink-700 hover:bg-ink-50 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {busyId === `${order.id}:pdf` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <Download className="h-4 w-4" aria-hidden />
+                    )}
+                    {t("downloadPdf")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onResend(order.id)}
+                    disabled={busyId === `${order.id}:mail`}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-ink-700 hover:bg-ink-50 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {busyId === `${order.id}:mail` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <Mail className="h-4 w-4" aria-hidden />
+                    )}
+                    {t("resendEmail")}
+                  </button>
+                </>
               )}
               <button
                 type="button"

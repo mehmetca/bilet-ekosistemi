@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useLayoutEffect, useCallback, useMemo } fr
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Search as SearchIcon, Ticket, QrCode, Eye, ChevronDown } from "lucide-react";
+import { Search as SearchIcon, Ticket, QrCode, Eye, ChevronDown, Download, Loader2, Mail } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import type { Order } from "@/types/database";
 import QRScanner from "@/components/QRScanner";
@@ -28,6 +28,9 @@ export default function BiletListesiPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [expandedOrder, setExpandedOrder] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [mailNotice, setMailNotice] = useState<string | null>(null);
+  const [lastSent, setLastSent] = useState<Record<string, string>>({});
   /** Portal menü: konum + taşmada maxHeight (kaydırma çubuğu gizli) */
   const [orderMenuLayout, setOrderMenuLayout] = useState<{
     top: number;
@@ -197,11 +200,94 @@ export default function BiletListesiPage() {
 
       const data = (await response.json()) as AdminOrder[];
       setTickets(data || []);
+
+      const orderIds = (data || []).map((order) => order.id).filter(Boolean);
+      if (orderIds.length > 0) {
+        const { data: logRows } = await supabase
+          .from("ticket_email_logs")
+          .select("order_id, sent_at")
+          .in("order_id", orderIds)
+          .order("sent_at", { ascending: false });
+        const latest: Record<string, string> = {};
+        for (const row of logRows || []) {
+          const orderId = row.order_id as string;
+          if (!latest[orderId]) latest[orderId] = row.sent_at as string;
+        }
+        setLastSent(latest);
+      }
     } catch (error) {
       console.error("Beklenmedik hata:", error);
       setTickets([]);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleResend(orderId: string) {
+    setBusyId(`${orderId}:mail`);
+    setMailNotice(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setMailNotice("Oturum bulunamadı.");
+        return;
+      }
+      const res = await fetch(`/api/orders/${orderId}/resend-ticket-email`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = (await res.json().catch(() => ({}))) as { sentAt?: string; error?: string };
+      if (res.ok) {
+        if (body.sentAt) setLastSent((prev) => ({ ...prev, [orderId]: body.sentAt! }));
+        setMailNotice("Bilet maili gönderildi.");
+      } else {
+        setMailNotice(body.error || "Mail gönderilemedi.");
+      }
+    } catch (e) {
+      console.error("admin resend ticket email error:", e);
+      setMailNotice("Mail gönderilemedi.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleDownloadPdf(orderId: string) {
+    setBusyId(`${orderId}:pdf`);
+    setMailNotice(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setMailNotice("Oturum bulunamadı.");
+        return;
+      }
+      const res = await fetch(`/api/orders/${orderId}/ticket-pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { error?: string };
+        setMailNotice(body.error || "PDF oluşturulamadı.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `kurdevents-e-bilet-${orderId.slice(0, 8)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("admin ticket pdf error:", e);
+      setMailNotice("PDF oluşturulamadı.");
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -286,6 +372,11 @@ export default function BiletListesiPage() {
             </button>
           </div>
         </div>
+        {mailNotice && (
+          <div className="mb-4 rounded-lg bg-slate-100 px-4 py-2 text-sm text-slate-700" role="status">
+            {mailNotice}
+          </div>
+        )}
 
         {/* Arama */}
         <div className="bg-white rounded-xl border border-slate-200 p-5 mb-5">
@@ -422,6 +513,45 @@ export default function BiletListesiPage() {
                           </button>
                         </div>
                       )}
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleDownloadPdf(ticket.id)}
+                          disabled={busyId === `${ticket.id}:pdf`}
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-slate-100 text-slate-700 rounded hover:bg-slate-200 disabled:opacity-50"
+                          title="Bilet PDF indir"
+                        >
+                          {busyId === `${ticket.id}:pdf` ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Download className="h-3 w-3" />
+                          )}
+                          PDF
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleResend(ticket.id)}
+                          disabled={busyId === `${ticket.id}:mail`}
+                          className="flex items-center gap-1 px-2 py-1 text-xs bg-slate-100 text-slate-700 rounded hover:bg-slate-200 disabled:opacity-50"
+                          title="Bileti yeniden gönder"
+                        >
+                          {busyId === `${ticket.id}:mail` ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Mail className="h-3 w-3" />
+                          )}
+                          Mail
+                        </button>
+                        {lastSent[ticket.id] && (
+                          <span className="text-[11px] text-slate-500">
+                            Son mail:{" "}
+                            {new Date(lastSent[ticket.id]).toLocaleString("tr-TR", {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            })}
+                          </span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                   );
