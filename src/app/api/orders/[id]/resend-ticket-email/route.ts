@@ -45,6 +45,39 @@ export async function POST(
     return NextResponse.json({ error: "Bu sipariş için yetkiniz yok." }, { status: 403 });
   }
 
+  const { data: adminRows } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .eq("role", "admin")
+    .limit(1);
+  const isAdmin = Boolean(adminRows && adminRows.length > 0);
+
+  // Yalnız admin, siparişin alıcı e-postasını düzeltebilir (yanlış e-posta ile alınan biletler).
+  const body = (await request.json().catch(() => null)) as { email?: string } | null;
+  const requestedEmail =
+    typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+  if (requestedEmail && requestedEmail !== (order.buyer_email || "").toLowerCase()) {
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: "Alıcı e-postasını yalnız yönetici değiştirebilir." },
+        { status: 403 }
+      );
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(requestedEmail)) {
+      return NextResponse.json({ error: "Geçerli bir e-posta yazın." }, { status: 400 });
+    }
+    const { error: updateError } = await supabase
+      .from("orders")
+      .update({ buyer_email: requestedEmail })
+      .eq("id", orderId);
+    if (updateError) {
+      console.error("resend-ticket-email email update error:", updateError);
+      return NextResponse.json({ error: "E-posta güncellenemedi." }, { status: 500 });
+    }
+    order.buyer_email = requestedEmail;
+  }
+
   if (!isTicketIssuedOrder(order.status)) {
     return NextResponse.json(
       { error: "Bilet yalnız onaylanmış siparişler için gönderilebilir." },
@@ -104,13 +137,6 @@ export async function POST(
     );
   }
 
-  const isAdmin = (await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", user.id)
-    .eq("role", "admin")
-    .limit(1)).data?.length;
-
   const sentAt = new Date().toISOString();
   const { error: insertError } = await supabase.from("ticket_email_logs").insert({
     order_id: orderId,
@@ -128,6 +154,7 @@ export async function POST(
     success: true,
     sentAt,
     lastSentAt: sentAt,
+    email: order.buyer_email,
     limit: { perHour: PER_HOUR_LIMIT, perDay: PER_DAY_LIMIT },
   });
 }

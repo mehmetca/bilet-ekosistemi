@@ -224,6 +224,14 @@ export default function BiletListesiPage() {
   }
 
   async function handleResend(orderId: string) {
+    const current = tickets.find((order) => order.id === orderId)?.buyer_email || "";
+    const answer = window.prompt(
+      "Bilet bu e-posta adresine gönderilecek. Yanlışsa düzeltin:",
+      current
+    );
+    if (answer === null) return;
+    const email = answer.trim().toLowerCase();
+
     setBusyId(`${orderId}:mail`);
     setMailNotice(null);
     try {
@@ -237,12 +245,21 @@ export default function BiletListesiPage() {
       }
       const res = await fetch(`/api/orders/${orderId}/resend-ticket-email`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
       });
-      const body = (await res.json().catch(() => ({}))) as { sentAt?: string; error?: string };
+      const body = (await res.json().catch(() => ({}))) as { sentAt?: string; email?: string; error?: string };
       if (res.ok) {
         if (body.sentAt) setLastSent((prev) => ({ ...prev, [orderId]: body.sentAt! }));
-        setMailNotice("Bilet maili gönderildi.");
+        if (body.email) {
+          setTickets((prev) =>
+            prev.map((order) => (order.id === orderId ? { ...order, buyer_email: body.email } : order))
+          );
+        }
+        setMailNotice(`Bilet maili gönderildi: ${body.email || email}`);
       } else {
         setMailNotice(body.error || "Mail gönderilemedi.");
       }
