@@ -85,33 +85,39 @@ export async function POST(
     );
   }
 
-  const since = new Date(Date.now() - DAY_MS).toISOString();
-  const { data: logs, error: logError } = await supabase
-    .from("ticket_email_logs")
-    .select("sent_at")
-    .eq("order_id", orderId)
-    .gte("sent_at", since)
-    .order("sent_at", { ascending: false });
+  // Limit yalnız müşteri için; admin destek amacıyla sınırsız gönderebilir.
+  // Satın alma anındaki otomatik gönderim (source='purchase') sayaca girmez:
+  // yanlış adrese giden biletin hemen ardından düzeltme yapılabilmeli.
+  if (!isAdmin) {
+    const since = new Date(Date.now() - DAY_MS).toISOString();
+    const { data: logs, error: logError } = await supabase
+      .from("ticket_email_logs")
+      .select("sent_at")
+      .eq("order_id", orderId)
+      .neq("source", "purchase")
+      .gte("sent_at", since)
+      .order("sent_at", { ascending: false });
 
-  if (logError) {
-    console.error("resend-ticket-email log lookup error:", logError);
-    return NextResponse.json({ error: "Gönderim geçmişi okunamadı." }, { status: 500 });
-  }
+    if (logError) {
+      console.error("resend-ticket-email log lookup error:", logError);
+      return NextResponse.json({ error: "Gönderim geçmişi okunamadı." }, { status: 500 });
+    }
 
-  const sentTimes = (logs || []).map((row) => new Date(row.sent_at as string).getTime());
-  const lastHourCount = sentTimes.filter((t) => Date.now() - t < HOUR_MS).length;
+    const sentTimes = (logs || []).map((row) => new Date(row.sent_at as string).getTime());
+    const lastHourCount = sentTimes.filter((t) => Date.now() - t < HOUR_MS).length;
 
-  if (lastHourCount >= PER_HOUR_LIMIT) {
-    return NextResponse.json(
-      { error: "Bu sipariş için son 1 saat içinde mail gönderildi. Lütfen daha sonra tekrar deneyin." },
-      { status: 429 }
-    );
-  }
-  if (sentTimes.length >= PER_DAY_LIMIT) {
-    return NextResponse.json(
-      { error: "Günlük gönderim sınırına ulaşıldı (5). Yarın tekrar deneyebilirsiniz." },
-      { status: 429 }
-    );
+    if (lastHourCount >= PER_HOUR_LIMIT) {
+      return NextResponse.json(
+        { error: "Bu sipariş için son 1 saat içinde mail gönderildi. Lütfen daha sonra tekrar deneyin." },
+        { status: 429 }
+      );
+    }
+    if (sentTimes.length >= PER_DAY_LIMIT) {
+      return NextResponse.json(
+        { error: "Günlük gönderim sınırına ulaşıldı (5). Yarın tekrar deneyebilirsiniz." },
+        { status: 429 }
+      );
+    }
   }
 
   const payload = await buildTicketMailPayloadForOrder(supabase, order as TicketMailOrderRow);
