@@ -31,7 +31,7 @@
     "email": "E-Mail",
     "password": "Passwort",
     "forgotPassword": "Passwort vergessen?",
-    "emailPlaceholder": "admin@kurdevents.com",
+    "emailPlaceholder": "email@mail.com",
     "passwordPlaceholder": "•••••••••",
     "loggingIn": "Anmeldung läuft...",
     "login": "Anmelden",

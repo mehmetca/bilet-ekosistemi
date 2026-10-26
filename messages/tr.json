@@ -31,7 +31,7 @@
     "email": "E-posta",
     "password": "Şifre",
     "forgotPassword": "Şifremi unuttum",
-    "emailPlaceholder": "admin@kurdevents.com",
+    "emailPlaceholder": "email@mail.com",
     "passwordPlaceholder": "•••••••••",
     "loggingIn": "Giriş Yapılıyor...",
     "login": "Giriş Yap",
