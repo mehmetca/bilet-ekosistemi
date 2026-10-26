@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import bwipjs from "bwip-js";
+import { getClientIp } from "@/lib/rate-limit";
 
 /**
  * In-memory rate limiter: IP başına dakikada MAX_REQUESTS istek.
@@ -38,10 +39,7 @@ function isValidBarcodeInput(code: string): boolean {
  */
 export async function GET(request: NextRequest) {
   // Rate limit kontrolü
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("x-real-ip") ||
-    "unknown";
+  const ip = getClientIp(request);
 
   if (!checkRateLimit(ip)) {
     return new NextResponse("Too many requests", {

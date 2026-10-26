@@ -6,6 +6,7 @@ import { DATA_CACHE_REVALIDATE } from "@/lib/server-data-cache";
 import { revalidateSiteSettingsCache } from "@/lib/revalidate-public-cache";
 import { applyMaintenanceCookie, setMaintenanceModeCache } from "@/lib/maintenance-mode";
 import { logAuditServer } from "@/lib/audit";
+import { getRealIp } from "@/lib/rate-limit";
 
 export const revalidate = 3600;
 
@@ -293,10 +294,7 @@ export async function POST(request: NextRequest) {
     revalidateSiteSettingsCache();
     setMaintenanceModeCache(maintenanceMode);
 
-    const ip =
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      null;
+    const ip = getRealIp(request);
     await logAuditServer({
       action: "update",
       entity_type: "site_settings",

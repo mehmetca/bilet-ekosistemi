@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/api-auth";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { logAuditServer } from "@/lib/audit";
+import { getRealIp } from "@/lib/rate-limit";
 import { routing } from "@/i18n/routing";
 import {
   BRANDING_SETTINGS_KEY,
@@ -46,10 +47,7 @@ export async function POST(request: NextRequest) {
     details: branding,
     user_id: auth.user.id,
     user_email: auth.user.email ?? null,
-    ip_address:
-      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") ||
-      null,
+    ip_address: getRealIp(request),
   });
 
   return NextResponse.json({ success: true, ...branding });

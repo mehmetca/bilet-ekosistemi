@@ -50,10 +50,22 @@ export function checkRateLimit(ip: string, options: RateLimitOptions): boolean {
 }
 
 /**
- * NextRequest'ten IP adresini çıkarır.
+ * NextRequest'ten ziyaretçinin gerçek IP adresini çıkarır.
+ * Site Cloudflare arkasında: `x-forwarded-for` zincirinin ilk halkası vekilin IP'si
+ * olabildiği için önce Cloudflare'ın imzaladığı `cf-connecting-ip` okunur.
  */
 export function getClientIp(request: Request): string {
-  const forwarded = (request.headers as Headers).get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]?.trim() ?? "unknown";
-  return (request.headers as Headers).get("x-real-ip") ?? "unknown";
+  const headers = request.headers as Headers;
+  const direct = headers.get("cf-connecting-ip");
+  if (direct?.trim()) return direct.trim();
+  const forwarded = headers.get("x-forwarded-for");
+  const first = forwarded?.split(",")[0]?.trim();
+  if (first) return first;
+  return headers.get("x-real-ip")?.trim() || "unknown";
+}
+
+/** Denetim kaydı için: gerçek IP yoksa `null` döner (`"unknown"` yazdırmamak için). */
+export function getRealIp(request: Request): string | null {
+  const ip = getClientIp(request);
+  return ip === "unknown" ? null : ip;
 }

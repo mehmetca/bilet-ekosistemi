@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireRole } from "@/lib/api-auth";
+import { getRealIp } from "@/lib/rate-limit";
 
 const MAX_ACTION_LENGTH = 80;
 const MAX_ENTITY_TYPE_LENGTH = 80;
@@ -32,8 +33,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-      request.headers.get("x-real-ip") || null;
+    const ip = getRealIp(request);
 
     await supabase.from("audit_logs").insert({
       user_id: auth.user.id,
