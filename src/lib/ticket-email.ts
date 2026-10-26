@@ -2,7 +2,7 @@ import QRCode from "qrcode";
 import bwipjs from "bwip-js";
 import { PDFDocument, PDFPage, StandardFonts, degrees, rgb } from "pdf-lib";
 import { getSiteUrl } from "@/lib/site-url";
-import { BrevoClient } from "@getbrevo/brevo";
+import { createBrevoClient } from "@/lib/brevo-client";
 
 export type SeatDetail = { section_name: string; row_label: string; seat_label: string; ticket_code?: string };
 export type TicketUnitDetail = { ticket_code: string };
@@ -555,9 +555,7 @@ export async function sendTicketEmail(payload: TicketMailPayload) {
     const qrAttachment = dataUrlToBase64(qrCodeDataUrl);
     const barcodeAttachment = dataUrlToBase64(barcodeDataUrl);
 
-    const brevo = new BrevoClient({
-      apiKey: brevoApiKey,
-    });
+    const brevo = createBrevoClient(brevoApiKey);
 
     const sendSmtpEmail = {
       to: [{

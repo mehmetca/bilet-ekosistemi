@@ -14,7 +14,7 @@ import {
 } from "@/lib/ticket-seating-match";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { getFulfillmentAuthToken } from "@/lib/fulfillment-auth";
-import { BrevoClient } from "@getbrevo/brevo";
+import { createBrevoClient } from "@/lib/brevo-client";
 import {
   escapeHtml,
   sendTicketEmail,
@@ -353,9 +353,7 @@ async function sendAdminOrderNotification(payload: {
       </div>
     `;
 
-    const brevo = new BrevoClient({
-      apiKey: brevoApiKey,
-    });
+    const brevo = createBrevoClient(brevoApiKey);
 
     const sendSmtpEmail = {
       to: [{

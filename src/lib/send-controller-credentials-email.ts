@@ -1,5 +1,5 @@
 import { getSiteUrl } from "@/lib/site-url";
-import { BrevoClient } from "@getbrevo/brevo";
+import { createBrevoClient } from "@/lib/brevo-client";
 
 function esc(value: string): string {
   return value
@@ -59,7 +59,7 @@ async function sendMail(input: {
     return { sent: false, reason: "Brevo yapılandırması eksik." };
   }
 
-  const brevo = new BrevoClient({ apiKey: brevoApiKey });
+  const brevo = createBrevoClient(brevoApiKey);
   await brevo.transactionalEmails.sendTransacEmail({
     to: [{ email: input.email, name: input.fullName }],
     sender: { name: fromName, email: fromEmail },

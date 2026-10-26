@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { BrevoClient } from "@getbrevo/brevo";
+import { createBrevoClient } from "@/lib/brevo-client";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { getAuthToken } from "@/lib/api-auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
   ].join("");
 
   try {
-    const brevo = new BrevoClient({ apiKey: brevoApiKey });
+    const brevo = createBrevoClient(brevoApiKey);
     await brevo.transactionalEmails.sendTransacEmail({
       to: [{ email: receiverEmail, name: displayName }],
       sender: { name: fromName, email: fromEmail },

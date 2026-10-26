@@ -3,7 +3,7 @@
  * Brevo API kullanır (bilet maili ile aynı altyapı).
  */
 
-import { BrevoClient } from "@getbrevo/brevo";
+import { createBrevoClient } from "@/lib/brevo-client";
 
 export type ReminderMailPayload = {
   email: string;
@@ -56,9 +56,7 @@ export async function sendReminderEmail(payload: ReminderMailPayload): Promise<{
       </div>
     `;
 
-    const brevo = new BrevoClient({
-      apiKey: brevoApiKey,
-    });
+    const brevo = createBrevoClient(brevoApiKey);
 
     const sendSmtpEmail = {
       to: [{

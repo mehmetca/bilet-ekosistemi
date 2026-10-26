@@ -1,5 +1,5 @@
 import { getSiteUrl } from "@/lib/site-url";
-import { BrevoClient } from "@getbrevo/brevo";
+import { createBrevoClient } from "@/lib/brevo-client";
 
 export async function sendControllerGuideEmail(input: {
   email: string;
@@ -44,9 +44,7 @@ export async function sendControllerGuideEmail(input: {
       </div>
     `;
 
-    const brevo = new BrevoClient({
-      apiKey: brevoApiKey,
-    });
+    const brevo = createBrevoClient(brevoApiKey);
 
     const sendSmtpEmail = {
       to: [{

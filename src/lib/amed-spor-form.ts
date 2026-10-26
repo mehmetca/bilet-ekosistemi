@@ -1,4 +1,4 @@
-import { BrevoClient } from "@getbrevo/brevo";
+import { createBrevoClient } from "@/lib/brevo-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -123,7 +123,7 @@ async function sendFormNotification(opts: NotifyOpts): Promise<{ sent: boolean; 
     </div>
   `;
 
-  const brevo = new BrevoClient({ apiKey: brevoApiKey });
+  const brevo = createBrevoClient(brevoApiKey);
   const emailPromise = brevo.transactionalEmails.sendTransacEmail({
     to: opts.to.map((email) => ({ email, name: "Amed Spor" })),
     sender: { name: fromName, email: fromEmail },
