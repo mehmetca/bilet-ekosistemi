@@ -174,15 +174,17 @@ export default function LoginPage() {
           // Profil kaydı başarısız olsa da üyelik tamamlandı
         }
 
-        // Hoş geldin maili gönder
+        // Hoş geldin maili gönder — alıcıyı sunucu oturum token'ından okur
         try {
           await fetch("/api/welcome", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${signUpData.session.access_token}`,
+            },
             body: JSON.stringify({
-              email: regEmail.trim(),
-              firstName: firstName.trim(),
-              lastName: lastName.trim(),
+              firstName,
+              lastName,
               locale,
             }),
           });
