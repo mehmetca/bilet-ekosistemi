@@ -10,6 +10,7 @@ interface AdminImageUploadProps {
   onChange: (url: string) => void;
   currentImage?: string;
   folder?: string;
+  previewClassName?: string;
   onUploadingChange?: (uploading: boolean) => void;
 }
 
@@ -18,6 +19,7 @@ export default function AdminImageUploadFixed({
   onChange,
   currentImage,
   folder = "event-images",
+  previewClassName = "aspect-[3/4] w-full object-cover object-top rounded-lg",
   onUploadingChange,
 }: AdminImageUploadProps) {
   const [uploading, setUploading] = useState(false);
@@ -248,7 +250,7 @@ export default function AdminImageUploadFixed({
                           className="block w-full"
                           title={img.name}
                         >
-                          <img src={img.url} alt={img.name} className="aspect-[3/4] w-full object-cover object-top" />
+                          <img src={img.url} alt={img.name} className={previewClassName} />
                         </button>
                         <button
                           type="button"
@@ -273,7 +275,7 @@ export default function AdminImageUploadFixed({
           <img
             src={value}
             alt="Etkinlik görseli"
-            className="aspect-[3/4] w-full object-cover object-top rounded-lg"
+            className={previewClassName}
           />
           <button
             type="button"

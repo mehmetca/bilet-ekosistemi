@@ -10,6 +10,7 @@ const ADVERTISEMENT_FIELDS = [
   "placement",
   "is_active",
   "locale",
+  "sort_order",
   "overlay_title",
   "overlay_day",
   "overlay_month_year",
@@ -20,6 +21,11 @@ function pickAdvertisementPayload(body: Record<string, unknown>) {
   for (const field of ADVERTISEMENT_FIELDS) {
     if (!(field in body)) continue;
     const value = body[field];
+    if (field === "sort_order") {
+      const n = Number(value);
+      payload[field] = Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0;
+      continue;
+    }
     // Boş string overlay alanlarını null yap (DB/UI tutarlılığı)
     if (
       (field === "overlay_title" || field === "overlay_day" || field === "overlay_month_year" || field === "link_url") &&

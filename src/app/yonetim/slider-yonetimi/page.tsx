@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { Plus, Edit2, Trash2, ExternalLink, Image as ImageIcon } from "lucide-react";
+import { Plus, Edit2, Trash2, ExternalLink, Image as ImageIcon, MoveUp, MoveDown } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import AdminImageUploadFixed from "@/components/AdminImageUploadFixed";
@@ -15,6 +15,7 @@ interface Advertisement {
   link_url: string;
   placement: string;
   is_active: boolean;
+  sort_order: number;
   locale?: string | null;
   overlay_title?: string | null;
   overlay_day?: string | null;
@@ -31,6 +32,7 @@ export default function SliderYonetimiPage() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingAd, setEditingAd] = useState<Advertisement | null>(null);
+  const [movingId, setMovingId] = useState<string | null>(null);
 
   const [newAd, setNewAd] = useState({
     title: "",
@@ -217,6 +219,43 @@ export default function SliderYonetimiPage() {
     }
   }
 
+  /** Ana slider panelindeki gibi: komşuyla yer değiştir, sıralama numarası yeniden yazılır. */
+  async function handleMoveOrder(adId: string, direction: "up" | "down") {
+    if (movingId) return;
+    const index = advertisements.findIndex((ad) => ad.id === adId);
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || target < 0 || target >= advertisements.length) return;
+
+    const next = [...advertisements];
+    [next[index], next[target]] = [next[target], next[index]];
+    const changed = next
+      .map((ad, i) => ({ id: ad.id, sort_order: i, stored: ad.sort_order }))
+      .filter((row) => row.stored !== row.sort_order);
+    if (changed.length === 0) return;
+
+    setMovingId(adId);
+    try {
+      const headers = await getAuthorizedHeaders();
+      for (const row of changed) {
+        const response = await fetch(`/api/advertisements/${row.id}`, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({ sort_order: row.sort_order }),
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData?.error || "Sıra güncellenemedi");
+        }
+      }
+      fetchAdvertisements();
+    } catch (error) {
+      console.error("Reorder advertisement error:", error);
+      alert(error instanceof Error ? error.message : "Sıra güncellenemedi.");
+    } finally {
+      setMovingId(null);
+    }
+  }
+
   function startEditAd(ad: Advertisement) {
     setEditingAd(ad);
     setNewAd({
@@ -373,11 +412,14 @@ export default function SliderYonetimiPage() {
                   />
                 </div>
               </div>
-              <AdminImageUploadFixed
-                value={newAd.image_url}
-                onChange={(url) => setNewAd({ ...newAd, image_url: url })}
-                folder="advertisements"
-              />
+              <div className="mt-4">
+                <AdminImageUploadFixed
+                  value={newAd.image_url}
+                  onChange={(url) => setNewAd({ ...newAd, image_url: url })}
+                  folder="advertisements"
+                  previewClassName="mx-auto block h-auto max-h-[400px] w-auto max-w-full rounded-lg object-contain"
+                />
+              </div>
               <div className="flex gap-2 mt-4">
                 <button
                   onClick={editingAd ? handleUpdateAd : handleAddAd}
@@ -410,11 +452,14 @@ export default function SliderYonetimiPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {advertisements.map((ad) => (
+                {advertisements.map((ad, index) => (
                   <div key={ad.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <span className="text-xs font-semibold text-slate-500 tabular-nums">
+                            {index + 1}. sıra
+                          </span>
                           <h3 className="font-semibold text-slate-900">{ad.title}</h3>
                           <span
                             className={`text-xs px-2 py-1 rounded ${
@@ -468,6 +513,22 @@ export default function SliderYonetimiPage() {
                       </div>
 
                       <div className="flex gap-2 ml-4">
+                        <button
+                          onClick={() => void handleMoveOrder(ad.id, "up")}
+                          disabled={index === 0 || movingId !== null}
+                          className="text-slate-600 hover:text-slate-900 p-2 rounded hover:bg-slate-100 disabled:opacity-40"
+                          title="Yukari tasi"
+                        >
+                          <MoveUp className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => void handleMoveOrder(ad.id, "down")}
+                          disabled={index === advertisements.length - 1 || movingId !== null}
+                          className="text-slate-600 hover:text-slate-900 p-2 rounded hover:bg-slate-100 disabled:opacity-40"
+                          title="Asagi tasi"
+                        >
+                          <MoveDown className="h-4 w-4" />
+                        </button>
                         <button
                           onClick={() => startEditAd(ad)}
                           className="text-blue-600 hover:text-blue-900 p-2 rounded hover:bg-blue-50"

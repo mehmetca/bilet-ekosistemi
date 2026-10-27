@@ -13,6 +13,7 @@ const ADVERTISEMENT_FIELDS = [
   "placement",
   "is_active",
   "locale",
+  "sort_order",
   "overlay_title",
   "overlay_day",
   "overlay_month_year",
@@ -23,6 +24,11 @@ function pickAdvertisementPayload(body: Record<string, unknown>) {
   for (const field of ADVERTISEMENT_FIELDS) {
     if (!(field in body)) continue;
     const value = body[field];
+    if (field === "sort_order") {
+      const n = Number(value);
+      payload[field] = Number.isFinite(n) ? Math.max(0, Math.trunc(n)) : 0;
+      continue;
+    }
     if (
       (field === "overlay_title" || field === "overlay_day" || field === "overlay_month_year" || field === "link_url") &&
       typeof value === "string" &&
@@ -52,8 +58,9 @@ export async function GET(request: NextRequest) {
         const { data, error } = await supabaseAdmin
           .from("advertisements")
           .select(
-            "id,title,image_url,link_url,placement,is_active,locale,overlay_title,overlay_day,overlay_month_year,created_at"
+            "id,title,image_url,link_url,placement,is_active,locale,sort_order,overlay_title,overlay_day,overlay_month_year,created_at"
           )
+          .order("sort_order", { ascending: true })
           .order("created_at", { ascending: false });
 
         if (error) {
@@ -85,6 +92,17 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as Record<string, unknown>;
     const payload = pickAdvertisementPayload(body);
     const supabaseAdmin = getSupabaseAdmin();
+
+    if (!("sort_order" in payload)) {
+      // Yeni kart listenin sonuna eklenir; sıra numarası panelde değiştirilir.
+      const { data: latest } = await supabaseAdmin
+        .from("advertisements")
+        .select("sort_order")
+        .order("sort_order", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      payload.sort_order = Number(latest?.sort_order ?? -1) + 1;
+    }
 
     const { data, error } = await supabaseAdmin
       .from("advertisements")

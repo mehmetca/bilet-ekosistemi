@@ -18,7 +18,7 @@ export type PublicAdvertisement = {
 };
 
 const AD_COLUMNS =
-  "id,title,image_url,link_url,placement,is_active,locale,overlay_title,overlay_day,overlay_month_year,created_at";
+  "id,title,image_url,link_url,placement,is_active,locale,sort_order,overlay_title,overlay_day,overlay_month_year,created_at";
 
 async function fetchActiveAdvertisements(locale?: string): Promise<PublicAdvertisement[]> {
   // RLS yalnızca authenticated okumaya izin veriyor; public slider/API için service role.
@@ -27,6 +27,7 @@ async function fetchActiveAdvertisements(locale?: string): Promise<PublicAdverti
     .from("advertisements")
     .select(AD_COLUMNS)
     .eq("is_active", true)
+    .order("sort_order", { ascending: true })
     .order("created_at", { ascending: false });
 
   const loc = locale && ["tr", "de", "en"].includes(locale) ? locale : undefined;
@@ -43,7 +44,7 @@ async function fetchActiveAdvertisements(locale?: string): Promise<PublicAdverti
 
 export async function getActiveAdvertisements(locale?: string): Promise<PublicAdvertisement[]> {
   const key = locale && ["tr", "de", "en"].includes(locale) ? locale : "all";
-  return unstable_cache(() => fetchActiveAdvertisements(locale), ["advertisements-active-v3", key], {
+  return unstable_cache(() => fetchActiveAdvertisements(locale), ["advertisements-active-v4", key], {
     revalidate: DATA_CACHE_REVALIDATE.advertisements,
     tags: ["advertisements"],
   })();
