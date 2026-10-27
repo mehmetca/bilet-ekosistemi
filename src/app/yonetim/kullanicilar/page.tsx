@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Plus, Trash2, UserCheck, CheckCircle, XCircle, Calendar, Eye, X } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
@@ -116,6 +116,12 @@ function KullanicilarContent() {
     }
   }, [accessToken]);
 
+  /** Atama seçenekleri: geçmiş etkinlikler hiçbir listede gösterilmez. */
+  const upcomingEvents = useMemo(() => {
+    const bugun = new Date().toISOString().slice(0, 10);
+    return events.filter((event) => !event.date || String(event.date).slice(0, 10) >= bugun);
+  }, [events]);
+
   const controllerUsers = users.filter((user) => user.roles.includes("controller"));
   const controllerCountForEvent = (eventId: string) =>
     new Set(
@@ -123,6 +129,8 @@ function KullanicilarContent() {
         .filter((assignment) => assignment.event_id === eventId)
         .map((assignment) => assignment.controller_user_id)
     ).size;
+
+  const upcomingEventsById = useMemo(() => new Set(upcomingEvents.map((event) => event.id)), [upcomingEvents]);
 
   async function handleCreateController(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -502,11 +510,11 @@ function KullanicilarContent() {
 
             <fieldset className="mt-5">
               <legend className="mb-2 text-sm font-semibold text-slate-800">Görevli olacağı etkinlikler</legend>
-              {events.length === 0 ? (
+              {upcomingEvents.length === 0 ? (
                 <p className="text-sm text-slate-500">Atanabilecek etkinlik bulunamadı.</p>
               ) : (
                 <div className="grid max-h-56 gap-2 overflow-y-auto rounded-lg border border-slate-200 p-3 sm:grid-cols-2">
-                  {events.map((event) => (
+                  {upcomingEvents.map((event) => (
                     <label key={event.id} className="flex items-start gap-2 rounded-md p-2 text-sm text-slate-700 hover:bg-slate-50">
                       <input
                         type="checkbox"
@@ -608,6 +616,7 @@ function KullanicilarContent() {
                   .filter((assignment) => assignment.controller_user_id === controller.user_id)
                   .map((assignment) => events.find((event) => event.id === assignment.event_id))
                   .filter((event): event is ControlEvent => Boolean(event));
+                const upcomingAssigned = assignedEvents.filter((event) => upcomingEventsById.has(event.id));
                 const isEditing = editingControllerId === controller.user_id;
                 return (
                   <article key={controller.user_id} className="p-5">
@@ -619,13 +628,13 @@ function KullanicilarContent() {
                         <p className="text-sm text-slate-600">{controller.email || "E-posta yok"}</p>
                         <p className="text-sm text-slate-600">{controller.phone || "Telefon yok"}</p>
                         <div className="mt-2 flex flex-wrap gap-1.5">
-                          {assignedEvents.length > 0 ? assignedEvents.map((event) => (
+                          {upcomingAssigned.length > 0 ? upcomingAssigned.map((event) => (
                             <span key={event.id} className="rounded-md bg-slate-100 px-2 py-1 text-xs text-slate-700">
                               {event.title}
                             </span>
-                          )) : (
+                          )) : assignedEvents.length === 0 ? (
                             <span className="text-xs font-medium text-amber-700">Etkinlik atanmamış</span>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                       <div className="flex shrink-0 flex-wrap gap-2">
@@ -651,7 +660,7 @@ function KullanicilarContent() {
                         <fieldset>
                           <legend className="mb-2 text-sm font-semibold text-slate-800">Atanmış etkinlikler</legend>
                           <div className="grid max-h-56 gap-2 overflow-y-auto sm:grid-cols-2">
-                            {events.map((event) => (
+                            {upcomingEvents.map((event) => (
                               <label key={event.id} className="flex items-start gap-2 rounded-md bg-white p-2 text-sm text-slate-700">
                                 <input
                                   type="checkbox"
