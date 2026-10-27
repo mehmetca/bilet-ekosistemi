@@ -8,6 +8,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import NextLink from "next/link";
+import { useTranslations } from "next-intl";
 import { ArrowLeft, Mail, Lock, Eye, EyeOff, CheckCircle } from "lucide-react";
 import { supabase } from "@/lib/supabase-client";
 import Header from "@/components/Header";
@@ -16,10 +17,10 @@ import { formatSupabaseAuthErrorMessage } from "@/lib/supabase-auth-errors";
 type Step = "email" | "sending" | "sent" | "set_password" | "updating" | "done";
 const APP_LOCALES = new Set(["tr", "de", "en", "ku", "ckb"]);
 
-function formatAuthUserMessage(err: unknown): string {
+function formatAuthUserMessage(err: unknown, rateLimitedMessage: string): string {
   const msg = err instanceof Error ? err.message : String(err);
   if (/rate limit|too many requests/i.test(msg)) {
-    return "Çok sık şifre sıfırlama isteği gönderildi. Lütfen birkaç dakika bekleyip tekrar deneyin.";
+    return rateLimitedMessage;
   }
   return formatSupabaseAuthErrorMessage(msg);
 }
@@ -30,6 +31,7 @@ function resolveLocaleFromPath(pathname: string): string {
 }
 
 export default function SifreYenilePage() {
+  const t = useTranslations("passwordReset");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [step, setStep] = useState<Step>("email");
@@ -149,26 +151,27 @@ export default function SifreYenilePage() {
     setError("");
     const trimmed = email.trim();
     if (!trimmed) {
-      setError("E-posta adresi girin.");
+      setError(t("errorEmailRequired"));
       return;
     }
     setStep("sending");
     try {
-      const redirectTo =
-        typeof window !== "undefined"
-          ? (() => {
-              const locale = resolveLocaleFromPath(window.location.pathname);
-              return new URL(`/${locale}/sifre-yenile`, window.location.origin).toString();
-            })()
-          : "";
-      const { error: err } = await supabase.auth.resetPasswordForEmail(trimmed, {
-        redirectTo,
+      const res = await fetch("/api/sifre-sifirlama/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: trimmed, locale: resolveLocaleFromPath(window.location.pathname) }),
       });
-      if (err) throw err;
+      if (res.status === 429) {
+        throw new Error(t("errorRateLimited"));
+      }
+      const json = (await res.json().catch(() => null)) as { success?: boolean } | null;
+      if (!res.ok || !json?.success) {
+        throw new Error(t("errorSendFailed"));
+      }
       setStep("sent");
     } catch (err) {
       setStep("email");
-      setError(formatAuthUserMessage(err) || "E-posta gönderilemedi. Lütfen tekrar deneyin.");
+      setError(formatAuthUserMessage(err, t("errorRateLimited")) || t("errorSendFailed"));
     }
   }
 
@@ -176,15 +179,15 @@ export default function SifreYenilePage() {
     e.preventDefault();
     setError("");
     if (!password || !passwordConfirm) {
-      setError("Yeni şifre ve tekrarı girin.");
+      setError(t("errorPasswordRequired"));
       return;
     }
     if (password.length < 6) {
-      setError("Şifre en az 6 karakter olmalıdır.");
+      setError(t("errorTooShort"));
       return;
     }
     if (password !== passwordConfirm) {
-      setError("Şifreler eşleşmiyor.");
+      setError(t("errorMismatch"));
       return;
     }
     setStep("updating");
@@ -195,7 +198,7 @@ export default function SifreYenilePage() {
       setTimeout(() => router.push("/giris?message=sifre-guncellendi"), 2000);
     } catch (err) {
       setStep("set_password");
-      setError(formatAuthUserMessage(err) || "Şifre güncellenemedi.");
+      setError(formatAuthUserMessage(err, t("errorRateLimited")) || t("errorUpdateFailed"));
     }
   }
 
@@ -216,30 +219,25 @@ export default function SifreYenilePage() {
           className="inline-flex items-center gap-2 text-ink-600 hover:text-ink-900 mb-8"
         >
           <ArrowLeft className="h-4 w-4" />
-          Giriş sayfasına dön
+          {t("backToLogin")}
         </NextLink>
 
         <div className="bg-white rounded-lg border border-ink-200 shadow-card p-8">
-          <h1 className="text-xl font-bold text-ink-900 mb-2">Şifre sıfırlama</h1>
+          <h1 className="text-xl font-bold text-ink-900 mb-2">{t("title")}</h1>
 
           {(step === "email" || step === "sending") && (
             <>
               {linkExpired && (
                 <div className="mb-6 rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800">
-                  <p className="font-medium mb-1">Bağlantı geçersiz veya süresi dolmuş</p>
-                  <p>
-                    E-postadaki link tek seferlik kullanım içindir ve belirli bir süre sonra geçersiz olur.
-                    Lütfen aşağıdan tekrar şifre sıfırlama talebi gönderin.
-                  </p>
+                  <p className="font-medium mb-1">{t("expiredTitle")}</p>
+                  <p>{t("expiredBody")}</p>
                 </div>
               )}
-              <p className="text-ink-600 text-sm mb-6">
-                Kayıtlı e-posta adresinizi girin. Size şifre sıfırlama bağlantısı göndereceğiz.
-              </p>
+              <p className="text-ink-600 text-sm mb-6">{t("intro")}</p>
               <form onSubmit={handleRequestReset} className="space-y-4">
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-ink-700 mb-2">
-                    E-posta
+                    {t("emailLabel")}
                   </label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-400" />
@@ -248,7 +246,7 @@ export default function SifreYenilePage() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="ornek@email.com"
+                      placeholder={t("emailPlaceholder")}
                       className="w-full rounded-lg border border-ink-300 pl-10 pr-4 py-3 text-ink-900 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                     />
                   </div>
@@ -263,7 +261,7 @@ export default function SifreYenilePage() {
                   disabled={step === "sending"}
                   className="w-full bg-gold-500 text-white py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {step === "sending" ? "Gönderiliyor..." : "Sıfırlama bağlantısı gönder"}
+                  {step === "sending" ? t("submitting") : t("submitCta")}
                 </button>
               </form>
             </>
@@ -272,11 +270,9 @@ export default function SifreYenilePage() {
           {step === "sent" && (
             <div className="py-4">
               <CheckCircle className="h-14 w-14 text-green-500 mx-auto mb-4" />
-              <p className="text-ink-700 font-medium mb-2 text-center">E-posta gönderildi</p>
+              <p className="text-ink-700 font-medium mb-2 text-center">{t("sentTitle")}</p>
               <p className="text-ink-600 text-sm mb-4">
-                <strong>{email}</strong> adresine şifre sıfırlama bağlantısı gönderdik. E-postayı
-                kontrol edin ve bağlantıya tıklayın. Gelen kutusunda göremiyorsanız spam klasörüne
-                bakın.
+                {t.rich("sentBody", { email, b: (chunks) => <strong>{chunks}</strong> })}
               </p>
 
               <div className="text-center">
@@ -285,7 +281,7 @@ export default function SifreYenilePage() {
                   onClick={() => { setStep("email"); setEmail(""); setError(""); }}
                   className="text-gold-700 hover:text-gold-700 font-medium text-sm"
                 >
-                  Farklı e-posta ile tekrar dene
+                  {t("retryDifferent")}
                 </button>
               </div>
             </div>
@@ -293,13 +289,11 @@ export default function SifreYenilePage() {
 
           {(step === "set_password" || step === "updating") && (
             <>
-              <p className="text-ink-600 text-sm mb-6">
-                Yeni şifrenizi belirleyin (en az 6 karakter).
-              </p>
+              <p className="text-ink-600 text-sm mb-6">{t("newPasswordIntro")}</p>
               <form onSubmit={handleSetPassword} className="space-y-4">
                 <div>
                   <label htmlFor="new-password" className="block text-sm font-medium text-ink-700 mb-2">
-                    Yeni şifre
+                    {t("newPasswordLabel")}
                   </label>
                   <div className="relative">
                     <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-400" />
@@ -323,7 +317,7 @@ export default function SifreYenilePage() {
                 </div>
                 <div>
                   <label htmlFor="new-password-confirm" className="block text-sm font-medium text-ink-700 mb-2">
-                    Yeni şifre (tekrar)
+                    {t("newPasswordConfirmLabel")}
                   </label>
                   <input
                     id="new-password-confirm"
@@ -344,7 +338,7 @@ export default function SifreYenilePage() {
                   disabled={step === "updating"}
                   className="w-full bg-gold-500 text-white py-3 rounded-lg font-semibold hover:bg-gold-400 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  {step === "updating" ? "Güncelleniyor..." : "Şifreyi güncelle"}
+                  {step === "updating" ? t("updating") : t("updateCta")}
                 </button>
               </form>
             </>
@@ -353,8 +347,8 @@ export default function SifreYenilePage() {
           {step === "done" && (
             <div className="text-center py-4">
               <CheckCircle className="h-14 w-14 text-green-500 mx-auto mb-4" />
-              <p className="text-ink-700 font-medium mb-2">Şifreniz güncellendi</p>
-              <p className="text-ink-600 text-sm">Giriş sayfasına yönlendiriliyorsunuz...</p>
+              <p className="text-ink-700 font-medium mb-2">{t("doneTitle")}</p>
+              <p className="text-ink-600 text-sm">{t("doneBody")}</p>
             </div>
           )}
         </div>
