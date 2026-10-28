@@ -12,6 +12,7 @@ import { useSimpleAuth } from "@/contexts/SimpleAuthContext"; // useSimpleAuth'Ä
 import { parseDateInput, toISODateString, formatEventDateWithMonth, formatEventDateDMYFromDate } from "@/lib/date-utils";
 import { eventDetailPath, isAmedSporEvent } from "@/lib/amed-spor-utils";
 import CoverImage from "@/components/CoverImage";
+import EventSoldOutBadge from "@/components/EventSoldOutBadge";
 
 interface EventCalendarProps {
   events: Event[];
@@ -195,9 +196,13 @@ export default function EventCalendar({ events }: EventCalendarProps) {
                         ? `${t("home.from")} ${formatPrice(Number(event.price_from), event.currency)}`
                         : t("home.free")}
                     </span>
+                    {event.manual_sold_out === true ? (
+                      <EventSoldOutBadge className="w-full text-center sm:w-auto sm:px-3 sm:py-2" />
+                    ) : (
                     <span className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-3 py-2.5 rounded-lg text-sm font-medium bg-gold-500 text-white hover:bg-gold-400">
                       {t("calendar.buyTicket")}
                     </span>
+                    )}
                   </div>
                 </div>
               </Link>

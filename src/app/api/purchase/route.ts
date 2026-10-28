@@ -12,7 +12,7 @@ import {
   resolveTicketForPlanRow,
   type TicketLike,
 } from "@/lib/ticket-seating-match";
-import { isEventPubliclyVisible } from "@/lib/event-visibility";
+import { isEventMarkedSoldOut, isEventPubliclyVisible } from "@/lib/event-visibility";
 import { getFulfillmentAuthToken } from "@/lib/fulfillment-auth";
 import { createBrevoClient } from "@/lib/brevo-client";
 import {
@@ -580,13 +580,19 @@ export async function POST(request: NextRequest) {
     // Sadece onaylanmış etkinliklerde bilet satışı; otomatik koltuk ataması için seating_plan_id gerekir
     const { data: eventRow } = await supabase
       .from("events")
-      .select("id, is_active, is_approved, is_draft, seating_plan_id, checkout_processing_fee, currency")
+      .select("id, is_active, is_approved, is_draft, manual_sold_out, seating_plan_id, checkout_processing_fee, currency")
       .eq("id", ticket.event_id)
       .single();
     if (!eventRow || !isEventPubliclyVisible(eventRow)) {
       return NextResponse.json(
         { success: false, message: "Bu etkinlik satışa açık değil." },
         { status: 403 }
+      );
+    }
+    if (isEventMarkedSoldOut(eventRow)) {
+      return NextResponse.json(
+        { success: false, message: "Bu etkinlikte biletler tükendi." },
+        { status: 409 }
       );
     }
 

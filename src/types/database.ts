@@ -14,6 +14,8 @@ export interface Event {
   venue: string;
   venue_id?: string | null;
   price_from: number;
+  /** Yönetici işareti: sitede her dilde "Bilet tükendi" gösterilir ve satış kilitlenir */
+  manual_sold_out?: boolean | null;
   /** Checkout’ta her bilet adedi için eklenen isteğe bağlı işlem ücreti — birim × adet (para birimi = currency). Kargo sipariş başına ayrıdır. */
   checkout_processing_fee?: number | null;
   currency?: EventCurrency | null;

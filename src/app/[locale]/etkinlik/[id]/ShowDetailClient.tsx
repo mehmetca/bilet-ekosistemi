@@ -314,6 +314,7 @@ function CityEventsSection({
           const eventTitle = (eventLocalized.title || event.title || "").trim();
           const eventDate = new Date(`${event.date} ${event.time || "00:00"}`);
           const isPast = eventDate < renderNow;
+          const manualSoldOut = event.manual_sold_out === true;
           const price = Number(event.price_from || 0);
           const dateParts = formatEventLongDateTime(event.date, event.time, locale);
           const venueName = (eventLocalized.venue || event.venue || "").trim();
@@ -363,7 +364,14 @@ function CityEventsSection({
                   {price > 0 || !(event.show_slug && isAmedSporEvent(event.show_slug)) ? (
                     <p className="text-lg font-bold text-gold-700">
                       {price > 0 ? `${t("from")} ${formatPrice(price, event.currency)}` : t("comingSoon")}
+                      {manualSoldOut ? (
+                        <span className="ml-2 inline-block align-middle rounded bg-red-600 px-2 py-0.5 text-xs font-extrabold uppercase tracking-wide text-white">
+                          {t("soldOutCta")}
+                        </span>
+                      ) : null}
                     </p>
+                  ) : manualSoldOut ? (
+                    <p className="text-xs font-extrabold uppercase tracking-wide text-red-600">{t("soldOutCta")}</p>
                   ) : null}
                 </div>
                 {isPast || salesBlocked ? (
@@ -377,9 +385,15 @@ function CityEventsSection({
                         ? `/${locale}/etkinlik/${event.id}/amed-spor-form`
                         : `/${locale}/etkinlik/${event.id}`
                     }
-                    className="inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md bg-gold-500 px-5 text-sm font-bold uppercase tracking-wide text-white shadow-card hover:bg-gold-400 sm:ml-auto"
+                    className={`inline-flex min-h-[48px] items-center justify-center gap-2 rounded-md px-5 text-sm font-bold uppercase tracking-wide text-white shadow-card sm:ml-auto ${
+                      manualSoldOut ? "bg-red-600 hover:bg-red-700" : "bg-gold-500 hover:bg-gold-400"
+                    }`}
                   >
-                    {event.show_slug && isAmedSporEvent(event.show_slug) ? t("amedSporFillForm") : t("buyTicket")}
+                    {manualSoldOut
+                      ? t("soldOutCta")
+                      : event.show_slug && isAmedSporEvent(event.show_slug)
+                      ? t("amedSporFillForm")
+                      : t("buyTicket")}
                     <ChevronRight className="h-4 w-4" />
                   </NextLink>
                 )}

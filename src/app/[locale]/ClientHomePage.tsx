@@ -198,6 +198,7 @@ export default function ClientHomePage({
   hideHeader = false,
 }: ClientHomePageProps) {
   const t = useTranslations("home");
+  const tDetail = useTranslations("eventDetail");
   const tCalendar = useTranslations("calendar");
   const tCat = useTranslations("categories");
   const locale = useLocale();
@@ -726,15 +727,16 @@ export default function ClientHomePage({
                             window.location.href = `/${locale}${eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}`;
                           }}
                           className={buttonClass({
-                            variant: eventStatus.isPast ? "outline" : "primary",
+                            variant: eventStatus.isPast ? "outline" : event.manual_sold_out === true ? "danger" : "primary",
                             size: "md",
-                            className: cn(
-                              "w-full sm:w-auto",
-                              eventStatus.isPast && "cursor-not-allowed"
-                            ),
+                            className: cn("w-full sm:w-auto", eventStatus.isPast && "cursor-not-allowed"),
                           })}
                         >
-                          {eventStatus.isPast ? t("buyTicketDisabled") : t("buyTicket")}
+                          {eventStatus.isPast
+                            ? t("buyTicketDisabled")
+                            : event.manual_sold_out === true
+                            ? tDetail("soldOutCta")
+                            : t("buyTicket")}
                         </button>
                       </div>
                     </div>

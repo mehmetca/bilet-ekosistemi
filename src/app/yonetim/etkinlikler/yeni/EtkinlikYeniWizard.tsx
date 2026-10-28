@@ -238,6 +238,8 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const [organizerDisplayName, setOrganizerDisplayName] = useState("");
   const [currency, setCurrency] = useState<EventCurrency>("EUR");
   const [priceFromInput, setPriceFromInput] = useState<number | "">("");
+  /** Yönetici işareti: sitede her dilde "Bilet tükendi" gösterilir, satış kilitlenir */
+  const [manualSoldOut, setManualSoldOut] = useState(false);
   /** Sipariş özeti: etkinlik başına bir kez; boş veya 0 = gösterilmez */
   const [checkoutProcessingFeeInput, setCheckoutProcessingFeeInput] = useState<number | "">("");
   const [ticketUrl, setTicketUrl] = useState("");
@@ -365,6 +367,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setShowSlugId((ev.show_slug as string) || "");
       setCurrency((ev.currency as EventCurrency) || "EUR");
       setPriceFromInput(typeof ev.price_from === "number" ? ev.price_from : "");
+      setManualSoldOut(Boolean((ev as { manual_sold_out?: boolean | null }).manual_sold_out));
       const cpf = Number(ev.checkout_processing_fee);
       setCheckoutProcessingFeeInput(Number.isFinite(cpf) && cpf > 0 ? cpf : "");
       setHasCustomForm(Boolean(ev.has_custom_form));
@@ -1018,6 +1021,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         address: addressVal || null,
         category,
         price_from: priceFrom,
+        manual_sold_out: manualSoldOut,
         checkout_processing_fee: checkoutFee,
         currency,
         image_url: imageUrl || null,
@@ -1063,6 +1067,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
             delete fallbackData.custom_form_max_attendees;
             delete fallbackData.accommodation_price;
             delete fallbackData.flight_price;
+            delete fallbackData.manual_sold_out;
             const res = await supabase.from("events").update({ ...fallbackData, category: cat }).eq("id", eventId);
             updateError = res.error;
           }
@@ -1434,6 +1439,20 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                   <p className="mt-1 text-xs text-slate-500">Tüm dillerde aynı rakam gösterilir. Boş = Ücretsiz.</p>
                 </div>
               </div>
+              <label className="flex items-start gap-3 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={manualSoldOut}
+                  onChange={(e) => setManualSoldOut(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span>
+                  <span className="block text-sm font-medium text-slate-700">Bilet tükendi olarak göster</span>
+                  <span className="block text-xs text-slate-500">
+                    İşaretlersem site bu etkinliği tüm dillerde &quot;Bilet tükendi&quot; olarak gösterir ve bilet alımı kapanır. Bilet gerçekten tükendiğinde veya organizatör öyle söylediğinde işaretleyin; kaldırırsanız satış devam eder.
+                  </span>
+                </span>
+              </label>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">İşlem ücreti (bilet başına, opsiyonel)</label>
                 <input

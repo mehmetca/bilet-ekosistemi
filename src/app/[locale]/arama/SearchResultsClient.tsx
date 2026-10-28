@@ -11,6 +11,7 @@ import type { Event } from "@/types/database";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { eventDetailPath } from "@/lib/amed-spor-utils";
 import CoverImage from "@/components/CoverImage";
+import EventSoldOutBadge from "@/components/EventSoldOutBadge";
 
 type Props = {
   initialQuery: string;
@@ -226,7 +227,11 @@ export default function SearchResultsClient({ initialQuery, events }: Props) {
                         <span className="font-bold text-gold-700">
                           {Number(event.price_from) > 0 ? formatPrice(Number(event.price_from), event.currency) : t("free")}
                         </span>
-                        <span className="text-sm font-medium text-gold-700">{t("buyTicket")} →</span>
+                        {event.manual_sold_out === true ? (
+                          <EventSoldOutBadge />
+                        ) : (
+                          <span className="text-sm font-medium text-gold-700">{t("buyTicket")} →</span>
+                        )}
                       </div>
                       {isEventPastByLocalDateTime(event.date, event.time) && (
                         <p className="mt-2 text-xs font-medium text-red-600">{t("eventEndedBanner")}</p>

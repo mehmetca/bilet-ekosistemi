@@ -15,6 +15,7 @@ import { formatEventDateDMY } from "@/lib/date-utils";
 import { supabase } from "@/lib/supabase-client";
 import { eventDetailPath } from "@/lib/amed-spor-utils";
 import CoverImage from "@/components/CoverImage";
+import EventSoldOutBadge from "@/components/EventSoldOutBadge";
 import { resolvePublicImageUrl } from "@/lib/external-image";
 
 function getYouTubeEmbedUrl(url?: string): string | null {
@@ -663,6 +664,9 @@ export default function ArtistPageClient({ artist, slug }: ArtistPageClientProps
                                 ? `${tHome("from")} ${formatPrice(Number(event.price_from), event.currency)}`
                                 : tHome("free")}
                             </span>
+                            {event.manual_sold_out === true && (
+                              <EventSoldOutBadge className="ml-2" />
+                            )}
                           </div>
                         </div>
                       </div>

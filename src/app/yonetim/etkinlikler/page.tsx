@@ -183,6 +183,23 @@ function EtkinliklerContent() {
     }
   }
 
+  /** Hızlı "Bilet tükendi" anahtarı: etkinlik yayında kalır, satış kapanır. */
+  async function handleSetSoldOut(eventId: string, soldOut: boolean) {
+    if (!isAdmin) return;
+    try {
+      const { error } = await supabase
+        .from("events")
+        .update({ manual_sold_out: soldOut })
+        .eq("id", eventId);
+      if (error) throw error;
+      await fetchEvents();
+      await revalidatePublicSiteCache();
+    } catch (err) {
+      console.error("Bilet tükendi ayarı güncellenemedi:", err);
+      alert("Bilet tükendi ayarı güncellenemedi. " + (err instanceof Error ? err.message : ""));
+    }
+  }
+
   async function handleApprove(eventId: string) {
     try {
       const { error } = await supabase
@@ -524,8 +541,24 @@ function EtkinliklerContent() {
               ? formatPrice(Number(event.price_from), event.currency)
               : "Ücretsiz"}
           </span>
+          {(event as Event & { manual_sold_out?: boolean }).manual_sold_out === true && (
+            <span className="rounded bg-red-600 px-2 py-0.5 text-xs font-extrabold uppercase tracking-wide text-white">
+              Bilet tükendi
+            </span>
+          )}
           {isAdmin && (
             <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer px-2 py-1.5 border border-slate-200 rounded-lg hover:bg-slate-50">
+                <input
+                  type="checkbox"
+                  checked={(event as Event & { manual_sold_out?: boolean }).manual_sold_out ?? false}
+                  onChange={(e) => handleSetSoldOut(event.id, e.target.checked)}
+                  disabled={submitting}
+                  title="Site bu etkinliği tüm dillerde 'Bilet tükendi' gösterir, satış kapanır"
+                  className="h-4 w-4 rounded border-slate-300 text-red-600 focus:ring-red-500"
+                />
+                <span className="text-red-600 font-medium">Tükendi</span>
+              </label>
               <select
                 value={(event as Event & { homepage_featured_order?: number | null }).homepage_featured_order ?? ""}
                 onChange={(e) => {

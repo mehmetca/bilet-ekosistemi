@@ -330,6 +330,7 @@
     "quantity": "Qty",
     "remaining": "Remaining",
     "soldOut": "Sold out",
+    "soldOutNote": "Tickets for this event are sold out. Sales resume automatically once the organizer releases more tickets.",
     "fullName": "Full Name",
     "fullNamePlaceholder": "Your full name",
     "email": "Email",

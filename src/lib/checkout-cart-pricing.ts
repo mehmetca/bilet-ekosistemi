@@ -3,7 +3,7 @@ import {
   shippingFeeForPhysicalDelivery,
   type CheckoutPhysicalDelivery,
 } from "@/lib/checkout-shipping";
-import { isEventPubliclyVisible } from "@/lib/event-visibility";
+import { isEventMarkedSoldOut, isEventPubliclyVisible } from "@/lib/event-visibility";
 
 export type CheckoutCartLineInput = {
   ticketId: string;
@@ -80,7 +80,7 @@ export async function computeCheckoutCartPricing(
 
   const { data: eventRows, error: eventError } = await supabase
     .from("events")
-    .select("id, is_active, is_approved, is_draft, checkout_processing_fee, currency")
+    .select("id, is_active, is_approved, is_draft, manual_sold_out, checkout_processing_fee, currency")
     .in("id", eventIds);
 
   if (eventError || !eventRows?.length) {
@@ -100,6 +100,9 @@ export async function computeCheckoutCartPricing(
     const eventRow = eventById.get(ticket.event_id);
     if (!eventRow || !isEventPubliclyVisible(eventRow)) {
       return { ok: false, message: "Sepette satışa kapalı etkinlik var.", status: 403 };
+    }
+    if (isEventMarkedSoldOut(eventRow)) {
+      return { ok: false, message: "Sepette biletleri tükenmiş etkinlik var.", status: 409 };
     }
 
     const eventCurrency = String(

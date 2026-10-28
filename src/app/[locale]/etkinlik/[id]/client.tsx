@@ -746,6 +746,7 @@ function SeatMapWithZoom({
   selectedSeatCategory,
   onSelectSeatCategory,
   currency,
+  categoryForcedSoldOut = false,
 }: {
   sections: SeatPlanSection[];
   heldSeatIds: Set<string>;
@@ -762,6 +763,7 @@ function SeatMapWithZoom({
   selectedSeatCategory: string;
   onSelectSeatCategory: (value: string) => void;
   currency: Event["currency"];
+  categoryForcedSoldOut?: boolean;
 }) {
   const t = useTranslations("eventDetail");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -932,7 +934,7 @@ function SeatMapWithZoom({
                 const active = selectedSeatCategory === tk.id;
                 const effectiveAvail =
                   ticketEffectiveAvailableById.get(tk.id) ?? Number(tk.available ?? 0);
-                const soldOut = effectiveAvail <= 0;
+                const soldOut = categoryForcedSoldOut || effectiveAvail <= 0;
                 return (
                   <button
                     key={tk.id}
@@ -1111,7 +1113,10 @@ function sidebarTicketFallbackFromCart(
 
 export default function EventDetailClient({ event, tickets, venue = null, organizerDisplayName = null, locale: localeProp = "tr", isUnapproved = false, isDraft = false, nowIso }: EventDetailClientProps): React.ReactElement {
   const t = useTranslations("eventDetail");
-  const salesBlocked = isUnapproved || isDraft;
+  /** Yönetimden elle işaretlenmiş "Bilet tükendi": stok sayısından bağımsız, her dilde gösterilir. */
+  const manualSoldOut = event.manual_sold_out === true;
+  const salesBlockedExcludingSoldOut = isUnapproved || isDraft;
+  const salesBlocked = salesBlockedExcludingSoldOut || manualSoldOut;
   const tCheckout = useTranslations("checkout");
   const tCat = useTranslations("categories");
   const locale = ((useLocale() as Locale) || localeProp) as Locale;
@@ -2468,6 +2473,13 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               )}
 
+              {manualSoldOut && !salesBlockedExcludingSoldOut && (
+                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+                  <p className="text-sm font-extrabold uppercase tracking-wide">{t("soldOut")}</p>
+                  <p className="mt-1 text-sm">{t("soldOutNote")}</p>
+                </div>
+              )}
+
               {/* Bestplatzbuchung / Saalplanbuchung – ikonlu seçim */}
               {/* Koltuk planı (seating_plan_id) olan etkinliklerde her iki seçenek gösterilir.
                   Planı olmayan etkinliklerde yalnızca "Fiyat kategorisine göre" gösterilir. */}
@@ -2526,6 +2538,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   <p className="text-sm text-gold-700 mb-4">
                     {t("externalTicketInfo")}{" "}
                     {t("priceFrom")}: <strong>{formatPrice(Number(event.price_from || 0), event.currency)}</strong>
+                    {manualSoldOut && (
+                      <span className="ml-2 inline-block rounded bg-red-600 px-2 py-0.5 text-xs font-extrabold uppercase tracking-wide text-white">
+                        {t("soldOutCta")}
+                      </span>
+                    )}
                   </p>
                   <p className="text-sm text-gold-700 mb-3">
                     {t("externalTicketDisclaimer")}
@@ -2537,9 +2554,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     href={externalTicketUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gold-400"
+                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white ${
+                      manualSoldOut ? "bg-red-600 hover:bg-red-700" : "bg-gold-500 hover:bg-gold-400"
+                    }`}
                   >
-                    {t("buyExternal")}
+                    {manualSoldOut ? t("soldOutCta") : t("buyExternal")}
                     <ChevronRight className="h-4 w-4" />
                   </a>
                 </div>
@@ -2669,6 +2688,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                 selectedSeatCategory={selectedSeatCategory}
                                 onSelectSeatCategory={setSelectedSeatCategory}
                                 currency={event.currency}
+                                categoryForcedSoldOut={manualSoldOut}
                               />
                               </>
                             )}
@@ -2895,7 +2915,11 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (isPastEvent || salesBlocked) return;
+                                      if (isPastEvent || salesBlockedExcludingSoldOut) return;
+                                      if (manualSoldOut) {
+                                        setActionMessage(t("soldOutNote"));
+                                        return;
+                                      }
                                       const eventPayload = {
                                         eventId: event.id,
                                         eventTitle: localized.title || event.title,
@@ -2939,10 +2963,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                                       setSelectedSeatIds(new Set());
                                       setHasSeatSelectionAddedToCart(true);
                                     }}
-                                    disabled={blockSeatSale || atCartTicketCap}
-                                    className="w-full rounded-lg bg-gold-500 px-4 py-3 text-white font-semibold hover:bg-gold-400 disabled:opacity-50"
+                                    disabled={isPastEvent || salesBlockedExcludingSoldOut || atCartTicketCap}
+                                    className={`w-full rounded-lg px-4 py-3 font-semibold text-white disabled:opacity-50 ${
+                                      manualSoldOut ? "bg-red-600" : "bg-gold-500 hover:bg-gold-400"
+                                    }`}
                                   >
-                                    {tCheckout("addToCart")} ({selectedSeatIds.size})
+                                    {manualSoldOut ? t("soldOutCta") : `${tCheckout("addToCart")} (${selectedSeatIds.size})`}
                                   </button>
                                 );
                               })()}
@@ -3156,7 +3182,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                         <div className="divide-y divide-ink-200">
                           {catalogTickets.map((ticketType) => {
                             const availableAmount = effectiveAvailabilityForTicket(ticketType);
-                            const isSoldOutRow = availableAmount <= 0;
+                            const isSoldOutRow = manualSoldOut || availableAmount <= 0;
                             const minSelectable = getMinQuantityFromDescription(ticketType.description);
                             const maxSelectable = Math.min(availableAmount, orderTicketsRemainingBudget);
                             const effectiveMin =
@@ -3283,7 +3309,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                       <button
                         type="button"
                         onClick={() => {
-                          if (isPastEvent || salesBlocked || selectedPriceTicketEntries.length === 0) return;
+                          if (isPastEvent || salesBlockedExcludingSoldOut) return;
+                          if (manualSoldOut) {
+                            setActionMessage(t("soldOutNote"));
+                            return;
+                          }
+                          if (selectedPriceTicketEntries.length === 0) return;
                           addItemsBatch(
                             selectedPriceTicketEntries.map(({ ticket, count }) => ({
                               ticketId: ticket.id,
@@ -3310,13 +3341,15 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           setActionMessage(tCheckout("addedToCart"));
                         }}
                         disabled={
-                          salesBlocked ||
+                          salesBlockedExcludingSoldOut ||
                           isPastEvent ||
                           selectedPriceTicketEntries.length === 0
                         }
-                        className="w-full rounded-lg bg-gold-500 px-8 py-4 text-lg font-semibold text-white transition-colors hover:bg-gold-400 disabled:bg-ink-300 disabled:text-ink-500"
+                        className={`w-full rounded-lg px-8 py-4 text-lg font-semibold text-white transition-colors disabled:bg-ink-300 disabled:text-ink-500 ${
+                          manualSoldOut ? "bg-red-600" : "bg-gold-500 hover:bg-gold-400"
+                        }`}
                       >
-                        {tCheckout("addToCart")} ({selectedPriceTicketTotalCount})
+                        {manualSoldOut ? t("soldOutCta") : `${tCheckout("addToCart")} (${selectedPriceTicketTotalCount})`}
                       </button>
                     </div>
                   </div>

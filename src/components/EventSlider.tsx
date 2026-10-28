@@ -24,6 +24,7 @@ interface EventSliderProps {
 
 export default function EventSlider({ events, title, locale = "tr", noEventsText = "Yaklaşan etkinlik bulunmamaktadır.", buyTicketText = "Bilet Al", freeText = "Ücretsiz" }: EventSliderProps) {
   const tHome = useTranslations("home");
+  const tDetail = useTranslations("eventDetail");
   const { isAdmin } = useSimpleAuth(); // isAdmin durumunu al
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
@@ -184,6 +185,13 @@ export default function EventSlider({ events, title, locale = "tr", noEventsText
                 <span className="bg-ink-200 text-ink-500 px-6 py-2.5 rounded-lg font-semibold text-center w-full sm:w-auto cursor-not-allowed">
                   {tHome("buyTicketDisabled")}
                 </span>
+              ) : currentEvent.manual_sold_out === true ? (
+                <Link
+                  href={eventDetailPath((currentEvent as Event & { show_slug?: string }).show_slug, currentEvent.id)}
+                  className="inline-flex w-full items-center justify-center rounded-lg bg-red-600 px-6 py-2.5 text-sm font-extrabold uppercase tracking-wide text-white transition-colors hover:bg-red-700 sm:w-auto"
+                >
+                  {tDetail("soldOutCta")}
+                </Link>
               ) : (
                 <Link
                   href={eventDetailPath((currentEvent as Event & { show_slug?: string }).show_slug, currentEvent.id)}

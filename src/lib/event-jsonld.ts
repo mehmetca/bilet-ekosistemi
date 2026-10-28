@@ -120,7 +120,10 @@ export function buildEventJsonLd(
 
   const imageAbs = absolutizeUrl(event.image_url, origin);
 
-  const availability = isPast ? "https://schema.org/SoldOut" : "https://schema.org/InStock";
+  const availability =
+    isPast || event.manual_sold_out === true
+      ? "https://schema.org/SoldOut"
+      : "https://schema.org/InStock";
 
   const desc = stripHtml(event.description);
   const safeDesc = (desc || event.title).slice(0, 5000);

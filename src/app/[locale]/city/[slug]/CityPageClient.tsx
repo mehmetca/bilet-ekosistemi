@@ -13,6 +13,7 @@ import type { Event } from "@/types/database";
 import { formatEventDateDMY } from "@/lib/date-utils";
 import { resolvePublicImageUrl } from "@/lib/external-image";
 import { eventDetailPath } from "@/lib/amed-spor-utils";
+import EventSoldOutBadge from "@/components/EventSoldOutBadge";
 
 interface CityPageClientProps {
   city: Record<string, unknown>;
@@ -156,6 +157,9 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
                           ? `${tHome("from")} ${formatPrice(Number(event.price_from), event.currency)}`
                           : tHome("free")}
                       </span>
+                      {event.manual_sold_out === true ? (
+                        <EventSoldOutBadge />
+                      ) : (
                       <Link
                         href={eventDetailPath((event as Event & { show_slug?: string }).show_slug, event.id)}
                         className="inline-flex items-center gap-1 rounded-lg bg-gold-500 px-3 py-2 text-sm font-medium text-white hover:bg-gold-400"
@@ -163,6 +167,7 @@ export default function CityPageClient({ city, initialEvents, nowIso }: CityPage
                         {tHome("buyTicket")}
                         <ChevronRight className="h-4 w-4" />
                       </Link>
+                      )}
                     </div>
                   </div>
                 </div>
