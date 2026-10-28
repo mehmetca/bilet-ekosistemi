@@ -5,7 +5,7 @@
  * Supabase Dashboard → Authentication → URL Configuration → Redirect URLs listesine
  * https://your-domain.com/tr/sifre-yenile (veya /sifre-yenile; middleware locale ekler) ve localhost ekleyin.
  */
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import NextLink from "next/link";
 import { useTranslations } from "next-intl";
@@ -31,6 +31,20 @@ function resolveLocaleFromPath(pathname: string): string {
 }
 
 export default function SifreYenilePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-ink-50">
+          <span className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-gold-500 border-t-transparent" />
+        </div>
+      }
+    >
+      <SifreYenileContent />
+    </Suspense>
+  );
+}
+
+function SifreYenileContent() {
   const t = useTranslations("passwordReset");
   const router = useRouter();
   const searchParams = useSearchParams();
