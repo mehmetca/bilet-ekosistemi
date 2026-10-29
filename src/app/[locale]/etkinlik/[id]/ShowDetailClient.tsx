@@ -137,7 +137,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
       {/* Hero – etkinlik özeti */}
       <div className="border-b border-ink-200 bg-white">
         <div className="site-container py-8">
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-start">
             <div>
               <span className="eyebrow">
                 {tCat((firstEvent.category || "diger").toLowerCase())}
@@ -162,7 +162,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
               </div>
             </div>
             <div>
-              <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-ink-200 bg-ink-100">
+              <div className="relative mx-auto w-full max-w-[240px] aspect-[3/4] overflow-hidden rounded-lg border border-ink-200 bg-ink-100">
                 {firstEvent.image_url ? (
                   <Image
                     src={resolvePublicImageUrl(firstEvent.image_url) ?? ""}
@@ -170,7 +170,7 @@ export default function ShowDetailClient({ events, showSlug, organizerDisplayNam
                     fill
                     priority
                     className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 360px"
+                    sizes="240px"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">

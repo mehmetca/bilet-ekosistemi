@@ -2264,7 +2264,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
           <span className="eyebrow mb-3 block">
             {tCat((event.category || "diger").toLowerCase())}
           </span>
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-stretch">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_240px] lg:items-stretch">
             <div className="flex flex-col">
               <h1 className="font-display text-3xl font-semibold tracking-tight text-ink-900 lg:text-4xl">{localized.title}</h1>
               <span className="rule-gold mt-4" />
@@ -2426,7 +2426,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
             </div>
 
             <div>
-              <div className="relative aspect-[3/4] overflow-hidden rounded-lg border border-ink-200 bg-ink-100">
+              <div className="relative mx-auto w-full max-w-[240px] aspect-[3/4] overflow-hidden rounded-lg border border-ink-200 bg-ink-100">
                 {event.image_url ? (
                   <Image
                     src={resolvePublicImageUrl(event.image_url) ?? ""}
@@ -2434,7 +2434,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                     fill
                     priority
                     className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 360px"
+                    sizes="240px"
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center">
