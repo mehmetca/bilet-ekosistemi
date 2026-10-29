@@ -76,9 +76,9 @@
   .poster-scrim {
     background-image: linear-gradient(
       to top,
-      rgba(14, 14, 13, 0.92) 0%,
-      rgba(14, 14, 13, 0.62) 34%,
-      rgba(14, 14, 13, 0.18) 70%,
+      rgba(14, 14, 13, 0.8) 0%,
+      rgba(14, 14, 13, 0.48) 34%,
+      rgba(14, 14, 13, 0.12) 70%,
       rgba(14, 14, 13, 0) 100%
     );
   }
