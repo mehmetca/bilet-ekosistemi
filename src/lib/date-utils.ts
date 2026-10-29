@@ -132,13 +132,39 @@ const KU_MONTHS_LONG = [
   "Adar",
   "Avrêl",
   "Gulan",
-  "Pûşper",
+  "Hezîran",
   "Tîrmeh",
   "Tebax",
-  "Rezber",
+  "Îlon",
   "Cotmeh",
-  "Sermawez",
+  "Mijdar",
   "Berfanbar",
+] as const;
+
+const KU_MONTHS_SHORT = [
+  "Rêb",
+  "Sib",
+  "Ada",
+  "Avr",
+  "Gul",
+  "Hez",
+  "Tîr",
+  "Teb",
+  "Îlo",
+  "Cot",
+  "Mij",
+  "Ber",
+] as const;
+
+/** getDay() sırasıyla: 0 = Yekşem (Pazar). */
+const KU_DOW = [
+  "Yekşem",
+  "Duşem",
+  "Sêşem",
+  "Çarşem",
+  "Pêncşem",
+  "În",
+  "Şemî",
 ] as const;
 
 const CKB_MONTHS_LONG = [
@@ -182,6 +208,16 @@ export function formatEventLongDateTime(
       dayNum: String(d),
       year: String(y),
       lineLong: `${dd} ${longM} ${y} ${dow}, ${time}`,
+    };
+  }
+  if (locale === "ku") {
+    const mi = Math.max(1, Math.min(12, m)) - 1;
+    const dd = String(d).padStart(2, "0");
+    return {
+      monthShort: KU_MONTHS_SHORT[mi] ?? "",
+      dayNum: String(d),
+      year: String(y),
+      lineLong: `${dd} ${KU_MONTHS_LONG[mi]} ${y} ${KU_DOW[localDate.getDay()] ?? ""}, ${time}`,
     };
   }
   const loc = locale === "de" ? "de-DE" : "en-GB";

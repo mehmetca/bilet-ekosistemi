@@ -31,12 +31,12 @@ const MONTH_EQUIV: Record<
   mart: { tr: "Mart", de: "März", en: "March", ku: "Adar", ckb: "ئادار" },
   nisan: { tr: "Nisan", de: "April", en: "April", ku: "Avrêl", ckb: "نیسان" },
   mayis: { tr: "Mayıs", de: "Mai", en: "May", ku: "Gulan", ckb: "ئایار" },
-  haziran: { tr: "Haziran", de: "Juni", en: "June", ku: "Pûşper", ckb: "حوزەیران" },
+  haziran: { tr: "Haziran", de: "Juni", en: "June", ku: "Hezîran", ckb: "حوزەیران" },
   temmuz: { tr: "Temmuz", de: "Juli", en: "July", ku: "Tîrmeh", ckb: "تەممووز" },
   agustos: { tr: "Ağustos", de: "August", en: "August", ku: "Tebax", ckb: "ئاب" },
-  eylul: { tr: "Eylül", de: "September", en: "September", ku: "Rezber", ckb: "ئەیلوول" },
+  eylul: { tr: "Eylül", de: "September", en: "September", ku: "Îlon", ckb: "ئەیلوول" },
   ekim: { tr: "Ekim", de: "Oktober", en: "October", ku: "Cotmeh", ckb: "تشرینی یەکەم" },
-  kasim: { tr: "Kasım", de: "November", en: "November", ku: "Sermawez", ckb: "تشرینی دووەم" },
+  kasim: { tr: "Kasım", de: "November", en: "November", ku: "Mijdar", ckb: "تشرینی دووەم" },
   aralik: { tr: "Aralık", de: "Dezember", en: "December", ku: "Berfanbar", ckb: "کانوونی یەکەم" },
 };
 

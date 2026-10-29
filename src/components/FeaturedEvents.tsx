@@ -5,6 +5,7 @@ import type { Event } from "@/types/database";
 import { isEventPubliclyVisible } from "@/lib/event-visibility";
 import { getLocalizedEvent } from "@/lib/i18n-content";
 import { eventDetailPath } from "@/lib/amed-spor-utils";
+import { formatEventLongDateTime } from "@/lib/date-utils";
 import type { Locale } from "@/lib/i18n-content";
 import { Music2 } from "lucide-react";
 import CoverImage from "@/components/CoverImage";
@@ -21,17 +22,8 @@ interface FeaturedEventsProps {
 // FeaturedEvents bileşeni
 export default function FeaturedEvents({ events, locale, title = "Events" }: FeaturedEventsProps) {
   const getStackedDateParts = (rawDate: string) => {
-    const datePart = String(rawDate || "").includes("T") ? String(rawDate).split("T")[0] : String(rawDate || "").slice(0, 10);
-    const m = datePart.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
-    if (!m) return { day: "—", month: "", year: "" };
-    const year = m[1];
-    const monthIndex = Math.max(0, Math.min(11, Number(m[2]) - 1));
-    const day = String(Number(m[3]));
-    const localeCode = locale === "tr" ? "tr-TR" : locale === "de" ? "de-DE" : "en-US";
-    const month = new Intl.DateTimeFormat(localeCode, { month: "short" })
-      .format(new Date(Number(year), monthIndex, 1))
-      .replace(/\.$/, "");
-    return { day, month, year };
+    const { dayNum, monthShort, year } = formatEventLongDateTime(rawDate, null, locale);
+    return { day: dayNum, month: monthShort, year };
   };
 
   const featured = [...events]
