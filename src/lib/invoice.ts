@@ -114,6 +114,16 @@ export async function issueInvoiceForOrder(
   admin?: SupabaseClient
 ): Promise<InvoiceResult> {
   const supabase = admin ?? getSupabaseAdmin();
+
+  const { data: testFlag } = await supabase
+    .from("orders")
+    .select("is_test")
+    .eq("id", orderId)
+    .maybeSingle();
+  if (testFlag?.is_test) {
+    return { ok: false, code: "test_order", message: "Deneme siparişi için resmî fatura düzenlenmez." };
+  }
+
   const { data, error } = await supabase.rpc("issue_order_invoice", {
     p_order_id: orderId,
     p_actor: options.actorUserId ?? null,
@@ -244,9 +254,10 @@ export async function listUninvoicedOrders(
   let orderQuery = supabase
     .from("orders")
     .select(
-      "id, event_id, created_at, buyer_name, buyer_email, quantity, total_price, sales_channel, door_payment"
+      "id, event_id, created_at, buyer_name, buyer_email, quantity, total_price, sales_channel, door_payment, is_test"
     )
     .eq("status", "completed")
+    .eq("is_test", false)
     .order("created_at", { ascending: false })
     .limit((filter.limit ?? 60) * 3);
   if (filter.eventId) orderQuery = orderQuery.eq("event_id", filter.eventId);

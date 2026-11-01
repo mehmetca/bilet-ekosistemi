@@ -8,6 +8,7 @@ import { generateTicketCode } from "@/lib/ticket-code";
 import { isEventMarkedSoldOut } from "@/lib/event-visibility";
 import { buildTicketMailPayloadForOrder, type TicketMailOrderRow } from "@/lib/order-ticket-mail";
 import { sendTicketEmail, type SeatDetail } from "@/lib/ticket-email";
+import { buildInvoiceMailAttachment } from "@/lib/invoice-mail";
 import type { TicketLike } from "@/lib/ticket-seating-match";
 import type { StaffRole } from "@/lib/server-staff-auth";
 
@@ -76,6 +77,13 @@ export async function POST(request: NextRequest) {
     if (!payment) {
       return NextResponse.json(
         { success: false, message: "Nakit, kart veya davetiye seçilmelidir." },
+        { status: 400 }
+      );
+    }
+    // Fatura (Rechnung) alıcı adı boş kesilemez → kapıda satışta ad soyad zorunlu.
+    if (buyerName.split(/\s+/).filter(Boolean).length < 2) {
+      return NextResponse.json(
+        { success: false, message: "Müşterinin ad ve soyadını yazın; fatura bu isimle kesilir." },
         { status: 400 }
       );
     }
@@ -267,7 +275,7 @@ export async function POST(request: NextRequest) {
       total_price: totalPrice,
       ticket_code: ticketCode,
       status: "completed",
-      buyer_name: buyerName || "Kapı gişesi",
+      buyer_name: buyerName,
       buyer_email: buyerEmail || null,
       delivery_method: "e_ticket",
       sales_channel: "door",
@@ -413,6 +421,9 @@ export async function POST(request: NextRequest) {
           buyer_email: buyerEmail,
           buyer_name: orderRow.buyer_name as string,
         });
+        const invoiceAttachment = await buildInvoiceMailAttachment(orderId);
+        payload.invoicePdfBase64 = invoiceAttachment?.base64;
+        payload.invoiceNumber = invoiceAttachment?.number;
         const result = await sendTicketEmail(payload);
         emailSent = Boolean(result?.sent);
         emailReason = emailSent ? null : String(result?.reason || "Mail gönderilemedi.");

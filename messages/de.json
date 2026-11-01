@@ -761,6 +761,8 @@
     "cancelled": "Storniert",
     "printTicket": "Mein Ticket drucken",
     "downloadPdf": "PDF herunterladen",
+    "invoiceNotIssued": "Für diese Bestellung wurde noch keine Rechnung ausgestellt.",
+    "downloadInvoice": "Rechnung herunterladen",
     "resendEmail": "Erneut senden",
     "resendEmailSent": "Ticket-E-Mail wurde gesendet.",
     "resendEmailFailed": "E-Mail konnte nicht gesendet werden.",

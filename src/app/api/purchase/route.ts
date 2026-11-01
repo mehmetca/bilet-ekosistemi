@@ -21,6 +21,8 @@ import {
   type SeatDetail,
   type TicketUnitDetail,
 } from "@/lib/ticket-email";
+import { buildInvoiceMailAttachment } from "@/lib/invoice-mail";
+import { resolveTicketOrganizer } from "@/lib/order-ticket-mail";
 
 
 
@@ -1153,6 +1155,8 @@ export async function POST(request: NextRequest) {
       seatDetails.length > 0
         ? [...new Set(seatDetails.map((s) => s.section_name))].join(", ")
         : (ticket.name || ticket.ticket_type || "Standart");
+    const invoiceAttachment = await buildInvoiceMailAttachment(orderData?.id);
+    const organizer = await resolveTicketOrganizer(getSupabaseAdmin(), ticket.event_id);
     const emailResult = await sendTicketEmail({
       buyerEmail,
       buyerName,
@@ -1167,6 +1171,10 @@ export async function POST(request: NextRequest) {
       location: eventSummary.location || ticket.city || ticket.location,
       seatDetails: seatDetails.length > 0 ? seatDetails : undefined,
       ticketCodes: ticketCodes.length > 0 ? ticketCodes : undefined,
+      invoicePdfBase64: invoiceAttachment?.base64,
+      invoiceNumber: invoiceAttachment?.number,
+      organizerName: organizer.name || undefined,
+      organizerLogoPath: organizer.logoPath || undefined,
     });
 
     if (!emailResult.sent) {

@@ -241,6 +241,8 @@
     "cancelled": "هەڵوەشێنراوە",
     "printTicket": "بلیتەکەم چاپ بکە",
     "downloadPdf": "داگرتنی PDF",
+    "invoiceNotIssued": "هێشتا بۆ ئەم داواکارییە فاتوورە دراسترنەکراوە.",
+    "downloadInvoice": "فاتوورە دابەزێنە",
     "resendEmail": "دووبارە بنێرە",
     "resendEmailSent": "ئیمەیڵی بلیت نێردرا.",
     "resendEmailFailed": "ئیمەیڵ نەنێردرا.",

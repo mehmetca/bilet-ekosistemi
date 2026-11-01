@@ -331,6 +331,8 @@
     "cancelled": "Hat betal kirin",
     "printTicket": "Bilêta min çap bike",
     "downloadPdf": "PDF dakêşîne",
+    "invoiceNotIssued": "Ji bo vê siparişê hîn fatûre nehatiye birîn.",
+    "downloadInvoice": "Dakxistina fatûreyê",
     "resendEmail": "Dîsa bişîne",
     "resendEmailSent": "E-nameya bilêtê hate şandin.",
     "resendEmailFailed": "E-name nehat şandin.",

@@ -761,6 +761,8 @@
     "cancelled": "İptal",
     "printTicket": "Biletimi Yazdır",
     "downloadPdf": "PDF İndir",
+    "invoiceNotIssued": "Bu sipariş için fatura henüz kesilmemiş.",
+    "downloadInvoice": "Faturamı İndir",
     "resendEmail": "Yeniden Gönder",
     "resendEmailSent": "Bilet maili gönderildi.",
     "resendEmailFailed": "Mail gönderilemedi.",

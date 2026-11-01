@@ -245,6 +245,8 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   /** Alman Rechnung KDV oranı: 7 kültür (Konzert), 19 regel, 0 = § 19 UStG. */
   const [vatRatePercent, setVatRatePercent] = useState<number>(7);
   const [ticketUrl, setTicketUrl] = useState("");
+  /** Onaylı organizatör adları: yazılan ad bunlardan biriyle eşleşirse fatura o organizatör adına kesilir. */
+  const [approvedOrganizerNames, setApprovedOrganizerNames] = useState<string[]>([]);
   /** Tur/gösteri gruplaması için show_slug (tek gösteri sayfası) */
   const [showSlugId, setShowSlugId] = useState("");
 
@@ -312,18 +314,31 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       return;
     }
     (async () => {
-      const { data: venuesData } = await supabase
-        .from("venues")
-        .select("id, name, address, city")
-        .order("name");
-      setVenues(venuesData || []);
+      const [venuesRes, approvedRes] = await Promise.all([
+        supabase.from("venues").select("id, name, address, city").order("name"),
+        supabase.from("organizer_requests").select("company_name").eq("status", "approved"),
+      ]);
+      setVenues(venuesRes.data || []);
+      setApprovedOrganizerNames([
+        ...new Set(
+          (approvedRes.data || [])
+            .map((row) => String(row.company_name || "").trim())
+            .filter((name) => name.length > 0)
+        ),
+      ]);
       if (isOrganizer && user?.id) {
+        const { data: ownRequest } = await supabase
+          .from("organizer_requests")
+          .select("company_name")
+          .eq("user_id", user.id)
+          .eq("status", "approved")
+          .maybeSingle();
         const { data: profile } = await supabase
           .from("organizer_profiles")
           .select("organization_display_name")
           .eq("user_id", user.id)
           .maybeSingle();
-        const name = profile?.organization_display_name?.trim() || null;
+        const name = ownRequest?.company_name?.trim() || profile?.organization_display_name?.trim() || null;
         setCurrentUserOrganizerName(name);
         if (!editId) setOrganizerDisplayName(name || "");
       }
@@ -949,6 +964,11 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       alert("Harici bilet linki girin veya en az bir bilet türü ekleyin (fiyat ve kapasite ile).");
       return;
     }
+    /** Dış link yoksa satışı biz yapıyoruz → fatura kesilecek, satıcı adı zorunlu. */
+    if (!hasExternalTicketLink && !(organizerDisplayName.trim() || currentUserOrganizerName || "").trim()) {
+      alert("Organizatör adı gerekli: biletleri kendimiz sattığımız etkinlikte fatura (Rechnung) bu ad adına kesilir.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -1413,8 +1433,19 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Organizasyon / Organizatör adı</label>
-                <input type="text" value={organizerDisplayName} onChange={(e) => setOrganizerDisplayName(e.target.value)} placeholder={currentUserOrganizerName ? currentUserOrganizerName : "Etkinlik kartında görünecek isim"} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
-                <p className="mt-1 text-xs text-slate-500">Bu isim etkinlik kartında ve sayfada görünür.</p>
+                <input type="text" list="onayli-organizatorler" value={organizerDisplayName} onChange={(e) => setOrganizerDisplayName(e.target.value)} placeholder={currentUserOrganizerName ? currentUserOrganizerName : "Onaylı organizatör adı (fatura bu adla kesilir)"} className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500" />
+                <datalist id="onayli-organizatorler">
+                  {approvedOrganizerNames.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+                <p className="mt-1 text-xs text-slate-500">Bu isim etkinlik sayfasında görünür; onaylı bir organizatör seçersen fatura (Rechnung) o organizatör adına kesilir.</p>
+                {!hasExternalTicketLink && organizerDisplayName.trim() && !approvedOrganizerNames.some((name) => name.toLowerCase() === organizerDisplayName.trim().toLowerCase()) && (
+                  <p className="mt-1 text-xs text-amber-600">Bu ad onaylı bir organizatör kaydıyla eşleşmiyor; eşleşene kadar bu etkinlik için fatura kesilemez.</p>
+                )}
+                {!hasExternalTicketLink && !organizerDisplayName.trim() && !currentUserOrganizerName && (
+                  <p className="mt-1 text-xs text-amber-600">Biletleri kendimizin sattığı etkinlikte organizatör adı zorunlu: fatura bu adla kesilir.</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Slug ID (show_slug)</label>

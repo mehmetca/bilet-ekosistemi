@@ -3,6 +3,7 @@ import { getAuthUser } from "@/lib/api-auth";
 import { buildTicketMailPayloadForOrder, type TicketMailOrderRow } from "@/lib/order-ticket-mail";
 import { canAccessOrder, isTicketIssuedOrder } from "@/lib/order-access";
 import { sendTicketEmail } from "@/lib/ticket-email";
+import { buildInvoiceMailAttachment } from "@/lib/invoice-mail";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +134,10 @@ export async function POST(
       { status: 400 }
     );
   }
+
+  const invoiceAttachment = await buildInvoiceMailAttachment(orderId);
+  payload.invoicePdfBase64 = invoiceAttachment?.base64;
+  payload.invoiceNumber = invoiceAttachment?.number;
 
   const result = await sendTicketEmail(payload);
   if (!result.sent) {

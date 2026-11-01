@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, Loader2, Mail, Printer, Trash2 } from "lucide-react";
+import { Download, FileText, Loader2, Mail, Printer, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import TicketPrint from "@/components/TicketPrint";
 import type { EventCurrency, TicketType } from "@/types/database";
@@ -30,6 +30,7 @@ type Props = {
   deletingId: string | null;
   onResend: (orderId: string) => void;
   onDownload: (orderId: string) => void;
+  onDownloadInvoice: (orderId: string) => void;
   busyId: string | null;
   lastSent: Record<string, string>;
 };
@@ -42,6 +43,7 @@ export default function BiletlerimOrderList({
   deletingId,
   onResend,
   onDownload,
+  onDownloadInvoice,
   busyId,
   lastSent,
 }: Props) {
@@ -118,6 +120,19 @@ export default function BiletlerimOrderList({
                       <Download className="h-4 w-4" aria-hidden />
                     )}
                     {t("downloadPdf")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDownloadInvoice(order.id)}
+                    disabled={busyId === `${order.id}:invoice`}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-ink-700 hover:bg-ink-50 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {busyId === `${order.id}:invoice` ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <FileText className="h-4 w-4" aria-hidden />
+                    )}
+                    {t("downloadInvoice")}
                   </button>
                   <button
                     type="button"

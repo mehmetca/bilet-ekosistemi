@@ -761,6 +761,8 @@
     "cancelled": "Cancelled",
     "printTicket": "Print My Ticket",
     "downloadPdf": "Download PDF",
+    "invoiceNotIssued": "No invoice has been issued for this order yet.",
+    "downloadInvoice": "Download invoice",
     "resendEmail": "Resend email",
     "resendEmailSent": "Ticket email sent.",
     "resendEmailFailed": "Could not send the email.",

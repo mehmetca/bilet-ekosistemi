@@ -489,6 +489,10 @@ export default function DoorSalePanel({ mode }: { mode: "sell" | "observe" }) {
 
   const submit = async () => {
     if (busy) return;
+    if (buyerName.trim().split(/\s+/).filter(Boolean).length < 2) {
+      setError("Fatura kesilebilmesi için müşterinin ad ve soyadını yazın.");
+      return;
+    }
     if (seatMode) {
       if (selectedSeats.length === 0) {
         setError("Önce salondan koltuk seçin.");
@@ -901,7 +905,7 @@ export default function DoorSalePanel({ mode }: { mode: "sell" | "observe" }) {
               <input
                 value={buyerName}
                 onChange={(e) => setBuyerName(e.target.value)}
-                placeholder="Müşteri adı (isteğe bağlı)"
+                placeholder="Müşteri adı soyadı (zorunlu)"
                 className="mt-3 w-full rounded-lg border border-ink-300 px-3 py-2 text-sm"
               />
               <input

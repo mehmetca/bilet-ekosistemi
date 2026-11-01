@@ -179,9 +179,43 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
     }
   }
 
-  if (!user) return null;
+  async function handleDownloadInvoice(orderId: string) {
+    setBusyId(`${orderId}:invoice`);
+    setNotice(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        setNotice(t("sessionExpired"));
+        return;
+      }
+      const res = await fetch(`/api/orders/${orderId}/invoice/?format=pdf`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setNotice(t("invoiceNotIssued"));
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Rechnung-${orderId.slice(0, 8)}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("invoice pdf download error:", e);
+      setNotice(t("resendEmailFailed"));
+    } finally {
+      setBusyId(null);
+    }
+  }
 
-  return (
+  if (!user) return null;  return (
     <section className="bg-white rounded-lg border border-ink-200 p-6 mb-6">
       <h2 className="text-lg font-semibold text-ink-900 mb-4 flex items-center gap-2">
         <TicketIcon className="h-5 w-5" aria-hidden />
@@ -237,6 +271,7 @@ export default function BiletlerimSection({ user }: BiletlerimSectionProps) {
             deletingId={deletingId}
             onResend={handleResend}
             onDownload={handleDownload}
+            onDownloadInvoice={handleDownloadInvoice}
             busyId={busyId}
             lastSent={lastSent}
           />

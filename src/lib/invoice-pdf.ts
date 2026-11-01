@@ -115,21 +115,47 @@ export async function buildInvoicePdf(inv: InvoiceRow): Promise<Uint8Array> {
   const buyer = inv.buyer_snapshot;
   const sellerAddress = addressLines(seller);
 
-  // Absender şeridi: yalnız satıcı (organizatör) kimliği.
-  page.drawText(
-    pdfText([seller.name, ...sellerAddress].filter(Boolean).join(" \u00B7 ")),
-    { x: MARGIN, y: A4.height - 44, size: 7.5, font: regular, color: muted }
-  );
-
+  // Sol üst: logo en solda, satıcı (organizatör) kimliği onun sağında ve aşağıda.
   const logo = await embedLogo(doc, seller.logo_path);
+  let logoW = 0;
+  let logoH = 0;
   if (logo) {
-    const scale = Math.min(150 / logo.width, 32 / logo.height, 1);
-    const w = logo.width * scale;
-    page.drawImage(logo, {
-      x: right - w,
-      y: A4.height - 78,
-      width: w,
-      height: logo.height * scale,
+    const scale = Math.min(120 / logo.width, 48 / logo.height, 1);
+    logoW = logo.width * scale;
+    logoH = logo.height * scale;
+  }
+  const sellerX = MARGIN + (logo ? logoW + 16 : 0);
+  const sellerTop = A4.height - 96;
+  const sellerMaxWidth = Math.max(120, right - 215 - sellerX - 12);
+  if (logo) {
+    page.drawImage(logo, { x: MARGIN, y: sellerTop - logoH + 12, width: logoW, height: logoH });
+  }
+
+  let headerY = sellerTop;
+  for (const line of wrap(seller.name || "Veranstalter", bold, 13, sellerMaxWidth)) {
+    page.drawText(line, { x: sellerX, y: headerY, size: 13, font: bold, color: ink });
+    headerY -= 15;
+  }
+  headerY -= 2;
+  for (const line of sellerAddress) {
+    for (const text of wrap(line, regular, 10.5, sellerMaxWidth)) {
+      page.drawText(text, { x: sellerX, y: headerY, size: 10.5, font: regular, color: ink });
+      headerY -= 13;
+    }
+  }
+  const sellerTaxLine = [
+    seller.vat_id ? `USt-IdNr. ${pdfText(seller.vat_id)}` : "",
+    seller.tax_id ? `Steuer-Nr. ${pdfText(seller.tax_id)}` : "",
+  ]
+    .filter(Boolean)
+    .join("  \u00B7  ");
+  if (sellerTaxLine) {
+    page.drawText(sellerTaxLine, {
+      x: sellerX,
+      y: headerY,
+      size: 9.5,
+      font: regular,
+      color: muted,
     });
   }
 
@@ -169,16 +195,16 @@ export async function buildInvoicePdf(inv: InvoiceRow): Promise<Uint8Array> {
   // Empfänger bloğu.
   page.drawText("Rechnungsempf\u00E4nger", {
     x: MARGIN,
-    y: A4.height - 132,
+    y: A4.height - 202,
     size: 8,
     font: bold,
     color: muted,
   });
-  let y = A4.height - 146;
+  let y = A4.height - 217;
   for (const raw of [buyer.name || "Gast", buyer.address || "", buyer.city || "", buyer.email || ""]) {
-    for (const text of wrap(String(raw), regular, 10.5, 240)) {
-      page.drawText(text, { x: MARGIN, y, size: 10.5, font: regular, color: ink });
-      y -= 13;
+    for (const text of wrap(String(raw), regular, 11, 250)) {
+      page.drawText(text, { x: MARGIN, y, size: 11, font: regular, color: ink });
+      y -= 13.5;
     }
   }
 
@@ -211,8 +237,8 @@ export async function buildInvoicePdf(inv: InvoiceRow): Promise<Uint8Array> {
 
   // Kalem tablosu.
   const tableTop = Math.min(y - 20, A4.height - 268);
-  const colQty = A4.width - 250;
-  const colUnit = A4.width - 170;
+  const colQty = A4.width - 262;
+  const colUnit = A4.width - 190;
   const colTotal = right - 78;
 
   page.drawLine({
@@ -229,10 +255,12 @@ export async function buildInvoicePdf(inv: InvoiceRow): Promise<Uint8Array> {
     color: muted,
   });
   page.drawText("Menge", { x: colQty, y: tableTop, size: 8.5, font: bold, color: muted });
-  page.drawText("Einzelpreis netto", { x: colUnit, y: tableTop, size: 8.5, font: bold, color: muted });
-  page.drawText("Gesamt netto", { x: colTotal, y: tableTop, size: 8.5, font: bold, color: muted });
+  page.drawText("Einzelpreis", { x: colUnit, y: tableTop, size: 8.5, font: bold, color: muted });
+  page.drawText("netto", { x: colUnit, y: tableTop - 10, size: 8.5, font: bold, color: muted });
+  page.drawText("Gesamt", { x: colTotal, y: tableTop, size: 8.5, font: bold, color: muted });
+  page.drawText("netto", { x: colTotal, y: tableTop - 10, size: 8.5, font: bold, color: muted });
 
-  let rowY = tableTop - 20;
+  let rowY = tableTop - 26;
   for (const item of inv.line_items) {
     const descLines = wrap(item.text, regular, 10.5, 280);
     descLines.forEach((text, idx) => {
