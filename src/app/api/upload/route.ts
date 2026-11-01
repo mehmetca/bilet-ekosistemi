@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateImageFile } from "@/lib/image-standards";
 import { saveLocalUpload } from "@/lib/local-upload";
-import { getAuthToken, requireRoleWithAccessToken } from "@/lib/api-auth";
+import {
+  authenticateWithAccessToken,
+  getAuthToken,
+  requireRoleWithAccessToken,
+} from "@/lib/api-auth";
+
+// Organizatör logosu başvuru anında yüklenir; rol henüz admin onayıyla verilmediği için
+// bu klasör rol yerine doğrulanmış oturum ister. Dosya adı sunucuda uuid ile üretilir.
+const SESSION_ONLY_FOLDERS = ["organizer-logos"];
 
 export async function POST(request: NextRequest) {
   let formData: FormData;
@@ -16,12 +24,15 @@ export async function POST(request: NextRequest) {
   const formToken = typeof formTokenRaw === "string" ? formTokenRaw.trim() : "";
   const accessToken = headerToken || formToken || null;
 
-  const auth = await requireRoleWithAccessToken(accessToken, ["admin", "organizer"]);
+  const folder = (formData.get("folder") as string) || "images";
+
+  const auth = SESSION_ONLY_FOLDERS.includes(folder)
+    ? await authenticateWithAccessToken(accessToken)
+    : await requireRoleWithAccessToken(accessToken, ["admin", "organizer"]);
   if (auth instanceof Response) return auth;
 
   try {
     const file = formData.get("file") as File;
-    const folder = (formData.get("folder") as string) || "images";
 
     if (!file) {
       return NextResponse.json({ error: "Dosya bulunamadı" }, { status: 400 });

@@ -24,17 +24,19 @@ interface SimpleAuthType {
   isAdmin: boolean;
   isController: boolean;
   isOrganizer: boolean;
-  userRole: "admin" | "controller" | "organizer" | null;
+  isGateSales: boolean;
+  userRole: "admin" | "controller" | "organizer" | "gate_sales" | null;
   signOut: () => Promise<void>;
   refreshRole: () => Promise<void>;
 }
 
 const SimpleAuthContext = createContext<SimpleAuthType | undefined>(undefined);
 
-function primaryUserRole(slugs: string[]): "admin" | "controller" | "organizer" | null {
+function primaryUserRole(slugs: string[]): "admin" | "controller" | "organizer" | "gate_sales" | null {
   if (slugs.includes("admin")) return "admin";
   if (slugs.includes("controller")) return "controller";
   if (slugs.includes("organizer")) return "organizer";
+  if (slugs.includes("gate_sales")) return "gate_sales";
   return null;
 }
 
@@ -55,6 +57,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   const isAdmin = roleSlugs.includes("admin");
   const isController = roleSlugs.includes("controller");
   const isOrganizer = roleSlugs.includes("organizer");
+  const isGateSales = roleSlugs.includes("gate_sales");
   const userRole = primaryUserRole(roleSlugs);
 
   async function fetchUserRole(userId: string, force = false) {
@@ -304,7 +307,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
   /** Ziyaretçi: 24 saat aktivite yoksa oturumu kapat. Admin/organizatör/kontrolcü etkilenmez. */
   useEffect(() => {
     if (loading || !user || !roleResolved) return;
-    const isStaff = isAdmin || isOrganizer || isController;
+    const isStaff = isAdmin || isOrganizer || isController || isGateSales;
     if (isStaff) return;
 
     if (isVisitorIdleExpired()) {
@@ -341,7 +344,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       window.clearInterval(intervalId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, loading, roleResolved, isAdmin, isOrganizer, isController]);
+  }, [user, loading, roleResolved, isAdmin, isOrganizer, isController, isGateSales]);
 
   async function refreshRole() {
     if (user) {
@@ -356,6 +359,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     isAdmin,
     isController,
     isOrganizer,
+    isGateSales,
     userRole,
     signOut,
     refreshRole,

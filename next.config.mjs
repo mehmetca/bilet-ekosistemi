@@ -9,6 +9,8 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
+  // worktree'lerde üst dizinde kalan hayalet lockfile'lar kökü yanlış infer ettiriyor.
+  outputFileTracingRoot: __dirname,
   transpilePackages: ["lucide-react", "next-intl", "use-intl", "konva"],
 
   experimental: {

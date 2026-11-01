@@ -14,7 +14,7 @@ const intlMiddleware = createMiddleware(routing);
 
 const APP_LOCALES = routing.locales as readonly string[];
 const AUTH_SESSION_PATH_RE =
-  /^\/(?:yonetim|auth|kontrol)(?:\/|$)|^\/(?:(?:tr|de|en|ku|ckb)\/)?(?:giris|sifre-yenile|sepet|bilgilerim|organizator-basvuru|panel)(?:\/|$)/;
+  /^\/(?:yonetim|auth|kontrol|gise)(?:\/|$)|^\/(?:(?:tr|de|en|ku|ckb)\/)?(?:giris|sifre-yenile|sepet|bilgilerim|organizator-basvuru|panel)(?:\/|$)/;
 
 // Test paths için auth bypass (sadece development)
 const DEV_BYPASS_AUTH_PATHS = [
@@ -307,7 +307,9 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/giris") ||
     pathname.startsWith("/auth") ||
     pathname === "/kontrol" ||
-    pathname.startsWith("/kontrol/")
+    pathname.startsWith("/kontrol/") ||
+    pathname === "/gise" ||
+    pathname.startsWith("/gise/")
   ) {
     const cookieLocale = request.cookies.get("NEXT_LOCALE")?.value;
     const panelLocale = isAppLocale(cookieLocale) ? cookieLocale : resolveUnprefixedPathLocale(request);

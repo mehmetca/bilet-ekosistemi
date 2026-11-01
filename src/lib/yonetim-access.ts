@@ -20,6 +20,7 @@ const ORGANIZER_PREFIXES = [
   "/yonetim/satis-raporu",
   "/yonetim/bilet-ozeti",
   "/yonetim/bilet-kontrol",
+  "/yonetim/gise",
   "/yonetim/bilgilerim",
 ];
 

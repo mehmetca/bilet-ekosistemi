@@ -15,6 +15,8 @@ import ControllerApplyForm from "@/components/ControllerApplyForm";
 import { supabase } from "@/lib/supabase-client";
 import QRScanner from "@/components/QRScanner";
 import DoorCounters from "@/components/DoorCounters";
+import OfflineDoorPanel from "@/components/OfflineDoorPanel";
+import { decideOffline, loadManifest, queueScan } from "@/lib/offline-checkin";
 import { feedbackService } from "@/lib/feedbackService";
 import { formatSupabaseAuthErrorMessage } from "@/lib/supabase-auth-errors";
 import {
@@ -61,6 +63,9 @@ export default function KontrolPage() {
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [scannerMounted, setScannerMounted] = useState(false);
   const [netError, setNetError] = useState<string | null>(null);
+  /** Cihaza indirilmiş giriş listesi olan etkinlik; çevrimdışı karar bunu kullanır. */
+  const [armedEventId, setArmedEventId] = useState<string | null>(null);
+  const [queueTick, setQueueTick] = useState(0);
   const autoCheckedCodeRef = useRef<string | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
@@ -114,36 +119,120 @@ export default function KontrolPage() {
     };
   }, [canShowDashboard, user?.id, user?.email]);
 
-  const handleScan = useCallback(async (code: string) => {
-    const clean = code.trim();
-    if (!clean || loading) return;
-    setLoading(true);
-    setNetError(null);
-    setManualCode(clean);
-    setCheckedCode(clean);
-    try {
-      const res = await verifyTicketAtDoor(clean);
-      setResult(res);
-      if (!res.valid && res.reason === "used") {
-        void feedbackService.playError();
-        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
-          navigator.vibrate([80, 40, 80]);
-        }
+  /**
+   * Çevrimdışı karar: yalnız cihazdaki giriş listesine bakılır.
+   * Liste o kodu bilmiyorsa RED — diğer etkinliğin/iptal edilen siparişin bileti
+   * kapıda yeşil olmaz. Sunucu bağlantısı geri geldiğinde kuyruk yazılır.
+   */
+  const scanOffline = useCallback(
+    async (code: string): Promise<CheckResult | null> => {
+      if (!armedEventId) return null;
+      const [decision, manifest] = await Promise.all([
+        decideOffline(armedEventId, code),
+        loadManifest(armedEventId),
+      ]);
+      const base: CheckResult = {
+        valid: false,
+        offline: true,
+        eventId: armedEventId,
+        eventTitle: manifest?.event.title ?? undefined,
+        eventDate: manifest?.event.date ?? undefined,
+        eventTime: manifest?.event.time ?? undefined,
+        venue: manifest?.event.location ?? undefined,
+        quantity: 1,
+      };
+      const entry = decision.entry;
+      const seat = {
+        seatSection: entry?.section ?? null,
+        seatRow: entry?.row ?? null,
+        seatLabel: entry?.seat ?? null,
+      };
+
+      if (decision.state === "unknown") {
+        return {
+          ...base,
+          ...seat,
+          reason: "not_found",
+          message: "Kod cihazdaki giriş listesinde yok (çevrimdışı karar).",
+        };
       }
-    } catch {
-      // Kapıda ağ kopması: boş ekran yerine tekrar denenebilir bir uyarı göster.
-      setResult(null);
-      setNetError("Bağlantı kurulamadı. İnterneti kontrol edip tekrar okutun.");
-      void feedbackService.playWarning();
-    } finally {
-      setLoading(false);
-    }
-  }, [loading]);
+      if (decision.state === "used") {
+        return { ...base, ...seat, reason: "used" };
+      }
+      return { ...base, ...seat, valid: true, marked: false };
+    },
+    [armedEventId]
+  );
+
+  const handleScan = useCallback(
+    async (code: string) => {
+      const clean = code.trim();
+      if (!clean || loading) return;
+      setLoading(true);
+      setNetError(null);
+      setManualCode(clean);
+      setCheckedCode(clean);
+      // Bağlantı yoksa sunucuyu denemeden cihaz listesinden karar ver.
+      if (armedEventId && typeof navigator !== "undefined" && !navigator.onLine) {
+        setResult(await scanOffline(clean));
+        setLoading(false);
+        return;
+      }
+      try {
+        const res = await verifyTicketAtDoor(clean);
+        setResult(res);
+        if (!res.valid && res.reason === "used") {
+          void feedbackService.playError();
+          if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+            navigator.vibrate([80, 40, 80]);
+          }
+        }
+      } catch {
+        // Kapıda ağ kopması: liste yüklüyse çevrimdışı karar ver, değilse tekrar denenebilir uyarı.
+        const off = await scanOffline(clean);
+        if (off) {
+          setResult(off);
+          void feedbackService.playWarning();
+        } else {
+          setResult(null);
+          setNetError("Bağlantı kurulamadı. İnterneti kontrol edip tekrar okutun.");
+          void feedbackService.playWarning();
+        }
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loading, armedEventId, scanOffline]
+  );
 
   // Giriş onayı ayrı insan hamlesi: deneme amaçlı okumalar bileti yakmaz.
   const handleMark = useCallback(async () => {
     const code = checkedCode.trim();
     if (!code || marking || loading) return;
+    // Çevrimdışı onay: sunucuya yazılmaz, cihaz kuyruğuna alınır.
+    if (result?.offline && armedEventId) {
+      setMarking(true);
+      try {
+        await queueScan({
+          client_event_id: crypto.randomUUID(),
+          event_id: armedEventId,
+          code,
+          scanned_at: new Date().toISOString(),
+          section: result.seatSection ?? null,
+          row: result.seatRow ?? null,
+          seat: result.seatLabel ?? null,
+        });
+        setResult({ ...result, marked: true, offlineMarked: true });
+        setQueueTick((n) => n + 1);
+        void feedbackService.playSuccess();
+        if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+          navigator.vibrate([40]);
+        }
+      } finally {
+        setMarking(false);
+      }
+      return;
+    }
     setMarking(true);
     setNetError(null);
     try {
@@ -158,13 +247,19 @@ export default function KontrolPage() {
         void feedbackService.playError();
       }
     } catch {
-      setResult(null);
-      setNetError("Bağlantı kurulamadı. İnterneti kontrol edip tekrar deneyin.");
+      const off = await scanOffline(code);
+      if (off) {
+        setResult(off);
+        setNetError("Bağlantı yok: bilet cihaz listesinden doğrulandı, onay bekliyor.");
+      } else {
+        setResult(null);
+        setNetError("Bağlantı kurulamadı. İnterneti kontrol edip tekrar deneyin.");
+      }
       void feedbackService.playWarning();
     } finally {
       setMarking(false);
     }
-  }, [checkedCode, marking, loading]);
+  }, [checkedCode, marking, loading, result, armedEventId, scanOffline]);
 
   // Onay düğmesi tek yerde üretilir: sonuç kartında ve kamera şeridinde aynı öğe.
   const confirmBar = useMemo(() => {
@@ -195,31 +290,53 @@ export default function KontrolPage() {
           <>
             <div className="flex items-center gap-2 text-green-800 font-semibold mb-4">
               <CheckCircle className="h-6 w-6 flex-shrink-0" />
-              {result.marked ? "Giriş işaretlendi" : "Geçerli bilet — onay bekliyor"}
+              {result.marked
+                ? result.offlineMarked
+                  ? "Giriş işaretlendi (çevrimdışı — sunucuya gönderilmeyi bekliyor)"
+                  : "Giriş işaretlendi"
+                : result.offline
+                  ? "Geçerli bilet — cihaz listesi doğruladı, onay bekliyor"
+                  : "Geçerli bilet — onay bekliyor"}
             </div>
             <dl className="space-y-3 text-green-800">
               <div className="flex items-start gap-3">
                 <span className="font-medium min-w-[80px]">Etkinlik</span>
                 <span>{result.eventTitle}</span>
               </div>
-              <div className="flex items-start gap-3">
-                <Calendar className="h-5 w-5 mt-0.5 text-green-600 flex-shrink-0" />
-                <span>
-                  {result.eventDate ? new Date(result.eventDate).toLocaleDateString("tr-TR") : ""} • {result.eventTime}
-                </span>
-              </div>
-              <div className="flex items-start gap-3">
-                <MapPin className="h-5 w-5 mt-0.5 text-green-600 flex-shrink-0" />
-                <span>{result.venue}</span>
-              </div>
-              <div className="flex items-start gap-3">
-                <User className="h-5 w-5 mt-0.5 text-green-600 flex-shrink-0" />
-                <div>
-                  <div>{result.buyerName}</div>
-                  <div className="text-sm text-green-700">{result.buyerEmail}</div>
-                  <div className="text-sm text-green-700">{result.quantity} bilet</div>
+              {result.eventDate ? (
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-5 w-5 mt-0.5 text-green-600 flex-shrink-0" />
+                  <span>
+                    {new Date(result.eventDate).toLocaleDateString("tr-TR")} • {result.eventTime}
+                  </span>
                 </div>
-              </div>
+              ) : null}
+              {result.venue ? (
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 mt-0.5 text-green-600 flex-shrink-0" />
+                  <span>{result.venue}</span>
+                </div>
+              ) : null}
+              {result.seatSection || result.seatRow ? (
+                <div className="flex items-start gap-3">
+                  <span className="font-medium min-w-[80px]">Yer</span>
+                  <span>
+                    {[result.seatSection, result.seatRow && `Sıra ${result.seatRow}`, result.seatLabel && `Koltuk ${result.seatLabel}`]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </div>
+              ) : null}
+              {result.buyerName ? (
+                <div className="flex items-start gap-3">
+                  <User className="h-5 w-5 mt-0.5 text-green-600 flex-shrink-0" />
+                  <div>
+                    <div>{result.buyerName}</div>
+                    <div className="text-sm text-green-700">{result.buyerEmail}</div>
+                    <div className="text-sm text-green-700">{result.quantity} bilet</div>
+                  </div>
+                </div>
+              ) : null}
             </dl>
             <div className="mt-5 space-y-2">
               {confirmBar}
@@ -235,9 +352,11 @@ export default function KontrolPage() {
             <div className="flex items-center gap-2 font-semibold">
               <XCircle className="h-6 w-6 flex-shrink-0" />
               {result.reason === "not_found"
-                ? "Bilet bulunamadı. Kodu kontrol edin."
+                ? result.message || "Bilet bulunamadı. Kodu kontrol edin."
                 : result.reason === "used"
-                  ? "Bu bilet içeri geçti."
+                  ? result.offline
+                    ? "Bu bilet içeri geçti (çevrimdışı liste)."
+                    : "Bu bilet içeri geçti."
                   : result.reason === "invalid"
                     ? result.message || "Bilet geçersiz."
                     : result.message || "Bir hata oluştu. Lütfen tekrar deneyin."}
@@ -274,7 +393,7 @@ export default function KontrolPage() {
             <CheckCircle className="h-5 w-5 flex-shrink-0" />
             {result.marked
               ? "Giriş işaretlendi"
-              : `Geçerli bilet — onay bekliyor: ${result.eventTitle}`}
+              : `${result.offline ? "Geçerli bilet (çevrimdışı)" : "Geçerli bilet"} — onay bekliyor: ${result.eventTitle}`}
           </div>
           {confirmBar}
         </div>
@@ -282,9 +401,11 @@ export default function KontrolPage() {
     }
     const text =
       result.reason === "used"
-        ? "Bu bilet içeri geçti."
+        ? result.offline
+          ? "Bu bilet içeri geçti (çevrimdışı liste)."
+          : "Bu bilet içeri geçti."
         : result.reason === "not_found"
-          ? "Bilet bulunamadı. Kodu kontrol edin."
+          ? result.message || "Bilet bulunamadı. Kodu kontrol edin."
           : result.message || "Bilet geçersiz.";
     const previousLine = result.reason === "used" ? previousEntryText(result.previous) : null;
     return (
@@ -460,6 +581,11 @@ export default function KontrolPage() {
                   </div>
                 ) : resultPanel}
                 <DoorCounters eventId={result?.eventId} />
+                <OfflineDoorPanel
+                  armedEventId={armedEventId}
+                  onArmedChange={setArmedEventId}
+                  queueTick={queueTick}
+                />
               </div>
             )}
 

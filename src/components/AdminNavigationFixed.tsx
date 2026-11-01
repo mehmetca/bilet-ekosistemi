@@ -23,6 +23,7 @@ import {
   PieChart,
   Image as ImageIcon,
   Palette,
+  FileText,
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 
@@ -56,9 +57,12 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       { href: "/yonetim/sanatcilar", label: t("nav.artists"), icon: User, description: t("nav.artistsDesc") },
       { href: "/yonetim/bilet-turleri", label: t("nav.ticketTypes"), icon: Ticket, description: t("nav.ticketTypesDesc") },
       { href: "/yonetim/bilet-listesi", label: t("nav.orders"), icon: CreditCard, description: t("nav.ordersDesc") },
+      { href: "/yonetim/gise", label: "Gişe kayıtları", icon: Ticket, description: "Kim, nerede, kaç bilet kesti" },
+      { href: "/yonetim/gise-gorevlendirmeleri", label: "Gişe görevlendirmeleri", icon: Users, description: "Kapıda bilet satma yetkisi verme" },
       { href: "/yonetim/amed-spor-kayitlar", label: "Amed Spor Kayıtları", icon: Users, description: "Form kayıt listesi ve CSV" },
       { href: "/yonetim/bilet-ozeti", label: t("nav.ticketSummary"), icon: PieChart, description: t("nav.ticketSummaryDesc") },
       { href: "/yonetim/muhasebe", label: t("nav.accounting"), icon: BarChart3, description: t("nav.accountingDesc") },
+      { href: "/yonetim/faturalar", label: "Faturalar", icon: FileText, description: "Rechnung / KDV / ZUGFeRD XML" },
       { href: "/yonetim/kullanicilar", label: t("nav.users"), icon: Users, description: t("nav.usersDesc") },
       { href: "/yonetim/musteri-ara", label: t("nav.customerSearch"), icon: SearchIcon, description: t("nav.customerSearchDesc") },
       { href: "/yonetim/bilet-kontrol", label: t("nav.ticketCheck"), icon: Shield, description: t("nav.ticketCheckDesc") },
@@ -83,6 +87,8 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       { href: "/yonetim", label: t("nav.dashboard"), icon: Calendar, description: t("nav.dashboardDescOrganizer") },
       { href: "/yonetim/etkinlikler", label: t("nav.organizerEvents"), icon: Calendar, description: t("nav.eventsDesc") },
       { href: "/yonetim/biletlerim", label: t("nav.myTickets"), icon: Ticket, description: t("nav.myTicketsDesc") },
+      { href: "/yonetim/gise", label: "Gişe satışı", icon: Ticket, description: "Kendi etkinliklerinde kapıda bilet kesme" },
+      { href: "/yonetim/faturalar", label: "Faturalar", icon: FileText, description: "Kendi etkinliklerinin Rechnung ve KDV dökümü" },
       { href: "/yonetim/bilgilerim", label: t("nav.orgInfo"), icon: User, description: t("nav.orgInfoDesc") },
     ],
     [t]
@@ -113,7 +119,9 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
                   ? t("roles.admin")
                   : userRole === "controller"
                     ? t("roles.controller")
-                    : t("roles.organizer")}
+                    : userRole === "gate_sales"
+                      ? t("roles.gateSales")
+                      : t("roles.organizer")}
               </span>
             </div>
           </div>
@@ -174,7 +182,9 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
             ? t("roles.admin")
             : userRole === "controller"
               ? t("roles.controller")
-              : t("roles.organizer")}
+              : userRole === "gate_sales"
+                ? t("roles.gateSales")
+                : t("roles.organizer")}
         </p>
       </div>
     </div>

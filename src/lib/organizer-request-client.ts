@@ -1,5 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase-client";
+import { postalAddress } from "@/lib/organizer-address";
 
 export type OrganizerRequest = {
   id?: string;
@@ -9,7 +10,15 @@ export type OrganizerRequest = {
   company_name?: string | null;
   legal_form?: string | null;
   address?: string | null;
+  street?: string | null;
+  postcode?: string | null;
+  city?: string | null;
+  country_code?: string | null;
   phone?: string | null;
+  tax_number?: string | null;
+  invoice_email?: string | null;
+  logo_path?: string | null;
+  kleinunternehmer?: boolean;
   trade_register?: string | null;
   trade_register_number?: string | null;
   vat_id?: string | null;
@@ -21,8 +30,15 @@ export type OrganizerRequest = {
 export type OrganizerApplicationInput = {
   company_name?: string;
   legal_form?: string;
-  address?: string;
+  street?: string;
+  postcode?: string;
+  city?: string;
+  country_code?: string;
   phone?: string;
+  tax_number?: string;
+  invoice_email?: string;
+  logo_path?: string;
+  kleinunternehmer?: boolean;
   trade_register?: string;
   trade_register_number?: string;
   vat_id?: string;
@@ -102,11 +118,24 @@ export async function submitOrganizerApplication(
       status: "pending",
       company_name: body.company_name?.trim() || null,
       legal_form: body.legal_form?.trim() || null,
-      address: body.address?.trim() || null,
+      street: body.street?.trim() || null,
+      postcode: body.postcode?.trim() || null,
+      city: body.city?.trim() || null,
+      country_code: body.country_code?.trim().toUpperCase() || null,
+      address: postalAddress({
+        street: body.street,
+        postcode: body.postcode,
+        city: body.city,
+        country_code: body.country_code,
+      }),
       phone: body.phone?.trim() || null,
+      tax_number: body.tax_number?.trim() || null,
+      invoice_email: body.invoice_email?.trim() || null,
+      logo_path: body.logo_path?.trim() || null,
+      kleinunternehmer: Boolean(body.kleinunternehmer),
       trade_register: body.trade_register?.trim() || null,
       trade_register_number: body.trade_register_number?.trim() || null,
-      vat_id: body.vat_id?.trim() || null,
+      vat_id: body.vat_id?.trim().replace(/\s+/g, "").toUpperCase() || null,
       representative_name: body.representative_name?.trim() || null,
       organization_display_name: body.organization_display_name?.trim() || null,
       terms_accepted_at: new Date().toISOString(),

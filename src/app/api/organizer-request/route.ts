@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { publicErrorMessage } from "@/lib/api-error";
+import { postalAddress } from "@/lib/organizer-address";
 
 async function getSupabaseWithUser(request: NextRequest) {
   const supabase = getSupabaseAdmin();
@@ -44,8 +45,16 @@ export async function GET(request: NextRequest) {
           organization_display_name: profRes.data.organization_display_name,
           company_name: null,
           legal_form: null,
+          street: null,
+          postcode: null,
+          city: null,
+          country_code: null,
           address: null,
           phone: null,
+          tax_number: null,
+          invoice_email: null,
+          logo_path: null,
+          kleinunternehmer: false,
           trade_register: null,
           trade_register_number: null,
           vat_id: null,
@@ -66,7 +75,15 @@ type OrganizerRequestBody = {
   company_name?: string;
   legal_form?: string;
   address?: string;
+  street?: string;
+  postcode?: string;
+  city?: string;
+  country_code?: string;
   phone?: string;
+  tax_number?: string;
+  invoice_email?: string;
+  logo_path?: string;
+  kleinunternehmer?: boolean;
   trade_register?: string;
   trade_register_number?: string;
   vat_id?: string;
@@ -74,6 +91,8 @@ type OrganizerRequestBody = {
   organization_display_name?: string;
   terms_accepted?: boolean;
 };
+
+const trimOrNull = (value?: string) => value?.trim() || null;
 
 export async function POST(request: NextRequest) {
   try {
@@ -86,8 +105,15 @@ export async function POST(request: NextRequest) {
     const {
       company_name,
       legal_form,
-      address,
+      street,
+      postcode,
+      city,
+      country_code,
       phone,
+      tax_number,
+      invoice_email,
+      logo_path,
+      kleinunternehmer,
       trade_register,
       trade_register_number,
       vat_id,
@@ -125,11 +151,19 @@ export async function POST(request: NextRequest) {
         status: "pending",
         company_name: company_name?.trim() || null,
         legal_form: legal_form?.trim() || null,
-        address: address?.trim() || null,
+        street: street?.trim() || null,
+        postcode: postcode?.trim() || null,
+        city: city?.trim() || null,
+        country_code: country_code?.trim().toUpperCase() || null,
+        address: postalAddress({ street, postcode, city, country_code }),
         phone: phone?.trim() || null,
+        tax_number: tax_number?.trim() || null,
+        invoice_email: invoice_email?.trim() || null,
+        logo_path: logo_path?.trim() || null,
+        kleinunternehmer: Boolean(kleinunternehmer),
         trade_register: trade_register?.trim() || null,
         trade_register_number: trade_register_number?.trim() || null,
-        vat_id: vat_id?.trim() || null,
+        vat_id: vat_id?.trim().replace(/\s+/g, "").toUpperCase() || null,
         representative_name: representative_name?.trim() || null,
         organization_display_name: organization_display_name?.trim() || null,
         terms_accepted_at: new Date().toISOString(),
@@ -179,8 +213,15 @@ export async function PATCH(request: NextRequest) {
     const {
       company_name,
       legal_form,
-      address,
+      street,
+      postcode,
+      city,
+      country_code,
       phone,
+      tax_number,
+      invoice_email,
+      logo_path,
+      kleinunternehmer,
       trade_register,
       trade_register_number,
       vat_id,
@@ -206,13 +247,28 @@ export async function PATCH(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
+    const addressPartsGiven =
+      street !== undefined || postcode !== undefined || city !== undefined || country_code !== undefined;
+
     const updates: Record<string, unknown> = {
-      legal_form: legal_form !== undefined ? (legal_form?.trim() || null) : undefined,
-      address: address !== undefined ? (address?.trim() || null) : undefined,
-      phone: phone !== undefined ? (phone?.trim() || null) : undefined,
-      trade_register: trade_register !== undefined ? (trade_register?.trim() || null) : undefined,
-      trade_register_number: trade_register_number !== undefined ? (trade_register_number?.trim() || null) : undefined,
-      vat_id: vat_id !== undefined ? (vat_id?.trim() || null) : undefined,
+      legal_form: legal_form !== undefined ? trimOrNull(legal_form) : undefined,
+      street: street !== undefined ? trimOrNull(street) : undefined,
+      postcode: postcode !== undefined ? trimOrNull(postcode) : undefined,
+      city: city !== undefined ? trimOrNull(city) : undefined,
+      country_code:
+        country_code !== undefined ? trimOrNull(country_code?.toUpperCase()) : undefined,
+      address: addressPartsGiven
+        ? postalAddress({ street, postcode, city, country_code })
+        : undefined,
+      phone: phone !== undefined ? trimOrNull(phone) : undefined,
+      tax_number: tax_number !== undefined ? trimOrNull(tax_number) : undefined,
+      invoice_email: invoice_email !== undefined ? trimOrNull(invoice_email) : undefined,
+      logo_path: logo_path !== undefined ? trimOrNull(logo_path) : undefined,
+      kleinunternehmer: kleinunternehmer !== undefined ? Boolean(kleinunternehmer) : undefined,
+      trade_register: trade_register !== undefined ? trimOrNull(trade_register) : undefined,
+      trade_register_number:
+        trade_register_number !== undefined ? trimOrNull(trade_register_number) : undefined,
+      vat_id: vat_id !== undefined ? trimOrNull(vat_id?.replace(/\s+/g, "").toUpperCase()) : undefined,
     };
 
     if (company_name !== undefined) {
@@ -231,7 +287,7 @@ export async function PATCH(request: NextRequest) {
     delete updates.undefined;
     const cleanUpdates = Object.fromEntries(
       Object.entries(updates).filter(([, v]) => v !== undefined)
-    ) as Record<string, string | null>;
+    ) as Record<string, unknown>;
 
     if (existing) {
       if (Object.keys(cleanUpdates).length > 0) {
@@ -247,7 +303,8 @@ export async function PATCH(request: NextRequest) {
         await adminSupabase.from("organizer_profiles").upsert(
           {
             user_id: user.id,
-            organization_display_name: cleanUpdates.organization_display_name || "Organizatör",
+            organization_display_name:
+              String(cleanUpdates.organization_display_name || "") || "Organizatör",
             updated_at: new Date().toISOString(),
           },
           { onConflict: "user_id" }
@@ -258,15 +315,23 @@ export async function PATCH(request: NextRequest) {
         user_id: user.id,
         email: user.email || "",
         status: "approved",
-        company_name: company_name?.trim() || null,
-        legal_form: legal_form?.trim() || null,
-        address: address?.trim() || null,
-        phone: phone?.trim() || null,
-        trade_register: trade_register?.trim() || null,
-        trade_register_number: trade_register_number?.trim() || null,
-        vat_id: vat_id?.trim() || null,
-        representative_name: representative_name?.trim() || null,
-        organization_display_name: organization_display_name?.trim() || "Organizatör",
+        company_name: trimOrNull(company_name),
+        legal_form: trimOrNull(legal_form),
+        street: trimOrNull(street),
+        postcode: trimOrNull(postcode),
+        city: trimOrNull(city),
+        country_code: trimOrNull(country_code?.toUpperCase()),
+        address: postalAddress({ street, postcode, city, country_code }),
+        phone: trimOrNull(phone),
+        tax_number: trimOrNull(tax_number),
+        invoice_email: trimOrNull(invoice_email),
+        logo_path: trimOrNull(logo_path),
+        kleinunternehmer: Boolean(kleinunternehmer),
+        trade_register: trimOrNull(trade_register),
+        trade_register_number: trimOrNull(trade_register_number),
+        vat_id: trimOrNull(vat_id?.replace(/\s+/g, "").toUpperCase()),
+        representative_name: trimOrNull(representative_name),
+        organization_display_name: trimOrNull(organization_display_name) || "Organizatör",
       };
       const { error: insErr } = await adminSupabase.from("organizer_requests").insert(insertRow);
       if (insErr) {

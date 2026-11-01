@@ -242,6 +242,8 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
   const [manualSoldOut, setManualSoldOut] = useState(false);
   /** Sipariş özeti: etkinlik başına bir kez; boş veya 0 = gösterilmez */
   const [checkoutProcessingFeeInput, setCheckoutProcessingFeeInput] = useState<number | "">("");
+  /** Alman Rechnung KDV oranı: 7 kültür (Konzert), 19 regel, 0 = § 19 UStG. */
+  const [vatRatePercent, setVatRatePercent] = useState<number>(7);
   const [ticketUrl, setTicketUrl] = useState("");
   /** Tur/gösteri gruplaması için show_slug (tek gösteri sayfası) */
   const [showSlugId, setShowSlugId] = useState("");
@@ -370,6 +372,8 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
       setManualSoldOut(Boolean((ev as { manual_sold_out?: boolean | null }).manual_sold_out));
       const cpf = Number(ev.checkout_processing_fee);
       setCheckoutProcessingFeeInput(Number.isFinite(cpf) && cpf > 0 ? cpf : "");
+      const vat = Number(ev.vat_rate_percent);
+      if (vat === 0 || vat === 7 || vat === 19) setVatRatePercent(vat);
       setHasCustomForm(Boolean(ev.has_custom_form));
       setCustomFormMaxAttendees(typeof ev.custom_form_max_attendees === "number" ? ev.custom_form_max_attendees : 3);
       setAccommodationPriceInput(typeof ev.accommodation_price === "number" && ev.accommodation_price > 0 ? ev.accommodation_price : "");
@@ -1023,6 +1027,7 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
         price_from: priceFrom,
         manual_sold_out: manualSoldOut,
         checkout_processing_fee: checkoutFee,
+        vat_rate_percent: vatRatePercent,
         currency,
         image_url: imageUrl || null,
         venue_id: selectedVenueId || null,
@@ -1469,6 +1474,22 @@ export default function EtkinlikYeniWizard({ editId }: { editId: string | null }
                 />
                 <p className="mt-1 text-xs text-slate-500">
                   Her satılan bilet için ayrı eklenir (ör. 10 bilet = bu rakam × 10). Kargo ücreti fiziksel gönderimde sipariş başına yalnızca bir kez eklenir.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">KDV oranı (Rechnung)</label>
+                <select
+                  value={vatRatePercent}
+                  onChange={(e) => setVatRatePercent(Number(e.target.value))}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value={7}>%7 — Kültür/Veranstaltung (Konzert)</option>
+                  <option value={19}>%19 — Regelsteuersatz</option>
+                  <option value={0}>%0 — § 19 UStG (Kleinunternehmer, vergi yok)</option>
+                </select>
+                <p className="mt-1 text-xs text-slate-500">
+                  Kesilen faturada brüt tutar bu orandan nete ayrıştırılır. Organizatörün unvanı,
+                  adresi ve USt-IdNr. belgede satıcı olarak görünür; bunlar organizatör başvurusundan alınır.
                 </p>
               </div>
               <div>

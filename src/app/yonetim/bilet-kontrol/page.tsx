@@ -7,6 +7,7 @@ import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import type { CheckResult } from "@/app/kontrol/actions";
 import QRScanner from "@/components/QRScanner";
 import DoorCounters from "@/components/DoorCounters";
+import { doorPickerFromDate } from "@/lib/door-picker";
 import { supabase } from "@/lib/supabase-client";
 
 type StaffEvent = {
@@ -82,7 +83,7 @@ export default function BiletKontrolPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
-      const res = await fetch("/api/staff-events", {
+      const res = await fetch(`/api/staff-events?sellable=1&from=${doorPickerFromDate()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = (await res.json().catch(() => null)) as { events?: StaffEvent[] } | null;

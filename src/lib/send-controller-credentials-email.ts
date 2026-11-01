@@ -167,3 +167,86 @@ export async function sendControllerApprovedEmail(input: {
     return { sent: false, reason: (error as Error)?.message };
   }
 }
+
+/**
+ * Admin tarafından açılan gişe görevlisi hesabının giriş bilgileri.
+ * Görevli kendi hesabını oluşturamaz; yetki yalnız atama ile doğar.
+ */
+export async function sendGateSalesCredentialsEmail(input: {
+  email: string;
+  fullName: string;
+  password: string;
+  events?: string[];
+}): Promise<MailResult> {
+  const email = String(input.email || "").trim();
+  const fullName = String(input.fullName || "").trim() || "Gişe Görevlisi";
+  const password = String(input.password || "");
+  if (!email || !password) return { sent: false, reason: "E-posta ve şifre zorunludur." };
+
+  const site = getSiteUrl();
+  const loginUrl = `${site}/giris?redirect=%2Fgise`;
+  const eventList = (input.events || [])
+    .filter(Boolean)
+    .map((title) => `<li style="color:#334155;">${esc(title)}</li>`)
+    .join("");
+
+  try {
+    return await sendMail({
+      email,
+      fullName,
+      subject: "KurdEvents gişe hesabın — kapıda bilet kesme",
+      bodyHtml: `
+        <h2 style="margin:0 0 12px;color:#0f172a;">Merhaba ${esc(fullName)},</h2>
+        <p style="margin:0 0 16px;color:#334155;line-height:1.6;">
+          Seni bir etkinlik için gişe görevlisi olarak görevlendirdik. Aşağıdaki bilgilerle gişe ekranına gir.
+        </p>
+
+        <table style="width:100%;border-collapse:collapse;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+          <tr>
+            <td style="padding:10px 12px;color:#475569;font-size:13px;width:110px;">E-posta</td>
+            <td style="padding:10px 12px;color:#0f172a;font-family:monospace;font-weight:600;">${esc(email)}</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 12px;color:#475569;font-size:13px;border-top:1px solid #e2e8f0;">Şifre</td>
+            <td style="padding:10px 12px;color:#0f172a;font-family:monospace;font-weight:600;font-size:17px;border-top:1px solid #e2e8f0;letter-spacing:1px;">${esc(password)}</td>
+          </tr>
+        </table>
+
+        <p style="margin:18px 0 8px;">
+          <a href="${loginUrl}" style="display:inline-block;background:#1d4ed8;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none;font-weight:600;">
+            Giriş yap ve gişe ekranını aç
+          </a>
+        </p>
+
+        ${
+          eventList
+            ? `<p style="margin:0 0 8px;color:#0f172a;font-size:15px;font-weight:600;">Görevli olduğun etkinlikler</p>
+               <ul style="margin:0 0 16px;padding-left:20px;">${eventList}</ul>`
+            : ""
+        }
+
+        <h3 style="margin:0 0 8px;color:#0f172a;font-size:15px;">Gişe ekranı nasıl çalışır</h3>
+        <ol style="margin:0 0 16px;padding-left:20px;color:#334155;line-height:1.7;font-size:14px;">
+          <li>Sadece sana atanan etkinlik görünür; tek etkinlikse seçim yapmana gerek kalmaz.</li>
+          <li>Bilet türünü ve adeti seç, tahsil ettiğin ödeme türünü (<strong>Nakit</strong> veya <strong>Kart (POS)</strong>) işaretle.</li>
+          <li><strong>"Bilet kes"</strong> düğmesi stoğu düşürür ve bilet kodlarını verir. Kodu müşteriye elden ver; e-posta yazdıysan bilet maili de gönderilir.</li>
+          <li>Ekranın sağındaki liste o günün kaydıdır; nakit ve kart toplamları üstte yazar. Yanlış satışta <strong>İptal</strong> stoğu geri döndürür.</li>
+        </ol>
+
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 14px;margin:0 0 16px;">
+          <p style="margin:0;color:#991b1b;font-size:14px;line-height:1.6;">
+            Gişe toplamı akşam kutudaki parayla karşılaştırılır. Etkinlik bittiğinde görevin sona erer;
+            yeni etkinlik için yönetici seni yeniden atar.
+          </p>
+        </div>
+
+        <p style="margin:0 0 16px;color:#334155;font-size:14px;line-height:1.6;">
+          Bu şifre e-postada açık yazdığı için ilk girişten sonra kendine yeni bir şifre koy.
+        </p>
+      `,
+    });
+  } catch (error) {
+    console.error("Gişe görevlisi giriş maili gönderilemedi:", (error as Error)?.message);
+    return { sent: false, reason: (error as Error)?.message };
+  }
+}

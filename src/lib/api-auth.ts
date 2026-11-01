@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { User } from "@supabase/supabase-js";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { createSupabaseServerClient } from "@/lib/supabase-ssr";
 
 /** Request'ten Bearer token alır. */
 export function getAuthToken(request: NextRequest): string | null {
@@ -38,6 +39,29 @@ export async function getAuthUser(
   request: NextRequest
 ): Promise<{ user: User; supabase: SupabaseClient } | NextResponse> {
   return authenticateWithAccessToken(getAuthToken(request));
+}
+
+/**
+ * Bearer yoksa çerez oturumuyla doğrular — tarayıcı sekmesinde açılan PDF indirmesinde
+ * Authorization başlığı olmaz. Yetki kapısı çağıran route'ta; dönen client service role'dür.
+ */
+export async function getAuthUserWithSession(
+  request: NextRequest
+): Promise<{ user: User; supabase: SupabaseClient } | NextResponse> {
+  const token = getAuthToken(request);
+  if (token) return authenticateWithAccessToken(token);
+  try {
+    const serverClient = await createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await serverClient.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
+    }
+    return { user, supabase: getSupabaseAdmin() };
+  } catch {
+    return NextResponse.json({ error: "Oturum gerekli" }, { status: 401 });
+  }
 }
 
 async function requireRoleForUser(

@@ -85,11 +85,12 @@ export function setMaintenanceModeCache(enabled: boolean): void {
   memoryCache = { value: enabled, at: Date.now() };
 }
 
-/** Giriş / yönetim / bakım — ziyaretçi kilidine takılmaz (bakim hariç özel işlenir). */
+/** Giriş / yönetim / bakım / gişe görevlisi — ziyaretçi kilidine takılmaz (bakim hariç özel işlenir). */
 export function isMaintenanceBypassPath(pathname: string): boolean {
   if (pathname.startsWith("/yonetim")) return true;
   if (pathname.startsWith("/auth")) return true;
   if (pathname.startsWith("/kontrol")) return true;
+  if (/^\/gise(?:\/|$)/.test(pathname)) return true;
   return /^\/(?:(?:tr|de|en|ku|ckb)\/)?(?:giris|sifre-yenile)(?:\/|$)/.test(pathname);
 }
 

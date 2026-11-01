@@ -16,6 +16,8 @@ import {
   LogOut,
   MapPin,
   PieChart,
+  Ticket,
+  FileText,
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import Footer from "@/components/Footer";
@@ -50,6 +52,8 @@ export default function OrganizerLayout({ children }: { children: React.ReactNod
     { href: "/yonetim/bilet-ozeti", label: t("nav.ticketSummary"), icon: PieChart },
     { href: "/yonetim/satis-raporu", label: t("nav.sales"), icon: BarChart3 },
     { href: "/yonetim/bilet-kontrol", label: t("nav.checkin"), icon: UserCheck },
+    { href: "/yonetim/gise", label: "Gişe satışı", icon: Ticket },
+    { href: "/yonetim/faturalar", label: "Faturalar", icon: FileText },
     { href: "/yonetim/bilgilerim", label: t("nav.profile"), icon: User },
   ];
 

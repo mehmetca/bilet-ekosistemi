@@ -22,8 +22,16 @@ export default function OrganizerApplicationPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [companyName, setCompanyName] = useState("");
   const [legalForm, setLegalForm] = useState("");
-  const [address, setAddress] = useState("");
+  const [street, setStreet] = useState("");
+  const [postcode, setPostcode] = useState("");
+  const [cityName, setCityName] = useState("");
+  const [country, setCountry] = useState("DE");
   const [phone, setPhone] = useState("");
+  const [invoiceEmail, setInvoiceEmail] = useState("");
+  const [taxNumber, setTaxNumber] = useState("");
+  const [kleinUnternehmer, setKleinUnternehmer] = useState(false);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState("");
   const [tradeRegister, setTradeRegister] = useState("");
   const [tradeRegisterNumber, setTradeRegisterNumber] = useState("");
   const [vatId, setVatId] = useState("");
@@ -68,11 +76,36 @@ export default function OrganizerApplicationPage() {
         return;
       }
 
+      let logoPath: string | undefined;
+      if (logoFile) {
+        const token = signUpData.session?.access_token;
+        if (!token) {
+          throw new Error(tApp("logoSessionMissing"));
+        }
+        const formData = new FormData();
+        formData.append("file", logoFile);
+        formData.append("folder", "organizer-logos");
+        formData.append("access_token", token);
+        const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+        const uploadJson = await uploadRes.json().catch(() => ({}));
+        if (!uploadRes.ok || !uploadJson.success) {
+          throw new Error(String(uploadJson.error || tApp("logoUploadFailed")));
+        }
+        logoPath = String(uploadJson.fileName);
+      }
+
       await submitOrganizerApplication(signUpData.user, {
         company_name: companyName.trim() || undefined,
         legal_form: legalForm.trim() || undefined,
-        address: address.trim() || undefined,
+        street: street.trim() || undefined,
+        postcode: postcode.trim() || undefined,
+        city: cityName.trim() || undefined,
+        country_code: country.trim() || undefined,
         phone: phone.trim() || undefined,
+        invoice_email: invoiceEmail.trim() || undefined,
+        tax_number: taxNumber.trim() || undefined,
+        kleinunternehmer: kleinUnternehmer,
+        logo_path: logoPath,
         trade_register: tradeRegister.trim() || undefined,
         trade_register_number: tradeRegisterNumber.trim() || undefined,
         vat_id: vatId.trim() || undefined,
@@ -86,8 +119,16 @@ export default function OrganizerApplicationPage() {
       setPassword("");
       setCompanyName("");
       setLegalForm("");
-      setAddress("");
+      setStreet("");
+      setPostcode("");
+      setCityName("");
+      setCountry("DE");
       setPhone("");
+      setInvoiceEmail("");
+      setTaxNumber("");
+      setKleinUnternehmer(false);
+      setLogoFile(null);
+      setLogoPreview("");
       setTradeRegister("");
       setTradeRegisterNumber("");
       setVatId("");
@@ -208,18 +249,64 @@ export default function OrganizerApplicationPage() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="address" className="block text-sm font-medium text-ink-700 mb-1">
-                    {tApp("address")} *
+                  <label htmlFor="street" className="block text-sm font-medium text-ink-700 mb-1">
+                    {tApp("street")} *
                   </label>
-                  <textarea
-                    id="address"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                  <input
+                    id="street"
+                    type="text"
+                    value={street}
+                    onChange={(e) => setStreet(e.target.value)}
                     required
-                    rows={3}
-                    placeholder={tApp("addressPlaceholder")}
-                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500 resize-none"
+                    placeholder={tApp("streetPlaceholder")}
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label htmlFor="postcode" className="block text-sm font-medium text-ink-700 mb-1">
+                      {tApp("postcode")} *
+                    </label>
+                    <input
+                      id="postcode"
+                      type="text"
+                      value={postcode}
+                      onChange={(e) => setPostcode(e.target.value)}
+                      required
+                      inputMode="numeric"
+                      placeholder={tApp("postcodePlaceholder")}
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="city" className="block text-sm font-medium text-ink-700 mb-1">
+                      {tApp("city")} *
+                    </label>
+                    <input
+                      id="city"
+                      type="text"
+                      value={cityName}
+                      onChange={(e) => setCityName(e.target.value)}
+                      required
+                      placeholder={tApp("cityPlaceholder")}
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="country" className="block text-sm font-medium text-ink-700 mb-1">
+                      {tApp("country")} *
+                    </label>
+                    <select
+                      id="country"
+                      value={country}
+                      onChange={(e) => setCountry(e.target.value)}
+                      required
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 bg-white text-ink-900 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
+                    >
+                      <option value="DE">{tApp("countryDe")}</option>
+                    </select>
+                    <p className="mt-1 text-xs text-ink-500">{tApp("countryHelp")}</p>
+                  </div>
                 </div>
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-ink-700 mb-1">
@@ -234,6 +321,44 @@ export default function OrganizerApplicationPage() {
                     placeholder={tApp("phonePlaceholder")}
                     className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
                   />
+                </div>
+                <div>
+                  <label htmlFor="invoice-email" className="block text-sm font-medium text-ink-700 mb-1">
+                    {tApp("invoiceEmail")}
+                  </label>
+                  <input
+                    id="invoice-email"
+                    type="email"
+                    value={invoiceEmail}
+                    onChange={(e) => setInvoiceEmail(e.target.value)}
+                    placeholder={tApp("invoiceEmailPlaceholder")}
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
+                  />
+                  <p className="mt-1 text-xs text-ink-500">{tApp("invoiceEmailHelp")}</p>
+                </div>
+                <div>
+                  <label htmlFor="logo" className="block text-sm font-medium text-ink-700 mb-1">
+                    {tApp("logo")}
+                  </label>
+                  <input
+                    id="logo"
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      setLogoFile(file);
+                      setLogoPreview(file ? URL.createObjectURL(file) : "");
+                    }}
+                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-sm text-ink-700 file:mr-3 file:rounded file:border-0 file:bg-gold-500 file:px-3 file:py-1 file:text-white"
+                  />
+                  <p className="mt-1 text-xs text-ink-500">{tApp("logoHelp")}</p>
+                  {logoPreview && (
+                    <img
+                      src={logoPreview}
+                      alt={tApp("logo")}
+                      className="mt-3 h-16 w-auto max-w-40 rounded border border-ink-200 bg-white object-contain p-1"
+                    />
+                  )}
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -263,19 +388,50 @@ export default function OrganizerApplicationPage() {
                     />
                   </div>
                 </div>
-                <div>
-                  <label htmlFor="vat-id" className="block text-sm font-medium text-ink-700 mb-1">
-                    {tApp("vatId")}
-                  </label>
-                  <input
-                    id="vat-id"
-                    type="text"
-                    value={vatId}
-                    onChange={(e) => setVatId(e.target.value)}
-                    placeholder={tApp("vatIdPlaceholder")}
-                    className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="vat-id" className="block text-sm font-medium text-ink-700 mb-1">
+                      {tApp("vatId")} {!kleinUnternehmer && "*"}
+                    </label>
+                    <input
+                      id="vat-id"
+                      type="text"
+                      value={vatId}
+                      onChange={(e) => setVatId(e.target.value)}
+                      required={!kleinUnternehmer}
+                      placeholder={tApp("vatIdPlaceholder")}
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tax-number" className="block text-sm font-medium text-ink-700 mb-1">
+                      {tApp("taxNumber")}
+                    </label>
+                    <input
+                      id="tax-number"
+                      type="text"
+                      value={taxNumber}
+                      onChange={(e) => setTaxNumber(e.target.value)}
+                      placeholder={tApp("taxNumberPlaceholder")}
+                      className="w-full rounded-lg border border-ink-300 px-4 py-3 text-ink-900 placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-gold-500 focus:border-gold-500"
+                    />
+                  </div>
                 </div>
+                <p className="text-xs text-ink-500 -mt-2">{tApp("taxNumberHelp")}</p>
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={kleinUnternehmer}
+                    onChange={(e) => setKleinUnternehmer(e.target.checked)}
+                    className="mt-1 h-5 w-5 rounded border-ink-300 text-gold-700 focus:ring-gold-500"
+                  />
+                  <span className="text-sm text-ink-700">
+                    {tApp("kleinUnternehmer")}
+                    <span className="block text-xs text-ink-500 mt-0.5">
+                      {tApp("kleinUnternehmerHelp")}
+                    </span>
+                  </span>
+                </label>
                 <div>
                   <label htmlFor="representative" className="block text-sm font-medium text-ink-700 mb-1">
                     {tApp("representativeName")} *

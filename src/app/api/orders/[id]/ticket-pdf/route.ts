@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAuthUser } from "@/lib/api-auth";
+import { getAuthUserWithSession } from "@/lib/api-auth";
 import { buildTicketMailPayloadForOrder, type TicketMailOrderRow } from "@/lib/order-ticket-mail";
 import { canAccessOrder } from "@/lib/order-access";
 import { buildTicketPdfMultiPageBase64 } from "@/lib/ticket-email";
@@ -15,13 +15,13 @@ export async function GET(
     return NextResponse.json({ error: "Sipariş ID gerekli" }, { status: 400 });
   }
 
-  const auth = await getAuthUser(request);
+  const auth = await getAuthUserWithSession(request);
   if (auth instanceof NextResponse) return auth;
   const { user, supabase } = auth;
 
   const { data: order, error: orderError } = await supabase
     .from("orders")
-    .select("id, user_id, buyer_email, buyer_name, event_id, ticket_id, ticket_code, quantity, total_price, status")
+    .select("id, user_id, buyer_email, buyer_name, event_id, ticket_id, ticket_code, quantity, total_price, status, sales_channel, sold_by")
     .eq("id", orderId)
     .maybeSingle();
 

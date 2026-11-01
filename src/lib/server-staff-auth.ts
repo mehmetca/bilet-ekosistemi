@@ -2,7 +2,7 @@ import { User } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase-ssr";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 
-export const STAFF_ROLES = ["admin", "controller", "organizer"] as const;
+export const STAFF_ROLES = ["admin", "controller", "organizer", "gate_sales"] as const;
 export type StaffRole = (typeof STAFF_ROLES)[number];
 
 export type StaffAuthResult =

@@ -78,9 +78,17 @@ function AuthCallbackInner() {
             if (cancelled) return;
             const role = roleData?.role as string | undefined;
             const hasManagementRole =
-              role === "admin" || role === "controller" || role === "organizer";
+              role === "admin" ||
+              role === "controller" ||
+              role === "organizer" ||
+              role === "gate_sales";
             if (hasManagementRole && adminFromHome) {
-              finalPath = role === "controller" ? "/kontrol" : "/yonetim";
+              finalPath =
+                role === "controller"
+                  ? "/kontrol"
+                  : role === "gate_sales"
+                    ? "/gise"
+                    : "/yonetim";
             }
           }
           router.replace(finalPath);

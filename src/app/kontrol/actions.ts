@@ -35,6 +35,18 @@ export type CheckResult = {
   buyerName?: string;
   buyerEmail?: string;
   quantity?: number;
+  /** Sunucunun eşleştirdiği bilet satırı (mutabakat raporunda cihaz kaydıyla karşılaştırılır). */
+  refKind?: "unit" | "seat" | "order";
+  refId?: string;
+  codeKey?: string;
+  logId?: string;
+  source?: "online" | "offline";
+  /** Çevrimdışı kararda: cihaz listesinden geldi, sunucuya yazılmayı bekliyor. */
+  offline?: boolean;
+  offlineMarked?: boolean;
+  seatSection?: string | null;
+  seatRow?: string | null;
+  seatLabel?: string | null;
 };
 
 export type CheckTicketOptions = {
@@ -43,6 +55,10 @@ export type CheckTicketOptions = {
   actorUserId?: string;
   /** Personelin işaretleyebileceği etkinlikler; null/undefined = sınırsız (admin). */
   allowedEventIds?: string[] | null;
+  /** Çevrimdışı kuyruk: tekrar gönderimde tek log satırı üreten anahtar. */
+  clientEventId?: string;
+  /** Cihazın okuma anı + kaynak etiketi, log yazıldıktan sonra işlenir (150). */
+  offline?: { scannedAt: string; deviceId?: string | null };
 };
 
 /** API route ve server action tarafından ortak çağrılan tek turda kapı kontrolü. */
@@ -65,6 +81,7 @@ export async function checkTicketCore(
       p_actor: options.actorUserId ?? null,
       p_mark: options.mark === true,
       p_allowed_event_ids: options.allowedEventIds ?? null,
+      p_client_event_id: options.clientEventId ?? null,
     });
 
     if (error) {
@@ -88,6 +105,18 @@ export async function checkTicketCore(
       return { valid: false, reason: "not_found" };
     }
 
+    // Çevrimdışı kuyruk okuması: sunucu 'online' yazdı, cihaz saatına çevrilir.
+    if (options.offline && row.logId) {
+      await supabase.rpc("mark_scan_offline", {
+        p_log_id: row.logId,
+        p_scanned_at: options.offline.scannedAt,
+        p_device_id: options.offline.deviceId ?? null,
+      });
+    }
+    const offlinePatch = options.offline
+      ? { source: "offline" as const, offline: true }
+      : {};
+
     // Eski check_ticket_door sürümünde ad boş kalır; tek kolonluk rpc ile doldurulur.
     if (row.previous && !row.previous.actorName && row.previous.actor) {
       const { data: name } = await supabase.rpc("staff_display_name", {
@@ -99,10 +128,10 @@ export async function checkTicketCore(
     }
 
     if (row.valid) {
-      return { ...row, valid: true, marked: row.marked === true, scopeDenied: row.scopeDenied === true };
+      return { ...row, valid: true, marked: row.marked === true, scopeDenied: row.scopeDenied === true, ...offlinePatch };
     }
 
-    return { ...row, valid: false, reason: row.reason ?? "invalid" };
+    return { ...row, valid: false, reason: row.reason ?? "invalid", ...offlinePatch };
   } catch (error) {
     console.error("Ticket check server error:", error);
     return { valid: false, reason: "error", message: "Sunucu hatası" };

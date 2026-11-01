@@ -289,7 +289,7 @@ export default function LoginPage() {
       });
       if (!data?.session?.user) throw new Error(t("errorSessionOpenFailed"));
 
-      // Rol kontrolü: admin/controller/organizer → yönetim, diğerleri → ana sayfa
+      // Rol kontrolü: admin/controller/organizer/gate_sales → panel veya kapı ekranı, diğerleri → ana sayfa
       await new Promise(resolve => setTimeout(resolve, 400));
       const sb = createSupabaseBrowserClient();
       const { data: roleData } = await sb
@@ -311,7 +311,8 @@ export default function LoginPage() {
           throw new Error("Kontrolör başvurunuz henüz onaylanmadı.");
         }
       }
-      const hasManagementRole = role === "admin" || role === "controller" || role === "organizer";
+      const hasManagementRole =
+        role === "admin" || role === "controller" || role === "organizer" || role === "gate_sales";
 
       if (activeLoginAttemptRef.current !== attemptId) return;
       setLoading(false);
@@ -322,7 +323,9 @@ export default function LoginPage() {
           ? redirectTo
           : role === "controller"
             ? "/kontrol"
-            : "/yonetim";
+            : role === "gate_sales"
+              ? "/gise"
+              : "/yonetim";
       window.location.href = hasManagementRole ? managementTarget : afterLogin;
       return;
     } catch (err: unknown) {

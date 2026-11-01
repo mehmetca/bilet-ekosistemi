@@ -1,4 +1,17 @@
+import { randomBytes } from "crypto";
+
 const BLT_PATTERN = /BLT\s*-\s*([A-Z0-9]+)/i;
+
+/** Kriptografik güvenli bilet kodu: BLT- + 8 karakter (0/O/1/I yok, tahmin edilemez). */
+export function generateTicketCode(): string {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "BLT-";
+  const bytes = randomBytes(8);
+  for (let i = 0; i < 8; i++) {
+    code += chars.charAt(bytes[i]! % chars.length);
+  }
+  return code;
+}
 
 function normalizeBltText(raw: string): string {
   const compact = raw.trim().toUpperCase().replace(/\s+/g, "");

@@ -65,14 +65,23 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
   const [orgForm, setOrgForm] = useState({
     company_name: "",
     legal_form: "",
+    street: "",
+    postcode: "",
+    city: "",
+    country_code: "DE",
     address: "",
     phone: "",
+    invoice_email: "",
+    tax_number: "",
+    kleinunternehmer: false,
+    logo_path: "",
     trade_register: "",
     trade_register_number: "",
     vat_id: "",
     representative_name: "",
     organization_display_name: "",
   });
+  const [logoSaving, setLogoSaving] = useState(false);
 
   useEffect(() => {
     if (!inYonetim && !authLoading && !user) {
@@ -134,8 +143,16 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
         setOrgForm({
           company_name: orgData.company_name || "",
           legal_form: orgData.legal_form || "",
+          street: orgData.street || "",
+          postcode: orgData.postcode || "",
+          city: orgData.city || "",
+          country_code: orgData.country_code || "DE",
           address: orgData.address || "",
           phone: orgData.phone || "",
+          invoice_email: orgData.invoice_email || "",
+          tax_number: orgData.tax_number || "",
+          kleinunternehmer: Boolean(orgData.kleinunternehmer),
+          logo_path: orgData.logo_path || "",
           trade_register: orgData.trade_register || "",
           trade_register_number: orgData.trade_register_number || "",
           vat_id: orgData.vat_id || "",
@@ -169,6 +186,34 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
       setError("errorGeneric");
     } finally {
       setSaveLoading(false);
+    }
+  }
+
+  async function handleLogoUpload(file: File) {
+    if (!isOrganizerInYonetim) return;
+    setLogoSaving(true);
+    setOrgError("");
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("folder", "organizer-logos");
+      formData.append("access_token", session?.access_token || "");
+      const res = await fetch("/api/upload", { method: "POST", body: formData });
+      const json = (await res.json().catch(() => ({}))) as {
+        fileName?: string;
+        error?: string;
+      };
+      if (!res.ok || !json.fileName) {
+        setOrgError("errorLogoUpload");
+        return;
+      }
+      const saved = json.fileName;
+      setOrgForm((o) => ({ ...o, logo_path: saved }));
+    } catch {
+      setOrgError("errorLogoUpload");
+    } finally {
+      setLogoSaving(false);
     }
   }
 
@@ -485,14 +530,44 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("address")}</label>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("street")} *</label>
                   <input
                     type="text"
-                    value={orgForm.address}
-                    onChange={(e) => setOrgForm((o) => ({ ...o, address: e.target.value }))}
-                    placeholder={tApp("addressPlaceholder")}
+                    value={orgForm.street}
+                    onChange={(e) => setOrgForm((o) => ({ ...o, street: e.target.value }))}
+                    placeholder={tApp("streetPlaceholder")}
                     className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("postcode")} *</label>
+                  <input
+                    type="text"
+                    value={orgForm.postcode}
+                    onChange={(e) => setOrgForm((o) => ({ ...o, postcode: e.target.value }))}
+                    placeholder={tApp("postcodePlaceholder")}
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("city")} *</label>
+                  <input
+                    type="text"
+                    value={orgForm.city}
+                    onChange={(e) => setOrgForm((o) => ({ ...o, city: e.target.value }))}
+                    placeholder={tApp("cityPlaceholder")}
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("country")} *</label>
+                  <select
+                    value={orgForm.country_code}
+                    onChange={(e) => setOrgForm((o) => ({ ...o, country_code: e.target.value }))}
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg bg-white focus:border-gold-500 focus:ring-gold-500"
+                  >
+                    <option value="DE">{tApp("countryDe")}</option>
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("phone")}</label>
@@ -558,6 +633,62 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
                     className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
                   />
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("taxNumber")}</label>
+                  <input
+                    type="text"
+                    value={orgForm.tax_number}
+                    onChange={(e) => setOrgForm((o) => ({ ...o, tax_number: e.target.value }))}
+                    placeholder={tApp("taxNumberPlaceholder")}
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("invoiceEmail")}</label>
+                  <input
+                    type="email"
+                    value={orgForm.invoice_email}
+                    onChange={(e) => setOrgForm((o) => ({ ...o, invoice_email: e.target.value }))}
+                    placeholder={tApp("invoiceEmailPlaceholder")}
+                    className="w-full px-3 py-2 border border-ink-300 rounded-lg focus:border-gold-500 focus:ring-gold-500"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-ink-500">{tApp("taxNumberHelp")}</p>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={orgForm.kleinunternehmer}
+                  onChange={(e) => setOrgForm((o) => ({ ...o, kleinunternehmer: e.target.checked }))}
+                  className="mt-1 h-4 w-4 rounded border-ink-300 text-gold-700 focus:ring-gold-500"
+                />
+                <span className="text-sm text-ink-700">
+                  {tApp("kleinUnternehmer")}
+                  <span className="block text-xs text-ink-500 mt-0.5">{tApp("kleinUnternehmerHelp")}</span>
+                </span>
+              </label>
+              <div>
+                <label className="block text-sm font-medium text-ink-700 mb-1">{tApp("logo")}</label>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg"
+                    disabled={logoSaving}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) void handleLogoUpload(file);
+                    }}
+                    className="text-sm text-ink-700 file:mr-3 file:rounded file:border-0 file:bg-gold-500 file:px-3 file:py-1 file:text-white disabled:opacity-50"
+                  />
+                  {orgForm.logo_path && (
+                    <img
+                      src={`/api/uploads/${orgForm.logo_path}`}
+                      alt={tApp("logo")}
+                      className="h-12 w-auto max-w-40 rounded border border-ink-200 bg-white object-contain p-1"
+                    />
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-ink-500">{tApp("logoHelp")}</p>
               </div>
               {orgError && (
                 <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-600">{t(orgError as Parameters<typeof t>[0]) || orgError}</div>
@@ -576,6 +707,13 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
             </form>
           ) : (
             <div className="bg-ink-50 rounded-lg border border-ink-200 p-6 space-y-4">
+              {organizerRequest?.logo_path ? (
+                <img
+                  src={`/api/uploads/${organizerRequest.logo_path}`}
+                  alt={tApp("logo")}
+                  className="h-16 w-auto max-w-[200px] object-contain"
+                />
+              ) : null}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="text-ink-500 block mb-1">{tApp("companyName")}</span>
@@ -585,13 +723,29 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
                   <span className="text-ink-500 block mb-1">{tApp("legalForm")}</span>
                   <span className="text-ink-900">{organizerRequest?.legal_form || "—"}</span>
                 </div>
-                <div className="sm:col-span-2">
-                  <span className="text-ink-500 block mb-1">{tApp("address")}</span>
-                  <span className="text-ink-900">{organizerRequest?.address || "—"}</span>
+                <div>
+                  <span className="text-ink-500 block mb-1">{tApp("street")}</span>
+                  <span className="text-ink-900">{organizerRequest?.street || organizerRequest?.address || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-ink-500 block mb-1">{tApp("postcode")}</span>
+                  <span className="text-ink-900">{organizerRequest?.postcode || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-ink-500 block mb-1">{tApp("city")}</span>
+                  <span className="text-ink-900">{organizerRequest?.city || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-ink-500 block mb-1">{tApp("country")}</span>
+                  <span className="text-ink-900">{organizerRequest?.country_code || "DE"}</span>
                 </div>
                 <div>
                   <span className="text-ink-500 block mb-1">{tApp("phone")}</span>
                   <span className="text-ink-900">{organizerRequest?.phone || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-ink-500 block mb-1">{tApp("invoiceEmail")}</span>
+                  <span className="text-ink-900">{organizerRequest?.invoice_email || organizerRequest?.email || "—"}</span>
                 </div>
                 <div>
                   <span className="text-ink-500 block mb-1">{tApp("representativeName")}</span>
@@ -612,6 +766,16 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
                 <div>
                   <span className="text-ink-500 block mb-1">{tApp("vatId")}</span>
                   <span className="text-ink-900">{organizerRequest?.vat_id || "—"}</span>
+                </div>
+                <div>
+                  <span className="text-ink-500 block mb-1">{tApp("taxNumber")}</span>
+                  <span className="text-ink-900">{organizerRequest?.tax_number || "—"}</span>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="text-ink-500 block mb-1">{tApp("kleinUnternehmer")}</span>
+                  <span className="text-ink-900">
+                    {organizerRequest?.kleinunternehmer ? t("yes") : t("no")}
+                  </span>
                 </div>
               </div>
             </div>
