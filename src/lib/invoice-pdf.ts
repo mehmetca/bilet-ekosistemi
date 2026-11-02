@@ -32,7 +32,8 @@ function pdfText(value: unknown): string {
 }
 
 function money(value: number, currency: string): string {
-  const symbol = currency === "EUR" ? "€" : currency === "TL" ? "TRY" : currency;
+  // pdf-lib standart fontlarında € glifi yok: sessiz düşüyor, belgede para birimi kayboluyor.
+  const symbol = currency === "TL" ? "TRY" : currency;
   const amount = Number(value ?? 0).toLocaleString("de-DE", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
