@@ -323,7 +323,11 @@ export async function fulfillStripeCheckoutSession(
     const seatIds = Array.isArray(item.seatIds) ? item.seatIds : [];
     const purchaseQty = seatIds.length > 0 ? seatIds.length : Math.max(1, Number(item.quantity) || 1);
     formData.append("quantity", String(purchaseQty));
-    formData.append("buyer_name", (intent.buyer_name || "Müşteri").trim());
+    // Ad boş kalırsa "Müşteri" yazılmaz: satın alma artık adı zorunlu tutuyor,
+    // eski niyetlerde son çare e-posta ön ekidir (fatura adsız kesilmesin).
+    const buyerName =
+      (intent.buyer_name || "").trim() || intent.buyer_email.split("@")[0] || "";
+    formData.append("buyer_name", buyerName);
     formData.append("buyer_email", intent.buyer_email.trim());
     formData.append("locale", intent.locale || "tr");
     formData.append("stripe_session_id", stripeSessionId);

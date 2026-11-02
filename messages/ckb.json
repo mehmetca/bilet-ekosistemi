@@ -215,7 +215,8 @@
     "stripeTestCardHint": "کارتی تاقیکردنەوە: 4242 4242 4242 4242، بەرواری بەسەرچوون: هەر بەروارێکی داهاتوو، CVC: هەر 3 ژمارە.",
     "cardFieldsRequired": "تکایە هەموو زانیارییەکانی کارت پڕبکەوە.",
     "seatsInCart": "کورسییەکان لە سەبەت ({count})",
-    "seatLineFallback": "کورسی {n}"
+    "seatLineFallback": "کورسی {n}",
+    "addressRequiredInvoice": "بۆ داواکاری سەرووی ٢٥٠ یۆرۆ، بۆ پسوولە ناونیشانی شەقام، کۆدی پۆست و شار پێویستن."
   },
   "panel": {
     "title": "هەژماری من",
@@ -585,7 +586,8 @@
     "imageSeatMapAriaLabel": "وێنەی پلانی دانیشتن؛ بۆ هەڵبژاردن لە کورسییەکاندا دابگرە",
     "imageSeatZoomInLabel": "+ گەورە بکەوە",
     "imageSeatZoomOutLabel": "− بچووک بکەوە",
-    "imageSeatToolbarReset": "ڕێکخستنەوە"
+    "imageSeatToolbarReset": "ڕێکخستنەوە",
+    "nameRequired": "ناو و پاشناو ئیجباریین."
   },
   "city": {
     "resultsCount": "ئەنجامەکانی {count} بۆ {city} دۆزرایەوە.",

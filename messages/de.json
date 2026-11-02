@@ -465,7 +465,8 @@
     "imageSeatMapAriaLabel": "Saalplanbild; tippen Sie auf Plätze zur Auswahl",
     "imageSeatZoomInLabel": "+ Vergrößern",
     "imageSeatZoomOutLabel": "− Verkleinern",
-    "imageSeatToolbarReset": "Zurücksetzen"
+    "imageSeatToolbarReset": "Zurücksetzen",
+    "nameRequired": "Vor- und Nachname sind erforderlich."
   },
   "checkout": {
     "title": "Warenkorb",
@@ -547,7 +548,8 @@
     "stripeTestCardHint": "Testkarte: 4242 4242 4242 4242, Ablaufdatum: ein zukünftiges Datum, CVC: beliebige 3 Ziffern.",
     "cardFieldsRequired": "Bitte geben Sie alle Kartendaten ein.",
     "seatsInCart": "Plätze ({count})",
-    "seatLineFallback": "Platz {n}"
+    "seatLineFallback": "Platz {n}",
+    "addressRequiredInvoice": "Bei Bestellungen über 250 € sind für die Rechnung Straße, Postleitzahl und Ort Pflicht."
   },
   "city": {
     "resultsCount": "{count} Ergebnisse in {city} gefunden.",

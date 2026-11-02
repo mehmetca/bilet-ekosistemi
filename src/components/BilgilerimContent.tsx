@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabase-client";
 import {
   ensureUserProfile,
   fetchUserProfile,
+  googleNameParts,
   updateUserPassword,
   upsertUserProfile,
   type UserProfile,
@@ -115,10 +116,11 @@ export default function BilgilerimContent({ inYonetim = false }: BilgilerimConte
         }
       } else {
         setProfile(profileData);
+        const google = googleNameParts(user);
         setForm({
           anrede: profileData.anrede || "",
-          first_name: profileData.first_name || "",
-          last_name: profileData.last_name || "",
+          first_name: profileData.first_name || google.firstName,
+          last_name: profileData.last_name || google.lastName,
           firma: profileData.firma || "",
           address: profileData.address || "",
           plz: profileData.plz || "",

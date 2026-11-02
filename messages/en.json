@@ -465,7 +465,8 @@
     "imageSeatMapAriaLabel": "Seating plan image; tap seats to select",
     "imageSeatZoomInLabel": "+ Zoom in",
     "imageSeatZoomOutLabel": "− Zoom out",
-    "imageSeatToolbarReset": "Reset"
+    "imageSeatToolbarReset": "Reset",
+    "nameRequired": "First and last name are required."
   },
   "checkout": {
     "title": "Shopping Cart",
@@ -547,7 +548,8 @@
     "stripeTestCardHint": "Test card: 4242 4242 4242 4242, expiry: any future date, CVC: any 3 digits.",
     "cardFieldsRequired": "Please enter all card details.",
     "seatsInCart": "Seats ({count})",
-    "seatLineFallback": "Seat {n}"
+    "seatLineFallback": "Seat {n}",
+    "addressRequiredInvoice": "For orders over 250 €, street address, postal code and city are required for the invoice."
   },
   "city": {
     "resultsCount": "{count} results found in {city}.",

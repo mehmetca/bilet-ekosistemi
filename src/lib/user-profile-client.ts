@@ -38,6 +38,21 @@ export type UserProfileInput = {
   geburtsdatum?: string;
 };
 
+/**
+ * Google/SSO girişinde ad, Supabase metadata'sında (`full_name` ya da Google'ın
+ * `name` claim'i) hazır gelir; "Bilgilerim" formunu kimse doldurmasa da bu ad
+ * profile yazılır, böylece fatura "Müşteri" adına kesilmez.
+ */
+export function googleNameParts(user: User): { firstName: string; lastName: string } {
+  const meta = (user.user_metadata || {}) as Record<string, unknown>;
+  const fullName = String(meta.full_name || meta.name || "")
+    .trim()
+    .replace(/\s+/g, " ");
+  if (!fullName) return { firstName: "", lastName: "" };
+  const [firstName, ...rest] = fullName.split(" ");
+  return { firstName, lastName: rest.join(" ") };
+}
+
 function buildKundennummer(
   user: User,
   firstName?: string | null,
@@ -118,7 +133,13 @@ export async function ensureUserProfile(
 ): Promise<UserProfile | null> {
   const existing = await fetchUserProfile(user.id);
   if (existing?.kundennummer) return existing;
-  return upsertUserProfile(user, { email: user.email || undefined, ...partial });
+  const google = googleNameParts(user);
+  return upsertUserProfile(user, {
+    ...partial,
+    first_name: partial?.first_name?.trim() || google.firstName || undefined,
+    last_name: partial?.last_name?.trim() || google.lastName || undefined,
+    email: partial?.email || user.email || undefined,
+  });
 }
 
 /** Şifre güncelleme — sunucu API yerine Supabase Auth istemcisi. */

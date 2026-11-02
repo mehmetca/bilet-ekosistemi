@@ -305,7 +305,8 @@
     "stripeTestCardHint": "Karta testê: 4242 4242 4242 4242, dîroka qedandinê: dîrokek di pêşerojê de, CVC: her 3 hejmar.",
     "cardFieldsRequired": "Ji kerema xwe hemû agahiyên kartê binivîsin.",
     "seatsInCart": "Cih di sepetê de ({count})",
-    "seatLineFallback": "Cih {n}"
+    "seatLineFallback": "Cih {n}",
+    "addressRequiredInvoice": "Ji bo firotanên ji 250 € zêdetir, ji bo fatûreyê navnîşana kolanê, kodê posteyê û bajar pêwîst in."
   },
   "panel": {
     "title": "Hesabê min",
@@ -585,7 +586,8 @@
     "imageSeatMapAriaLabel": "Wêneya plana salonê; ji bo hilbijartinê li cihan bitikin",
     "imageSeatZoomInLabel": "+ Mezin bike",
     "imageSeatZoomOutLabel": "− Biçûk bike",
-    "imageSeatToolbarReset": "Sifir bike"
+    "imageSeatToolbarReset": "Sifir bike",
+    "nameRequired": "Nav û paşnav mecbûrî ne."
   },
   "city": {
     "resultsCount": "{count} encam ji bo {city} hatin dîtin.",

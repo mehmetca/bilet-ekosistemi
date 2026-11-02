@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = (await request.json()) as CreateCheckoutBody;
     const buyerEmail = (body.buyerEmail || "").trim();
-    const buyerName = (body.buyerName || "").trim();
+    let buyerName = (body.buyerName || "").trim();
     const buyerAddress = (body.buyerAddress || "").trim();
     const buyerPlz = (body.buyerPlz || "").trim();
     const buyerCity = (body.buyerCity || "").trim();
@@ -99,6 +99,7 @@ export async function POST(request: NextRequest) {
     }
 
     let userId: string | null = null;
+    let authUserName = "";
     const authHeader = request.headers.get("authorization");
     const bearer = authHeader?.replace(/^Bearer\s+/i, "").trim();
     const supabaseAdmin = getSupabaseAdmin();
@@ -107,7 +108,11 @@ export async function POST(request: NextRequest) {
       const {
         data: { user },
       } = await supabaseAdmin.auth.getUser(bearer);
-      if (user?.id) userId = user.id;
+      if (user?.id) {
+        userId = user.id;
+        const meta = (user.user_metadata || {}) as Record<string, unknown>;
+        authUserName = String(meta.full_name || meta.name || "").trim().replace(/\s+/g, " ");
+      }
     }
     if (!userId) {
       try {
@@ -115,7 +120,11 @@ export async function POST(request: NextRequest) {
         const {
           data: { user },
         } = await serverAuth.auth.getUser();
-        if (user?.id) userId = user.id;
+        if (user?.id) {
+          userId = user.id;
+          const meta = (user.user_metadata || {}) as Record<string, unknown>;
+          authUserName = String(meta.full_name || meta.name || "").trim().replace(/\s+/g, " ");
+        }
       } catch {
         /* ignore */
       }
@@ -128,6 +137,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Google/SSO adı metadata'da gelir; boş adla sipariş açılırsa fatura "Müşteri" adına kesilir.
+    if (!buyerName) buyerName = authUserName;
+    if (!buyerName) {
+      return NextResponse.json(
+        { success: false, message: "Ad ve soyad zorunludur." },
+        { status: 400 }
+      );
+    }
+
     const pricing = await computeCheckoutCartPricing(supabaseAdmin, items, physicalDelivery);
     if (pricing.ok === false) {
       return NextResponse.json(
@@ -137,6 +155,18 @@ export async function POST(request: NextRequest) {
     }
 
     const priced = pricing;
+
+    // Kleinbetragsrechnung sınırı (250 € brüt): üstünde tam Rechnung için alıcı adresi şart.
+    if (priced.grandTotal > 250 && (!buyerAddress || !buyerPlz || !buyerCity)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "250 € üzeri siparişlerde fatura için adres, posta kodu ve şehir zorunludur.",
+        },
+        { status: 400 }
+      );
+    }
 
     // Checkout süresince koltuk hold’larını uzat (ödeme ekranı > sepet rezervasyonu)
     const seatIdsToExtend = [

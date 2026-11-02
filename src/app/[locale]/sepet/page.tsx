@@ -67,6 +67,8 @@ const SafeTicketPrint = (TicketPrint ?? (() => null)) as typeof TicketPrint;
 
 const PENDING_STRIPE_CHECKOUT_KEY = "pendingStripeCheckoutData";
 const CHECKOUT_SUCCESS_SNAPSHOT_KEY = "checkoutSuccessSnapshot";
+/** Kleinbetragsrechnung sınırı: bu tutarın üstünde alıcı adresi olmadan tam fatura kesilemez. */
+const INVOICE_ADDRESS_THRESHOLD_EUR = 250;
 
 type PendingStripeCheckoutData = {
   buyerName: string;
@@ -118,6 +120,13 @@ export default function CheckoutPage() {
     async function loadProfile() {
       try {
         if (!user?.id) return;
+        // Google/SSO girişinde ad metadata'da hazır; profil boşsa oradan doldur.
+        const googleFullName = String(
+          (user.user_metadata as { full_name?: string; name?: string } | undefined)?.full_name ||
+            (user.user_metadata as { name?: string } | undefined)?.name ||
+            ""
+        ).trim();
+        if (googleFullName) setBuyerName((prev) => (prev === "" ? googleFullName : prev));
         const profile = await fetchUserProfile(user.id);
         if (profile) {
           const fullName = [profile.first_name, profile.last_name].filter(Boolean).join(" ").trim();
@@ -300,8 +309,7 @@ export default function CheckoutPage() {
     const finalName =
       pendingData?.buyerName?.trim() ||
       buyerName.trim() ||
-      (user?.email ? user.email.split("@")[0] : "") ||
-      "Müşteri";
+      (user?.email ? user.email.split("@")[0] : "");
 
     setError(null);
     setIsPending(true);
@@ -436,11 +444,10 @@ export default function CheckoutPage() {
     if (items.length === 0) return;
 
     const finalEmail = (buyerEmail.trim() || user?.email || "").trim();
-    if (!user) {
-      if (!buyerName.trim() || !buyerEmail.trim()) {
-        setError(tEvent("nameEmailRequired"));
-        return;
-      }
+    // Giriş yapmış olsa da ad zorunlu: fatura "Müşteri" ya da e-posta ön ekine kesilemez.
+    if (!buyerName.trim()) {
+      setError(tEvent("nameRequired"));
+      return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!finalEmail || !emailRegex.test(finalEmail)) {
@@ -450,6 +457,13 @@ export default function CheckoutPage() {
     if (shippingFeeOnce > 0) {
       if (!buyerAddress.trim() || !buyerPlz.trim() || !buyerCity.trim()) {
         setError(t("addressRequiredShipping"));
+        return;
+      }
+    }
+    // 250 € üstü tam fatura (Kleinbetragsrechnung sınırı) için alıcı adresi zorunlu.
+    if (totalPrice > INVOICE_ADDRESS_THRESHOLD_EUR) {
+      if (!buyerAddress.trim() || !buyerPlz.trim() || !buyerCity.trim()) {
+        setError(t("addressRequiredInvoice"));
         return;
       }
     }

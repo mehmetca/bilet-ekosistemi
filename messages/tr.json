@@ -465,7 +465,8 @@
     "imageSeatMapAriaLabel": "Salon planı görseli; koltuklara tıklayarak seçin",
     "imageSeatZoomInLabel": "+ Büyüt",
     "imageSeatZoomOutLabel": "− Küçült",
-    "imageSeatToolbarReset": "Sıfırla"
+    "imageSeatToolbarReset": "Sıfırla",
+    "nameRequired": "Ad soyad zorunludur."
   },
   "checkout": {
     "title": "Alışveriş Sepeti",
@@ -547,7 +548,8 @@
     "stripeTestCardHint": "Test kart: 4242 4242 4242 4242, son kullanım: gelecekte bir tarih, CVC: herhangi 3 hane.",
     "cardFieldsRequired": "Lütfen tüm kart bilgilerini girin.",
     "seatsInCart": "Koltuklar ({count})",
-    "seatLineFallback": "Koltuk {n}"
+    "seatLineFallback": "Koltuk {n}",
+    "addressRequiredInvoice": "250 € üzeri siparişlerde fatura için sokak adresi, posta kodu ve şehir zorunludur."
   },
   "city": {
     "resultsCount": "{city} için {count} sonuç bulundu.",
