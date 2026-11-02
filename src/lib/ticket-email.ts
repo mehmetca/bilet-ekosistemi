@@ -674,7 +674,7 @@ export async function sendTicketEmail(payload: TicketMailPayload) {
       const invoiceNote = copy
         .text(
           "invoiceNote",
-          "The invoice ({number}) for your ticket is attached as a PDF. You can download it again anytime from your account."
+          "The invoice for your ticket ({number}) is attached as a PDF file. You can download it again anytime from your account."
         )
         .replace("{number}", payload.invoiceNumber);
       html += `<div style="max-width:900px;margin:12px auto 0;padding:12px 16px;background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;font-family:Arial,sans-serif;font-size:13px;color:#334155;">${escapeHtml(invoiceNote)}</div>`;

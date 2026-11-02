@@ -30,7 +30,7 @@
     "labelSeat": "Koltuk",
     "labelTotal": "Toplam",
     "labelOrganizer": "Organizatör",
-    "invoiceNote": "Satın aldığınız bilete ilişkin fatura (Rechnung {number}) ekteki PDF dosyasıdır. E-postanız da fatura yerine geçer; isterseniz hesap sayfanızdan yeniden indirebilirsiniz.",
+    "invoiceNote": "Biletinize ait fatura (Rechnung {number}) ekteki PDF dosyasıdır. Hesabınızdan dilediğiniz zaman yeniden indirebilirsiniz.",
     "eventFallback": "Etkinlik"
   },
   "common": {

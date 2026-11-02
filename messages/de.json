@@ -30,7 +30,7 @@
     "labelSeat": "Platz",
     "labelTotal": "Gesamtbetrag",
     "labelOrganizer": "Veranstalter",
-    "invoiceNote": "Die zum Ticket gehörende Rechnung ({number}) befindet sich als PDF-Datei im Anhang. Diese E-Mail gilt ebenfalls als Beleg; die Rechnung können Sie jederzeit erneut in Ihrem Konto herunterladen.",
+    "invoiceNote": "Die Rechnung zu Ihrem Ticket ({number}) befindet sich als PDF-Datei im Anhang. Sie können sie jederzeit erneut in Ihrem Konto herunterladen.",
     "eventFallback": "Veranstaltung"
   },
   "common": {
