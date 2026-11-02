@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { requireAdmin } from "@/lib/api-auth";
+import { isEventPast } from "@/lib/event-time";
 import {
   persistAmedSporForm,
   type AmedSporFormAttendee,
@@ -107,6 +108,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, message: "Bu etkinlik için form kabul edilmiyor." },
         { status: 400 }
+      );
+    }
+
+    if (isEventPast(event.date, event.time)) {
+      return NextResponse.json(
+        { success: false, message: "Bu etkinlik tamamlandı; form artık kabul edilmiyor." },
+        { status: 410 }
       );
     }
 

@@ -19,7 +19,6 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
-  Bell,
   X,
   ZoomIn,
   ZoomOut,
@@ -1232,9 +1231,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
       }
     }
   }, [isAmedSpor, event.id]);
-  const [reminderEmail, setReminderEmail] = useState("");
-  const [reminderPending, setReminderPending] = useState(false);
-  const [reminderResult, setReminderResult] = useState<{ success: boolean; message: string } | null>(null);
   /** Site ayarı: sipariş başına max bilet (varsayılan 10) */
   const [maxTicketsPerOrder, setMaxTicketsPerOrder] = useState(10);
   const stageLabel = t("stageLabel");
@@ -2038,27 +2034,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
   const eventDateTime = new Date(`${event.date} ${event.time || "23:59"}`);
   const isPastEvent = eventDateTime < renderNow;
 
-  async function handleReminderSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!reminderEmail.trim()) return;
-    setReminderPending(true);
-    setReminderResult(null);
-    try {
-      const res = await fetch("/api/reminders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: reminderEmail.trim(), event_id: event.id }),
-      });
-      const data = await res.json();
-      setReminderResult({ success: data.success, message: data.message || t("actionFailed") });
-      if (data.success) setReminderEmail("");
-    } catch {
-      setReminderResult({ success: false, message: t("actionFailed") });
-    } finally {
-      setReminderPending(false);
-    }
-  }
-
   useEffect(() => {
     try {
       const stored = window.localStorage.getItem("favorite_events");
@@ -2473,6 +2448,12 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </div>
               )}
 
+              {isPastEvent && !isDraft && !isUnapproved && (
+                <p className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+                  {t("eventEnded")}
+                </p>
+              )}
+
               {manualSoldOut && !salesBlockedExcludingSoldOut && (
                 <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
                   <p className="text-sm font-extrabold uppercase tracking-wide">{t("soldOut")}</p>
@@ -2483,7 +2464,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               {/* Bestplatzbuchung / Saalplanbuchung – ikonlu seçim */}
               {/* Koltuk planı (seating_plan_id) olan etkinliklerde her iki seçenek gösterilir.
                   Planı olmayan etkinliklerde yalnızca "Fiyat kategorisine göre" gösterilir. */}
-              {!isExternalOnlyEvent && !isAmedSpor && (
+              {!isExternalOnlyEvent && !isAmedSpor && !isPastEvent && (
                 <div className={`mb-8 grid gap-4 ${hasSeatingPlan ? "sm:grid-cols-2" : "sm:grid-cols-1 max-w-md"}`}>
                   <button
                     type="button"
@@ -2523,7 +2504,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                   )}
                 </div>
               )}
-              {hasSeatingPlan && !isExternalOnlyEvent && bookingMode === null && !isAmedSpor && (
+              {hasSeatingPlan && !isExternalOnlyEvent && bookingMode === null && !isAmedSpor && !isPastEvent && (
                 <p className="mb-8 text-sm text-ink-600">
                   {locale === "de"
                     ? "Bitte wählen Sie eine Buchungsart."
@@ -2533,47 +2514,47 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                 </p>
               )}
 
-              {isExternalOnlyEvent && (
-                <div className="mb-8 rounded-lg border border-gold-300 bg-gold-50 p-5">
-                  <p className="text-sm text-gold-700 mb-4">
-                    {t("externalTicketInfo")}{" "}
-                    {t("priceFrom")}: <strong>{formatPrice(Number(event.price_from || 0), event.currency)}</strong>
-                    {manualSoldOut && (
-                      <span className="ml-2 inline-block rounded bg-red-600 px-2 py-0.5 text-xs font-extrabold uppercase tracking-wide text-white">
-                        {t("soldOutCta")}
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-sm text-gold-700 mb-3">
-                    {t("externalTicketDisclaimer")}
-                  </p>
-                  <p className="text-sm text-gold-700 mb-4">
-                    {t("externalTicketDisclaimer2")} {t("externalTicketSupport")}
-                  </p>
-                  <a
-                    href={externalTicketUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white ${
-                      manualSoldOut ? "bg-red-600 hover:bg-red-700" : "bg-gold-500 hover:bg-gold-400"
-                    }`}
-                  >
-                    {manualSoldOut ? t("soldOutCta") : t("buyExternal")}
-                    <ChevronRight className="h-4 w-4" />
-                  </a>
-                </div>
+              {isExternalOnlyEvent && !isPastEvent && (
+                  <div className="mb-8 rounded-lg border border-gold-300 bg-gold-50 p-5">
+                    <p className="text-sm text-gold-700 mb-4">
+                      {t("externalTicketInfo")}{" "}
+                      {t("priceFrom")}: <strong>{formatPrice(Number(event.price_from || 0), event.currency)}</strong>
+                      {manualSoldOut && (
+                        <span className="ml-2 inline-block rounded bg-red-600 px-2 py-0.5 text-xs font-extrabold uppercase tracking-wide text-white">
+                          {t("soldOutCta")}
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-sm text-gold-700 mb-3">
+                      {t("externalTicketDisclaimer")}
+                    </p>
+                    <p className="text-sm text-gold-700 mb-4">
+                      {t("externalTicketDisclaimer2")} {t("externalTicketSupport")}
+                    </p>
+                    <a
+                      href={externalTicketUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white ${
+                        manualSoldOut ? "bg-red-600 hover:bg-red-700" : "bg-gold-500 hover:bg-gold-400"
+                      }`}
+                    >
+                      {manualSoldOut ? t("soldOutCta") : t("buyExternal")}
+                      <ChevronRight className="h-4 w-4" />
+                    </a>
+                  </div>
               )}
 
               {/* Yer seçerek: oturum planı varsa koltuk listesi — plan yoksa bu blok artık görünmez
                   (seat butonu yalnızca hasSeatingPlan durumunda render edildiğinden bu şart asla doğru olmaz;
                   güvenlik katmanı olarak burada bırakıldı) */}
-              {!isExternalOnlyEvent && bookingMode === "seat" && !hasSeatingPlan && (
+              {!isExternalOnlyEvent && !isPastEvent && bookingMode === "seat" && !hasSeatingPlan && (
                 <div className="rounded-lg border border-ink-200 bg-ink-50 p-6 text-center text-ink-600">
                   <p className="font-medium">{t("noSeatingPlanMessage")}</p>
                   <p className="mt-2 text-sm">{t("noSeatingPlanHint")}</p>
                 </div>
               )}
-              {!isExternalOnlyEvent && bookingMode === "seat" && hasSeatingPlan && (
+              {!isExternalOnlyEvent && !isPastEvent && bookingMode === "seat" && hasSeatingPlan && (
                 <div className="rounded-lg border border-ink-200 bg-white p-6">
                   {seatingPlanLoading && (!seatingPlanData || seatingPlanData.length === 0) ? (
                     <p className="text-ink-500">{t("seatingPlanLoadingText")}</p>
@@ -3079,7 +3060,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               )}
 
               {/* Amed Spor: önce form, sonra ödeme */}
-              {isAmedSpor && !amedSporFormSubmitted && (
+              {isAmedSpor && !isPastEvent && !amedSporFormSubmitted && (
                 <div className="rounded-lg border border-gold-100 bg-gold-50/60 p-5 shadow-card">
                   <p className="mb-2 font-medium text-ink-900">
                     {t("amedSporFormRequired")}
@@ -3165,7 +3146,7 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               )}
 
               {/* Bilet Türleri - Fiyat kategorisine göre: yer seçimi ile aynı sağ panel akışı */}
-              {!isExternalOnlyEvent && !isAmedSpor && bookingMode === "price" && (
+              {!isExternalOnlyEvent && !isAmedSpor && !isPastEvent && bookingMode === "price" && (
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
                   <div>
                     {catalogTickets.length === 0 ? (
@@ -3299,12 +3280,6 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
                           {formatPrice(totalPrice, event.currency)}
                         </span>
                       </div>
-
-                      {isPastEvent && (
-                        <p className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700">
-                          {t("eventEnded")}
-                        </p>
-                      )}
 
                       <button
                         type="button"
@@ -3696,39 +3671,8 @@ export default function EventDetailClient({ event, tickets, venue = null, organi
               </section>
             )}
 
-            {/* Bilet hatırlatıcısı + Güvenli alışveriş */}
-            <div className="grid sm:grid-cols-2 gap-4 mt-8">
-              {!isPastEvent && (
-                <div className="rounded-lg border border-gold-100 bg-gold-50/60 p-6 shadow-card">
-                  <h3 className="font-display mb-2 flex items-center gap-2 text-lg font-semibold text-ink-900">
-                    <Bell className="h-5 w-5 text-gold-700" />
-                    {t("ticketReminder")}
-                  </h3>
-                  <p className="text-sm text-ink-600 mb-4">{t("reminderDesc")}</p>
-                  <form onSubmit={handleReminderSubmit} className="space-y-3">
-                    <input
-                      type="email"
-                      value={reminderEmail}
-                      onChange={(e) => setReminderEmail(e.target.value)}
-                      placeholder={t("reminderPlaceholder")}
-                      required
-                      className="w-full rounded-lg border border-ink-300 bg-white px-3 py-2 text-sm focus:border-gold-500 focus:ring-1 focus:ring-gold-500"
-                    />
-                    <button
-                      type="submit"
-                      disabled={reminderPending}
-                      className="w-full rounded-lg bg-gold-500 px-4 py-2 text-sm font-semibold text-white hover:bg-gold-400 disabled:opacity-50"
-                    >
-                      {reminderPending ? t("saving") : t("getReminder")}
-                    </button>
-                  </form>
-                  {reminderResult && (
-                    <p className={`mt-3 text-sm ${reminderResult.success ? "text-green-700" : "text-red-700"}`}>
-                      {reminderResult.message}
-                    </p>
-                  )}
-                </div>
-              )}
+            {/* Güvenli alışveriş */}
+            <div className="mt-8">
               <div className="rounded-lg border border-gold-300 bg-gradient-to-r from-gold-50 to-paper p-6">
                 <h3 className="mb-4 font-display text-lg font-semibold text-ink-900">{t("secureShopping")}</h3>
                 <div className="space-y-3">

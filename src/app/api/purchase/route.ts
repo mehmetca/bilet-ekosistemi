@@ -13,6 +13,7 @@ import {
 } from "@/lib/ticket-seating-match";
 import { assignBestAvailableSeats } from "@/lib/door-seat-assign";
 import { isEventMarkedSoldOut, isEventPubliclyVisible } from "@/lib/event-visibility";
+import { isEventPast } from "@/lib/event-time";
 import { getFulfillmentAuthToken } from "@/lib/fulfillment-auth";
 import { createBrevoClient } from "@/lib/brevo-client";
 import {
@@ -396,7 +397,7 @@ export async function POST(request: NextRequest) {
     // Sadece onaylanmış etkinliklerde bilet satışı; otomatik koltuk ataması için seating_plan_id gerekir
     const { data: eventRow } = await supabase
       .from("events")
-      .select("id, is_active, is_approved, is_draft, manual_sold_out, seating_plan_id, checkout_processing_fee, currency")
+      .select("id, is_active, is_approved, is_draft, manual_sold_out, seating_plan_id, checkout_processing_fee, currency, date, time")
       .eq("id", ticket.event_id)
       .single();
     if (!eventRow || !isEventPubliclyVisible(eventRow)) {
@@ -408,6 +409,12 @@ export async function POST(request: NextRequest) {
     if (isEventMarkedSoldOut(eventRow)) {
       return NextResponse.json(
         { success: false, message: "Bu etkinlikte biletler tükendi." },
+        { status: 409 }
+      );
+    }
+    if (isEventPast(eventRow.date, eventRow.time)) {
+      return NextResponse.json(
+        { success: false, message: "Bu etkinlik tamamlandı; bilet satışı kapalıdır." },
         { status: 409 }
       );
     }

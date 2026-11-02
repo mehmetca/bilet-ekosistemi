@@ -4,6 +4,7 @@ import {
   type CheckoutPhysicalDelivery,
 } from "@/lib/checkout-shipping";
 import { isEventMarkedSoldOut, isEventPubliclyVisible } from "@/lib/event-visibility";
+import { isEventPast } from "@/lib/event-time";
 
 export type CheckoutCartLineInput = {
   ticketId: string;
@@ -80,7 +81,7 @@ export async function computeCheckoutCartPricing(
 
   const { data: eventRows, error: eventError } = await supabase
     .from("events")
-    .select("id, is_active, is_approved, is_draft, manual_sold_out, checkout_processing_fee, currency")
+    .select("id, is_active, is_approved, is_draft, manual_sold_out, checkout_processing_fee, currency, date, time")
     .in("id", eventIds);
 
   if (eventError || !eventRows?.length) {
@@ -103,6 +104,9 @@ export async function computeCheckoutCartPricing(
     }
     if (isEventMarkedSoldOut(eventRow)) {
       return { ok: false, message: "Sepette biletleri tükenmiş etkinlik var.", status: 409 };
+    }
+    if (isEventPast(eventRow.date, eventRow.time)) {
+      return { ok: false, message: "Sepette tarihi geçmiş etkinlik var.", status: 409 };
     }
 
     const eventCurrency = String(
