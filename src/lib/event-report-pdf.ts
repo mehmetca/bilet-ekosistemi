@@ -402,7 +402,7 @@ export async function buildEventReportPdf(data: EventReportData): Promise<Uint8A
   }
   notes.push({
     label: "Nummerierung:",
-    text: `Bereits ausgestellte Rechnungen behalten ihre Nummer. Neu ausgestellte Rechnungen erhalten das Format RE-${new Date().getFullYear()}-ET######.`,
+    text: `Alle Rechnungen werden fortlaufend im Format RE-${new Date().getFullYear()}-ET###### nummeriert; bei Stornierung bleibt die Nummer der stornierten Rechnung vergeben.`,
   });
   notes.push({
     label: "Buchhaltung:",
