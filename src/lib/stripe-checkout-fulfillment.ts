@@ -25,6 +25,7 @@ export type CheckoutIntentRecord = {
   delivery_choice: string;
   seat_hold_session_id: string | null;
   cart_json: StoredCheckoutCartLine[];
+  locale: string | null;
   total_amount_cents: number;
   currency: string;
   status: string;
@@ -324,6 +325,7 @@ export async function fulfillStripeCheckoutSession(
     formData.append("quantity", String(purchaseQty));
     formData.append("buyer_name", (intent.buyer_name || "Müşteri").trim());
     formData.append("buyer_email", intent.buyer_email.trim());
+    formData.append("locale", intent.locale || "tr");
     formData.append("stripe_session_id", stripeSessionId);
     if (fulfillmentToken) formData.append("fulfillment_token", fulfillmentToken);
     if (intent.user_id) formData.append("client_user_id", intent.user_id);

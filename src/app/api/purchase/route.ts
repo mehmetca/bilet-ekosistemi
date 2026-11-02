@@ -23,6 +23,7 @@ import {
 } from "@/lib/ticket-email";
 import { buildInvoiceMailAttachment } from "@/lib/invoice-mail";
 import { resolveTicketOrganizer } from "@/lib/order-ticket-mail";
+import { normalizeAppLocale } from "@/i18n/config";
 
 
 
@@ -217,6 +218,7 @@ export async function POST(request: NextRequest) {
       );
     }
     const buyerEmail = (formData.get("buyer_email") as string)?.trim();
+    const orderLocale = normalizeAppLocale(formData.get("locale"));
     const buyerAddress = (formData.get("buyer_address") as string)?.trim() || null;
     const buyerPlz = (formData.get("buyer_plz") as string)?.trim() || null;
     const buyerCity = (formData.get("buyer_city") as string)?.trim() || null;
@@ -925,6 +927,7 @@ export async function POST(request: NextRequest) {
       status: "completed",
       buyer_name: buyerName,
       buyer_email: buyerEmail,
+      locale: orderLocale,
       stripe_session_id: stripeSessionId,
       stripe_payment_intent_id: verifiedStripeSession.payment_intent || null,
       stripe_amount_total: paidAmountCents,
@@ -1160,6 +1163,7 @@ export async function POST(request: NextRequest) {
     const emailResult = await sendTicketEmail({
       buyerEmail,
       buyerName,
+      locale: orderLocale,
       ticketCode,
       quantity,
       ticketType: ticketTypeDisplay,

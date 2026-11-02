@@ -6,6 +6,8 @@ import { PDFDocument, PDFImage, PDFPage, StandardFonts, degrees, rgb } from "pdf
 import { getSiteUrl } from "@/lib/site-url";
 import { createBrevoClient } from "@/lib/brevo-client";
 import { getLocalUploadDir } from "@/lib/local-upload";
+import { normalizeAppLocale } from "@/i18n/config";
+import { loadMessagesWithEnFallback, type MessageTree } from "@/i18n/load-messages";
 
 export type SeatDetail = { section_name: string; row_label: string; seat_label: string; ticket_code?: string };
 export type TicketUnitDetail = { ticket_code: string };
@@ -13,6 +15,8 @@ export type TicketUnitDetail = { ticket_code: string };
 export type TicketMailPayload = {
   buyerEmail: string;
   buyerName: string;
+  /** Satın alma sayfasının dili; tanınmayan ya da boş değer Türkçe'ye düşer. */
+  locale?: string;
   ticketCode: string;
   quantity: number;
   ticketType: string;
@@ -35,7 +39,7 @@ export type TicketMailPayload = {
 };
 
 const PDF_TICKET_HEADER_TEXT = "KURDEVENTS E-TICKET";
-const PDF_CUSTOMER_TICKET_TEXT = "MUSTERI/ETKINLIK BILETI";
+const PDF_CUSTOMER_TICKET_TEXT = "EINTRITTSKARTE";
 
 /** E-posta HTML enjeksiyonuna karşı kullanıcı/alan metinlerini kaçır. */
 export function escapeHtml(value: unknown): string {
@@ -48,20 +52,51 @@ export function escapeHtml(value: unknown): string {
 }
 
 /** Organizatör (fatura satıcısı) satırı — mailin üç varyantında da aynı biçimde kullanılır. */
-function organizerHtmlLine(payload: TicketMailPayload): string {
+function organizerHtmlLine(payload: TicketMailPayload, label: string): string {
   const name = escapeHtml(payload.organizerName || "");
   if (!name) return "";
-  return `<p style="margin:12px 0 0;font-size:13px;color:#64748b;">Organizat\u00F6r / Veranstalter: <strong style="color:#0f172a;">${name}</strong></p>`;
+  return `<p style="margin:12px 0 0;font-size:13px;color:#64748b;">${escapeHtml(label)}: <strong style="color:#0f172a;">${name}</strong></p>`;
 }
 
-function buildTicketEmailHtml(payload: TicketMailPayload, qrCodeDataUrl: string, barcodeDataUrl: string) {
-  const buyerName = escapeHtml(payload.buyerName);
-  const eventTitle = escapeHtml(payload.eventTitle || "Etkinlik");
+type TicketEmailCopy = {
+  locale: ReturnType<typeof normalizeAppLocale>;
+  text: (key: string, fallback: string) => string;
+};
+
+const MAIL_DATE_LOCALES: Record<string, string> = { tr: "tr-TR", de: "de-DE", en: "en-GB" };
+
+/** Mail metinleri messages/<locale>.json `ticketEmail` bloğundan; ku/ckb İngilizce'ye düşer. */
+async function loadTicketEmailCopy(payload: TicketMailPayload): Promise<TicketEmailCopy> {
+  const locale = normalizeAppLocale(payload.locale);
+  let block: MessageTree = {};
+  try {
+    const messages = await loadMessagesWithEnFallback(locale);
+    const raw = messages.ticketEmail;
+    if (raw && typeof raw === "object" && !Array.isArray(raw)) block = raw as MessageTree;
+  } catch {
+    /* çeviri yüklenemezse aşağıdaki varsayılanlar kullanılır */
+  }
+  const text = (key: string, fallback: string): string => {
+    const value = (block as Record<string, unknown>)[key];
+    return typeof value === "string" && value.trim() ? value : fallback;
+  };
+  return { locale, text };
+}
+
+async function buildTicketEmailHtml(
+  payload: TicketMailPayload,
+  qrCodeDataUrl: string,
+  barcodeDataUrl: string,
+  copy: TicketEmailCopy
+) {
+  const t = copy.text;
+  const dateLocale = MAIL_DATE_LOCALES[copy.locale] ?? "en-GB";
+  const eventTitle = escapeHtml(payload.eventTitle || t("eventFallback", "Event"));
   const ticketCode = escapeHtml(payload.ticketCode);
   const venueText = escapeHtml(payload.venue || "-");
   const locationText = escapeHtml(payload.location || "-");
   const eventDateText = payload.eventDate
-    ? escapeHtml(new Date(payload.eventDate).toLocaleDateString("tr-TR"))
+    ? escapeHtml(new Date(payload.eventDate).toLocaleDateString(dateLocale))
     : "-";
   const timeText = escapeHtml(payload.eventTime || "--:--");
   const priceText = Number(payload.totalPrice).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -70,26 +105,28 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrCodeDataUrl: string,
 
   // Primary HTML - tek bilet veya çoklu koltuk
   if (multiSeat) {
+    const seatValue = (s: SeatDetail) =>
+      `${escapeHtml(s.section_name)} · ${t("rowWord", "Row")} ${escapeHtml(s.row_label)} · ${t("seatNrWord", "No")} ${escapeHtml(s.seat_label)}`;
     const rows = payload.seatDetails!.map(
       (s, i) =>
-        `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;">${i + 1}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;">${escapeHtml(s.ticket_code || payload.ticketCode)}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${escapeHtml(s.section_name)} · Sıra ${escapeHtml(s.row_label)} · Nr ${escapeHtml(s.seat_label)}</td></tr>`
+        `<tr><td style="padding:8px 12px;border:1px solid #e2e8f0;">${i + 1}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;">${escapeHtml(s.ticket_code || payload.ticketCode)}</td><td style="padding:8px 12px;border:1px solid #e2e8f0;">${seatValue(s)}</td></tr>`
     ).join("");
     return `
     <div style="font-family:Arial,sans-serif;background:#eef2f7;padding:24px;">
       <div style="max-width:900px;margin:0 auto;">
-        <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${buyerName},</h2>
-        <p style="margin:0 0 8px;color:#334155;">Siparişiniz tamamlandı. <strong>${payload.seatDetails!.length} adet bilet</strong> siparişiniz oluşturuldu.</p>
-        <p style="margin:0 0 14px;color:#334155;">Ekteki PDF dosyasında her bilet <strong>ayrı sayfada</strong> yer alır; her sayfada o bilete özel bilet kodu ve koltuk bilgisi vardır.</p>
+        <h2 style="margin:0 0 10px;color:#0f172a;">${escapeHtml(t("greeting", "Hello {name},").replace("{name}", payload.buyerName || ""))}</h2>
+        <p style="margin:0 0 8px;color:#334155;">${escapeHtml(t("orderCompletedMulti", "{count} tickets have been issued.").replace("{count}", String(payload.seatDetails!.length)))}</p>
+        <p style="margin:0 0 14px;color:#334155;">${escapeHtml(t("seatPdfNote", "Each ticket is on its own page of the attached PDF."))}</p>
         <p style="margin:0 0 6px;color:#0f172a;font-weight:700;">${eventTitle}</p>
         <p style="margin:0 0 14px;color:#64748b;font-size:14px;">${eventDateText}, ${timeText} · ${venueText}</p>
         <table style="border-collapse:collapse;width:100%;max-width:600px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;">
-          <thead><tr style="background:#f1f5f9;"><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">No</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">Bilet Kodu</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">Koltuk</th></tr></thead>
+          <thead><tr style="background:#f1f5f9;"><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">${escapeHtml(t("noColumn", "No"))}</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">${escapeHtml(t("ticketCodeColumn", "Ticket code"))}</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">${escapeHtml(t("seatColumn", "Seat"))}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
-        <p style="margin:14px 0 0;font-size:12px;color:#64748b;">Toplam: EUR ${priceText}</p>
-        ${organizerHtmlLine(payload)}
-        <p style="margin:16px 0 0;font-size:14px;color:#0f172a;font-weight:600;">Ekteki PDF sayfasında biletleriniz gönderilmiştir. Yazdırabilirsiniz. İyi seyirler dileriz.</p>
-        <div style="font-size:11px;color:#64748b;margin-top:16px;">Bu e-posta otomatik olusturulmustur.</div>
+        <p style="margin:14px 0 0;font-size:12px;color:#64748b;">${escapeHtml(t("totalWord", "Total"))}: EUR ${priceText}</p>
+        ${organizerHtmlLine(payload, t("labelOrganizer", "Organizer"))}
+        <p style="margin:16px 0 0;font-size:14px;color:#0f172a;font-weight:600;">${escapeHtml(t("printNote", "Your tickets are in the attached PDF. You can print them. Enjoy the show."))}</p>
+        <div style="font-size:11px;color:#64748b;margin-top:16px;">${escapeHtml(t("autoGenerated", "This email was generated automatically."))}</div>
       </div>
     </div>
   `;
@@ -108,19 +145,19 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrCodeDataUrl: string,
     return `
     <div style="font-family:Arial,sans-serif;background:#eef2f7;padding:24px;">
       <div style="max-width:900px;margin:0 auto;">
-        <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${buyerName},</h2>
-        <p style="margin:0 0 8px;color:#334155;">Siparişiniz tamamlandı. <strong>${payload.ticketCodes!.length} adet bilet</strong> siparişiniz oluşturuldu.</p>
-        <p style="margin:0 0 14px;color:#334155;">Ekteki PDF dosyasında her bilet <strong>ayrı sayfada</strong> yer alır; her sayfada o bilete özel bilet kodu ve QR bulunur.</p>
+        <h2 style="margin:0 0 10px;color:#0f172a;">${escapeHtml(t("greeting", "Hello {name},").replace("{name}", payload.buyerName || ""))}</h2>
+        <p style="margin:0 0 8px;color:#334155;">${escapeHtml(t("orderCompletedMulti", "{count} tickets have been issued.").replace("{count}", String(payload.ticketCodes!.length)))}</p>
+        <p style="margin:0 0 14px;color:#334155;">${escapeHtml(t("codePdfNote", "Each ticket is on its own page of the attached PDF, with its own code and QR."))}</p>
         <p style="margin:0 0 6px;color:#0f172a;font-weight:700;">${eventTitle}</p>
         <p style="margin:0 0 14px;color:#64748b;font-size:14px;">${eventDateText}, ${timeText} · ${venueText}</p>
         <table style="border-collapse:collapse;width:100%;max-width:600px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;">
-          <thead><tr style="background:#f1f5f9;"><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">No</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">Bilet Kodu</th></tr></thead>
+          <thead><tr style="background:#f1f5f9;"><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">${escapeHtml(t("noColumn", "No"))}</th><th style="padding:8px 12px;text-align:left;border:1px solid #e2e8f0;">${escapeHtml(t("ticketCodeColumn", "Ticket code"))}</th></tr></thead>
           <tbody>${rows}</tbody>
         </table>
-        <p style="margin:14px 0 0;font-size:12px;color:#64748b;">Toplam: EUR ${priceText}</p>
-        ${organizerHtmlLine(payload)}
-        <p style="margin:16px 0 0;font-size:14px;color:#0f172a;font-weight:600;">Ekteki PDF sayfasında biletleriniz gönderilmiştir. Yazdırabilirsiniz. İyi seyirler dileriz.</p>
-        <div style="font-size:11px;color:#64748b;margin-top:16px;">Bu e-posta otomatik olusturulmustur.</div>
+        <p style="margin:14px 0 0;font-size:12px;color:#64748b;">${escapeHtml(t("totalWord", "Total"))}: EUR ${priceText}</p>
+        ${organizerHtmlLine(payload, t("labelOrganizer", "Organizer"))}
+        <p style="margin:16px 0 0;font-size:14px;color:#0f172a;font-weight:600;">${escapeHtml(t("printNote", "Your tickets are in the attached PDF. You can print them. Enjoy the show."))}</p>
+        <div style="font-size:11px;color:#64748b;margin-top:16px;">${escapeHtml(t("autoGenerated", "This email was generated automatically."))}</div>
       </div>
     </div>
   `;
@@ -132,48 +169,49 @@ function buildTicketEmailHtml(payload: TicketMailPayload, qrCodeDataUrl: string,
       ? payload.seatDetails
           .map(
             (s) =>
-              `${escapeHtml(s.section_name)} · Sıra ${escapeHtml(s.row_label)} · Nr ${escapeHtml(s.seat_label)}`
+              `${escapeHtml(s.section_name)} · ${t("rowWord", "Row")} ${escapeHtml(s.row_label)} · ${t("seatNrWord", "No")} ${escapeHtml(s.seat_label)}`
           )
           .join("; ")
       : "";
 
+  const cellLabel = "padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;";
   return `
     <div style="font-family:Arial,sans-serif;background:#eef2f7;padding:24px;">
       <div style="max-width:600px;margin:0 auto;">
-        <h2 style="margin:0 0 10px;color:#0f172a;">Merhaba ${buyerName},</h2>
-        <p style="margin:0 0 6px;color:#334155;">Siparişiniz tamamlandı. Biletiniz ektedir.</p>
-        <p style="margin:0 0 16px;color:#334155;">Ekteki PDF dosyasını indirip yazdırabilirsiniz. İyi seyirler dileriz.</p>
+        <h2 style="margin:0 0 10px;color:#0f172a;">${escapeHtml(t("greeting", "Hello {name},").replace("{name}", payload.buyerName || ""))}</h2>
+        <p style="margin:0 0 6px;color:#334155;">${escapeHtml(t("orderCompleted", "Your order is complete. Your ticket is attached."))}</p>
+        <p style="margin:0 0 16px;color:#334155;">${escapeHtml(t("singlePdfNote", "You can download and print the attached PDF. Enjoy the show."))}</p>
         <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#fff;border:1px solid #cbd5e1;border-radius:8px;">
           <tr>
-            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;width:40%;">Etkinlik</td>
-            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f172a;font-weight:600;">${eventTitle}</td>
+            <td style="${cellLabel}width:40%;">${escapeHtml(t("labelEvent", "Event"))}</td>
+            <td style="${cellLabel}color:#0f172a;font-weight:600;">${eventTitle}</td>
           </tr>
           <tr>
-            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;">Tarih / Saat</td>
-            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f172a;">${eventDateText}, ${timeText}</td>
+            <td style="${cellLabel}">${escapeHtml(t("labelDateTime", "Date / time"))}</td>
+            <td style="${cellLabel}color:#0f172a;">${eventDateText}, ${timeText}</td>
           </tr>
           <tr>
-            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;">Mekan</td>
-            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f172a;">${venueText}, ${locationText}</td>
+            <td style="${cellLabel}">${escapeHtml(t("labelVenue", "Venue"))}</td>
+            <td style="${cellLabel}color:#0f172a;">${venueText}, ${locationText}</td>
           </tr>
           <tr>
-            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;">Bilet Kodu</td>
-            <td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f172a;font-family:monospace;font-weight:700;letter-spacing:1px;">${ticketCode}</td>
+            <td style="${cellLabel}">${escapeHtml(t("labelTicketCode", "Ticket code"))}</td>
+            <td style="${cellLabel}color:#0f172a;font-family:monospace;font-weight:700;letter-spacing:1px;">${ticketCode}</td>
           </tr>
-          ${seatLine ? `<tr><td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#64748b;">Koltuk</td><td style="padding:12px 16px;border-bottom:1px solid #e2e8f0;font-size:13px;color:#0f172a;font-weight:600;">${seatLine}</td></tr>` : ""}
+          ${seatLine ? `<tr><td style="${cellLabel}">${escapeHtml(t("labelSeat", "Seat"))}</td><td style="${cellLabel}color:#0f172a;font-weight:600;">${seatLine}</td></tr>` : ""}
           <tr>
-            <td style="padding:12px 16px;font-size:13px;color:#64748b;">Toplam</td>
+            <td style="padding:12px 16px;font-size:13px;color:#64748b;">${escapeHtml(t("labelTotal", "Total"))}</td>
             <td style="padding:12px 16px;font-size:13px;color:#0f172a;font-weight:700;">EUR ${priceText}</td>
           </tr>
           ${
             payload.organizerName
-              ? `<tr><td style="padding:12px 16px;font-size:13px;color:#64748b;">Organizat&ouml;r / Veranstalter</td><td style="padding:12px 16px;font-size:13px;color:#0f172a;font-weight:600;">${escapeHtml(
+              ? `<tr><td style="padding:12px 16px;font-size:13px;color:#64748b;">${escapeHtml(t("labelOrganizer", "Organizer"))}</td><td style="padding:12px 16px;font-size:13px;color:#0f172a;font-weight:600;">${escapeHtml(
                   payload.organizerName
                 )}</td></tr>`
               : ""
           }
         </table>
-        <div style="font-size:11px;color:#64748b;margin-top:20px;">Bu e-posta otomatik oluşturulmuştur.</div>
+        <div style="font-size:11px;color:#64748b;margin-top:20px;">${escapeHtml(t("autoGenerated", "This email was generated automatically."))}</div>
       </div>
     </div>
   `;
@@ -273,18 +311,13 @@ function drawVerticalDashedLine(
   }
 }
 
-function drawWrappedText(
-  page: PDFPage,
+function wrapPdfLines(
   text: string,
-  x: number,
-  y: number,
-  maxWidth: number,
-  fontSize: number,
-  lineHeight: number,
   font: any,
-  color: ReturnType<typeof rgb>,
+  fontSize: number,
+  maxWidth: number,
   maxLines = 2
-) {
+): string[] {
   const words = text.split(" ");
   const lines: string[] = [];
   let current = "";
@@ -301,9 +334,7 @@ function drawWrappedText(
   }
   if (current && lines.length < maxLines) lines.push(current);
 
-  lines.forEach((line, idx) => {
-    page.drawText(line, { x, y: y - idx * lineHeight, size: fontSize, font, color });
-  });
+  return lines.length ? lines : [""];
 }
 
 /**
@@ -342,10 +373,10 @@ async function buildTicketPdfBase64(payload: TicketMailPayload) {
   const barcodeImage = await pdfDoc.embedPng(dataUrlToUint8Array(barcodeDataUrl));
 
   const eventDateText = payload.eventDate
-    ? new Date(payload.eventDate).toLocaleDateString("tr-TR")
+    ? new Date(payload.eventDate).toLocaleDateString("de-DE")
     : "-";
 
-  const safeEventTitle = toPdfSafeText(payload.eventTitle || "Etkinlik");
+  const safeEventTitle = toPdfSafeText(payload.eventTitle || "Veranstaltung");
   const safeBuyerName = toPdfSafeText(payload.buyerName);
   const safeTicketType = toPdfSafeText(payload.ticketType);
   const safeVenue = toPdfSafeText(payload.venue);
@@ -354,7 +385,7 @@ async function buildTicketPdfBase64(payload: TicketMailPayload) {
   const safeDate = toPdfSafeText(eventDateText);
   const safeTime = toPdfSafeText(payload.eventTime || "--:--");
 
-  const primary = rgb(0.0, 0.25, 0.55);
+  const primary = rgb(220 / 255, 11 / 255, 44 / 255);
   const slate900 = rgb(0.06, 0.09, 0.16);
   const slate500 = rgb(0, 0, 0);
   const white = rgb(1, 1, 1);
@@ -441,67 +472,104 @@ async function buildTicketPdfBase64(payload: TicketMailPayload) {
     font: boldFont,
     color: slate500,
   });
-  drawWrappedText(
-    page,
+  const titleLines = wrapPdfLines(
     safeEventTitle,
-    leftX,
-    ticketY + 225,
-    stubX - leftX - 20,
-    26,
-    28,
     boldFont,
-    slate900,
+    20,
+    stubX - leftX - 20,
     2
   );
+  // Başlık, son satırı tarihin 22 puan üstünde kalacak şekilde aşağıdan yaslanır.
+  titleLines.forEach((line, idx) => {
+    page.drawText(line, {
+      x: leftX,
+      y: ticketY + 212 + (titleLines.length - 1 - idx) * 22,
+      size: 20,
+      font: boldFont,
+      color: slate900,
+    });
+  });
   page.drawText(`${safeDate}, ${safeTime}`, {
     x: leftX,
-    y: ticketY + 163,
-    size: 18,
+    y: ticketY + 190,
+    size: 14,
     font: boldFont,
     color: slate900,
   });
   page.drawText(safeVenue, {
     x: leftX,
-    y: ticketY + 141,
-    size: 13,
+    y: ticketY + 170,
+    size: 12,
     font: boldFont,
     color: slate900,
   });
   page.drawText(safeLocation, {
     x: leftX,
-    y: ticketY + 124,
-    size: 12,
+    y: ticketY + 155,
+    size: 11,
     font: regularFont,
     color: slate900,
   });
 
+  // Veranstalter: adı salon adresinin altında, logosu çerçevenin içinde sağda.
+  const organizerName = toPdfSafeText(payload.organizerName || "");
+  const organizerLogo = await embedOrganizerLogo(pdfDoc, payload.organizerLogoPath);
+  if (organizerName !== "-") {
+    page.drawText("VERANSTALTER", {
+      x: leftX,
+      y: ticketY + 134,
+      size: 8,
+      font: regularFont,
+      color: slate500,
+    });
+    page.drawText(organizerName.slice(0, 46), {
+      x: leftX,
+      y: ticketY + 120,
+      size: 12,
+      font: boldFont,
+      color: slate900,
+    });
+  }
+  if (organizerLogo) {
+    const scale = Math.min(130 / organizerLogo.width, 58 / organizerLogo.height, 1);
+    const logoW = organizerLogo.width * scale;
+    const logoH = organizerLogo.height * scale;
+    page.drawImage(organizerLogo, {
+      x: stubX - 22 - logoW,
+      y: ticketY + 138 - logoH,
+      width: logoW,
+      height: logoH,
+    });
+  }
+
   const seatRow: [string, string] | null =
     payload.seatDetails && payload.seatDetails.length > 0
-      ? ["Platz / Koltuk", payload.seatDetails.map((s) => `${s.section_name} · Sıra ${s.row_label} · Nr ${s.seat_label}`).join("; ")]
+      ? ["Platz / Reihe", payload.seatDetails.map((s) => `${s.section_name} · Reihe ${s.row_label} · Nr. ${s.seat_label}`).join("; ")]
       : null;
+  const buyerRow: [string, string] | null =
+    safeBuyerName !== "-" && safeBuyerName !== "Musteri" ? ["Inhaber", safeBuyerName] : null;
   const rows: Array<[string, string]> = [
-    ["Bilet Turu", safeTicketType],
+    ["Kategorie", safeTicketType],
     ...(seatRow ? [seatRow] : []),
-    ["Kisi/Adet", `${safeBuyerName} / ${payload.quantity}`],
-    ["Toplam", `EUR ${Number(payload.totalPrice).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`],
-    ["Giris", "EINGANG X"],
+    ...(buyerRow ? [buyerRow] : []),
+    ["Gesamtpreis", `${Number(payload.totalPrice).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} EUR`],
   ];
-  let y = ticketY + 92;
+  let y = ticketY + 98;
   for (const [label, value] of rows) {
     const safeValue = toPdfSafeText(value);
     page.drawText(label, { x: leftX, y, size: 11, font: regularFont, color: slate500 });
     page.drawText(safeValue.length > 50 ? safeValue.slice(0, 47) + "..." : safeValue, { x: leftX + 110, y, size: 10, font: boldFont, color: slate900 });
-    y -= 21;
+    y -= 19;
   }
 
-  page.drawText("KOPARILABILIR BOLUM", {
+  page.drawText("ABTRENNBARER ABSCHNITT", {
     x: stubX + 18,
     y: ticketY + 255,
     size: 10,
     font: boldFont,
     color: slate500,
   });
-  page.drawText("Bilet Kodu", {
+  page.drawText("Ticketnummer", {
     x: stubX + 18,
     y: ticketY + 232,
     size: 11,
@@ -515,60 +583,21 @@ async function buildTicketPdfBase64(payload: TicketMailPayload) {
     font: boldFont,
     color: slate900,
   });
-  page.drawText("EINGANG X", {
+  page.drawText(`${safeDate}, ${safeTime}`, {
     x: stubX + 18,
     y: ticketY + 187,
-    size: 13,
+    size: 12,
     font: boldFont,
     color: slate900,
   });
   page.drawImage(qrImage, { x: stubX + 38, y: ticketY + 40, width: 120, height: 120 });
-  page.drawText("QR kodu giriste okutunuz.", {
+  page.drawText("QR-Code am Eingang scannen.", {
     x: stubX + 31,
     y: ticketY + 26,
     size: 9,
     font: regularFont,
     color: slate500,
   });
-
-  // Biletin altında organizatör (fatura satıcısı) şeridi: logo solda, adı sağında.
-  const organizerName = toPdfSafeText(payload.organizerName || "");
-  const organizerLogo = await embedOrganizerLogo(pdfDoc, payload.organizerLogoPath);
-  if (organizerName !== "-" || organizerLogo) {
-    let logoW = 0;
-    let logoH = 0;
-    if (organizerLogo) {
-      const scale = Math.min(130 / organizerLogo.width, 40 / organizerLogo.height, 1);
-      logoW = organizerLogo.width * scale;
-      logoH = organizerLogo.height * scale;
-    }
-    const footerTop = ticketY - 16;
-    if (organizerLogo) {
-      page.drawImage(organizerLogo, {
-        x: ticketX,
-        y: footerTop - logoH,
-        width: logoW,
-        height: logoH,
-      });
-    }
-    const textX = ticketX + (organizerLogo ? logoW + 16 : 0);
-    page.drawText("ORGANIZATOR / VERANSTALTER", {
-      x: textX,
-      y: footerTop - 9,
-      size: 8,
-      font: regularFont,
-      color: slate500,
-    });
-    if (organizerName !== "-") {
-      page.drawText(organizerName.slice(0, 70), {
-        x: textX,
-        y: footerTop - 26,
-        size: 13,
-        font: boldFont,
-        color: slate900,
-      });
-    }
-  }
 
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes).toString("base64");
@@ -633,10 +662,13 @@ export async function sendTicketEmail(payload: TicketMailPayload) {
       return { sent: false, reason: "Brevo yapılandırması eksik." };
     }
 
-    const subject = `Biletiniz hazır: ${payload.ticketCode}`;
+    const copy = await loadTicketEmailCopy(payload);
+    const subject = copy
+      .text("subject", "Your ticket is ready: {code}")
+      .replace("{code}", payload.ticketCode);
     const qrCodeDataUrl = await buildQrCodeDataUrl(payload);
     const barcodeDataUrl = await buildCode128DataUrl(payload.ticketCode);
-    let html = buildTicketEmailHtml(payload, qrCodeDataUrl, barcodeDataUrl);
+    let html = await buildTicketEmailHtml(payload, qrCodeDataUrl, barcodeDataUrl, copy);
     const pdfAttachment = await buildTicketPdfMultiPageBase64(payload);
     const qrAttachment = dataUrlToBase64(qrCodeDataUrl);
     const barcodeAttachment = dataUrlToBase64(barcodeDataUrl);
@@ -648,12 +680,17 @@ export async function sendTicketEmail(payload: TicketMailPayload) {
     ];
 
     if (payload.invoicePdfBase64 && payload.invoiceNumber) {
-      const invoiceNumber = escapeHtml(payload.invoiceNumber);
       attachment.push({
         content: payload.invoicePdfBase64,
         name: `Rechnung-${payload.invoiceNumber}.pdf`,
       });
-      html += `<div style="max-width:900px;margin:12px auto 0;padding:12px 16px;background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;font-family:Arial,sans-serif;font-size:13px;color:#334155;">Satin aldiginiz bilete ili&#351;kin fatura (Rechnung <strong>${invoiceNumber}</strong>) ekteki PDF dosyas&#305;d&#305;r. E-postan&#305;z&#305; da fatura yerine ge&#231;er; isterseniz hesap sayfan&#305;zdan yeniden indirabilirsiniz.</div>`;
+      const invoiceNote = copy
+        .text(
+          "invoiceNote",
+          "The invoice ({number}) for your ticket is attached as a PDF. You can download it again anytime from your account."
+        )
+        .replace("{number}", payload.invoiceNumber);
+      html += `<div style="max-width:900px;margin:12px auto 0;padding:12px 16px;background:#ffffff;border:1px solid #cbd5e1;border-radius:8px;font-family:Arial,sans-serif;font-size:13px;color:#334155;">${escapeHtml(invoiceNote)}</div>`;
     }
 
     const brevo = createBrevoClient(brevoApiKey);

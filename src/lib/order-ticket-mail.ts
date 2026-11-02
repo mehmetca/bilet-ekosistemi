@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { normalizeAppLocale } from "@/i18n/config";
 import type { SeatDetail, TicketMailPayload } from "@/lib/ticket-email";
 
 export type TicketMailOrderRow = {
@@ -10,6 +11,7 @@ export type TicketMailOrderRow = {
   total_price: number;
   buyer_name?: string | null;
   buyer_email?: string | null;
+  locale?: string | null;
 };
 
 export type TicketOrganizer = { name: string | null; logoPath: string | null };
@@ -104,6 +106,7 @@ export async function buildTicketMailPayloadForOrder(
   return {
     buyerEmail: order.buyer_email || "",
     buyerName: order.buyer_name || "Müşteri",
+    locale: normalizeAppLocale(order.locale),
     ticketCode: order.ticket_code || ticketCodes[0] || "",
     quantity: Number(order.quantity || 0),
     ticketType: ticketTypeDisplay,

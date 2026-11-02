@@ -12,6 +12,12 @@ export type AppLocale = (typeof locales)[number];
 /** Mesaj birleştirmede taban dil (next-intl “fallback” kaynağı). */
 export const fallbackLocale = "en" as const satisfies AppLocale;
 
+/** Sunucuya gelen serbest dil metnini tanınan locale'e indirger (kapı satışı/panel → tr). */
+export function normalizeAppLocale(value: unknown, fallback: AppLocale = "tr"): AppLocale {
+  const raw = String(value ?? "").trim().toLowerCase();
+  return (locales as readonly string[]).includes(raw) ? (raw as AppLocale) : fallback;
+}
+
 /**
  * Özet yapı (mesaj fallback = İngilizce; site varsayılan dili = Almanca).
  * `localeDetection` ve kök URL locale değerleri `routing.ts` ile aynı tutulmalı.

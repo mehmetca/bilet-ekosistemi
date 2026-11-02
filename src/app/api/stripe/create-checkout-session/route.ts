@@ -11,6 +11,7 @@ import {
   type CheckoutPhysicalDelivery,
 } from "@/lib/checkout-shipping";
 import { CHECKOUT_HOLD_SECONDS } from "@/lib/cart-reservation";
+import { normalizeAppLocale } from "@/i18n/config";
 
 export const runtime = "nodejs";
 
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
     const buyerAddress = (body.buyerAddress || "").trim();
     const buyerPlz = (body.buyerPlz || "").trim();
     const buyerCity = (body.buyerCity || "").trim();
-    const locale = (body.locale || "tr").trim();
+    const locale = normalizeAppLocale(body.locale);
     const deliveryRaw = normalizeDeliveryChoice(body.deliveryChoice);
     const physicalDelivery: CheckoutPhysicalDelivery =
       deliveryRaw === "e_ticket" ? "none" : deliveryRaw;
@@ -176,6 +177,7 @@ export async function POST(request: NextRequest) {
         delivery_choice: deliveryRaw,
         seat_hold_session_id: seatHoldSessionId,
         cart_json: items,
+        locale,
         ...(formData ? { form_json: formData } : {}),
         total_amount_cents: priced.grandTotalCents,
         currency: priced.currency,
