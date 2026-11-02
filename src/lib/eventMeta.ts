@@ -60,6 +60,13 @@ export function parseEventDescription(raw?: string | null): EventMeta {
   return { content: normalizeDescriptionHtml(working.trim()), externalTicketUrl };
 }
 
+/** Açıklama alanlarından herhangi biri hariç bilet linki taşıyorsa true. */
+export function hasExternalTicketLink(...descriptions: (string | null | undefined)[]): boolean {
+  return descriptions.some(
+    (value) => typeof value === "string" && value.includes(EXTERNAL_TICKET_URL_START)
+  );
+}
+
 export function buildEventDescription(content: string, externalTicketUrl?: string): string {
   const cleanedContent = (content || "").trim();
   const url = (externalTicketUrl || "").trim();

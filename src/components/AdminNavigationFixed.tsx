@@ -63,6 +63,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
       { href: "/yonetim/bilet-ozeti", label: t("nav.ticketSummary"), icon: PieChart, description: t("nav.ticketSummaryDesc") },
       { href: "/yonetim/muhasebe", label: t("nav.accounting"), icon: BarChart3, description: t("nav.accountingDesc") },
       { href: "/yonetim/faturalar", label: "Faturalar", icon: FileText, description: "Rechnung / KDV / ZUGFeRD XML" },
+      { href: "/yonetim/etkinlik-raporlari", label: "Etkinlik raporları", icon: BarChart3, description: "Veranstaltungsabrechnung: PDF ve e-posta" },
       { href: "/yonetim/kullanicilar", label: t("nav.users"), icon: Users, description: t("nav.usersDesc") },
       { href: "/yonetim/musteri-ara", label: t("nav.customerSearch"), icon: SearchIcon, description: t("nav.customerSearchDesc") },
       { href: "/yonetim/bilet-kontrol", label: t("nav.ticketCheck"), icon: Shield, description: t("nav.ticketCheckDesc") },
