@@ -83,12 +83,7 @@ async function loadTicketEmailCopy(payload: TicketMailPayload): Promise<TicketEm
   return { locale, text };
 }
 
-async function buildTicketEmailHtml(
-  payload: TicketMailPayload,
-  qrCodeDataUrl: string,
-  barcodeDataUrl: string,
-  copy: TicketEmailCopy
-) {
+async function buildTicketEmailHtml(payload: TicketMailPayload, copy: TicketEmailCopy) {
   const t = copy.text;
   const dateLocale = MAIL_DATE_LOCALES[copy.locale] ?? "en-GB";
   const eventTitle = escapeHtml(payload.eventTitle || t("eventFallback", "Event"));
@@ -262,10 +257,6 @@ async function buildCode128DataUrl(ticketCode: string): Promise<string> {
 function dataUrlToUint8Array(dataUrl: string): Uint8Array {
   const base64 = dataUrl.split(",")[1] || "";
   return Uint8Array.from(Buffer.from(base64, "base64"));
-}
-
-function dataUrlToBase64(dataUrl: string): string {
-  return dataUrl.split(",")[1] || "";
 }
 
 function toPdfSafeText(value: string | undefined | null): string {
@@ -666,17 +657,13 @@ export async function sendTicketEmail(payload: TicketMailPayload) {
     const subject = copy
       .text("subject", "Your ticket is ready: {code}")
       .replace("{code}", payload.ticketCode);
-    const qrCodeDataUrl = await buildQrCodeDataUrl(payload);
-    const barcodeDataUrl = await buildCode128DataUrl(payload.ticketCode);
-    let html = await buildTicketEmailHtml(payload, qrCodeDataUrl, barcodeDataUrl, copy);
+    let html = await buildTicketEmailHtml(payload, copy);
     const pdfAttachment = await buildTicketPdfMultiPageBase64(payload);
-    const qrAttachment = dataUrlToBase64(qrCodeDataUrl);
-    const barcodeAttachment = dataUrlToBase64(barcodeDataUrl);
 
+    // QR ve barkod PDF'in içine gömülü; ayrı PNG ek yanıltıcıydı (çok biletli siparişte
+    // yalnız ana kodun görseli gidiyordu) ve maile gereksiz ağırlık katıyordu.
     const attachment: Array<{ content: string; name: string }> = [
       { content: pdfAttachment, name: "kurdevents-e-bilet.pdf" },
-      { content: qrAttachment, name: "kurdevents-e-ticket-qr.png" },
-      { content: barcodeAttachment, name: "kurdevents-e-ticket-barcode.png" },
     ];
 
     if (payload.invoicePdfBase64 && payload.invoiceNumber) {
