@@ -83,6 +83,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: Wallet,
     items: [
       { href: "/yonetim/muhasebe", labelKey: "nav.accounting", icon: BarChart3, descriptionKey: "nav.accountingDesc" },
+      { href: "/yonetim/satis-raporu", label: "Satış & kazanç", icon: Wallet, description: "Ciro, komisyon ve organizatöre kalan (payout)" },
       { href: "/yonetim/faturalar", label: "Faturalar", icon: FileText, description: "Rechnung / KDV / ZUGFeRD XML" },
       { href: "/yonetim/etkinlik-raporlari", label: "Etkinlik raporları", icon: BarChart3, description: "Veranstaltungsabrechnung: PDF ve e-posta" },
     ],
