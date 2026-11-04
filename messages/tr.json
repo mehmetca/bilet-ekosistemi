@@ -1144,7 +1144,8 @@
       "profile": "Profil",
       "checkin": "Check-in",
       "venuesOrganizer": "Mekanlar / Salon tasarımı",
-      "guestName": "Organizatör"
+      "guestName": "Organizatör",
+      "searchPlaceholder": "Menüde ara"
     }
   }
 }

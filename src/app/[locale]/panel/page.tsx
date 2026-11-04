@@ -20,12 +20,10 @@ export default function PanelPage() {
       return;
     }
     if (!authLoading && user) {
+      // Admin/organizatör de müşteri olabilir: kendi biletleri ve profilini görebilmeli.
+      // Yönetime geçiş üst menüdeki "Yönetim" bağlantısıyla yapılır.
       if (isController) {
         router.replace("/yonetim/bilet-kontrol");
-        return;
-      }
-      if (isAdmin || isOrganizer) {
-        router.replace("/yonetim");
         return;
       }
     }

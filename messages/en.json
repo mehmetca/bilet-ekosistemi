@@ -1142,7 +1142,8 @@
       "profile": "Profile",
       "checkin": "Check-in",
       "venuesOrganizer": "Venues / seating design",
-      "guestName": "Guest"
+      "guestName": "Guest",
+      "searchPlaceholder": "Search menu"
     }
   }
 }

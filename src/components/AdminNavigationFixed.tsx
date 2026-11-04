@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -8,24 +8,22 @@ import {
   X,
   Calendar,
   Ticket,
-  Users,
-  Settings,
   Shield,
-  CreditCard,
-  BarChart3,
   LogOut,
   User,
-  Megaphone,
-  MapPin,
-  Bell,
-  Search as SearchIcon,
-  LayoutGrid,
-  PieChart,
-  Image as ImageIcon,
-  Palette,
   FileText,
+  ChevronDown,
+  Search as SearchIcon,
+  type LucideIcon,
 } from "lucide-react";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import {
+  ADMIN_NAV_GROUPS,
+  findGroupKeyForPath,
+  type AdminNavItem,
+} from "@/components/adminNavConfig";
+
+const OPEN_GROUPS_STORAGE_KEY = "adminNavOpenGroups";
 
 interface AdminNavigationFixedProps {
   isOpen?: boolean;
@@ -43,37 +41,54 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
 
   const isActive = (path: string) => pathname === path;
 
-  const adminMenuItems = useMemo(
-    () => [
-      { href: "/yonetim", label: t("nav.dashboard"), icon: Calendar, description: t("nav.dashboardDescAdmin") },
-      { href: "/yonetim/etkinlikler", label: t("nav.events"), icon: Calendar, description: t("nav.eventsDesc") },
-      { href: "/yonetim/mekanlar", label: t("nav.venues"), icon: MapPin, description: t("nav.venuesDesc") },
-      { href: "/yonetim/salon-yapim-wizard", label: t("nav.salonWizard"), icon: LayoutGrid, description: t("nav.salonWizardDesc") },
-      { href: "/yonetim/salon-yapim-wizard-2", label: "Salon Wizard 2", icon: LayoutGrid, description: "Yeni salon kurulum sihirbazı (eski wizard’a dokunmaz)" },
-      { href: "/yonetim/sehirler", label: t("nav.cities"), icon: MapPin, description: t("nav.citiesDesc") },
-      { href: "/yonetim/slider-yonetimi", label: t("nav.slider"), icon: Megaphone, description: t("nav.sliderDesc") },
-      { href: "/yonetim/hero-backgrounds", label: "Ana Slider Fotoğrafları", icon: ImageIcon, description: "Hero görseli ekle, sil, görünür/gizli yap" },
-      { href: "/yonetim/logolar", label: "Logo ve Simgeler", icon: Palette, description: "Üst/alt logo ve favicon yükle" },
-      { href: "/yonetim/sanatcilar", label: t("nav.artists"), icon: User, description: t("nav.artistsDesc") },
-      { href: "/yonetim/bilet-turleri", label: t("nav.ticketTypes"), icon: Ticket, description: t("nav.ticketTypesDesc") },
-      { href: "/yonetim/bilet-listesi", label: t("nav.orders"), icon: CreditCard, description: t("nav.ordersDesc") },
-      { href: "/yonetim/gise", label: "Gişe kayıtları", icon: Ticket, description: "Kim, nerede, kaç bilet kesti" },
-      { href: "/yonetim/gise-gorevlendirmeleri", label: "Gişe görevlendirmeleri", icon: Users, description: "Kapıda bilet satma yetkisi verme" },
-      { href: "/yonetim/amed-spor-kayitlar", label: "Amed Spor Kayıtları", icon: Users, description: "Form kayıt listesi ve CSV" },
-      { href: "/yonetim/bilet-ozeti", label: t("nav.ticketSummary"), icon: PieChart, description: t("nav.ticketSummaryDesc") },
-      { href: "/yonetim/muhasebe", label: t("nav.accounting"), icon: BarChart3, description: t("nav.accountingDesc") },
-      { href: "/yonetim/faturalar", label: "Faturalar", icon: FileText, description: "Rechnung / KDV / ZUGFeRD XML" },
-      { href: "/yonetim/etkinlik-raporlari", label: "Etkinlik raporları", icon: BarChart3, description: "Veranstaltungsabrechnung: PDF ve e-posta" },
-      { href: "/yonetim/kullanicilar", label: t("nav.users"), icon: Users, description: t("nav.usersDesc") },
-      { href: "/yonetim/musteri-ara", label: t("nav.customerSearch"), icon: SearchIcon, description: t("nav.customerSearchDesc") },
-      { href: "/yonetim/bilet-kontrol", label: t("nav.ticketCheck"), icon: Shield, description: t("nav.ticketCheckDesc") },
-      { href: "/yonetim/etkinlik-uyarilari", label: t("nav.eventAlerts"), icon: Bell, description: t("nav.eventAlertsDesc") },
-      { href: "/yonetim/huni-analitigi", label: t("nav.funnel"), icon: BarChart3, description: t("nav.funnelDesc") },
-      { href: "/yonetim/audit-log", label: t("nav.audit"), icon: Shield, description: t("nav.auditDesc") },
-      { href: "/yonetim/ayarlar", label: t("nav.settings"), icon: Settings, description: t("nav.settingsDesc") },
-    ],
-    [t]
-  );
+  const navLabel = (item: AdminNavItem) =>
+    item.labelKey ? t(item.labelKey) : item.label || "";
+  const navDescription = (item: AdminNavItem) =>
+    item.descriptionKey ? t(item.descriptionKey) : item.description || "";
+
+  const activeGroupKey = findGroupKeyForPath(pathname || "");
+  const [openGroups, setOpenGroups] = useState<string[]>(() => []);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // Açık gruplar tarayıcıda hatırlanır; aktif sayfanın grubu her zaman açılır.
+  useEffect(() => {
+    let stored: string[] = [];
+    try {
+      const raw = window.localStorage.getItem(OPEN_GROUPS_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) stored = parsed.filter((v) => typeof v === "string");
+      }
+    } catch {
+      /* ignore */
+    }
+    if (activeGroupKey && !stored.includes(activeGroupKey)) stored = [...stored, activeGroupKey];
+    setOpenGroups(stored);
+  }, [activeGroupKey]);
+
+  function toggleGroup(key: string) {
+    setOpenGroups((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      try {
+        window.localStorage.setItem(OPEN_GROUPS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+
+  const searching = searchTerm.trim().length > 0;
+  const visibleGroups = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return ADMIN_NAV_GROUPS;
+    return ADMIN_NAV_GROUPS.map((group) => ({
+      ...group,
+      items: group.items.filter((item) =>
+        `${navLabel(item)} ${navDescription(item)}`.toLowerCase().includes(term)
+      ),
+    })).filter((group) => group.items.length > 0);
+  }, [searchTerm, t]);
 
   const controllerMenuItems = useMemo(
     () => [
@@ -95,11 +110,7 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
     [t]
   );
 
-  const menuItems = isAdmin
-    ? adminMenuItems
-    : isController && !isOrganizer
-      ? controllerMenuItems
-      : organizerMenuItems;
+  const flatMenuItems = isController && !isOrganizer ? controllerMenuItems : organizerMenuItems;
 
   const sidebarContent = (
     <div className="w-56 h-full bg-white flex flex-col overflow-hidden">
@@ -141,26 +152,93 @@ export default function AdminNavigationFixed({ isOpen = false, onClose }: AdminN
 
       {/* Navigation - scrollable */}
       <nav className="flex-1 overflow-y-auto min-h-0 p-3 space-y-1">
-        {menuItems.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                isActive(item.href)
-                  ? "bg-primary-50 text-primary-700 border border-primary-200"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              }`}
-            >
-              <Icon className="h-3 w-3" />
-              <div className="flex-1 min-w-0">
-                <div className="text-xs font-medium">{item.label}</div>
-                <div className="text-xs text-slate-500 hidden lg:block">{item.description}</div>
-              </div>
-            </Link>
-          );
-        })}
+        {isAdmin ? (
+          <>
+            <div className="relative mb-2">
+              <SearchIcon className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder={t("nav.searchPlaceholder")}
+                className="w-full rounded-lg border border-slate-200 py-1.5 pl-7 pr-2 text-xs text-slate-700 placeholder:text-slate-400 focus:border-primary-300 focus:outline-none"
+              />
+            </div>
+
+            {visibleGroups.map((group) => {
+              const GroupIcon: LucideIcon = group.icon;
+              const expanded = searching || openGroups.includes(group.key);
+              const hasActive = group.key === activeGroupKey;
+              return (
+                <div key={group.key} className="pb-1">
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(group.key)}
+                    aria-expanded={expanded}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs font-semibold transition-colors ${
+                      hasActive ? "text-primary-700" : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <GroupIcon className="h-3.5 w-3.5 flex-shrink-0" />
+                    <span className="flex-1 truncate">{group.label}</span>
+                    <span className="rounded-full bg-slate-100 px-1.5 text-[10px] font-medium text-slate-600">
+                      {group.items.length}
+                    </span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 flex-shrink-0 transition-transform ${
+                        expanded ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {expanded && (
+                    <div className="mt-0.5 space-y-0.5 border-l border-slate-200 pl-2 ml-2">
+                      {group.items.map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          title={navDescription(item)}
+                          className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium transition-colors ${
+                            isActive(item.href)
+                              ? "bg-primary-50 text-primary-700 border border-primary-200"
+                              : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                          }`}
+                        >
+                          <item.icon className="h-3 w-3 flex-shrink-0" />
+                          <span className="min-w-0 flex-1 truncate">{navLabel(item)}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {visibleGroups.length === 0 && (
+              <p className="px-2 py-3 text-xs text-slate-500">Eşleşen sayfa yok.</p>
+            )}
+          </>
+        ) : (
+          flatMenuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  isActive(item.href)
+                    ? "bg-primary-50 text-primary-700 border border-primary-200"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }`}
+              >
+                <Icon className="h-3 w-3" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs font-medium">{item.label}</div>
+                  <div className="text-xs text-slate-500 hidden lg:block">{item.description}</div>
+                </div>
+              </Link>
+            );
+          })
+        )}
       </nav>
 
       {/* User Menu - sabit altta */}

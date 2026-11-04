@@ -1,15 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Plus, Trash2, UserCheck, CheckCircle, XCircle, Calendar, Eye, X } from "lucide-react";
+import { Plus, Trash2, UserCheck, CheckCircle, XCircle, Calendar, Eye, X, Search as SearchIcon } from "lucide-react";
 import AdminOnlyGuard from "@/components/AdminOnlyGuard";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
+import { supabase } from "@/lib/supabase-client";
 
 function authHeaders(accessToken: string, json = false): Record<string, string> {
   const h: Record<string, string> = { Authorization: `Bearer ${accessToken}` };
   if (json) h["Content-Type"] = "application/json";
   return h;
 }
+
+/** Kullanıcı listesi sayfa boyu; altında 1,2,3… sayfa numaraları gösterilir. */
+const USERS_PAGE_SIZE = 30;
 
 type OrganizerRequest = {
   id: string;
@@ -56,6 +60,57 @@ type ControllerRequest = {
   created_at: string;
 };
 
+/** Admin, organizatörün onaylı şirket/fatura bilgilerini kendi adına düzenler. */
+type CustomerOrderRow = {
+  id: string;
+  quantity: number;
+  total_price: number;
+  ticket_code?: string;
+  status: string;
+  created_at: string;
+  events?: { title?: string; date?: string; time?: string; venue?: string } | null;
+  tickets?: { name?: string } | null;
+};
+
+type CustomerResult = {
+  profile: {
+    kundennummer?: string;
+    anrede?: string;
+    first_name?: string;
+    last_name?: string;
+    firma?: string;
+    address?: string;
+    plz?: string;
+    city?: string;
+    email?: string;
+    telefon?: string;
+    handynummer?: string;
+  };
+  authInfo?: { email?: string; created_at?: string; last_sign_in_at?: string; user_id?: string };
+  orders: CustomerOrderRow[];
+};
+
+type OrganizerCompanyForm = {
+  userId: string;
+  email: string | null;
+  company_name: string;
+  legal_form: string;
+  street: string;
+  postcode: string;
+  city: string;
+  country_code: string;
+  vat_id: string;
+  tax_number: string;
+  invoice_email: string;
+  phone: string;
+  representative_name: string;
+  trade_register: string;
+  trade_register_number: string;
+  organization_display_name: string;
+  logo_path: string;
+  kleinunternehmer: boolean;
+};
+
 function KullanicilarContent() {
   const { accessToken, loading: authLoading } = useSimpleAuth();
   const [users, setUsers] = useState<DisplayUser[]>([]);
@@ -67,6 +122,13 @@ function KullanicilarContent() {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [viewingRequest, setViewingRequest] = useState<OrganizerRequest | null>(null);
+  const [companyEdit, setCompanyEdit] = useState<OrganizerCompanyForm | null>(null);
+  const [companySaving, setCompanySaving] = useState(false);
+  const [userSearch, setUserSearch] = useState("");
+  const [usersPage, setUsersPage] = useState(1);
+  const [customerResult, setCustomerResult] = useState<CustomerResult | null>(null);
+  const [customerLoading, setCustomerLoading] = useState(false);
+  const [customerError, setCustomerError] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<"admin">("admin");
   const [showControllerForm, setShowControllerForm] = useState(false);
@@ -362,8 +424,214 @@ function KullanicilarContent() {
     }
   }
 
-  async function removeRole(userId?: string, role?: string) {
-    if (!userId || !role) {
+  /** Müşteri/organizatörün giriş e-postasını düzeltir (destek: yanlış yazılmış adres). */
+  async function handleFixEmail(user: DisplayUser) {
+    const answer = window.prompt("Kullanıcının yeni e-posta adresi:", user.email || "");
+    if (answer === null) return;
+    const email = answer.trim().toLowerCase();
+    if (!email || email === (user.email || "").toLowerCase()) return;
+    if (!accessToken) {
+      alert("Oturum gerekli. Lütfen tekrar giriş yapın.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: authHeaders(accessToken, true),
+        body: JSON.stringify({ action: "updateEmail", userId: user.user_id, email }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string; email?: string };
+      if (!res.ok) {
+        alert(data.error || "E-posta güncellenemedi");
+        return;
+      }
+      alert(`E-posta güncellendi: ${data.email || email}`);
+      fetchData();
+    } catch {
+      alert("Bir hata oluştu.");
+    }
+  }
+
+  /** Kullanıcı şifresini unuttuğunda admin geçici şifre verir. */
+  async function handleFixPassword(user: DisplayUser) {
+    const answer = window.prompt(
+      `${user.email || user.user_id} için yeni şifre (en az 8 karakter):`,
+      ""
+    );
+    if (answer === null || !answer.trim()) return;
+    if (answer.trim().length < 8) {
+      alert("Şifre en az 8 karakter olmalı.");
+      return;
+    }
+    if (!accessToken) {
+      alert("Oturum gerekli. Lütfen tekrar giriş yapın.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: authHeaders(accessToken, true),
+        body: JSON.stringify({
+          action: "updatePassword",
+          userId: user.user_id,
+          password: answer.trim(),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        alert(data.error || "Şifre güncellenemedi");
+        return;
+      }
+      alert("Şifre güncellendi. Kullanıcıya yeni şifreyi iletin.");
+    } catch {
+      alert("Bir hata oluştu.");
+    }
+  }
+
+  /** Organizatörün şirket/fatura bilgilerini (fatura satıcı bloğu) düzenleme. */
+  async function openCompanyEditor(user: DisplayUser) {
+    if (!accessToken) {
+      alert("Oturum gerekli. Lütfen tekrar giriş yapın.");
+      return;
+    }
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: authHeaders(accessToken, true),
+        body: JSON.stringify({ action: "getOrganizerCompany", userId: user.user_id }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        company?: Record<string, unknown>;
+      };
+      if (!res.ok || !data.company) {
+        alert(data.error || "Organizatör kaydı okunamadı");
+        return;
+      }
+      const c = data.company;
+      const str = (key: string) => (typeof c[key] === "string" ? (c[key] as string) : "");
+      setCompanyEdit({
+        userId: user.user_id,
+        email: user.email,
+        company_name: str("company_name"),
+        legal_form: str("legal_form"),
+        street: str("street"),
+        postcode: str("postcode"),
+        city: str("city"),
+        country_code: str("country_code") || "DE",
+        vat_id: str("vat_id"),
+        tax_number: str("tax_number"),
+        invoice_email: str("invoice_email"),
+        phone: str("phone"),
+        representative_name: str("representative_name"),
+        trade_register: str("trade_register"),
+        trade_register_number: str("trade_register_number"),
+        organization_display_name: str("organization_display_name"),
+        logo_path: str("logo_path"),
+        kleinunternehmer: c.kleinunternehmer === true,
+      });
+    } catch {
+      alert("Bir hata oluştu.");
+    }
+  }
+
+  async function handleSaveCompany() {
+    if (!companyEdit || !accessToken) return;
+    setCompanySaving(true);
+    try {
+      const { userId, email, ...company } = companyEdit;
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: authHeaders(accessToken, true),
+        body: JSON.stringify({ action: "updateOrganizerCompany", userId, company }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) {
+        alert(data.error || "Kaydedilemedi");
+        return;
+      }
+      alert(`Şirket bilgileri kaydedildi${email ? ` (${email})` : ""}.`);
+      setCompanyEdit(null);
+    } catch {
+      alert("Bir hata oluştu.");
+    } finally {
+      setCompanySaving(false);
+    }
+  }
+
+  /** Kundennummer / e-posta / ID parçası ile profil + siparişleri getirir (eski "Müşteri Ara"). */
+  async function handleCustomerSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const term = userSearch.trim();
+    if (!term) {
+      setCustomerResult(null);
+      setCustomerError("");
+      return;
+    }
+    setCustomerLoading(true);
+    setCustomerError("");
+    setCustomerResult(null);
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const res = await fetch(
+        `/api/admin/customer-by-kundennummer?q=${encodeURIComponent(term)}`,
+        { headers: { Authorization: `Bearer ${session?.access_token || ""}` } }
+      );
+      const data = (await res.json().catch(() => ({}))) as CustomerResult & { error?: string };
+      if (!res.ok) {
+        setCustomerError(data.error || "Müşteri bulunamadı.");
+        return;
+      }
+      setCustomerResult(data);
+    } catch {
+      setCustomerError("Bir hata oluştu.");
+    } finally {
+      setCustomerLoading(false);
+    }
+  }
+
+  const filteredUsers = useMemo(() => {
+    const term = userSearch.trim().toLowerCase();
+    if (!term) return users;
+    return users.filter((user) =>
+      [
+        user.email || "",
+        user.full_name || "",
+        user.phone || "",
+        user.user_id || "",
+        ...(user.roles || []),
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(term)
+    );
+  }, [users, userSearch]);
+
+  const usersPageCount = Math.max(1, Math.ceil(filteredUsers.length / USERS_PAGE_SIZE));
+  const currentUsersPage = Math.min(usersPage, usersPageCount);
+  const pagedUsers = filteredUsers.slice(
+    (currentUsersPage - 1) * USERS_PAGE_SIZE,
+    currentUsersPage * USERS_PAGE_SIZE
+  );
+
+  /** Uzun listelerde 1 … 4 5 6 … 20 biçiminde kompakt sayfa numaraları. */
+  const usersPageNumbers = useMemo(() => {
+    const pages: Array<number | "gap"> = [];
+    const total = usersPageCount;
+    const current = currentUsersPage;
+    const windowStart = Math.max(2, current - 1);
+    const windowEnd = Math.min(total - 1, current + 1);
+    pages.push(1);
+    if (windowStart > 2) pages.push("gap");
+    for (let p = windowStart; p <= windowEnd; p += 1) pages.push(p);
+    if (windowEnd < total - 1) pages.push("gap");
+    if (total > 1) pages.push(total);
+    return pages;
+  }, [usersPageCount, currentUsersPage]);
+
+  async function removeRole(userId?: string, role?: string) {    if (!userId || !role) {
       alert("Kullanıcı bilgisi eksik.");
       return;
     }
@@ -882,6 +1150,144 @@ function KullanicilarContent() {
         )}
 
         {/* Tüm Üyeler (Organizatör, Bilet Alıcı, Yönetici, Kontrolör) */}
+        <form onSubmit={handleCustomerSearch} className="mb-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1">
+              <SearchIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={userSearch}
+                onChange={(e) => {
+                  setUserSearch(e.target.value);
+                  setUsersPage(1);
+                  if (!e.target.value.trim()) {
+                    setCustomerResult(null);
+                    setCustomerError("");
+                  }
+                }}
+                placeholder="E-posta, ad soyad, Kundennummer veya ID parçası ile ara…"
+                className="w-full rounded-lg border border-slate-300 py-2.5 pl-10 pr-4 text-sm focus:border-primary-500 focus:ring-primary-500"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={customerLoading}
+              className="rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50"
+            >
+              {customerLoading ? "Aranıyor…" : "Müşteri kartı"}
+            </button>
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            Liste yazarken süzülür. "Müşteri kartı" bastığında profil, giriş bilgisi ve siparişler
+            gelir (Kundennummer BiIgilerim sayfasındadır; e-posta veya ID parçası da kabul edilir).
+          </p>
+        </form>
+
+        {customerError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+            {customerError}
+          </div>
+        )}
+
+        {customerResult && (
+          <div className="mb-6 space-y-4 rounded-xl border border-slate-200 bg-white p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-base font-semibold text-slate-900">
+                  {[customerResult.profile.first_name, customerResult.profile.last_name]
+                    .filter(Boolean)
+                    .join(" ") ||
+                    customerResult.profile.email ||
+                    customerResult.authInfo?.email ||
+                    "Müşteri"}
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Kundennummer: {customerResult.profile.kundennummer || "—"} · ID:{" "}
+                  <span className="font-mono">
+                    {customerResult.authInfo?.user_id
+                      ? customerResult.authInfo.user_id.slice(-8)
+                      : "—"}
+                  </span>
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCustomerResult(null)}
+                className="rounded p-1 hover:bg-slate-100"
+                title="Kapat"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+              <div>
+                <span className="text-slate-500">E-posta:</span>{" "}
+                {customerResult.profile.email || customerResult.authInfo?.email || "—"}
+              </div>
+              <div>
+                <span className="text-slate-500">Telefon:</span>{" "}
+                {customerResult.profile.telefon || customerResult.profile.handynummer || "—"}
+              </div>
+              <div>
+                <span className="text-slate-500">Adres:</span>{" "}
+                {[customerResult.profile.address, customerResult.profile.plz, customerResult.profile.city]
+                  .filter(Boolean)
+                  .join(", ") || "—"}
+              </div>
+              <div>
+                <span className="text-slate-500">Firma:</span>{" "}
+                {customerResult.profile.firma || "—"}
+              </div>
+            </div>
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-slate-900">
+                Siparişler ({customerResult.orders.length})
+              </h3>
+              {customerResult.orders.length === 0 ? (
+                <p className="text-sm text-slate-500">Henüz sipariş yok.</p>
+              ) : (
+                <div className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                  {customerResult.orders.map((order) => (
+                    <div
+                      key={order.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 p-3 text-sm"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-900">
+                          {order.events?.title || "—"}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {order.events?.date || "—"}
+                          {order.ticket_code ? ` · ${order.ticket_code}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-slate-600">
+                          {order.tickets?.name || "Bilet"} × {order.quantity}
+                        </span>
+                        <span className="font-medium">
+                          €{Number(order.total_price || 0).toFixed(2)}
+                        </span>
+                        <span
+                          className={`rounded px-2 py-0.5 text-xs font-medium ${
+                            order.status === "completed"
+                              ? "bg-green-100 text-green-800"
+                              : order.status === "cancelled"
+                                ? "bg-red-100 text-red-800"
+                                : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {order.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl border border-slate-200">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -894,7 +1300,7 @@ function KullanicilarContent() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user) => (
+                {pagedUsers.map((user) => (
                   <tr key={user.user_id} className="border-b border-slate-100">
                     <td className="p-4 text-sm text-slate-900">
                       <div className="flex items-center gap-3">
@@ -961,6 +1367,29 @@ function KullanicilarContent() {
                         >
                           Sil
                         </button>
+                        <button
+                          onClick={() => handleFixEmail(user)}
+                          className="p-1.5 px-2 text-slate-700 hover:bg-slate-100 rounded text-xs font-medium border border-slate-200"
+                          title="Giriş e-postasını düzelt"
+                        >
+                          E-posta
+                        </button>
+                        <button
+                          onClick={() => handleFixPassword(user)}
+                          className="p-1.5 px-2 text-slate-700 hover:bg-slate-100 rounded text-xs font-medium border border-slate-200"
+                          title="Yeni şifre ver"
+                        >
+                          Şifre
+                        </button>
+                        {user.roles.includes("organizer") && (
+                          <button
+                            onClick={() => openCompanyEditor(user)}
+                            className="p-1.5 px-2 text-amber-700 hover:bg-amber-50 rounded text-xs font-medium border border-amber-200"
+                            title="Şirket / fatura bilgilerini düzenle"
+                          >
+                            Şirket
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -969,6 +1398,134 @@ function KullanicilarContent() {
             </table>
           </div>
         </div>
+
+        {filteredUsers.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-slate-600">
+              {filteredUsers.length} kullanıcı · sayfa {currentUsersPage}/{usersPageCount}
+            </p>
+            <div className="flex flex-wrap items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setUsersPage(Math.max(1, currentUsersPage - 1))}
+                disabled={currentUsersPage === 1}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+              >
+                ‹
+              </button>
+              {usersPageNumbers.map((entry, index) =>
+                entry === "gap" ? (
+                  <span key={`gap-${index}`} className="px-2 text-sm text-slate-400">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={entry}
+                    type="button"
+                    onClick={() => setUsersPage(entry)}
+                    className={`min-w-9 rounded-lg border px-3 py-1.5 text-sm ${
+                      entry === currentUsersPage
+                        ? "border-primary-500 bg-primary-50 font-semibold text-primary-700"
+                        : "border-slate-300 text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    {entry}
+                  </button>
+                )
+              )}
+              <button
+                type="button"
+                onClick={() => setUsersPage(Math.min(usersPageCount, currentUsersPage + 1))}
+                disabled={currentUsersPage === usersPageCount}
+                className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+        )}
+
+        {companyEdit && (
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-900/40 p-4">
+            <div className="my-8 w-full max-w-3xl rounded-xl bg-white p-6 shadow-xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h2 className="text-lg font-bold text-slate-900">
+                  Şirket bilgileri{companyEdit.email ? ` — ${companyEdit.email}` : ""}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setCompanyEdit(null)}
+                  className="rounded p-1 hover:bg-slate-100"
+                  title="Kapat"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <p className="mb-4 text-sm text-slate-600">
+                Faturada satıcı bloğu bu bilgilerden üretilir. Değişiklik yalnız bundan sonraki belgelere yansır.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {(
+                  [
+                    ["company_name", "Ünvan / firma adı"],
+                    ["legal_form", "Hukuki tür (GmbH, e.K.)"],
+                    ["street", "Sokak / cadde"],
+                    ["postcode", "Posta kodu"],
+                    ["city", "Şehir"],
+                    ["country_code", "Ülke kodu (DE)"],
+                    ["vat_id", "USt-IdNr."],
+                    ["tax_number", "Steuernummer"],
+                    ["invoice_email", "Fatura e-postası"],
+                    ["phone", "Telefon"],
+                    ["representative_name", "Temsilci"],
+                    ["trade_register", "Sicil mahkemesi"],
+                    ["trade_register_number", "Sicil no (HRB)"],
+                    ["organization_display_name", "Organizatör görünen adı"],
+                    ["logo_path", "Logo yolu (uploads/...)"],
+                  ] as Array<[keyof OrganizerCompanyForm, string]>
+                ).map(([key, label]) => (
+                  <label key={key} className="text-sm">
+                    <span className="mb-1 block text-slate-600">{label}</span>
+                    <input
+                      value={String(companyEdit[key] ?? "")}
+                      onChange={(e) =>
+                        setCompanyEdit({ ...companyEdit, [key]: e.target.value })
+                      }
+                      className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                    />
+                  </label>
+                ))}
+              </div>
+              <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={companyEdit.kleinunternehmer}
+                  onChange={(e) =>
+                    setCompanyEdit({ ...companyEdit, kleinunternehmer: e.target.checked })
+                  }
+                />
+                Kleinunternehmer (§ 19 UStG — faturada KDV gösterilmez)
+              </label>
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCompanyEdit(null)}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm"
+                >
+                  Vazgeç
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveCompany}
+                  disabled={companySaving}
+                  className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+                >
+                  {companySaving ? "Kaydediliyor…" : "Kaydet"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

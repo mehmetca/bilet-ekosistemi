@@ -1144,7 +1144,8 @@
       "profile": "Profil",
       "checkin": "Check-in",
       "venuesOrganizer": "Orte / Saalplan",
-      "guestName": "Gast"
+      "guestName": "Gast",
+      "searchPlaceholder": "Menü durchsuchen"
     }
   }
 }

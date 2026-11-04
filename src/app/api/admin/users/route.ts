@@ -708,6 +708,115 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true });
     }
 
+    // Müşteri/organizatörün giriş e-postasını düzeltme (yanlış yazılmış adres).
+    if (action === "updateEmail") {
+      const { userId, email } = body as { userId?: string; email?: string };
+      const cleanEmail = (email || "").trim().toLowerCase();
+      if (!userId) return NextResponse.json({ error: "userId gerekli" }, { status: 400 });
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+        return NextResponse.json({ error: "Geçerli bir e-posta yazın." }, { status: 400 });
+      }
+      const { error: authErr } = await supabase.auth.admin.updateUserById(userId, {
+        email: cleanEmail,
+        email_confirm: true,
+      });
+      if (authErr) {
+        console.error("updateEmail error:", authErr);
+        return NextResponse.json({ error: authErr.message || "E-posta güncellenemedi" }, { status: 500 });
+      }
+      // Profil ve organizatör başvurusundaki kopyalar da düzeltilir.
+      await supabase.from("user_profiles").update({ email: cleanEmail }).eq("user_id", userId);
+      await supabase.from("organizer_requests").update({ email: cleanEmail }).eq("user_id", userId);
+      return NextResponse.json({ success: true, email: cleanEmail });
+    }
+
+    // Şifre sıfırlama: kullanıcı kendi şifresini unuttuğunda admin geçici şifre verir.
+    if (action === "updatePassword") {
+      const { userId, password } = body as { userId?: string; password?: string };
+      if (!userId) return NextResponse.json({ error: "userId gerekli" }, { status: 400 });
+      if (!password || password.length < 8) {
+        return NextResponse.json({ error: "Şifre en az 8 karakter olmalı." }, { status: 400 });
+      }
+      const { error: passErr } = await supabase.auth.admin.updateUserById(userId, { password });
+      if (passErr) {
+        console.error("updatePassword error:", passErr);
+        return NextResponse.json({ error: passErr.message || "Şifre güncellenemedi" }, { status: 500 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // Organizatörün onaylı şirket/fatura bilgileri (fatura satıcı bloğu buradan gelir).
+    if (action === "getOrganizerCompany") {
+      const { userId } = body as { userId?: string };
+      if (!userId) return NextResponse.json({ error: "userId gerekli" }, { status: 400 });
+      const { data: row, error: rowErr } = await supabase
+        .from("organizer_requests")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "approved")
+        .maybeSingle();
+      if (rowErr) return NextResponse.json({ error: rowErr.message }, { status: 500 });
+      if (!row) return NextResponse.json({ error: "Onaylı organizatör kaydı yok." }, { status: 404 });
+      return NextResponse.json({ success: true, company: row });
+    }
+
+    if (action === "updateOrganizerCompany") {
+      const { userId, company } = body as {
+        userId?: string;
+        company?: Record<string, unknown>;
+      };
+      if (!userId || !company || typeof company !== "object") {
+        return NextResponse.json({ error: "userId ve company gerekli" }, { status: 400 });
+      }
+      const { data: existing, error: findErr } = await supabase
+        .from("organizer_requests")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("status", "approved")
+        .maybeSingle();
+      if (findErr) return NextResponse.json({ error: findErr.message }, { status: 500 });
+      if (!existing) return NextResponse.json({ error: "Onaylı organizatör kaydı yok." }, { status: 404 });
+
+      const text = (value: unknown) =>
+        typeof value === "string" && value.trim() ? value.trim() : null;
+      const patch = {
+        company_name: text(company.company_name),
+        legal_form: text(company.legal_form),
+        street: text(company.street),
+        postcode: text(company.postcode),
+        city: text(company.city),
+        country_code: text(company.country_code)?.toUpperCase() || null,
+        vat_id: text(company.vat_id),
+        tax_number: text(company.tax_number),
+        invoice_email: text(company.invoice_email),
+        phone: text(company.phone),
+        representative_name: text(company.representative_name),
+        trade_register: text(company.trade_register),
+        trade_register_number: text(company.trade_register_number),
+        organization_display_name: text(company.organization_display_name),
+        logo_path: text(company.logo_path),
+        kleinunternehmer: Boolean(company.kleinunternehmer),
+      };
+      const { error: upErr } = await supabase
+        .from("organizer_requests")
+        .update(patch)
+        .eq("id", existing.id);
+      if (upErr) {
+        console.error("updateOrganizerCompany error:", upErr);
+        return NextResponse.json({ error: upErr.message }, { status: 500 });
+      }
+      await supabase.from("organizer_profiles").upsert(
+        {
+          user_id: userId,
+          organization_display_name:
+            patch.organization_display_name || patch.company_name || "Organizatör",
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
+      return NextResponse.json({ success: true });
+    }
+
     return NextResponse.json({ error: "Geçersiz action" }, { status: 400 });
   } catch (err) {
     console.error("admin users POST error:", err);

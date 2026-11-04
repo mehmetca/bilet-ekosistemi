@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSimpleAuth } from "@/contexts/SimpleAuthContext";
 import OrganizerDashboard from "@/components/OrganizerDashboard";
+import { ADMIN_QUICK_LINKS } from "@/components/adminNavConfig";
 
 export default function YonetimDashboard() {
   const { isAdmin, isController, isOrganizer, accessToken } = useSimpleAuth();
@@ -45,80 +46,24 @@ export default function YonetimDashboard() {
       )}
       <h2 className="text-xl font-semibold text-slate-900 mb-4">Yönetim Paneline Hoş Geldiniz</h2>
       <p className="text-slate-600 mb-6">Sol menüden istediğiniz sayfaya erişebilirsiniz.</p>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link href="/yonetim/etkinlikler" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Etkinlikler</h3>
-          <p className="text-sm text-slate-500">Tüm etkinlikleri yönetin</p>
-        </Link>
-        <Link href="/yonetim/mekanlar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Mekanlar / Salon ayarları</h3>
-          <p className="text-sm text-slate-500">Mekanlar ve oturum planı (bölüm, sıra, koltuk)</p>
-        </Link>
-        <Link href="/yonetim/salon-yapim-wizard" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Salon Yapım Wizard</h3>
-          <p className="text-sm text-slate-500">Adım adım salon planı oluşturun</p>
-        </Link>
-        <Link href="/yonetim/salon-yapim-wizard-2" className="p-4 border border-teal-200 rounded-lg hover:border-teal-400 hover:bg-teal-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-teal-800">Salon Yapım Wizard 2</h3>
-          <p className="text-sm text-slate-500">Yön, numaralama, koridor — eski wizard’a dokunmaz</p>
-        </Link>
-        <Link href="/yonetim/bilet-kontrol" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Bilet Kontrol</h3>
-          <p className="text-sm text-slate-500">Biletleri doğrulayın</p>
-        </Link>
-        <Link href="/yonetim/muhasebe" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Muhasebe</h3>
-          <p className="text-sm text-slate-500">Finansal raporlar</p>
-        </Link>
-        <Link href="/yonetim/etkinlik-uyarilari" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Etkinlik Uyarıları</h3>
-          <p className="text-sm text-slate-500">Bilet hatırlatması kayıtları</p>
-        </Link>
-        <Link href="/yonetim/huni-analitigi" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Huni Analitiği</h3>
-          <p className="text-sm text-slate-500">Görüntüleme → Satın alma</p>
-        </Link>
-        <Link href="/yonetim/kullanicilar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Kullanıcılar</h3>
-          <p className="text-sm text-slate-500">Rol ve yetki yönetimi</p>
-        </Link>
-        <Link href="/yonetim/bilet-turleri" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Bilet Türleri</h3>
-          <p className="text-sm text-slate-500">Bilet kategorileri</p>
-        </Link>
-        <Link href="/yonetim/bilet-listesi" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Siparişler / Biletler</h3>
-          <p className="text-sm text-slate-500">Satılan biletler ve siparişler</p>
-        </Link>
-        <Link href="/yonetim/amed-spor-kayitlar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Amed Spor Kayıtları</h3>
-          <p className="text-sm text-slate-500">Form listesi ve CSV export</p>
-        </Link>
-        <Link href="/yonetim/slider-yonetimi" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Slider</h3>
-          <p className="text-sm text-slate-500">Ana ve haber slider</p>
-        </Link>
-        <Link href="/yonetim/sanatcilar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Sanatçılar</h3>
-          <p className="text-sm text-slate-500">Özgeçmiş ve galeri düzenleyin</p>
-        </Link>
-        <Link href="/yonetim/hero-backgrounds" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Hero Background</h3>
-          <p className="text-sm text-slate-500">Ana sayfa arka planı</p>
-        </Link>
-        <Link href="/yonetim/logolar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Logo ve Simgeler</h3>
-          <p className="text-sm text-slate-500">Üst/alt logo ve favicon</p>
-        </Link>
-        <Link href="/yonetim/sehirler" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Şehirler</h3>
-          <p className="text-sm text-slate-500">Das ist los in deiner Stadt!</p>
-        </Link>
-        <Link href="/yonetim/ayarlar" className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group">
-          <h3 className="font-medium text-slate-900 group-hover:text-primary-700">Ayarlar</h3>
-          <p className="text-sm text-slate-500">Sistem ayarları</p>
-        </Link>
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        {ADMIN_QUICK_LINKS.map((link) => (
+          <Link
+            key={link.href}
+            href={link.href}
+            className="p-4 border border-slate-200 rounded-lg hover:border-primary-300 hover:bg-primary-50 transition-colors group"
+          >
+            <h3 className="font-medium text-slate-900 group-hover:text-primary-700">
+              {link.title}
+            </h3>
+            <p className="text-sm text-slate-500">{link.description}</p>
+          </Link>
+        ))}
       </div>
+      <p className="mt-4 text-sm text-slate-500">
+        Tüm sayfalar sol menüde gruplu: Etkinlik &amp; Mekân, Satış &amp; Kasa, Finans,
+        Kullanıcılar, Site &amp; Görünüm, Kontrol &amp; Analiz.
+      </p>
       <div className="mt-8 pt-8 border-t border-slate-200">
         <h3 className="text-lg font-semibold text-slate-900 mb-4">Hızlı Ekleme</h3>
         <div className="flex flex-wrap gap-3 justify-center">
