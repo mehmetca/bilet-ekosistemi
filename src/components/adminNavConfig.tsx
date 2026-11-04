@@ -49,6 +49,7 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     icon: Calendar,
     items: [
       { href: "/yonetim", labelKey: "nav.dashboard", icon: Calendar, descriptionKey: "nav.dashboardDescAdmin" },
+      { href: "/yonetim/akis", label: "Canlı akış", icon: Bell, description: "Sipariş, gişe, mail, fatura, üyelik ve yönetici işlemleri" },
     ],
   },
   {
