@@ -145,6 +145,24 @@ export async function middleware(request: NextRequest) {
   if (canonical) return canonical;
 
   const pathname = request.nextUrl.pathname;
+
+  // skipTrailingSlashRedirect aktif: sondaki `/` davranışı burada yürütülüyor.
+  // API: eksik slash yönlendirme değil internal rewrite ile tamamlanır; istemci
+  // tek turda cevabını alır (308 + gövdenin yeniden gönderilmesi yok).
+  if (pathname.startsWith("/api/")) {
+    if (pathname.endsWith("/")) return NextResponse.next();
+    const target = new URL(request.url);
+    target.pathname = `${pathname}/`;
+    return NextResponse.rewrite(target);
+  }
+
+  // Sayfalar: kanonik URL sondaki `/` ile. Uzantılı yollar (/index.html, .txt) hariç.
+  if (!pathname.endsWith("/") && !/\.[^/]*$/.test(pathname)) {
+    const target = new URL(request.url);
+    target.pathname = `${pathname}/`;
+    return NextResponse.redirect(target, 308);
+  }
+
   console.log("Middleware called for pathname:", pathname);
 
   // Test paths için auth bypass ve intl middleware bypass
@@ -335,6 +353,8 @@ export async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     "/((?!api|_next|_vercel|.*\\..*).*)",
+    // API uçları slash rewrite'i için; middleware gövdesi bu yolda erken dönüyor.
+    "/api/:path*",
     "/index.html",
     "/(tr|de|en|ku|ckb)/index.html",
   ],
