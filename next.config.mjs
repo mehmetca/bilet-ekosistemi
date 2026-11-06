@@ -21,6 +21,11 @@ const nextConfig = {
 
   trailingSlash: true,
 
+  // Yerleşik trailing-slash yönlendirmesi middleware'den ÖNCE çalışıyor ve her
+  // `/api/...` çağrısını (sonda `/` yok) 308 ile ikinci tura çıkarıyor.
+  // Slash davranışı artık middleware'de: API için internal rewrite, sayfa için 308.
+  skipTrailingSlashRedirect: true,
+
   serverExternalPackages: [
     "@sentry/nextjs",
     "@sentry/node",
